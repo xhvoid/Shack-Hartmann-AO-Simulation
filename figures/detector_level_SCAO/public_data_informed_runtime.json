@@ -1,0 +1,11 @@
+{
+  "output_artifacts": "public_data_informed_ao_photon_scan.csv;public_data_informed_ao_photon_scan.png;public_data_informed_conditions.csv;public_data_informed_error_budget.csv;public_data_informed_error_budget.png;public_data_informed_validation.csv;public_data_informed_validation.png",
+  "run_finished_utc": "2026-07-09T20:33:23Z",
+  "run_started_utc": "2026-07-09T20:25:56Z",
+  "runtime_limit_minutes": 30.0,
+  "runtime_minutes": 7.4542438631993715,
+  "runtime_seconds": 447.2546317919623,
+  "script": "examples/run_public_data_informed_ao_demo.py",
+  "source_note": "Local wall-clock runtime for the public-data-informed Notebook 11 demo. The run uses tracked public caches and synthetic AO proxies; no live archive query is performed.",
+  "within_runtime_limit": true
+}

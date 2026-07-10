@@ -1,0 +1,48 @@
+{
+  "provenance_note": "Local literature-inspired atmosphere profile fixture loads with normalized Cn2 weights, units, and source_class provenance.",
+  "schema_version": "0.1",
+  "data_kind": "literature_atmosphere_profile",
+  "name": "paranal_three_layer_literature_inspired",
+  "source_class": "synthetic_literature_inspired",
+  "source_note": "Three-layer fallback inspired by Paranal turbulence-profile literature such as arXiv:1806.02585; values are not a copied measured profile.",
+  "source_id": "SAMPLE_PARANAL_3LAYER",
+  "fallback_used": true,
+  "units": {
+    "seeing_arcsec_500nm": "arcsec",
+    "r0_500_m": "m",
+    "outer_scale_L0_m": "m",
+    "tau0_s": "s",
+    "theta0_arcsec": "arcsec",
+    "height_m": "m",
+    "cn2_weight": "fraction",
+    "wind_ms": "m/s",
+    "wind_dir_deg": "deg"
+  },
+  "summary": {
+    "seeing_arcsec_500nm": 0.8,
+    "r0_500_m": 0.126,
+    "outer_scale_L0_m": 25.0,
+    "tau0_s": 0.003,
+    "theta0_arcsec": 2.0
+  },
+  "layers": [
+    {
+      "height_m": 0.0,
+      "cn2_weight": 0.5,
+      "wind_ms": 6.0,
+      "wind_dir_deg": 0.0
+    },
+    {
+      "height_m": 5000.0,
+      "cn2_weight": 0.3,
+      "wind_ms": 14.0,
+      "wind_dir_deg": 70.0
+    },
+    {
+      "height_m": 12000.0,
+      "cn2_weight": 0.2,
+      "wind_ms": 28.0,
+      "wind_dir_deg": 130.0
+    }
+  ]
+}

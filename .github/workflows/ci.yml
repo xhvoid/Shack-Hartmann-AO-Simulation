@@ -1,0 +1,38 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Run tests
+        run: pytest -q
+
+      - name: Run example scripts
+        run: |
+          python examples/run_psf_strehl_demo.py
+          python examples/run_shwfs_centroid_demo.py
+
+      - name: Fast detector-level SCAO smoke
+        # Exercises the detector-level extension end-to-end, offline, from the
+        # tracked public caches: the public-data overview (provenance summary +
+        # photon budget) and the fast 2 m SCAO integration (error-budget table,
+        # validation checks, and the small reference-metrics JSON).
+        run: |
+          python examples/run_public_data_overview.py
+          python examples/run_fast_integration.py

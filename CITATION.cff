@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: "Shack-Hartmann Wavefront Sensing and Adaptive Optics Simulations"
+abstract: "A compact Python adaptive-optics simulation portfolio: Shack-Hartmann wavefront sensing, detector-level centroiding, synthetic DM and interaction matrices, TSVD reconstruction, closed-loop SCAO diagnostics, and NIR PSF/Strehl science metrics."
+authors:
+  - family-names: Han
+    given-names: Xu
+version: 0.1.0
+date-released: "2026-06-25"
+license: MIT
+repository-code: "https://github.com/xhvoid/Shack-Hartmann-AO-Simulation"
+keywords:
+  - adaptive optics
+  - Shack-Hartmann wavefront sensing
+  - astronomical instrumentation
+  - point spread function

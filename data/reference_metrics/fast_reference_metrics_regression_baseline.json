@@ -1,0 +1,37 @@
+{
+  "closed_rms_nm": 48.348567,
+  "config_hash": "94d32c22e8a70620ba16f18b2e0887e92e23e2aa681b87cec8ca1bac53924176",
+  "h_strehl": 0.96641,
+  "kept_modes": 13,
+  "open_rms_nm": 70.009063,
+  "preset": "fast",
+  "reference_scenario": "all_effects",
+  "runtime_band": "fast_over_60s",
+  "runtime_note": "Reference runtime band observed on a local machine; CI enforces functional completion of the fast integration, not a strict timing benchmark. tolerances.runtime_s_reference_max is a documented reference, not an enforced limit.",
+  "scenario_count": 8,
+  "scenario_names": [
+    "ideal_static",
+    "dynamic_multilayer_proxy",
+    "detector_noise",
+    "latency",
+    "stroke_limit",
+    "misregistration",
+    "ncpa",
+    "all_effects"
+  ],
+  "schema_version": 2,
+  "source_class": "synthetic_assumed",
+  "source_note": "Fast end-to-end detector-level 2 m SCAO integration using local synthetic/literature-inspired fixtures; not calibrated observatory AO telemetry.",
+  "tolerances": {
+    "closed_rms_nm_abs": 15.0,
+    "h_strehl_abs": 0.04,
+    "kept_modes_abs": 0,
+    "open_rms_nm_abs": 15.0,
+    "runtime_s_reference_max": 30.0,
+    "valid_centroid_fraction_abs": 1e-12
+  },
+  "valid_centroid_fraction": 1.0,
+  "validation_check_count": 6,
+  "validation_pass_count": 6,
+  "workflow": "fast_integration"
+}

@@ -1,0 +1,12 @@
+# Local Gaia/2MASS-style target-photometry fixture with coordinate/magnitude units and source_class provenance.
+# data_kind=target_photometry
+# source_class=synthetic_assumed
+# source_note=Offline synthetic guide-star photometry shaped like Gaia/2MASS columns; replace with direct_public_data when catalog queries are added.
+# source_id=Data-source interface_SAMPLE_TARGET_PHOTOMETRY_SYNTHETIC
+# fallback_used=true
+# ra_unit=deg
+# dec_unit=deg
+# magnitude_unit=mag
+target_id,ra_deg,dec_deg,gaia_g_mag,twomass_j_mag,twomass_h_mag,twomass_ks_mag
+demo_ngs_bright,83.6331,-5.3911,9.4,8.7,8.4,8.3
+demo_ngs_faint,83.6410,-5.4020,13.2,12.4,12.0,11.9

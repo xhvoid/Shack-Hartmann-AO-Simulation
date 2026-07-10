@@ -1,0 +1,27 @@
+{
+  "provenance_note": "Synthetic 2 m Gaussian DM preset supplies actuator count, stroke limit, dead/stuck actuator metadata, units, and source_class provenance.",
+  "schema_version": "0.1",
+  "data_kind": "dm_preset",
+  "source_class": "synthetic_literature_inspired",
+  "source_note": "Synthetic Gaussian DM preset motivated by influence-function modelling references such as Berdeu arXiv:2306.10803; not measured DM calibration data.",
+  "source_id": "SYNTHETIC_DM_2M_FAST_GAUSSIAN",
+  "units": {
+    "telescope_diameter_m": "m",
+    "n_actuators_across": "actuators_across_pupil",
+    "coupling_width_pitch": "actuator_pitch_fraction",
+    "stroke_limit_nm": "nm_OPD_equivalent",
+    "stuck_command_nm": "nm_OPD_equivalent"
+  },
+  "parameters": {
+    "telescope_diameter_m": 2.0,
+    "n_actuators_across": 11,
+    "influence_model": "gaussian",
+    "coupling_width_pitch": 0.35,
+    "stroke_limit_nm": 800.0,
+    "include_edge_actuators": true,
+    "actuator_margin_fraction": 0.0,
+    "dead_actuator_indices": [],
+    "stuck_actuator_indices": [],
+    "stuck_command_nm": 0.0
+  }
+}

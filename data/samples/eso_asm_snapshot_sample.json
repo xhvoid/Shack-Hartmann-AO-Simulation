@@ -1,0 +1,27 @@
+{
+  "provenance_note": "Local ESO ASM-style atmosphere snapshot fixture with units and source_class provenance.",
+  "schema_version": "0.1",
+  "data_kind": "eso_asm_snapshot",
+  "source_class": "synthetic_literature_inspired",
+  "source_note": "Offline fallback shaped like an ESO ASM atmosphere snapshot; representative values only, not downloaded telemetry.",
+  "source_id": "Data-source interface_SAMPLE_ESO_ASM_SYNTHETIC",
+  "fallback_used": true,
+  "units": {
+    "mjd": "day",
+    "seeing_arcsec_500nm": "arcsec",
+    "r0_500_m": "m",
+    "tau0_s": "s",
+    "theta0_arcsec": "arcsec",
+    "wind_speed_ms": "m/s",
+    "wind_dir_deg": "deg"
+  },
+  "measurements": {
+    "mjd": 60300.0,
+    "seeing_arcsec_500nm": 0.8,
+    "r0_500_m": 0.126,
+    "tau0_s": 0.003,
+    "theta0_arcsec": 2.0,
+    "wind_speed_ms": 12.0,
+    "wind_dir_deg": 70.0
+  }
+}

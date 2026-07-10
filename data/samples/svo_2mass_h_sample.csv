@@ -1,0 +1,19 @@
+# Local SVO-style filter fixture with wavelength/transmission units and source_class provenance.
+# data_kind=svo_filter_curve
+# filter_id=2MASS.H.synthetic
+# source_class=synthetic_literature_inspired
+# source_note=Offline smooth H-band fallback inspired by 2MASS/SVO-style filter curves; not downloaded from SVO.
+# source_id=Data-source interface_SAMPLE_SVO_2MASS_H_SYNTHETIC
+# fallback_used=true
+# wavelength_unit=m
+# transmission_unit=dimensionless
+wavelength_m,transmission
+1.45e-6,0.02
+1.50e-6,0.28
+1.55e-6,0.72
+1.60e-6,0.96
+1.65e-6,1.00
+1.70e-6,0.94
+1.75e-6,0.65
+1.80e-6,0.22
+1.85e-6,0.03

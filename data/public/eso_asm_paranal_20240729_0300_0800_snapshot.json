@@ -1,0 +1,40 @@
+{
+  "provenance_note": "Direct public reference output: ESO Paranal ASM 2024-07-29T03:00:00Z to 2024-07-29T08:00:00Z median nighttime atmosphere snapshot.",
+  "schema_version": "0.2",
+  "data_kind": "eso_asm_snapshot",
+  "source_class": "direct_public_data",
+  "source_note": "ESO Paranal ASM API direct JSON query over 2024-07-29T03:00:00Z to 2024-07-29T08:00:00Z; fields dimm_paranal-fwhm,mass_paranal-tau0,mass_paranal-tet0,mass_paranal-turb_speed. r0_500_m is derived from median seeing using Fried DOI 10.1364/JOSA.56.001372.",
+  "source_id": "ESO_ASM_PARANAL_20240729_0300_0800_MEDIAN",
+  "url": "https://www.eso.org/asm/api/?from=2024-07-29T03%3A00%3A00Z&to=2024-07-29T08%3A00%3A00Z&fields=dimm_paranal-fwhm%2Cmass_paranal-tau0%2Cmass_paranal-tet0%2Cmass_paranal-turb_speed",
+  "query_url": "https://www.eso.org/asm/api/?from=2024-07-29T03%3A00%3A00Z&to=2024-07-29T08%3A00%3A00Z&fields=dimm_paranal-fwhm%2Cmass_paranal-tau0%2Cmass_paranal-tet0%2Cmass_paranal-turb_speed",
+  "utc_start": "2024-07-29T03:00:00Z",
+  "utc_end": "2024-07-29T08:00:00Z",
+  "local_time_note": "approximately 23:00-04:00 CLT for Chile winter",
+  "night_window_class": "nighttime",
+  "fields": [
+    "dimm_paranal-fwhm",
+    "mass_paranal-tau0",
+    "mass_paranal-tet0",
+    "mass_paranal-turb_speed"
+  ],
+  "access_time": "2026-06-22T20:49:48+00:00",
+  "fallback_used": false,
+  "units": {
+    "unix_time_median_ms": "ms",
+    "seeing_arcsec_500nm": "arcsec",
+    "r0_500_m": "m",
+    "tau0_s": "s",
+    "theta0_arcsec": "arcsec",
+    "turbulence_speed_ms": "m/s",
+    "sample_count": "count"
+  },
+  "measurements": {
+    "unix_time_median_ms": 1722232030500.0,
+    "seeing_arcsec_500nm": 0.7235,
+    "r0_500_m": 0.13969571527297858,
+    "tau0_s": 0.003409,
+    "theta0_arcsec": 1.894,
+    "turbulence_speed_ms": 10.84,
+    "sample_count": 184
+  }
+}

@@ -1,0 +1,6 @@
+calibration_amplitude_nm,kept_modes,rcond,rank,largest_singular_value_px_per_nm,smallest_singular_value_px_per_nm,condition_proxy,noise_amplification_proxy,matrix_unit,source_class
+2.0,16,0.003,16,0.006696908210132363,0.0034115217723576408,1.9630266658108562,759.2586128228294,detector_px / nm_OPD_equivalent,synthetic_assumed
+5.0,16,0.003,16,0.006696917835750884,0.0034115241476747058,1.9630281205295004,759.2579028234475,detector_px / nm_OPD_equivalent,synthetic_assumed
+10.0,16,0.003,16,0.00669695220584754,0.0034115326294076685,1.9630333147393366,759.2553676063912,detector_px / nm_OPD_equivalent,synthetic_assumed
+20.0,16,0.003,16,0.00669708957515643,0.0034115665322446823,1.963054072625691,759.2452344694037,detector_px / nm_OPD_equivalent,synthetic_assumed
+50.0,16,0.003,16,0.006698046198312552,0.003411802775150507,1.9631985316082865,759.1746478658292,detector_px / nm_OPD_equivalent,synthetic_assumed

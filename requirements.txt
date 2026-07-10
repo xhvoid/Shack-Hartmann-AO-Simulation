@@ -1,0 +1,6 @@
+# Runtime dependencies only. Notebook, test, and documentation tools are
+# declared as optional extras in pyproject.toml ([notebooks], [test], [docs]).
+numpy>=1.24
+scipy>=1.10
+matplotlib>=3.7
+pandas>=1.5

@@ -1,0 +1,18 @@
+# Direct public reference output: IRSA 2MASS All-Sky Point Source Catalog cone query near the demo guide-star field.
+# data_kind=target_photometry
+# source_class=direct_public_data
+# source_note=IRSA 2MASS All-Sky Point Source Catalog PSC fp_psc cone query; 2MASS canonical paper DOI 10.1086/498708.
+# source_id=IRSA_2MASS_PSC_DEMO_NGS_BRIGHT_20260622
+# url=https://irsa.ipac.caltech.edu/cgi-bin/Gator/nph-query?catalog=fp_psc&spatial=cone&radius=60&radunits=arcsec&objstr=83.6331+-5.3911&outfmt=1
+# access_time=2026-06-22T20:49:48+00:00
+# fallback_used=false
+# ra_unit=deg
+# dec_unit=deg
+# magnitude_unit=mag
+target_id,ra_deg,dec_deg,twomass_j_mag,twomass_h_mag,twomass_ks_mag,twomass_dist_arcsec,twomass_ph_qual
+2MASS_05343359-0523099,83.639998,-5.386088,11.282,10.782,10.719,30.606969,AAA
+2MASS_05342945-0523374,83.622723,-5.393739,13.989,13.372,13.088,38.386104,AAA
+2MASS_05342954-0523437,83.623088,-5.395487,11.897,10.696,10.109,39.205363,AAA
+2MASS_05342926-0523509,83.621939,-5.397498,13.240,11.888,11.202,46.158883,AAA
+2MASS_05342896-0523481,83.620703,-5.396706,13.968,13.368,13.028,48.800229,AAA
+2MASS_05342924-0523567,83.621861,-5.399109,10.191,9.783,9.614,49.536645,AAA

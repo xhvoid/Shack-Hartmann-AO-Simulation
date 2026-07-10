@@ -1,0 +1,10 @@
+metric,value,unit,source_class,source_note
+eso_asm_median_seeing,0.7235,arcsec,direct_public_data,"ESO Paranal ASM API direct JSON query over 2024-07-29T03:00:00Z to 2024-07-29T08:00:00Z; fields dimm_paranal-fwhm,mass_paranal-tau0,mass_paranal-tet0,mass_paranal-turb_speed. r0_500_m is derived from median seeing using Fried DOI 10.1364/JOSA.56.001372."
+eso_asm_r0_500,0.13969571527297858,m,direct_public_data,"ESO Paranal ASM API direct JSON query over 2024-07-29T03:00:00Z to 2024-07-29T08:00:00Z; fields dimm_paranal-fwhm,mass_paranal-tau0,mass_paranal-tet0,mass_paranal-turb_speed. r0_500_m is derived from median seeing using Fried DOI 10.1364/JOSA.56.001372."
+svo_2mass_j_effective_wavelength,1.2410517069432105,um,direct_public_data,SVO Filter Profile Service direct download for 2MASS/2MASS.J; profile reference http://www.ipac.caltech.edu/2mass/releases/allsky/doc/sec6_4a.html#rsr; 2MASS canonical paper DOI 10.1086/498708.
+svo_2mass_h_effective_wavelength,1.651366459841462,um,direct_public_data,SVO Filter Profile Service direct download for 2MASS/2MASS.H; profile reference http://www.ipac.caltech.edu/2mass/releases/allsky/doc/sec6_4a.html#rsr; 2MASS canonical paper DOI 10.1086/498708.
+svo_2mass_ks_effective_wavelength,2.165631123267069,um,direct_public_data,SVO Filter Profile Service direct download for 2MASS/2MASS.Ks; profile reference http://www.ipac.caltech.edu/2mass/releases/allsky/doc/sec6_4a.html#rsr; 2MASS canonical paper DOI 10.1086/498708.
+panstarrs_rows,19,count,direct_public_data,MAST Pan-STARRS DR2 mean catalog cache.
+twomass_rows,6,count,direct_public_data,IRSA 2MASS PSC cache.
+best_wfs_photon_budget_source,PS1_101500836297539800,id,direct_public_data,Selected from Pan-STARRS DR2 optical photometry cache.
+best_wfs_photons_per_subap_frame_est,0.010434988574487547,photons/subap/frame,direct_public_data,"Simple AB-magnitude engineering estimate, not measured WFS telemetry."

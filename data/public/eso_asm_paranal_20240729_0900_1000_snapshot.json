@@ -1,0 +1,29 @@
+{
+  "provenance_note": "Direct public reference output: ESO Paranal ASM 2024-07-29 09:00-10:00 UTC median atmosphere snapshot.",
+  "schema_version": "0.2",
+  "data_kind": "eso_asm_snapshot",
+  "source_class": "direct_public_data",
+  "source_note": "ESO Paranal ASM API direct JSON query over 2024-07-29T09:00:00Z to 2024-07-29T10:00:00Z; fields dimm_paranal-fwhm, mass_paranal-tau0, mass_paranal-tet0, mass_paranal-turb_speed. r0_500_m is derived from median seeing using Fried DOI 10.1364/JOSA.56.001372.",
+  "source_id": "ESO_ASM_PARANAL_20240729_0900_1000_MEDIAN",
+  "url": "https://www.eso.org/asm/api/?from=2024-07-29T09:00:00Z&to=2024-07-29T10:00:00Z&fields=dimm_paranal-fwhm,mass_paranal-tau0,mass_paranal-tet0,mass_paranal-turb_speed",
+  "access_time": "2026-06-22T17:10:44+00:00",
+  "fallback_used": false,
+  "units": {
+    "unix_time_median_ms": "ms",
+    "seeing_arcsec_500nm": "arcsec",
+    "r0_500_m": "m",
+    "tau0_s": "s",
+    "theta0_arcsec": "arcsec",
+    "turbulence_speed_ms": "m/s",
+    "sample_count": "count"
+  },
+  "measurements": {
+    "unix_time_median_ms": 1722245402000.0,
+    "seeing_arcsec_500nm": 0.871,
+    "r0_500_m": 0.11603886337543053,
+    "tau0_s": 0.003588,
+    "theta0_arcsec": 1.708,
+    "turbulence_speed_ms": 9.82,
+    "sample_count": 45
+  }
+}

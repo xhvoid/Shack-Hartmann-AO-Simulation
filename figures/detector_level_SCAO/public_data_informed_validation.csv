@@ -1,0 +1,7 @@
+check_name,passed,metric_value,tolerance,message,source_class,source_note
+nighttime_eso_asm_condition_present,True,4,1,At least one public-data-informed condition uses the nighttime ESO ASM cache.,direct_public_data,"Checks condition table provenance, not AO telemetry."
+catalog_photon_condition_present,True,2,1,At least one condition uses catalog-derived Pan-STARRS photon-budget input.,direct_public_data,"Checks photon-budget provenance, not WFS telemetry."
+scenario_metrics_finite,True,1,1,Public-data-informed scenario metrics are finite.,synthetic_assumed,AO loop metrics are synthetic fast-mode outputs.
+internal_ao_terms_not_direct_public,True,1,1,Scenario rows do not claim synthetic AO internals as direct public data.,synthetic_assumed,"DM, detector, interaction matrix, latency, NCPA, and registration remain synthetic proxies."
+jhk_svo_direct_caches_expected,True,1,1,J/H/K science metrics are configured to prefer SVO direct caches.,direct_public_data,SVO cache existence is verified by data-source tests and overview generation.
+runtime_under_30m,True,7.4542438631993715,30.0,Public-data-informed AO demo runtime stays below the documented 30 minute local-run limit.,package_reference,Runtime record written to figures/detector_level_SCAO/public_data_informed_runtime.csv and figures/detector_level_SCAO/public_data_informed_runtime.json.

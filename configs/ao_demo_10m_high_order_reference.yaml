@@ -1,0 +1,96 @@
+# 10 m high-order geometric reference config skeleton with units, source_class tags, and source notes.
+schema_version: 0.1
+preset_name: ao_demo_10m_high_order_reference
+preset_role: Narrative reference for existing notebook 09; not a full detector-level calibration target.
+
+telescope:
+  diameter_m: {value: 10.0, unit: m, source_class: synthetic_assumed, source_note: "10 m-class benchmark scale used in existing notebook 09."}
+  central_obstruction_ratio: {value: 0.0, unit: dimensionless, source_class: synthetic_assumed, source_note: "Notebook 09 clean-model pupil baseline; not instrument-specific."}
+  spider_width_m: {value: 0.0, unit: m, source_class: synthetic_assumed, source_note: "Notebook 09 clean-model pupil baseline."}
+  pupil_sampling_px: {value: 384, unit: pixel, source_class: synthetic_assumed, source_note: "Existing high-order notebook quality mode."}
+  pupil_rotation_deg: {value: 0.0, unit: deg, source_class: synthetic_assumed, source_note: "Clean geometric reference."}
+  pupil_shift_x_frac: {value: 0.0, unit: pupil_diameter_fraction, source_class: synthetic_assumed, source_note: "Clean geometric reference."}
+  pupil_shift_y_frac: {value: 0.0, unit: pupil_diameter_fraction, source_class: synthetic_assumed, source_note: "Clean geometric reference."}
+  science_field_angle_arcsec: {value: 0.0, unit: arcsec, source_class: synthetic_assumed, source_note: "On-axis PSF diagnostics only."}
+
+atmosphere:
+  seeing_arcsec_500nm: {value: 0.8, unit: arcsec, source_class: synthetic_literature_inspired, source_note: "Representative seeing scenario; r0 conversion uses Fried DOI 10.1364/JOSA.56.001372."}
+  r0_500_m: {value: 0.126, unit: m, source_class: synthetic_literature_inspired, source_note: "Approximate value from r0=0.98*lambda/seeing at 500 nm for 0.8 arcsec; recompute in future config loaders."}
+  outer_scale_L0_m: {value: 25.0, unit: m, source_class: synthetic_literature_inspired, source_note: "Typical finite outer-scale placeholder."}
+  tau0_s: {value: 0.003, unit: s, source_class: synthetic_literature_inspired, source_note: "Representative coherence time placeholder; Greenwood temporal reference DOI 10.1364/JOSA.67.000390."}
+  theta0_arcsec: {value: 2.0, unit: arcsec, source_class: synthetic_literature_inspired, source_note: "Representative isoplanatic-angle placeholder."}
+  seed: {value: 9009, unit: dimensionless, source_class: synthetic_assumed, source_note: "Deterministic high-order reference seed."}
+  layers:
+    - height_m: {value: 0.0, unit: m, source_class: synthetic_literature_inspired, source_note: "Single equivalent layer for geometric high-order reference."}
+      cn2_weight: {value: 1.0, unit: fraction, source_class: synthetic_literature_inspired, source_note: "Equivalent single-layer reference, not full atmosphere realism."}
+      wind_ms: {value: 10.0, unit: m/s, source_class: synthetic_assumed, source_note: "Synthetic frozen-flow shift for notebook 09 reference."}
+      wind_dir_deg: {value: 0.0, unit: deg, source_class: synthetic_assumed, source_note: "Synthetic wind direction measured counter-clockwise from +x."}
+
+wfs:
+  n_lenslets: {value: 48, unit: subapertures_across_pupil, source_class: synthetic_assumed, source_note: "Existing notebook 09 geometric SH-WFS sampling."}
+  wavelength_m: {value: 7.0e-7, unit: m, source_class: synthetic_assumed, source_note: "WFS reference wavelength placeholder."}
+  min_fill_fraction: {value: 0.35, unit: fraction, source_class: synthetic_assumed, source_note: "Geometric valid subaperture threshold."}
+  detector_pad_factor: {value: 0, unit: not_used, source_class: synthetic_assumed, source_note: "Detector-level spot modelling is intentionally disabled for 10 m reference."}
+  detector_window_px: {value: 0, unit: not_used, source_class: synthetic_assumed, source_note: "Detector-level spot modelling is intentionally disabled for 10 m reference."}
+  threshold_fraction: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "Detector-level thresholding is not used in notebook 09."}
+
+detector:
+  photons_per_subap_frame: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "10 m reference is geometric; detector noise belongs in notebook 11."}
+  qe: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "10 m reference is geometric; detector QE not used."}
+  throughput: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "10 m reference is geometric; throughput not used."}
+  read_noise_e: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "10 m reference is geometric; read noise not used."}
+  dark_e_per_s: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "10 m reference is geometric; dark current not used."}
+  background_e: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "10 m reference is geometric; detector background not used."}
+  full_well_e: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "10 m reference is geometric; full well not used."}
+  prnu_rms: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "10 m reference is geometric; PRNU not used."}
+  bad_pixel_fraction: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "10 m reference is geometric; bad pixels not used."}
+
+dm:
+  n_actuators_across: {value: 49, unit: actuators_across_pupil, source_class: synthetic_assumed, source_note: "Existing notebook 09 nominal actuator grid."}
+  influence_model: {value: gaussian, unit: model_name, source_class: synthetic_literature_inspired, source_note: "Gaussian influence baseline motivated by synthetic DM modelling references such as Berdeu arXiv:2306.10803."}
+  coupling_width_pitch: {value: 0.35, unit: actuator_pitch_fraction, source_class: synthetic_literature_inspired, source_note: "Synthetic literature-inspired Gaussian coupling width."}
+  stroke_limit_nm: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "Notebook 09 clean model does not enforce a realistic stroke budget."}
+  dead_actuator_fraction: {value: 0.0, unit: fraction, source_class: synthetic_assumed, source_note: "No dead actuators in notebook 09 reference."}
+
+registration:
+  shift_x_frac: {value: 0.0, unit: subaperture_pitch_fraction, source_class: synthetic_assumed, source_note: "Perfect registration in clean high-order reference."}
+  shift_y_frac: {value: 0.0, unit: subaperture_pitch_fraction, source_class: synthetic_assumed, source_note: "Perfect registration in clean high-order reference."}
+  rotation_deg: {value: 0.0, unit: deg, source_class: synthetic_assumed, source_note: "Perfect registration in clean high-order reference."}
+  magnification: {value: 1.0, unit: dimensionless, source_class: synthetic_assumed, source_note: "Perfect registration in clean high-order reference."}
+  shear: {value: 0.0, unit: dimensionless, source_class: synthetic_assumed, source_note: "Perfect registration in clean high-order reference."}
+
+control:
+  calibration_amplitude_rad: {value: 0.001, unit: rad_at_wfs_wavelength, source_class: synthetic_assumed, source_note: "Notebook 09 geometric poke amplitude reference."}
+  tsvd_rcond_initial: {value: 0.02, unit: dimensionless, source_class: synthetic_assumed, source_note: "Notebook 09 reference value only; must not be copied into notebook 11 without a fresh scan."}
+  gain_initial: {value: 0.65, unit: dimensionless, source_class: synthetic_assumed, source_note: "Notebook 09 reference gain only; not a detector-level 2 m default."}
+  leak: {value: 0.0, unit: dimensionless_per_frame, source_class: synthetic_assumed, source_note: "Clean reference controller."}
+  frame_rate_hz: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "Notebook 09 does not claim calibrated RTC timing."}
+  latency_frames: {value: 0, unit: frame, source_class: synthetic_assumed, source_note: "Notebook 09 clean model omits explicit latency."}
+  n_steps: {value: 0, unit: not_used, source_class: synthetic_assumed, source_note: "See notebook 09 for exact loop length."}
+  settling_frames: {value: 0, unit: not_used, source_class: synthetic_assumed, source_note: "See notebook 09 for exact settling definition."}
+
+science:
+  wavelengths_m: {J: 1.25e-6, H: 1.65e-6, K: 2.20e-6, unit: m, source_class: synthetic_assumed, source_note: "Monochromatic J/H/K fallback used for clean high-order PSF metrics."}
+  bandpass_mode: {value: monochromatic_fallback, unit: mode_name, source_class: synthetic_assumed, source_note: "SVO bandpass support is provided by the notebook-11 data-source module."}
+  science_pixel_scale_mas: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "PSF diagnostics use normalized FFT sampling in notebook 09."}
+  science_fov_arcsec: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "PSF diagnostics use normalized FFT sampling in notebook 09."}
+  exposure_s: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "No science detector exposure model in notebook 09."}
+
+source:
+  guide_star_mag_r: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "Notebook 09 clean model omits guide-star photon budget."}
+  spectrum_model: {value: not_used, unit: not_used, source_class: synthetic_assumed, source_note: "Notebook 09 clean model omits source spectrum."}
+  airmass: {value: 0.0, unit: not_used, source_class: synthetic_assumed, source_note: "Notebook 09 clean model omits airmass."}
+
+static_aberration:
+  ncpa_low_order_rms_nm: {value: 0.0, unit: nm_OPD, source_class: synthetic_assumed, source_note: "Notebook 09 clean model omits NCPA."}
+  ncpa_mid_spatial_rms_nm: {value: 0.0, unit: nm_OPD, source_class: synthetic_assumed, source_note: "Notebook 09 clean model omits NCPA."}
+  seed: {value: 0, unit: not_used, source_class: synthetic_assumed, source_note: "Notebook 09 clean model omits NCPA."}
+
+archive_validation:
+  external_archive_mode: {value: not_used, unit: mode_name, source_class: synthetic_assumed, source_note: "10 m reference is a clean geometric notebook 09 comparison, not an archive-validation workflow."}
+  public_frame_source: {value: not_selected, unit: dataset_name, source_class: synthetic_assumed, source_note: "No direct_public_data archive frame selected for the 10 m reference."}
+  comparison_metrics: {value: not_used, unit: metric_set, source_class: synthetic_assumed, source_note: "Archive output comparison is documented with notebook 11."}
+
+caching:
+  enabled: {value: false, unit: boolean, source_class: synthetic_assumed, source_note: "Notebook 09 currently does not use this cache schema."}
+  cache_dir: {value: data/cache, unit: path, source_class: synthetic_assumed, source_note: "Reserved for future generated caches."}

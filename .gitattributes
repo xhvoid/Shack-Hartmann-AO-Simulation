@@ -1,0 +1,11 @@
+# The reusable numerical code lives in src/. Notebooks are narrative experiment
+# logs / documentation, and figures and reference metrics are generated outputs,
+# so they should not dominate the GitHub language statistics.
+# Treat every notebook as documentation, wherever it lives.
+*.ipynb linguist-documentation
+notebooks/*.ipynb linguist-documentation
+figures/** linguist-generated
+data/reference_metrics/** linguist-generated
+
+# PDFs are binary report artifacts and should not be diffed as text.
+*.pdf binary
