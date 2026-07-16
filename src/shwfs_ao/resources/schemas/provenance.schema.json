@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shwfs-ao.invalid/schemas/provenance.schema.json",
+  "title": "SHWFS-AO provenance record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_name",
+    "schema_version",
+    "source_class",
+    "note",
+    "source_id",
+    "url",
+    "access_time",
+    "fallback_used",
+    "references"
+  ],
+  "properties": {
+    "schema_name": {"const": "shwfs_ao.provenance"},
+    "schema_version": {"const": 2},
+    "source_class": {
+      "enum": [
+        "direct_public_data",
+        "literature_derived",
+        "synthetic_literature_inspired",
+        "synthetic_assumed",
+        "package_reference"
+      ]
+    },
+    "note": {"type": "string", "minLength": 1},
+    "source_id": {"type": ["string", "null"]},
+    "url": {"type": ["string", "null"]},
+    "access_time": {"type": ["string", "null"]},
+    "fallback_used": {"type": "boolean"},
+    "references": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  }
+}

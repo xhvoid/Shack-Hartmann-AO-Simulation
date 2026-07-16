@@ -2,7 +2,7 @@
 
 # Atmosphere Profile Builder Notes
 
-The atmosphere builder adds `src/atmosphere_profiles.py`, which consumes the literature-profile object and produces an `AtmosphereConfig` shared across the simulation modules:
+The atmosphere builder is currently implemented in `src/shwfs_ao/legacy/atmosphere_profiles.py` and re-exported through the installed `atmosphere_profiles` compatibility module. It consumes the literature-profile object and produces an `AtmosphereConfig` shared across the simulation modules:
 
 ```text
 layers: height_m, cn2_weight, wind_ms, wind_dir_deg

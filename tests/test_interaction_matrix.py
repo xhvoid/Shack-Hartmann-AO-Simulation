@@ -1,5 +1,7 @@
 # Tests verify detector-level DM poke-matrix shape, finite/non-negative SVD singular values, TSVD reconstruction, and fresh rcond scan diagnostics.
 
+from dataclasses import replace
+
 import numpy as np
 import pytest
 
@@ -9,6 +11,7 @@ from interaction_matrix import (
     InteractionMatrixError,
     PokeMatrixConfig,
     build_detector_dm_poke_matrix,
+    choose_rcond_from_singular_values,
     expand_controlled_commands,
     kept_modes_for_rcond,
     noise_amplification_proxy,
@@ -94,6 +97,74 @@ def test_svd_singular_values_are_finite_nonnegative_and_reported(interaction_mat
     assert summary["matrix_unit"] == "detector_px / nm_OPD_equivalent"
     assert summary["noise_amplification_proxy"] > 0.0
     assert len(poke.config_hash) == 64
+    assert poke.calibration_settings["hash_schema"] == 2
+    assert set(poke.calibration_settings["calibration_state"]["pupil_mask"]) == {
+        "shape",
+        "dtype",
+        "sha256",
+    }
+    assert set(poke.calibration_settings["response_state"]["poke_matrix"]) == {
+        "shape",
+        "dtype",
+        "sha256",
+    }
+
+
+def test_poke_hash_is_reproducible_and_tracks_response_relevant_state(interaction_matrix_case):
+    calibration, dm_model, poke = interaction_matrix_case
+    config = PokeMatrixConfig(
+        calibration_amplitude_nm=12.0,
+        rcond_scan_grid=(1.0e-6, 1.0e-5, 1.0e-4, 1.0e-3, 1.0e-2),
+        target_kept_mode_fraction=0.85,
+        source_class="synthetic_assumed",
+        source_note="Unit-test central-difference poke configuration.",
+    )
+
+    identical = build_detector_dm_poke_matrix(calibration, dm_model, config)
+    shifted_reference = replace(
+        calibration,
+        reference_centroids_px=calibration.reference_centroids_px
+        + np.array([1.0e-3, 0.0]),
+    )
+    changed_reference = build_detector_dm_poke_matrix(shifted_reference, dm_model, config)
+    changed_dm = replace(
+        dm_model,
+        influence_functions=dm_model.influence_functions * 1.001,
+    )
+    changed_influence = build_detector_dm_poke_matrix(calibration, changed_dm, config)
+
+    assert identical.config_hash == poke.config_hash
+    assert changed_reference.config_hash != poke.config_hash
+    assert changed_influence.config_hash != poke.config_hash
+
+
+def test_explicit_controlled_actuator_order_is_preserved_by_canonical_adapter(
+    interaction_matrix_case,
+):
+    calibration, dm_model, full_poke = interaction_matrix_case
+    controlled = (2, 0)
+    config = PokeMatrixConfig(
+        calibration_amplitude_nm=12.0,
+        rcond_scan_grid=(1.0e-6, 1.0e-5, 1.0e-4, 1.0e-3, 1.0e-2),
+        target_kept_mode_fraction=0.85,
+        controlled_actuator_indices=controlled,
+        source_class="synthetic_assumed",
+        source_note="Reordered legacy actuator-subset adapter fixture.",
+    )
+
+    reordered = build_detector_dm_poke_matrix(calibration, dm_model, config)
+
+    np.testing.assert_array_equal(reordered.controlled_actuator_indices, controlled)
+    np.testing.assert_array_equal(
+        reordered.valid_subaperture_mask,
+        full_poke.valid_subaperture_mask,
+    )
+    np.testing.assert_allclose(
+        reordered.poke_matrix,
+        full_poke.poke_matrix[:, controlled],
+        rtol=2.0e-13,
+        atol=2.0e-15,
+    )
 
 
 def test_noise_amplification_proxy_grows_as_rcond_decreases(interaction_matrix_case):
@@ -168,6 +239,56 @@ def test_tikhonov_placeholder_returns_finite_commands(interaction_matrix_case):
     assert result.source_class == poke.source_class
     assert np.all(np.isfinite(result.commands_nm))
     assert np.isfinite(result.residual_norm_px)
+
+
+@pytest.mark.parametrize("alpha", [0.0, 1.0e-12, 1.0e-3])
+def test_interaction_tikhonov_handles_rank_deficient_matrix(interaction_matrix_case, alpha):
+    _, _, poke = interaction_matrix_case
+    matrix = np.array(
+        [
+            [1.0, 1.0],
+            [2.0, 2.0],
+            [3.0, 3.0],
+            [4.0, 4.0],
+        ]
+    )
+    singular_values = np.linalg.svd(matrix, compute_uv=False)
+    rank_deficient = replace(
+        poke,
+        poke_matrix=matrix,
+        singular_values=singular_values,
+        kept_modes=1,
+        rank=1,
+        controlled_actuator_indices=np.array([0, 1]),
+        valid_subaperture_mask=np.array([True, True]),
+        row_valid=np.ones(4, dtype=bool),
+    )
+    measurement = matrix @ np.array([1.0, 1.0])
+
+    result = tikhonov_reconstruct_commands(measurement, rank_deficient, alpha=alpha)
+
+    assert np.all(np.isfinite(result.commands_nm))
+    assert matrix @ result.commands_nm == pytest.approx(measurement, rel=1.0e-6, abs=1.0e-9)
+    assert result.commands_nm[0] == pytest.approx(result.commands_nm[1], rel=1.0e-6, abs=1.0e-9)
+
+
+def test_impossible_minimum_kept_modes_request_raises():
+    with pytest.raises(InteractionMatrixError, match="exceeds numerical rank"):
+        choose_rcond_from_singular_values(
+            singular_values=(4.0, 1.0, 0.0),
+            rcond_grid=(1.0e-8, 1.0e-4),
+            minimum_kept_modes=3,
+        )
+
+
+def test_rcond_grid_that_cannot_meet_lower_bound_raises():
+    with pytest.raises(InteractionMatrixError, match="No rcond_grid value"):
+        choose_rcond_from_singular_values(
+            singular_values=(4.0, 1.0, 0.1),
+            rcond_grid=(0.5, 0.75),
+            target_kept_mode_fraction=1.0,
+            minimum_kept_modes=1,
+        )
 
 
 def test_rejects_poke_amplitude_that_would_be_clipped(interaction_matrix_case):

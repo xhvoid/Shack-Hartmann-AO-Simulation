@@ -58,6 +58,27 @@ def test_zero_phase_centroid_residual_is_below_gate():
     assert residual_rms_px < 0.05
 
 
+@pytest.mark.parametrize(
+    "effect",
+    [
+        {"read_noise_e": 1.0},
+        {"dark_e_per_s": 1.0},
+        {"background_e_per_pixel_frame": 1.0},
+        {"prnu_rms": 0.01},
+        {"full_well_e": 100.0},
+        {"bad_pixel_mask": np.zeros((3, 3), dtype=bool)},
+    ],
+)
+def test_none_photon_detector_retains_historical_effect_configuration(effect):
+    config = DetectorConfig(photons_per_subap_frame=None, **effect)
+    field, expected = next(iter(effect.items()))
+    actual = getattr(config, field)
+    if isinstance(expected, np.ndarray):
+        np.testing.assert_array_equal(actual, expected)
+    else:
+        assert actual == expected
+
+
 def test_known_phase_tilt_has_expected_sign_and_linear_response():
     calibration = build_detector_shwfs_calibration(
         geometry=_test_geometry(),
@@ -79,6 +100,39 @@ def test_known_phase_tilt_has_expected_sign_and_linear_response():
     assert mean_x_small > 0.0
     assert mean_y_small < 0.0
     assert mean_x_large / mean_x_small == pytest.approx(2.0, rel=0.15)
+
+
+def test_uniform_tilt_uses_one_detector_pixel_scale_for_edge_and_full_lenslets():
+    geometry = ShwfsGeometryConfig(
+        telescope_diameter_m=2.0,
+        n_pupil_pixels=64,
+        n_lenslets=6,
+        min_fill_fraction=0.35,
+        pad_factor=4,
+        detector_window_px=32,
+    )
+    calibration = build_detector_shwfs_calibration(
+        geometry=geometry,
+        detector=DetectorConfig(photons_per_subap_frame=None),
+    )
+    phase = phase_tilt_map_rad(calibration, tilt_x_rad_per_m=0.05)
+
+    measurement = measure_detector_shwfs(
+        phase,
+        calibration,
+        include_noise=False,
+        return_spots=True,
+    )
+
+    x_shifts = measurement.shifts_px[:, 0]
+    assert measurement.spots is not None
+    assert len({spot.shape for spot in measurement.spots}) == 1
+    assert np.all(x_shifts > 0.0)
+    # The residual spread is the coarse pupil-sampling error at 64 pixels. The
+    # former per-bounding-box detector scale produced a roughly 1.47 max/min
+    # ratio for this same case; a fixed FFT scale keeps it below 1.12.
+    assert np.max(x_shifts) / np.min(x_shifts) < 1.12
+    assert np.max(np.abs(measurement.shifts_px[:, 1])) < 0.03 * np.mean(x_shifts)
 
 
 def test_detector_tilt_response_matrix_shape_and_finite_rows():

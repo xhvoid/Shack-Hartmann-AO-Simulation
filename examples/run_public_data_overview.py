@@ -5,8 +5,8 @@ from __future__ import annotations
 import csv
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
-import sys
 
 import matplotlib
 
@@ -17,16 +17,17 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
 
 from atmosphere_profiles import atmosphere_config_from_eso_asm_snapshot
 from data_sources import load_eso_asm_snapshot, load_svo_filter_curve
+from shwfs_ao.io.artifacts import write_csv_rows
+from shwfs_ao.io.resources import open_text_resource
 
 
-PUBLIC = ROOT / "data" / "public"
-GENERATED = ROOT / "figures" / "detector_level_SCAO"
+PUBLIC = Path("data/public")
+GENERATED = Path(
+    os.environ.get("AO_DEMO_OUTPUT_DIR", ROOT / "figures" / "detector_level_SCAO")
+)
 
 SVO_FILTER_PATHS = {
     "J": PUBLIC / "svo_2mass_j_direct.csv",
@@ -76,7 +77,7 @@ def main() -> None:
     tmass_rows = _read_commented_csv(TWOMASS_PATH)
 
     photon_rows = _build_photon_budget_rows(ps1_rows)
-    _write_csv(GENERATED / "public_data_photon_budget.csv", photon_rows)
+    write_csv_rows(GENERATED / "public_data_photon_budget.csv", photon_rows)
     _write_summary_csv(
         GENERATED / "public_data_summary.csv",
         filter_curves=filter_curves,
@@ -91,16 +92,16 @@ def main() -> None:
     _plot_filter_curves(filter_curves)
     _plot_photon_budget(photon_rows)
 
-    print(f"Wrote {(GENERATED / 'public_data_overview.png').relative_to(ROOT)}")
-    print(f"Wrote {(GENERATED / 'public_filter_curves_jhk.png').relative_to(ROOT)}")
-    print(f"Wrote {(GENERATED / 'public_data_photon_budget.png').relative_to(ROOT)}")
-    print(f"Wrote {(GENERATED / 'public_data_summary.csv').relative_to(ROOT)}")
-    print(f"Wrote {(GENERATED / 'public_data_photon_budget.csv').relative_to(ROOT)}")
+    print(f"Wrote {GENERATED / 'public_data_overview.png'}")
+    print(f"Wrote {GENERATED / 'public_filter_curves_jhk.png'}")
+    print(f"Wrote {GENERATED / 'public_data_photon_budget.png'}")
+    print(f"Wrote {GENERATED / 'public_data_summary.csv'}")
+    print(f"Wrote {GENERATED / 'public_data_photon_budget.csv'}")
 
 
 def _read_commented_csv(path: Path) -> list[dict[str, str]]:
     data_lines: list[str] = []
-    with path.open(newline="", encoding="utf-8") as handle:
+    with open_text_resource(path, newline="", encoding="utf-8") as handle:
         for line in handle:
             stripped = line.strip()
             if not stripped or stripped.startswith("#"):
@@ -407,15 +408,6 @@ def _minutes_from_unix_ms(values_ms: list[float]) -> np.ndarray:
     return (np.asarray(values_ms) - first) / 60_000.0
 
 
-def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:
-    if not rows:
-        return
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
-
-
 def _effective_wavelength_um(curve) -> float:
     transmission = np.asarray(curve.transmission)
     wavelength_um = np.asarray(curve.wavelength_m) * 1.0e6
@@ -480,7 +472,7 @@ def _write_summary_csv(path: Path, *, filter_curves, asm_snapshot, asm_config, p
             }
         )
     rows[2:2] = band_rows
-    _write_csv(path, rows)
+    write_csv_rows(path, rows)
 
 
 if __name__ == "__main__":

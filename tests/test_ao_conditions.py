@@ -18,7 +18,8 @@ from data_sources import load_eso_asm_snapshot
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ASM_PATH = ROOT / "data" / "public" / "eso_asm_paranal_20240729_0300_0800_snapshot.json"
+DATA_ROOT = ROOT / "src" / "shwfs_ao" / "resources"
+ASM_PATH = DATA_ROOT / "public" / "eso_asm_paranal_20240729_0300_0800_snapshot.json"
 PHOTON_BUDGET_PATH = ROOT / "figures" / "detector_level_SCAO" / "public_data_photon_budget.csv"
 RUNTIME_PATH = ROOT / "figures" / "detector_level_SCAO" / "public_data_informed_runtime.csv"
 VALIDATION_PATH = ROOT / "figures" / "detector_level_SCAO" / "public_data_informed_validation.csv"

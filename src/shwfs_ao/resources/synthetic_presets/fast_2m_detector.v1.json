@@ -1,0 +1,114 @@
+{
+  "schema_name": "shwfs_ao.system_profile",
+  "schema_version": 1,
+  "profile_name": "fast_2m_detector",
+  "profile_version": 1,
+  "baseline_rationale": "Canonical version of the frozen fast 2 m detector-level numerical scale: 52 pupil pixels, 5 lenslets, 5 actuators across, and 12 loop frames. Observing conditions are held equal to the portfolio and research v1 profiles.",
+  "provenance": {
+    "schema_name": "shwfs_ao.provenance",
+    "schema_version": 2,
+    "source_class": "synthetic_assumed",
+    "note": "Reviewed AO-REF-011 fast detector-level SCAO system profile; synthetic engineering configuration, not measured observatory telemetry.",
+    "source_id": "shwfs_ao.system_profile.fast_2m_detector.v1",
+    "url": null,
+    "access_time": null,
+    "fallback_used": false,
+    "references": [
+      "AO-REF-011",
+      "IntegrationConfig.from_mode('fast')",
+      "notebooks/11_full_detector_level_2m_scao_demo.ipynb"
+    ]
+  },
+  "config": {
+    "backend": "native",
+    "wfs_model": "detector_level",
+    "atmosphere_model": "native_frozen_flow",
+    "telescope_diameter_m": 2.0,
+    "pupil_pixels": 52,
+    "lenslets_across": 5,
+    "actuators_across": 5,
+    "wfs_wavelength_m": 7e-7,
+    "science_wavelengths_m": [1.25e-6, 1.65e-6, 2.2e-6],
+    "atmosphere": {
+      "r0_m": 0.1263371938263465,
+      "r0_reference_wavelength_m": 5e-7,
+      "outer_scale_m": 25.0,
+      "wind_m_per_s": [10.0, 0.0],
+      "target_rms_opd_m": 2.6e-7,
+      "normalize_rms": true
+    },
+    "detector": {
+      "enabled": true,
+      "photons_per_subap_frame": 8000.0,
+      "read_noise_e": 1.0,
+      "dark_e_per_s": 0.0,
+      "background_e_per_pixel_frame": 0.0,
+      "full_well_e": null,
+      "qe": 1.0,
+      "prnu_rms": 0.0,
+      "exposure_s": 0.001,
+      "prnu_mode": "per_frame_legacy",
+      "bad_pixel_fraction": 0.0
+    },
+    "wfs": {
+      "min_fill_fraction": 0.35,
+      "pad_factor": 3,
+      "detector_window_px": 18,
+      "centroid_estimator": "center_of_gravity",
+      "threshold_fraction": 0.0,
+      "subtract_minimum": false,
+      "min_flux_e": 30.0,
+      "min_peak_snr": 3.0,
+      "max_centroid_sigma_px": 0.5,
+      "max_window_clipping_fraction": 0.15,
+      "central_obstruction_ratio": 0.0,
+      "spider_width_m": 0.0
+    },
+    "dm": {
+      "influence_model": "gaussian",
+      "coupling_width_pitch": 0.4,
+      "stroke_limit_opd_m": 1e-6,
+      "include_edge_actuators": true,
+      "actuator_margin_fraction": 0.0,
+      "dead_actuator_indices": [],
+      "stuck_actuator_indices": [],
+      "stuck_command_opd_m": 0.0
+    },
+    "calibration": {
+      "source": "build",
+      "method": "central",
+      "probe_kind": "dm_actuator",
+      "amplitude_m": 1e-8,
+      "include_noise": false,
+      "repeats": 1,
+      "resource_name": null
+    },
+    "reconstructor": {
+      "kind": "tsvd",
+      "rcond": 1e-8,
+      "alpha": null,
+      "min_valid_fraction": 1.0,
+      "min_rank": 1,
+      "max_cached_masks": 32
+    },
+    "command_projector": {
+      "kind": "identity",
+      "mapping_resource": null
+    },
+    "controller": {
+      "n_steps": 12,
+      "gain": 0.32,
+      "leak": 0.02,
+      "latency_frames": 0,
+      "frame_rate_hz": 1000.0,
+      "include_noise": false
+    },
+    "science": {
+      "psf_pad_factor": 3
+    },
+    "random": {
+      "root_seed": 1,
+      "derivation_scheme_id": "shwfs_ao.random.sha256-json-pcg64-v1"
+    }
+  }
+}

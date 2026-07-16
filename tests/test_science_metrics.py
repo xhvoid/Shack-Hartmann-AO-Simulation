@@ -26,6 +26,7 @@ from synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build
 
 
 ROOT = Path(__file__).resolve().parents[1]
+DATA_ROOT = ROOT / "src" / "shwfs_ao" / "resources"
 
 
 @pytest.fixture(scope="module")
@@ -148,8 +149,112 @@ def test_marechal_matches_peak_strehl_for_small_residual_opd():
     assert metrics.marechal_abs_error < 0.03
 
 
+def test_peak_centered_metrics_are_invariant_to_integer_sampled_tip_tilt():
+    n = 64
+    y, x = np.indices((n, n))
+    xn = (x - n // 2) / float(n)
+    yn = (y - n // 2) / float(n)
+    mask = xn**2 + yn**2 <= 0.24
+    wavelength_m = 1.0e-6
+    wavelength_nm = wavelength_m * 1.0e9
+    ideal_opd_nm = np.where(mask, 0.0, np.nan)
+    # Three cycles across the unpadded array shift the padded PSF by an exact
+    # integer number of samples without changing its shape.
+    tilted_opd_nm = np.where(mask, wavelength_nm * 3.0 * xn, np.nan)
+
+    ideal = science_psf_metrics_from_opd(
+        ideal_opd_nm,
+        mask,
+        wavelength_m=wavelength_m,
+        telescope_diameter_m=2.0,
+        pad_factor=4,
+    )
+    tilted = science_psf_metrics_from_opd(
+        tilted_opd_nm,
+        mask,
+        wavelength_m=wavelength_m,
+        telescope_diameter_m=2.0,
+        pad_factor=4,
+    )
+
+    assert tilted.strehl_peak == pytest.approx(ideal.strehl_peak, abs=1.0e-12)
+    assert tilted.fwhm_px == pytest.approx(ideal.fwhm_px, abs=1.0e-12)
+    assert tilted.ee50_px == pytest.approx(ideal.ee50_px, abs=1.0e-12)
+    assert tilted.ee80_px == pytest.approx(ideal.ee80_px, abs=1.0e-12)
+    assert tilted.halo_fraction == pytest.approx(ideal.halo_fraction, abs=1.0e-12)
+
+
+def test_band_quadrature_is_invariant_to_benign_nonuniform_resampling():
+    uniform_wavelengths = np.linspace(1.2e-6, 1.8e-6, 61)
+    nonuniform_wavelengths = np.concatenate(
+        (
+            np.linspace(1.2e-6, 1.45e-6, 51, endpoint=False),
+            np.linspace(1.45e-6, 1.8e-6, 22),
+        )
+    )
+    uniform = ScienceBandpass(
+        "uniform_H",
+        uniform_wavelengths,
+        np.ones_like(uniform_wavelengths),
+        source_note="Uniform flat-band quadrature regression.",
+    )
+    nonuniform = ScienceBandpass(
+        "nonuniform_H",
+        nonuniform_wavelengths,
+        np.ones_like(nonuniform_wavelengths),
+        source_note="Nonuniform flat-band quadrature regression.",
+    )
+    n = 48
+    coords = np.linspace(-1.0, 1.0, n)
+    x, y = np.meshgrid(coords, coords)
+    mask = x**2 + y**2 <= 1.0
+    opd_nm = np.where(mask, 90.0 * (x**2 - y**2), np.nan)
+
+    uniform_metrics = band_averaged_psf_metrics_from_opd(
+        opd_nm,
+        mask,
+        uniform,
+        telescope_diameter_m=2.0,
+        pad_factor=3,
+    )
+    nonuniform_metrics = band_averaged_psf_metrics_from_opd(
+        opd_nm,
+        mask,
+        nonuniform,
+        telescope_diameter_m=2.0,
+        pad_factor=3,
+    )
+
+    assert uniform.effective_wavelength_m == pytest.approx(1.5e-6, abs=1.0e-15)
+    assert nonuniform.effective_wavelength_m == pytest.approx(1.5e-6, abs=1.0e-15)
+    assert nonuniform_metrics.strehl_peak == pytest.approx(uniform_metrics.strehl_peak, rel=2.0e-4)
+    assert nonuniform_metrics.ee80_lambda_over_d == pytest.approx(
+        uniform_metrics.ee80_lambda_over_d,
+        rel=2.0e-4,
+    )
+
+
+@pytest.mark.parametrize("invalid_value", [np.nan, np.inf])
+def test_science_metrics_reject_nonfinite_opd_inside_pupil(invalid_value):
+    n = 32
+    coords = np.linspace(-1.0, 1.0, n)
+    x, y = np.meshgrid(coords, coords)
+    mask = x**2 + y**2 <= 1.0
+    opd_nm = np.where(mask, 0.0, np.nan)
+    inside_y, inside_x = np.argwhere(mask)[0]
+    opd_nm[inside_y, inside_x] = invalid_value
+
+    with pytest.raises(AODiagnosticsError, match="Non-finite values inside"):
+        science_psf_metrics_from_opd(
+            opd_nm,
+            mask,
+            wavelength_m=1.65e-6,
+            telescope_diameter_m=2.0,
+        )
+
+
 def test_svo_style_h_band_metrics_are_finite():
-    curve = load_svo_filter_curve(ROOT / "data" / "samples" / "svo_2mass_h_sample.csv")
+    curve = load_svo_filter_curve(DATA_ROOT / "samples" / "svo_2mass_h_sample.csv")
     band = bandpass_from_filter_curve(curve, name="2MASS.H")
     n = 64
     coords = np.linspace(-1.0, 1.0, n)

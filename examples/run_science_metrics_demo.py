@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import matplotlib
@@ -14,9 +13,6 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
 
 from ao_diagnostics import (
     bandpass_from_filter_curve,
@@ -25,6 +21,7 @@ from ao_diagnostics import (
     top_hat_bandpass,
 )
 from data_sources import load_svo_filter_curve
+from shwfs_ao.io.resources import resource_exists
 
 
 def _demo_cases(n_pixels: int = 96) -> tuple[dict[str, np.ndarray], np.ndarray]:
@@ -91,13 +88,13 @@ def main() -> None:
 
 def _build_jhk_bandpasses():
     specs = (
-        ("J", ROOT / "data" / "public" / "svo_2mass_j_direct.csv", (1.10e-6, 1.40e-6)),
-        ("H", ROOT / "data" / "public" / "svo_2mass_h_direct.csv", (1.50e-6, 1.80e-6)),
-        ("K", ROOT / "data" / "public" / "svo_2mass_ks_direct.csv", (2.00e-6, 2.35e-6)),
+        ("J", Path("data/public/svo_2mass_j_direct.csv"), (1.10e-6, 1.40e-6)),
+        ("H", Path("data/public/svo_2mass_h_direct.csv"), (1.50e-6, 1.80e-6)),
+        ("K", Path("data/public/svo_2mass_ks_direct.csv"), (2.00e-6, 2.35e-6)),
     )
     bandpasses = []
     for name, public_path, fallback_range in specs:
-        fallback_path = ROOT / "data" / "samples" / "svo_2mass_h_sample.csv" if name == "H" else None
+        fallback_path = Path("data/samples/svo_2mass_h_sample.csv") if name == "H" else None
         path = _first_existing_path(public_path, fallback_path) if fallback_path is not None else _first_existing_path(public_path)
         if path is not None:
             bandpasses.append(bandpass_from_filter_curve(load_svo_filter_curve(path), name=name))
@@ -114,7 +111,7 @@ def _build_jhk_bandpasses():
 
 def _first_existing_path(*paths: Path | None) -> Path | None:
     for path in paths:
-        if path is not None and path.exists():
+        if path is not None and resource_exists(path):
             return path
     return None
 

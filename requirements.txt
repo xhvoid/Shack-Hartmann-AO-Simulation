@@ -1,5 +1,6 @@
 # Runtime dependencies only. Notebook, test, and documentation tools are
 # declared as optional extras in pyproject.toml ([notebooks], [test], [docs]).
+# Reproducible CI/test installs use constraints/py310.txt or py314.txt.
 numpy>=1.24
 scipy>=1.10
 matplotlib>=3.7

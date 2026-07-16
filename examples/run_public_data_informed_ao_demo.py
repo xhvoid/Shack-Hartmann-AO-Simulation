@@ -15,9 +15,8 @@ from __future__ import annotations
 
 import csv
 from datetime import datetime, timezone
-import json
+import os
 from pathlib import Path
-import sys
 import time
 
 import matplotlib
@@ -28,18 +27,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
 
 from ao_conditions import condition_rows, default_observing_conditions
 from ao_error_budget import ScenarioConfig, run_error_budget_scenario
 from ao_integration import IntegrationConfig, build_integration_system, build_jhk_bandpasses, run_integration
 from data_sources import load_eso_asm_snapshot
+from shwfs_ao.io.artifacts import (
+    RUNTIME_V2_HEADER,
+    write_csv_rows,
+    write_runtime_artifacts,
+)
+from shwfs_ao.io.resources import resource_exists
 
 
-GENERATED = ROOT / "figures" / "detector_level_SCAO"
-PUBLIC = ROOT / "data" / "public"
+GENERATED = Path(os.environ.get("AO_DEMO_OUTPUT_DIR", ROOT / "figures" / "detector_level_SCAO"))
+PUBLIC = Path("data/public")
 PUBLIC_SUMMARY = GENERATED / "public_data_summary.csv"
 PUBLIC_PHOTON_BUDGET = GENERATED / "public_data_photon_budget.csv"
 ESO_ASM_SNAPSHOT_PATH = PUBLIC / "eso_asm_paranal_20240729_0300_0800_snapshot.json"
@@ -119,24 +121,29 @@ def main() -> None:
         )
 
     csv_path = GENERATED / "public_data_informed_ao_photon_scan.csv"
-    _write_csv(csv_path, rows)
+    write_csv_rows(csv_path, rows)
     png_path = GENERATED / "public_data_informed_ao_photon_scan.png"
     _plot(rows, png_path)
 
     condition_csv = GENERATED / "public_data_informed_conditions.csv"
     condition_table = condition_rows(conditions)
-    _write_csv(condition_csv, condition_table)
+    write_csv_rows(condition_csv, condition_table)
     scenario_rows = _run_conditioned_scenarios(conditions)
     scenario_csv = GENERATED / "public_data_informed_error_budget.csv"
-    _write_csv(scenario_csv, scenario_rows)
+    write_csv_rows(scenario_csv, scenario_rows)
     scenario_png = GENERATED / "public_data_informed_error_budget.png"
     _plot_conditioned_scenarios(scenario_rows, scenario_png)
     validation_rows = _build_validation_rows(scenario_rows, condition_table)
     runtime_row = _build_runtime_row(run_started_utc, run_started_perf)
     runtime_csv = GENERATED / "public_data_informed_runtime.csv"
     runtime_json = GENERATED / "public_data_informed_runtime.json"
-    _write_csv(runtime_csv, [runtime_row])
-    _write_json(runtime_json, runtime_row)
+    write_runtime_artifacts(
+        runtime_row,
+        output_dir=GENERATED,
+        prefix="public_data_informed",
+        formats=("csv", "json"),
+        fieldnames=RUNTIME_V2_HEADER,
+    )
     validation_rows.append(
         {
             "check_name": "runtime_under_30m",
@@ -145,23 +152,23 @@ def main() -> None:
             "tolerance": runtime_row["runtime_limit_minutes"],
             "message": "Public-data-informed AO demo runtime stays below the documented 30 minute local-run limit.",
             "source_class": "package_reference",
-            "source_note": f"Runtime record written to {runtime_csv.relative_to(ROOT)} and {runtime_json.relative_to(ROOT)}.",
+            "source_note": f"Runtime record written to {_display_path(runtime_csv)} and {_display_path(runtime_json)}.",
         }
     )
     validation_csv = GENERATED / "public_data_informed_validation.csv"
-    _write_csv(validation_csv, validation_rows)
+    write_csv_rows(validation_csv, validation_rows)
     validation_png = GENERATED / "public_data_informed_validation.png"
     _plot_validation_rows(validation_rows, validation_png)
 
-    print(f"Wrote {png_path.relative_to(ROOT)}")
-    print(f"Wrote {csv_path.relative_to(ROOT)}")
-    print(f"Wrote {condition_csv.relative_to(ROOT)}")
-    print(f"Wrote {scenario_png.relative_to(ROOT)}")
-    print(f"Wrote {scenario_csv.relative_to(ROOT)}")
-    print(f"Wrote {runtime_csv.relative_to(ROOT)}")
-    print(f"Wrote {runtime_json.relative_to(ROOT)}")
-    print(f"Wrote {validation_png.relative_to(ROOT)}")
-    print(f"Wrote {validation_csv.relative_to(ROOT)}")
+    print(f"Wrote {_display_path(png_path)}")
+    print(f"Wrote {_display_path(csv_path)}")
+    print(f"Wrote {_display_path(condition_csv)}")
+    print(f"Wrote {_display_path(scenario_png)}")
+    print(f"Wrote {_display_path(scenario_csv)}")
+    print(f"Wrote {_display_path(runtime_csv)}")
+    print(f"Wrote {_display_path(runtime_json)}")
+    print(f"Wrote {_display_path(validation_png)}")
+    print(f"Wrote {_display_path(validation_csv)}")
     print(
         f"Runtime: {float(runtime_row['runtime_minutes']):.2f} min "
         f"(limit {float(runtime_row['runtime_limit_minutes']):.1f} min, "
@@ -193,18 +200,11 @@ def _read_metric_rows(path: Path) -> dict[str, dict[str, str]]:
     return {row["metric"]: row for row in rows}
 
 
-def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:
-    if not rows:
-        raise RuntimeError(f"Cannot write empty CSV: {path}")
-    fieldnames = list(rows[0])
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
-        writer.writeheader()
-        writer.writerows(rows)
-
-
-def _write_json(path: Path, row: dict[str, object]) -> None:
-    path.write_text(json.dumps(row, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
 
 
 def _build_runtime_row(run_started_utc: datetime, run_started_perf: float) -> dict[str, object]:
@@ -253,7 +253,9 @@ def _run_conditioned_scenarios(conditions) -> list[dict[str, object]]:
         # its phase sequence as an "ESO-ASM-conditioned synthetic phase sequence"
         # (never a "measured wavefront sequence"). The atmosphere amplitude is a
         # labelled f(seeing) engineering proxy anchored to the nighttime ESO ASM
-        # cache; the wavefront itself is synthetic, not telemetry.
+        # cache. Seeing/r0 set the strength proxy, while tau0 and effective
+        # turbulence speed drive its seconds-based temporal evolution; the
+        # wavefront itself is synthetic, not telemetry.
         asm_conditioned = "ESO ASM" in condition.atmosphere_source
         phase_sequence_provenance = (
             "ESO-ASM-conditioned synthetic phase sequence"
@@ -297,9 +299,16 @@ def _run_conditioned_scenarios(conditions) -> list[dict[str, object]]:
             misregistration_magnification=float(condition.misregistration_magnification),
             misregistration_shear=float(condition.misregistration_shear),
             ncpa_rms_nm=float(condition.ncpa_rms_nm),
-            seed=101 + len(rows),
+            tau0_s=float(condition.tau0_s),
+            turbulence_speed_m_s=float(condition.turbulence_speed_m_s),
+            phase_seed=101,
+            detector_noise_seed=211,
+            ncpa_seed=307,
             source_class=condition.source_class,
-            source_note=condition.source_note,
+            source_note=(
+                f"{condition.source_note} Seeing/r0 set phase_amplitude_nm; "
+                "tau0 and effective turbulence speed set the temporal proxy."
+            ),
         )
         result = run_error_budget_scenario(
             system.calibration,
@@ -372,7 +381,7 @@ def _build_validation_rows(scenario_rows: list[dict[str, object]], condition_row
     )
     provenance_ok = all(str(row["source_class"]) in {"synthetic_assumed", "synthetic_literature_inspired"} for row in scenario_rows)
     jhk_direct = all(
-        (PUBLIC / filename).exists()
+        resource_exists(PUBLIC / filename)
         for filename in ("svo_2mass_j_direct.csv", "svo_2mass_h_direct.csv", "svo_2mass_ks_direct.csv")
     )
     return [

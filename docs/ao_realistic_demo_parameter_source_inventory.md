@@ -1,6 +1,6 @@
 # AO detector-level extension parameter-source inventory
 
-Prepared: 2026-07-09 22:34
+Prepared: 2026-07-10 22:24
 
 Scope: tracked public caches, derived calculations, synthetic model parameters, and derived result artifacts used by the detector-level AO extension. Direct public data are separated from synthetic AO proxies.
 
@@ -47,7 +47,7 @@ Scope: tracked public caches, derived calculations, synthetic model parameters, 
 | Interaction matrix / reconstructor | Central-difference poke amplitude=10 nm; rcond scan grid=1e-8,1e-6,1e-4,1e-3; fast-integration kept_modes=13 | synthetic_assumed | Self-calibrated detector-level poke matrix; no observatory control matrix is used |
 | compact poke-matrix diagnostic | Command-line diagnostic matrix shape=90x16, rank=16, kept_modes=16, selected rcond=3e-3 | synthetic_assumed | figures/detector_level_SCAO/poke_matrix_singular_values.csv; compact detector-level sanity check, not high-order observatory reconstructor conditioning |
 | Science bandpasses | J/H/Ks use SVO 2MASS direct caches when present; top-hat fallback only if a cache is missing | direct_public_data with documented fallback path | data/public/svo_2mass_j_direct.csv, h_direct.csv, ks_direct.csv |
-| fast reference run | open_rms=70.009063 nm; closed_rms=48.348567 nm; H Strehl=0.96641; kept_modes=13; validation=6/6 | synthetic_assumed | Fast end-to-end detector-level 2 m SCAO integration using local synthetic/literature-inspired fixtures; not calibrated observatory AO telemetry. |
+| fast reference run | open_rms=77.164249 nm; closed_rms=59.442573 nm; H Strehl=0.950455; kept_modes=13; validation=6/6 | synthetic_assumed | Fast end-to-end detector-level 2 m SCAO integration using local synthetic/literature-inspired fixtures; not calibrated observatory AO telemetry. |
 
 ## Public-data-informed photon scan results
 

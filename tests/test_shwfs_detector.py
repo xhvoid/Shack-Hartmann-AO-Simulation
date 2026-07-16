@@ -34,6 +34,27 @@ def test_negative_detector_noise_inputs_raise_error():
         add_detector_noise(spot, photons=-1.0)
 
 
+def test_none_photons_preserves_background_and_seeded_read_noise():
+    spot = np.ones((3, 3)) / 9.0
+
+    assert np.array_equal(add_detector_noise(spot, photons=None, seed=1), spot)
+    np.testing.assert_array_equal(
+        add_detector_noise(
+            spot,
+            photons=None,
+            background_e=2.0,
+            read_noise_e=0.25,
+            seed=17,
+        ),
+        np.maximum(
+            spot
+            + 2.0
+            + np.random.default_rng(17).normal(scale=0.25, size=spot.shape),
+            0.0,
+        ),
+    )
+
+
 def test_zero_phase_centroid_shifts_are_near_zero():
     x, y, _, _, mask, _ = make_pupil_grid(N=48, diameter=1.0)
     phase = np.zeros_like(x)

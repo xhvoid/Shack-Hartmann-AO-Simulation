@@ -20,12 +20,17 @@ REQUIRED_DOCS = [
     ROOT / "docs" / "ao_realistic_demo_parameter_source_inventory.pdf",
 ]
 
-REQUIRED_DATA_DIRS = [
+REQUIRED_DEVELOPER_DATA_DIRS = [
     ROOT / "data" / "external",
     ROOT / "data" / "cache",
-    ROOT / "data" / "samples",
-    ROOT / "data" / "literature_profiles",
-    ROOT / "data" / "synthetic_presets",
+]
+
+REQUIRED_RUNTIME_DATA_DIRS = [
+    ROOT / "src" / "shwfs_ao" / "resources" / "public",
+    ROOT / "src" / "shwfs_ao" / "resources" / "samples",
+    ROOT / "src" / "shwfs_ao" / "resources" / "literature_profiles",
+    ROOT / "src" / "shwfs_ao" / "resources" / "synthetic_presets",
+    ROOT / "src" / "shwfs_ao" / "resources" / "reference_metrics",
 ]
 
 REQUIRED_CONFIG_GROUPS = [
@@ -67,9 +72,12 @@ def test_public_documentation_is_checked_in():
 
 
 def test_data_directory_skeleton_exists():
-    for path in REQUIRED_DATA_DIRS:
+    for path in REQUIRED_DEVELOPER_DATA_DIRS:
         assert path.is_dir(), f"Missing data directory: {path}"
         assert (path / ".gitkeep").is_file(), f"Missing tracked .gitkeep in {path}"
+    for path in REQUIRED_RUNTIME_DATA_DIRS:
+        assert path.is_dir(), f"Missing runtime resource directory: {path}"
+        assert any(child.is_file() for child in path.iterdir()), f"Empty runtime resource directory: {path}"
 
 
 def test_config_files_have_required_groups():

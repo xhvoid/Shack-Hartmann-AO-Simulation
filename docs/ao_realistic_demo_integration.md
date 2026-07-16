@@ -14,9 +14,20 @@ Notebook 11 is not calibrated observatory telemetry. Its value is that the full 
 
 The strongest control-engineering figure in the current notebook-10/11 story is the gain-delay stability map: it shows that closed-loop performance is a controller operating-region problem, not just an open-loop versus closed-loop before/after comparison. The chosen operating point should be described as a compromise between residual OPD, latency tolerance, command growth, and stability margin.
 
+Production loop sequencing, command projection, gain/leak state, and exact
+frame latency are owned by `shwfs_ao.control`. Its gain, latency, photon,
+read-noise, and gain-delay helpers reset random streams, atmosphere,
+controller, and DM state for every point, so a scan compares the same
+truth/time sequence and is independent of axis order. The installed
+`ao_integration` surface keeps its frozen result and file contracts while
+adapting behavior-compatible work to that owner. Notebook 09 and Notebook 11
+source migration remains intentionally deferred to AO-REF-019; this ticket
+does not rewrite notebook outputs or reference metrics. See the
+[AO-REF-009 control-loop contract](refactor/AO_REF_009_CONTROL_LOOP.md).
+
 ## Automated fast run
 
-The automated fast run completes without internet access. It may consume small tracked public reference caches in `data/public/`, but it does not require a live archive query during tests. The command is:
+The automated fast run completes without internet access. It may consume small tracked public reference caches from `src/shwfs_ao/resources/public/` through compatible `data/public/...` logical names, but it does not require a live archive query during tests. The command is:
 
 ```bash
 python3 examples/run_fast_integration.py
@@ -29,14 +40,14 @@ figures/detector_level_SCAO/fast_error_budget.csv
 figures/detector_level_SCAO/fast_error_budget.png
 figures/detector_level_SCAO/fast_validation.csv
 figures/detector_level_SCAO/fast_validation.png
-data/reference_metrics/fast_reference_metrics.json
+figures/detector_level_SCAO/fast_reference_metrics.json
 ```
 
 The test suite also executes notebook 11 top-to-bottom in fast mode with temporary output paths.
 
 ## Reference metrics
 
-The run writes a compact JSON reference payload with the following fields:
+The run writes a compact candidate JSON payload in the selected output directory with the following fields:
 
 ```text
 open_rms_nm
@@ -48,6 +59,33 @@ runtime_band
 ```
 
 The JSON also stores scenario count, validation pass count, config hash, provenance, and tolerance bands for future regression checks.
+
+Normal tests compare temporary fast-run outputs against the immutable
+`*_regression_baseline.*` files using the documented JSON tolerances plus tight
+deterministic table tolerances. A baseline is never rewritten by a test or CI
+generator. After reviewing an intentional numerical/provenance diff, a
+maintainer first generates a candidate and machine/human-readable diff in an
+explicit directory:
+
+```bash
+python3 scripts/update_fast_regression_baselines.py \
+  --generate-candidate \
+  --candidate-dir /tmp/ao-fast-candidate
+```
+
+After reviewing both diff files, acceptance is a separate command and requires
+the review rationale and reference:
+
+```bash
+python3 scripts/update_fast_regression_baselines.py \
+  --accept-baseline-update \
+  --candidate-dir /tmp/ao-fast-candidate \
+  --reason "documented numerical change" \
+  --review-reference "PR-or-issue-reference"
+```
+
+Acceptance never launches an experiment and generation never writes packaged
+references.
 
 ## Rerun modes
 
@@ -107,7 +145,7 @@ documented limit is 30 minutes; the validation table includes a
 
 ## Caveats
 
-Detector, DM, control, and most effect parameters remain synthetic or literature-inspired placeholders unless their source class says otherwise. Small public reference caches now exist for the SVO 2MASS J/H/Ks filter curves, IRSA 2MASS PSC photometry, MAST Pan-STARRS DR2 optical photometry, and ESO Paranal ASM nighttime atmosphere snapshot/time-series data. The pipeline is suitable for engineering sanity checks and portfolio demonstration, not for quoting performance of a specific telescope, guide star, or AO real-time controller.
+Detector, DM, control, and most effect parameters remain synthetic or literature-inspired placeholders unless their source class says otherwise. Canonical loop ownership improves identity, timing, replay, and telemetry contracts; it does not make those inputs measured hardware or RTC parameters. Small public reference caches now exist for the SVO 2MASS J/H/Ks filter curves, IRSA 2MASS PSC photometry, MAST Pan-STARRS DR2 optical photometry, and ESO Paranal ASM nighttime atmosphere snapshot/time-series data. The pipeline is suitable for engineering sanity checks and portfolio demonstration, not for quoting performance of a specific telescope, guide star, or AO real-time controller.
 
 The compact detector-level interaction-matrix poke matrix is well conditioned in fast mode and should be described as a response sanity check rather than a high-order reconstructor-conditioning result. Likewise, the high Strehl values in science/integration belong to a reduced 2 m demonstrator. EE50/EE80 are secondary PSF diagnostics because the fast PSF sampling can quantize encircled-energy radii.
 

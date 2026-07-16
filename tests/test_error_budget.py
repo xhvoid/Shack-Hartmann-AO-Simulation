@@ -1,5 +1,7 @@
 # Tests verify the 8-scenario error-budget matrix produces finite ScenarioResult rows with OPD RMS, J/H/K Strehl, EE50/EE80, command, saturation, and centroid-validity metrics.
 
+from dataclasses import replace
+
 import numpy as np
 import pytest
 
@@ -8,6 +10,7 @@ from ao_error_budget import (
     AOErrorBudgetError,
     REQUIRED_SCENARIO_NAMES,
     ScenarioConfig,
+    build_control_space_phase_sequence,
     default_error_budget_scenarios,
     run_error_budget_scenarios,
     scenario_results_as_dicts,
@@ -18,7 +21,7 @@ from synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build
 
 
 @pytest.fixture(scope="module")
-def error_budget_rows():
+def error_budget_system():
     geometry = ShwfsGeometryConfig(
         telescope_diameter_m=2.0,
         n_pupil_pixels=52,
@@ -65,6 +68,12 @@ def error_budget_rows():
             source_note="Fast central-difference poke configuration.",
         ),
     )
+    return calibration, dm_model, poke
+
+
+@pytest.fixture(scope="module")
+def error_budget_rows(error_budget_system):
+    calibration, dm_model, poke = error_budget_system
     bandpasses = (
         top_hat_bandpass("J", 1.10e-6, 1.40e-6, source_note="Test synthetic J fallback."),
         top_hat_bandpass("H", 1.50e-6, 1.80e-6, source_note="Test synthetic H fallback."),
@@ -90,6 +99,70 @@ def test_default_scenario_matrix_names_and_count():
     assert scenarios[-1].scenario_name == "all_effects"
     assert "detector_noise" in scenarios[-1].enabled_effects
     assert "science_path_ncpa" in scenarios[-1].enabled_effects
+
+
+def test_scenario_time_axis_and_random_domains_are_independent(error_budget_system):
+    calibration, dm_model, poke = error_budget_system
+    scenario = ScenarioConfig(
+        "seed_isolation",
+        ("multi_component_dynamic_phase",),
+        n_steps=8,
+        frame_rate_hz=400.0,
+        tau0_s=0.004,
+        turbulence_speed_m_s=10.0,
+        seed=3,
+        phase_seed=41,
+        detector_noise_seed=43,
+        ncpa_seed=47,
+        source_note="Seed-domain and physical-time regression scenario.",
+    )
+    changed_nontruth_seeds = replace(scenario, detector_noise_seed=101, ncpa_seed=103)
+
+    truth = build_control_space_phase_sequence(calibration, dm_model, poke, scenario)
+    same_truth = build_control_space_phase_sequence(calibration, dm_model, poke, changed_nontruth_seeds)
+
+    assert scenario.time_s == pytest.approx(np.arange(8, dtype=float) / 400.0)
+    assert scenario.resolved_phase_seed == 41
+    assert scenario.resolved_detector_noise_seed == 43
+    assert scenario.resolved_ncpa_seed == 47
+    assert np.allclose(truth, same_truth, equal_nan=True)
+
+
+def test_frame_rate_tau0_and_wind_change_dynamic_truth(error_budget_system):
+    calibration, dm_model, poke = error_budget_system
+    base = ScenarioConfig(
+        "physical_time_inputs",
+        ("multi_component_dynamic_phase",),
+        n_steps=8,
+        frame_rate_hz=500.0,
+        tau0_s=0.004,
+        turbulence_speed_m_s=10.0,
+        phase_seed=53,
+        source_note="Temporal-input sensitivity regression scenario.",
+    )
+    base_truth = build_control_space_phase_sequence(calibration, dm_model, poke, base)
+
+    variants = (
+        replace(base, frame_rate_hz=1000.0),
+        replace(base, tau0_s=0.008),
+        replace(base, turbulence_speed_m_s=25.0),
+    )
+
+    for variant in variants:
+        variant_truth = build_control_space_phase_sequence(calibration, dm_model, poke, variant)
+        assert not np.allclose(base_truth, variant_truth, equal_nan=True)
+
+
+def test_default_dynamic_effect_rows_share_one_atmospheric_truth(error_budget_system):
+    calibration, dm_model, poke = error_budget_system
+    scenarios = default_error_budget_scenarios(n_steps=8, phase_amplitude_nm=260.0)
+    dynamic_scenarios = scenarios[1:]
+    reference_truth = build_control_space_phase_sequence(calibration, dm_model, poke, dynamic_scenarios[0])
+
+    assert len({scenario.resolved_phase_seed for scenario in dynamic_scenarios}) == 1
+    for scenario in dynamic_scenarios[1:]:
+        effect_truth = build_control_space_phase_sequence(calibration, dm_model, poke, scenario)
+        assert np.allclose(reference_truth, effect_truth, equal_nan=True)
 
 
 def test_all_8_scenarios_produce_finite_error_budget_metrics(error_budget_rows):
@@ -171,4 +244,19 @@ def test_rejects_non_eight_scenario_matrix():
             dm_model=None,  # type: ignore[arg-type]
             poke_result=None,  # type: ignore[arg-type]
             scenarios=bad_scenarios,
+        )
+
+
+def test_scenario_rejects_fractional_frame_counts_and_latency():
+    with pytest.raises(AOErrorBudgetError, match="n_steps must be an integer"):
+        ScenarioConfig(
+            "fractional_steps",
+            ("invalid",),
+            n_steps=4.0,  # type: ignore[arg-type]
+        )
+    with pytest.raises(AOErrorBudgetError, match="latency_frames must be an integer"):
+        ScenarioConfig(
+            "fractional_latency",
+            ("invalid",),
+            latency_frames=1.5,  # type: ignore[arg-type]
         )

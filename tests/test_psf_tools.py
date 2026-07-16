@@ -33,6 +33,22 @@ def test_zero_phase_strehl_is_one():
     assert strehl_ratio(phase, mask, pad_factor=2) == pytest.approx(1.0)
 
 
+def test_nonfinite_phase_is_allowed_only_outside_the_pupil():
+    _, _, mask = _circular_mask()
+    exterior_nan = np.where(mask, 0.0, np.nan)
+    invalid_inside = exterior_nan.copy()
+    inside_y, inside_x = np.argwhere(mask)[0]
+    invalid_inside[inside_y, inside_x] = np.nan
+
+    psf = compute_psf_from_phase(exterior_nan, mask, pad_factor=2)
+
+    assert np.isclose(np.sum(psf), 1.0)
+    with pytest.raises(ValueError, match="finite inside"):
+        compute_psf_from_phase(invalid_inside, mask, pad_factor=2)
+    with pytest.raises(ValueError, match="finite inside"):
+        marechal_strehl(invalid_inside, mask)
+
+
 def test_marechal_strehl_decreases_with_phase_rms():
     x, _, mask = _circular_mask()
 
