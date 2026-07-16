@@ -1,0 +1,17 @@
+{
+  "schema_name": "shwfs_ao.wheel_smoke_bundle_manifest",
+  "schema_version": 1,
+  "pytest_ini": "tests/wheel_smoke/pytest.ini",
+  "entries": [
+    {
+      "source": "tests/backends/hcipy/test_conversion.py",
+      "kind": "test",
+      "requires": ["hcipy"]
+    },
+    {
+      "source": "tests/backends/hcipy/test_optional_import.py",
+      "kind": "test",
+      "requires": []
+    }
+  ]
+}
