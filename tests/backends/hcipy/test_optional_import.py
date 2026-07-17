@@ -101,6 +101,11 @@ def test_importing_shwfs_ao_never_imports_hcipy_eagerly():
     ids=lambda path: path.stem,
 )
 def test_hcipy_marked_tests_never_enter_the_native_selection(test_file):
+    if not test_file.is_file():
+        pytest.skip(
+            f"{test_file.name} is not in this test tree (native-only "
+            "wheel-smoke bundles omit hcipy-marked modules)"
+        )
     result = subprocess.run(
         [
             sys.executable,
