@@ -19,8 +19,14 @@ import shwfs_ao.dm.model as dm_model
 
 
 ROOT = Path(__file__).resolve().parents[2]
+# AO-REF-019 archived the original notebook 09 under legacy/original_notebooks/;
+# the AO-REF-006 delegation contract keeps guarding that archived evidence.
 NOTEBOOK_09 = (
-    ROOT / "notebooks" / "09_ao_psf_instrument_performance_high_order_ao.ipynb"
+    ROOT
+    / "notebooks"
+    / "legacy"
+    / "original_notebooks"
+    / "09_ao_psf_instrument_performance_high_order_ao.ipynb"
 )
 
 NATIVE_DM_EXPORTS = (

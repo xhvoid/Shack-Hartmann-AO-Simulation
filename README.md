@@ -26,9 +26,9 @@ The repository focuses on five connected parts of an AO simulation chain:
 * Science diagnostics: residual OPD RMS, Strehl ratio, FWHM, EE50/EE80, and J/H/K PSF comparisons.
 * Extensions: simplified PWFS forward modelling, compact noise / latency / gain-stability scans, a fast 2 m detector-level SCAO integration run, and a public-data-informed upgrade of that 2 m demonstrator (ESO ASM / SVO / Pan-STARRS caches with explicit provenance).
 
-Notebook 09 is the closest one to a clean 10 m-class high-order control calculation. It moves from low-order modal correction to a high-order actuator-space SH-AO demonstration with 48 × 48 WFS sampling, a 49 × 49 nominal actuator grid, TSVD command reconstruction, and J/H/K PSF diagnostics. Notebook 10 then asks a more engineering-style question: what happens when measurement noise, loop delay, and gain tuning are no longer ignored?
+The high-order SCAO study (notebook 09) is the closest one to a clean 10 m-class high-order control calculation. It moves from low-order modal correction to a high-order actuator-space SH-AO demonstration with 48 × 48 WFS sampling, a 49 × 49 nominal actuator grid, TSVD command reconstruction, and J/H/K PSF diagnostics. The noise–latency–gain study (notebook 10) then asks a more engineering-style question: what happens when measurement noise, loop delay, and gain tuning are no longer ignored?
 
-Notebook 11 is a separate 2 m detector-level SCAO demonstrator. It ties together the detector SH-WFS, synthetic DM, detector-level interaction matrix, closed-loop controller, science PSF metrics, error-budget scenarios, and validation checks into one fast rerunnable path.
+The 2 m detector-level study (notebook 11) is a separate 2 m detector-level SCAO demonstrator. It ties together the detector SH-WFS, synthetic DM, detector-level interaction matrix, closed-loop controller, science PSF metrics, error-budget scenarios, and validation checks into one fast rerunnable path.
 
 ## Quick start
 
@@ -45,14 +45,18 @@ This installs the core package and test dependency, runs the numerical test suit
 
 ## Quick review path
 
-For a short technical review, start with:
+For a short technical review, start with the thinned research narratives that run
+directly on the installed package:
 
-1. `06_detector_level_shwfs.ipynb` — detector-level SH-WFS centroiding and response calibration.
-2. `09_ao_psf_instrument_performance_high_order_ao.ipynb` — high-order actuator-space SH-AO and NIR PSF diagnostics.
-3. `10_noise_latency_gain_stability.ipynb` — noise, latency, and gain-stability trade-offs.
-4. `11_full_detector_level_2m_scao_demo.ipynb` — fast 2 m detector-level SCAO integration, error-budget table, and validation checks.
+1. `notebooks/tutorials/02_detector_centroiding.ipynb` — detector-level SH-WFS centroiding and photon-noise precision.
+2. `notebooks/tutorials/04_closed_loop_control.ipynb` — the shared closed-loop engine converging on a frozen-flow screen.
+3. `notebooks/studies/high_order_scao.ipynb` — SCAO residual and near-infrared Strehl versus deformable-mirror order.
+4. `notebooks/studies/detector_level_2m.ipynb` — the same loop engine scaled to a 2 m aperture with detector photon and read noise.
 
-The earlier notebooks document the build-up from low-order modal reconstruction to detector-level and closed-loop models.
+The `tutorials/` notebooks document the build-up from a single wavefront to a
+closed loop; the `studies/` notebooks answer one focused research question each.
+The original full-scale portfolio runs — and the headline figures reproduced
+below — are preserved unchanged under `notebooks/legacy/original_notebooks/`.
 
 ## Data provenance: real, estimated, synthetic
 
@@ -153,7 +157,7 @@ The detector-level SH-WFS notebooks simulate lenslet spots, finite detector wind
 src/shwfs_ao/ namespaced AO implementation; shared core, detector, and native backend APIs
 src/*.py      installed compatibility shims for the existing top-level imports
 src/shwfs_ao/resources/  canonical packaged fixtures, schemas, and reference metrics
-notebooks/    narrative simulations from SH-WFS basics to high-order AO
+notebooks/    research narratives: tutorials/, studies/, experimental/, and archived legacy/original_notebooks/
 examples/     lightweight command-line demonstrations
 tests/        numerical sanity checks for the core modules
 configs/      documented synthetic and literature-inspired presets
@@ -225,20 +229,49 @@ surface displacement in OPD—exactly one factor-of-two conversion. See the
 
 ## Notebook sequence
 
-| Notebook                                               | Purpose                                                                                                                                                                                                                                                                           |
-| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `01_test_sh_wfs.ipynb`                                 | Initial SH-WFS sanity checks for slopes, modal reconstruction, residuals, and Strehl.                                                                                                                               |
-| `02_sh_wfs_experiment.ipynb`                           | Baseline SH-WFS experiments with fixed/random wavefronts, spot checks, photon noise, and PSFs.                                                                                                                      |
-| `03_zernike_mode_scan.ipynb`                           | Reconstruction quality versus Zernike order and controlled mode count.                                                                                                                                              |
-| `04_sampling_vs_mode_order_heatmap.ipynb`              | WFS sampling density versus correction order and conditioning.                                                                                                                                                      |
-| `05_tsvd_regularization.ipynb`                         | TSVD regularization in an intentionally ill-conditioned reconstruction problem.                                                                                                                                      |
-| `06_detector_level_shwfs.ipynb`                        | Detector-level SH-WFS centroiding, response calibration, reconstruction, and noise scans.                                                                                                                           |
-| `07_closed_loop_ao.ipynb`                              | Geometric closed-loop AO baseline with Gaussian DM influence functions and an integrator controller.                                                                                                                |
-| `07_detector_level_closed_loop_ao.ipynb`               | Closed-loop AO driven by detector-level centroid shifts instead of ideal slopes.                                                                                                                                    |
-| `08_pwfs_detector_level_atmospheric_turbulence.ipynb`  | Exploratory detector-level PWFS forward model with four pupil images and `Sx/Sy` maps.                                                                                                                             |
-| `09_ao_psf_instrument_performance_high_order_ao.ipynb` | High-order actuator-space SH-AO demonstrator with 48 × 48 WFS sampling, 49 × 49 nominal actuator grid, TSVD reconstruction, and J/H/K PSF diagnostics.                                                             |
-| `10_noise_latency_gain_stability.ipynb`                | Photon/read-noise, loop-delay, and gain-stability trade-offs.                                                                                                                                                       |
-| `11_full_detector_level_2m_scao_demo.ipynb`            | Fast 2 m detector-level SCAO integration using the reusable detector, DM, interaction-matrix, control, error-budget, science-metric, and validation modules.                                                        |
+The notebooks are thinned research narratives that run on the installed
+`shwfs_ao` package. Each one states a scientific question, a configuration, a
+single simulation call into installed APIs, a diagnostic table, a plot, an
+interpretation, and its limitations — none of them re-implements an AO engine.
+
+**Tutorials** (`notebooks/tutorials/`; fast, executed in CI from the built wheel):
+
+| Notebook | Purpose |
+| --- | --- |
+| `00_wavefront_and_atmosphere.ipynb` | Frozen-flow von Kármán phase screen and the phase/OPD representation. |
+| `01_geometric_shwfs.ipynb` | Geometric Shack–Hartmann slope response to Zernike tilt. |
+| `02_detector_centroiding.ipynb` | Detector-level centroiding precision versus photon budget. |
+| `03_tsvd_regularization.ipynb` | Truncated-SVD regularization of wavefront reconstruction. |
+| `04_closed_loop_control.ipynb` | Integrator closed-loop convergence on a frozen-flow screen. |
+
+**Studies** (`notebooks/studies/`; one focused research question each):
+
+| Notebook | Purpose |
+| --- | --- |
+| `mode_order_sampling.ipynb` | Modal correction convergence versus order and seeing. |
+| `high_order_scao.ipynb` | SCAO residual and near-infrared Strehl versus deformable-mirror order. |
+| `noise_latency_gain.ipynb` | Gain/latency stability boundary of the integrator loop. |
+| `detector_level_2m.ipynb` | 2 m detector-level SCAO with photon and read noise, sharing the high-order loop engine. |
+| `native_vs_hcipy.ipynb` | Native-versus-HCIPy cross-backend validation (optional HCIPy job). |
+
+**Experimental** (`notebooks/experimental/`; run manually, not gated in CI):
+
+| Notebook | Purpose |
+| --- | --- |
+| `pwfs_detector_level_atmosphere.ipynb` | Exploratory detector-level pyramid-WFS forward model with four pupil images and `Sx/Sy` maps. |
+
+The sixteen original numbered notebooks are preserved unchanged as archived
+evidence under `notebooks/legacy/original_notebooks/` and are never executed in
+CI. [`notebooks/notebook_manifest.json`](notebooks/notebook_manifest.json)
+records how each original consolidates into a canonical notebook, together with
+its content hash, owner, execution class, and fixed-seed policy. The scientific
+discussion elsewhere in this README refers to three of these full-scale
+originals by their historical numbers: notebook 09 →
+`studies/high_order_scao.ipynb`, notebook 10 → `studies/noise_latency_gain.ipynb`,
+and notebook 11 → `studies/detector_level_2m.ipynb`. Those archived originals ran
+at larger scale, so their headline numbers and figures are portfolio results,
+while the `studies/` successors reproduce the same trends at reduced,
+CI-friendly scale.
 
 ## Installation
 
@@ -405,44 +438,52 @@ Only `fast` is part of the automated test suite; the heavier presets are for loc
 
 ## Running the notebooks
 
-Start Jupyter from the repository root:
+Install the notebook extras and start Jupyter from the repository root:
 
 ```bash
+python3 -m pip install -e ".[notebooks]"
 jupyter notebook
 ```
 
-Recommended reading order:
+Recommended reading order — the tutorials build the pipeline up one stage at a
+time, then the studies each answer a focused research question:
 
 ```text
-01 → 02 → 03 → 04 → 05 → 06 → 07 → 07_detector_level_closed_loop_ao → 08 → 09 → 10 → 11
+tutorials/00_wavefront_and_atmosphere
+  → tutorials/01_geometric_shwfs
+  → tutorials/02_detector_centroiding
+  → tutorials/03_tsvd_regularization
+  → tutorials/04_closed_loop_control
+  → studies/mode_order_sampling
+  → studies/high_order_scao
+  → studies/noise_latency_gain
+  → studies/detector_level_2m
 ```
 
-For the high-order AO PSF result, start directly with:
+To jump straight to a result: `studies/high_order_scao.ipynb` for the
+Strehl-versus-order high-order AO case, `studies/noise_latency_gain.ipynb` for
+the noise, latency, and loop-gain trade-offs, and `studies/detector_level_2m.ipynb`
+for the 2 m detector-level integration. The optional cross-backend comparison is
+`studies/native_vs_hcipy.ipynb` (needs the `hcipy` extra); the experimental
+pyramid-WFS model is `experimental/pwfs_detector_level_atmosphere.ipynb`.
 
-```text
-09_ao_psf_instrument_performance_high_order_ao.ipynb
-```
+The fast tutorials are executed in CI from the built, non-editable wheel. To
+reproduce that smoke run locally against your installed package:
 
-For noise, latency, and loop-gain trade-offs, start with:
-
-```text
-10_noise_latency_gain_stability.ipynb
-```
-
-For the fast 2 m detector-level integration path, start with:
-
-```text
-11_full_detector_level_2m_scao_demo.ipynb
+```bash
+python3 -m pip install -e ".[test,notebook-test]"
+python3 scripts/run_notebook_smoke.py --class fast
 ```
 
 ## Reproducibility and validation
 
-I use four lightweight checks rather than trying to execute every notebook in CI:
+Notebook reproducibility is enforced at several levels rather than by hand:
 
 * Unit tests validate the numerical core: PSF normalization, Strehl sanity checks, phase/OPD conversion, detector centroiding edge cases, phase-screen RMS scaling, and modal reconstruction.
 * Command-line examples regenerate small PNG and CSV artifacts from deterministic seeds.
-* Notebooks remain the narrative entry points for the broader AO experiments, with notebook 10 explicitly separating clean-model AO performance from noise, latency, and controller-stability stress tests.
-* Notebook 11 is smoke-tested in fast mode with temporary output paths and compares generated metrics against the packaged regression references without overwriting them.
+* Static notebook-governance tests (`tests/notebooks/`) assert that every canonical notebook imports only the installed package, defines no AO engine of its own, ships captured error-free outputs, and that the disposition manifest covers every AO-REF-000 original exactly once.
+* The fast tutorial notebooks are executed in CI from the built wheel in a throwaway working directory (`MPLBACKEND=Agg`, fixed seeds, per-cell and whole-notebook timeouts) via `scripts/run_notebook_smoke.py`; the slower studies run in scheduled/manual jobs and the cross-backend study runs in the HCIPy lane, each guarded by the same governance tests.
+* The fast 2 m detector-level integration path is additionally smoke-tested through `examples/run_fast_integration.py`, which compares generated metrics against the packaged regression references without overwriting them.
 
 ## Provenance summary
 
@@ -583,7 +624,7 @@ I keep this caveat explicit because the numbers are useful for comparing clean-m
 
 ### 5. Noise, latency, and loop-gain stability
 
-Notebook `10_noise_latency_gain_stability.ipynb` adds a compact engineering trade-off layer around the closed-loop AO model. It scans photon flux, read noise, a transparent centroid-noise proxy, loop gain, and frame delay, then reports residual OPD RMS, H-band Marechal Strehl, command growth, and a simple stability flag.
+The noise–latency–gain study (`studies/noise_latency_gain.ipynb`; full-scale original archived at `notebooks/legacy/original_notebooks/10_noise_latency_gain_stability.ipynb`) adds a compact engineering trade-off layer around the closed-loop AO model. It scans photon flux, read noise, a transparent centroid-noise proxy, loop gain, and frame delay, then reports residual OPD RMS, H-band Marechal Strehl, command growth, and a simple stability flag.
 
 This is not a full AO error budget. Its purpose is to make the controller trade-offs visible: noise floors limit the value of high gain, latency narrows the stable gain range, and clean-model Strehl can be optimistic when detector and timing effects are ignored. The delay axis is also labelled as physical latency for a nominal 1 kHz loop.
 
@@ -591,7 +632,7 @@ The gain-delay map is the main control-engineering diagnostic in notebook 10. Th
 
 ### 6. Fast 2 m detector-level SCAO integration
 
-Notebook `11_full_detector_level_2m_scao_demo.ipynb` is the fast integration path for the compact 2 m detector-level SCAO demonstrator. It does not replace notebook 09; it answers a different question. Notebook 09 shows a clean high-order 10 m-class actuator-space control case, while notebook 11 keeps the system smaller and routes the simulation through detector-level SH-WFS centroiding, a synthetic DM, a detector-level poke matrix, closed-loop correction, J/H/K science metrics, error-budget scenarios, and validation checks.
+The 2 m detector-level study (`studies/detector_level_2m.ipynb`; full-scale original archived at `notebooks/legacy/original_notebooks/11_full_detector_level_2m_scao_demo.ipynb`) is the fast integration path for the compact 2 m detector-level SCAO demonstrator. It does not replace the high-order study (notebook 09); it answers a different question. The high-order study shows a clean high-order 10 m-class actuator-space control case, while the 2 m study keeps the system smaller and routes the simulation through detector-level SH-WFS centroiding, a synthetic DM, a detector-level poke matrix, closed-loop correction, J/H/K science metrics, error-budget scenarios, and validation checks.
 
 The command-line entry point is `examples/run_fast_integration.py`. It writes reference metrics with tolerances so later changes can be checked against open RMS, closed RMS, H-band Strehl, valid-centroid fraction, kept modes, and runtime band.
 
