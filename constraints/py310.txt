@@ -22,3 +22,9 @@ setuptools==83.0.0
 six==1.17.0
 tzdata==2026.3
 wheel==0.47.0
+# notebook-test extra (native wheel gate installs [test,notebook-test]): the
+# declared packages are pinned here; their Jupyter execution stack resolves
+# under these pins.
+ipykernel==7.3.0
+nbclient==0.11.0
+nbformat==5.10.4

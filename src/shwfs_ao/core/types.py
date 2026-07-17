@@ -992,7 +992,8 @@ def _finite_float(value: object, *, label: str) -> float:
     if isinstance(value, bool):
         raise ValueError(f"{label} must be a finite real scalar.")
     try:
-        output = float(value)
+        # EAFP by design: non-convertible inputs surface as the ValueError below.
+        output = float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{label} must be a finite real scalar.") from exc
     if not math.isfinite(output):

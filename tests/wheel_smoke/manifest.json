@@ -4,39 +4,308 @@
   "pytest_ini": "tests/wheel_smoke/pytest.ini",
   "entries": [
     {
-      "source": "tests/backends/hcipy/test_conversion.py",
-      "kind": "test",
-      "requires": ["hcipy"]
-    },
-    {
-      "source": "tests/backends/hcipy/test_hcipy_atmosphere.py",
-      "kind": "test",
-      "requires": ["hcipy"]
-    },
-    {
-      "source": "tests/backends/hcipy/test_hcipy_dm.py",
-      "kind": "test",
-      "requires": ["hcipy"]
-    },
-    {
-      "source": "tests/backends/hcipy/test_hcipy_shwfs.py",
-      "kind": "test",
-      "requires": ["hcipy"]
-    },
-    {
-      "source": "tests/backends/hcipy/test_hcipy_propagation.py",
-      "kind": "test",
-      "requires": ["hcipy"]
-    },
-    {
       "source": "tests/backends/hcipy/test_optional_import.py",
       "kind": "test",
       "requires": []
     },
     {
+      "source": "tests/calibration/test_interaction_calibration.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/calibration/test_interaction_diagnostics.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/calibration/test_reconstructors.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/control/test_command_mapping.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/control/test_config.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/control/test_controller.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/control/test_history.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/control/test_loop.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/control/test_native_integration.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/control/test_sweeps.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/core/test_hashing.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/core/test_provenance.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/core/test_types_contracts.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/core/test_wavefront_unit_audit.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/cross_backend/test_validation_contract.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/detector/test_centroid_validity.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/detector/test_config_random.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/dm/test_legacy_ao_closed_loop_delegation.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/dm/test_model.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/experiments/test_scao.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/io/test_artifacts.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/io/test_configs.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/science/test_legacy_compatibility.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/science/test_metrics.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/test_config_hashing.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/test_detector_centroids.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/test_detector_closed_loop.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/test_dm_response.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/test_error_budget.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/test_interaction_matrix.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/test_phase_screen.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/test_psf_tools.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/test_pwfs_forward.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/test_reconstruction.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/test_shwfs_detector.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/test_validation_checks.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/test_zernike.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/wfs/test_geometry_native_optics.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/wfs/test_legacy_seeded_output_regression.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/backends/hcipy/test_conversion.py",
+      "kind": "test",
+      "requires": [
+        "hcipy"
+      ]
+    },
+    {
+      "source": "tests/backends/hcipy/test_hcipy_atmosphere.py",
+      "kind": "test",
+      "requires": [
+        "hcipy"
+      ]
+    },
+    {
+      "source": "tests/backends/hcipy/test_hcipy_dm.py",
+      "kind": "test",
+      "requires": [
+        "hcipy"
+      ]
+    },
+    {
+      "source": "tests/backends/hcipy/test_hcipy_propagation.py",
+      "kind": "test",
+      "requires": [
+        "hcipy"
+      ]
+    },
+    {
+      "source": "tests/backends/hcipy/test_hcipy_shwfs.py",
+      "kind": "test",
+      "requires": [
+        "hcipy"
+      ]
+    },
+    {
       "source": "tests/cross_backend/test_native_vs_hcipy.py",
       "kind": "test",
-      "requires": ["hcipy"]
+      "requires": []
+    },
+    {
+      "source": "examples/run_fast_integration.py",
+      "kind": "example",
+      "requires": []
+    },
+    {
+      "source": "examples/run_psf_strehl_demo.py",
+      "kind": "example",
+      "requires": []
+    },
+    {
+      "source": "examples/run_shwfs_centroid_demo.py",
+      "kind": "example",
+      "requires": []
+    },
+    {
+      "source": "examples/run_native_hcipy_validation.py",
+      "kind": "example",
+      "requires": [
+        "hcipy"
+      ]
+    },
+    {
+      "source": "notebooks/tutorials/00_wavefront_and_atmosphere.ipynb",
+      "kind": "notebook",
+      "requires": []
+    },
+    {
+      "source": "notebooks/tutorials/01_geometric_shwfs.ipynb",
+      "kind": "notebook",
+      "requires": []
+    },
+    {
+      "source": "notebooks/tutorials/02_detector_centroiding.ipynb",
+      "kind": "notebook",
+      "requires": []
+    },
+    {
+      "source": "notebooks/tutorials/03_tsvd_regularization.ipynb",
+      "kind": "notebook",
+      "requires": []
+    },
+    {
+      "source": "notebooks/tutorials/04_closed_loop_control.ipynb",
+      "kind": "notebook",
+      "requires": []
+    },
+    {
+      "source": "notebooks/studies/native_vs_hcipy.ipynb",
+      "kind": "notebook",
+      "requires": [
+        "hcipy"
+      ]
+    },
+    {
+      "source": "notebooks/notebook_manifest.json",
+      "kind": "fixture",
+      "requires": []
+    },
+    {
+      "source": "scripts/run_notebook_smoke.py",
+      "kind": "support",
+      "requires": []
     }
   ]
 }

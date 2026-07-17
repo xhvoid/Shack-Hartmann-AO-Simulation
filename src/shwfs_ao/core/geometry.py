@@ -249,10 +249,10 @@ def _validate_cartesian_grid(
         raise GeometryError("y_m axis must span telescope_diameter_m.")
 
 
-def _readonly_array(values: object, *, dtype: object) -> np.ndarray:
+def _readonly_array(values: object, *, dtype: type) -> np.ndarray:
     """Return a truly immutable C-contiguous array backed by ``bytes``."""
 
-    contiguous = np.ascontiguousarray(values, dtype=dtype)
+    contiguous: np.ndarray = np.ascontiguousarray(values, dtype=dtype)
     return np.frombuffer(contiguous.tobytes(order="C"), dtype=contiguous.dtype).reshape(
         contiguous.shape
     )

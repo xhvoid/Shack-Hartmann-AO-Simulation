@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import csv
 import json
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -115,7 +114,9 @@ def _result() -> SimpleNamespace:
 
 
 def _v3_kwargs() -> dict[str, object]:
-    digest = lambda character: "sha256:" + character * 64
+    def digest(character: str) -> str:
+        return "sha256:" + character * 64
+
     tolerance_specs = {
         "closed_rms_nm_abs": ("nm_opd_rms", "absolute", True),
         "h_strehl_abs": ("dimensionless", "absolute", True),

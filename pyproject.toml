@@ -39,6 +39,10 @@ hcipy = [
 docs = [
     "reportlab>=4.0",
 ]
+lint = [
+    "ruff>=0.15",
+    "mypy>=2.3",
+]
 
 [project.urls]
 Repository = "https://github.com/xhvoid/Shack-Hartmann-AO-Simulation"
@@ -102,3 +106,33 @@ markers = [
     "hcipy: requires the optional HCIPy backend dependency (deselected in native CI)",
     "slow: long-running; excluded from fast CI selections",
 ]
+
+[tool.ruff]
+# Archived legacy notebooks and the virtual environment are never linted.
+extend-exclude = ["notebooks"]
+
+[tool.ruff.lint]
+# AO-REF-020 lint gate: the Ruff default correctness set, stated explicitly
+# (pyflakes plus the pycodestyle error classes Ruff enables by default).
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+# Compatibility facades and installed top-level shims import names purely to
+# re-export them; unused-import findings there are the mechanism, not a bug.
+"src/shwfs_ao/legacy/**" = ["F401"]
+"src/*.py" = ["F401"]
+# Examples select the Agg backend, and tests/scripts probe optional
+# dependencies, before the remaining imports; E402 is intentional there.
+"examples/**" = ["E402"]
+"scripts/**" = ["E402"]
+"tests/**" = ["E402"]
+
+[tool.mypy]
+# AO-REF-020 static type gate, scoped to the public protocols and unit-typed
+# result/geometry contracts under shwfs_ao.core.  Widening the checked set is
+# welcome; shrinking it needs a ticket.
+files = ["src/shwfs_ao/core"]
+python_version = "3.14"
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true

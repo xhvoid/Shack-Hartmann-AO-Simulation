@@ -33,3 +33,19 @@ Generate into an explicit candidate directory with `--generate-candidate`,
 review its JSON and Markdown diffs, then use `--accept-baseline-update` with a
 non-empty `--reason` and `--review-reference`. Neither normal tests nor an
 integration run can accept a baseline implicitly.
+
+## CI smoke and packaging helpers (AO-REF-019/020)
+
+`prepare_wheel_smoke_bundle.py` copies the manifest-listed portable tests,
+offline fixtures, canonical notebooks, example scripts, and support scripts
+from `tests/wheel_smoke/manifest.json` into a fresh bundle directory; it
+refuses `src/`, `.git/`, and the archived `notebooks/legacy` evidence so the
+bundle can only pass against the installed wheel.
+
+`run_notebook_smoke.py` executes canonical notebooks under the AO-REF-019
+smoke contract (fresh temporary working directory, `MPLBACKEND=Agg`, per-cell
+and whole-notebook timeouts), selecting by manifest execution class.
+
+`inspect_wheel_contents.py` compares a built wheel against a wheel rebuilt
+from the sdist in a clean directory and asserts the compatibility modules,
+schemas, fixtures, and runtime resources are packaged.
