@@ -57,24 +57,38 @@ def monochromatic_psf(
 ) -> PsfResult:
     """Construct a fixed backend propagator and generate one PSF.
 
-    The initial registry contains only ``"native"``.  Unknown identifiers are
-    rejected rather than silently changing optical or sampling semantics.
+    The registry contains ``"native"`` and the optional ``"hcipy"`` backend.
+    Unknown identifiers are rejected rather than silently changing optical or
+    sampling semantics.  The HCIPy identifier translates this repository-owned
+    pad-factor contract onto the exactly equivalent angular focal lattice and
+    resolves the optional dependency at construction time.
     """
 
     if not isinstance(pupil, PupilGeometry):
         raise SciencePropagationError("pupil must be a PupilGeometry.")
     if not isinstance(sampling, PsfSampling):
         raise SciencePropagationError("sampling must be a PsfSampling.")
-    if not isinstance(backend, str) or backend != "native":
+    if not isinstance(backend, str) or backend not in ("native", "hcipy"):
         raise SciencePropagationError(
-            "backend must be 'native'; HCIPy propagation is not available yet."
+            "backend must be 'native' or 'hcipy'."
         )
 
-    # Local import keeps this construction layer backend-neutral and avoids a
+    # Local imports keep this construction layer backend-neutral and avoid a
     # module cycle while the native backend imports the sampling contract.
-    from ..backends.native.propagation import NativeSciencePropagator
+    if backend == "native":
+        from ..backends.native.propagation import NativeSciencePropagator
 
-    propagator = NativeSciencePropagator(pupil=pupil, sampling=sampling)
+        propagator = NativeSciencePropagator(pupil=pupil, sampling=sampling)
+    else:
+        from ..backends.hcipy.propagation import (
+            HcipySciencePropagator,
+            focal_sampling_from_psf_sampling,
+        )
+
+        propagator = HcipySciencePropagator(
+            pupil,
+            focal_sampling_from_psf_sampling(pupil, sampling),
+        )
     return propagator.psf_from_opd(opd_m, wavelength_m)
 
 

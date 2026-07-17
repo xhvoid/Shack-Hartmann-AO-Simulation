@@ -306,7 +306,7 @@ def test_constructor_and_helper_reject_mismatched_config_or_backend() -> None:
     with pytest.raises(SciencePropagationError, match="PsfSampling"):
         NativeSciencePropagator(pupil=pupil, sampling=4)  # type: ignore[arg-type]
 
-    for backend in ("hcipy", "Native", "", None):
+    for backend in ("fourier", "Native", "", None):
         with pytest.raises(SciencePropagationError, match="backend"):
             monochromatic_psf(
                 _zero_opd(pupil),

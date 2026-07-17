@@ -42,6 +42,10 @@ __all__ = (
     "build_hcipy_deformable_mirror",
     "HcipyShackHartmannError",
     "HcipyShackHartmannOptics",
+    "HcipySciencePropagationError",
+    "HcipyFocalSampling",
+    "focal_sampling_from_psf_sampling",
+    "HcipySciencePropagator",
 )
 
 
@@ -73,6 +77,17 @@ _EXPORT_MODULE.update(
         for name in (
             "HcipyShackHartmannError",
             "HcipyShackHartmannOptics",
+        )
+    }
+)
+_EXPORT_MODULE.update(
+    {
+        name: "propagation"
+        for name in (
+            "HcipySciencePropagationError",
+            "HcipyFocalSampling",
+            "focal_sampling_from_psf_sampling",
+            "HcipySciencePropagator",
         )
     }
 )
