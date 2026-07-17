@@ -32,7 +32,12 @@ from shwfs_ao.backends.hcipy.dm import (
     HcipyDmError,
     build_hcipy_deformable_mirror,
 )
+from shwfs_ao.backends.hcipy.shwfs import (
+    HcipyShackHartmannError,
+    HcipyShackHartmannOptics,
+)
 from shwfs_ao.core.geometry import build_pupil_geometry
+from shwfs_ao.wfs.shack_hartmann.geometry import build_shack_hartmann_geometry
 
 
 HCIPY_INSTALLED = hcipy_installed()
@@ -40,6 +45,7 @@ _HCIPY_MARKED_TEST_FILES = (
     Path(__file__).with_name("test_conversion.py"),
     Path(__file__).with_name("test_hcipy_atmosphere.py"),
     Path(__file__).with_name("test_hcipy_dm.py"),
+    Path(__file__).with_name("test_hcipy_shwfs.py"),
 )
 
 
@@ -63,8 +69,10 @@ def test_importing_shwfs_ao_never_imports_hcipy_eagerly():
         "import shwfs_ao.backends.hcipy.conversion\n"
         "import shwfs_ao.backends.hcipy.atmosphere\n"
         "import shwfs_ao.backends.hcipy.dm\n"
+        "import shwfs_ao.backends.hcipy.shwfs\n"
         "from shwfs_ao.backends.hcipy import HcipyAtmosphereConfig\n"
         "from shwfs_ao.backends.hcipy import HcipyDmError\n"
+        "from shwfs_ao.backends.hcipy import HcipyShackHartmannOptics\n"
         "import shwfs_ao.experiments.scao\n"
         "import shwfs_ao.io.configs\n"
         "raise SystemExit(1 if 'hcipy' in sys.modules else 0)\n"
@@ -107,7 +115,7 @@ def test_hcipy_marked_tests_never_enter_the_native_selection(test_file):
     assert "::" not in result.stdout
 
 
-@pytest.mark.parametrize("module_name", ("atmosphere", "dm"))
+@pytest.mark.parametrize("module_name", ("atmosphere", "dm", "shwfs"))
 def test_hcipy_backend_modules_never_import_legacy_code(module_name):
     import importlib
 
@@ -226,3 +234,34 @@ class TestWithoutHcipy:
                 geometry.y_m,
                 np.ones((4, 4), dtype=bool),
             )
+
+    def test_shwfs_construction_raises_optional_dependency_error(self):
+        geometry = build_shack_hartmann_geometry(
+            telescope_diameter_m=1.0,
+            pupil_shape=(16, 16),
+            n_lenslets_across=2,
+            min_fill_fraction=0.3,
+        )
+        with pytest.raises(OptionalDependencyError) as excinfo:
+            HcipyShackHartmannOptics(geometry, 700.0e-9, f_number=100.0)
+        assert "pip install 'shack-hartmann-ao-simulation[hcipy]'" in str(
+            excinfo.value
+        )
+
+    def test_shwfs_validation_precedes_the_dependency_requirement(self):
+        with pytest.raises(
+            HcipyShackHartmannError,
+            match="ShackHartmannGeometry",
+        ):
+            HcipyShackHartmannOptics(object(), 700.0e-9, f_number=100.0)
+        geometry = build_shack_hartmann_geometry(
+            telescope_diameter_m=1.0,
+            pupil_shape=(18, 18),
+            n_lenslets_across=4,
+            min_fill_fraction=0.3,
+        )
+        with pytest.raises(
+            HcipyShackHartmannError,
+            match="integer multiple",
+        ):
+            HcipyShackHartmannOptics(geometry, 700.0e-9, f_number=100.0)

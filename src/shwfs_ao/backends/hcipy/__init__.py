@@ -40,6 +40,8 @@ __all__ = (
     "HcipyDmBackend",
     "build_hcipy_gaussian_influence_basis",
     "build_hcipy_deformable_mirror",
+    "HcipyShackHartmannError",
+    "HcipyShackHartmannOptics",
 )
 
 
@@ -62,6 +64,15 @@ _EXPORT_MODULE.update(
             "HcipyDmBackend",
             "build_hcipy_gaussian_influence_basis",
             "build_hcipy_deformable_mirror",
+        )
+    }
+)
+_EXPORT_MODULE.update(
+    {
+        name: "shwfs"
+        for name in (
+            "HcipyShackHartmannError",
+            "HcipyShackHartmannOptics",
         )
     }
 )
