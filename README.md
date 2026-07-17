@@ -275,10 +275,12 @@ python3 -m pip install -e ".[test,notebooks,docs]" # everything for development
 ```
 
 The `hcipy` extra is optional: the native backends never import HCIPy, and
-`import shwfs_ao` works without it. Currently the extra provides the
+`import shwfs_ao` works without it. The extra provides the
 `shwfs_ao.backends.hcipy.conversion` layer (grid, field, aperture, and
-wavefront round trips); HCIPy atmosphere, DM, Shack-Hartmann, and science
-propagation backends arrive in later tickets. Calling HCIPy-backed
+wavefront round trips) plus the HCIPy atmosphere, DM, Shack-Hartmann, and
+science propagation backends, and `shwfs_ao.validation` compares the two
+backend families against a reviewed cross-backend baseline
+(`python3 examples/run_native_hcipy_validation.py`). Calling HCIPy-backed
 functionality without the extra raises an error naming the exact
 `pip install 'shack-hartmann-ao-simulation[hcipy]'` command.
 
@@ -345,6 +347,7 @@ python3 examples/run_public_data_informed_ao_demo.py
 python3 examples/run_error_budget_demo.py
 python3 examples/run_validation_checks_demo.py
 python3 examples/run_fast_integration.py
+python3 examples/run_native_hcipy_validation.py   # needs the hcipy extra
 ```
 
 `run_public_data_informed_ao_demo.py` is a slower local scan because it runs
