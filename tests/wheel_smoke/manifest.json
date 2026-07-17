@@ -14,6 +14,11 @@
       "requires": ["hcipy"]
     },
     {
+      "source": "tests/backends/hcipy/test_hcipy_dm.py",
+      "kind": "test",
+      "requires": ["hcipy"]
+    },
+    {
       "source": "tests/backends/hcipy/test_optional_import.py",
       "kind": "test",
       "requires": []
