@@ -44,3 +44,26 @@ After verification, commit the synchronized metadata, create an annotated
 `vX.Y.Z` tag on that exact commit, push it, and create matching release notes.
 Those operations are explicit maintainer actions and are intentionally not
 performed by tests or repository-optimization tickets.
+
+## AO-REF-021 deprecation clock
+
+`src/shwfs_ao/resources/deprecation_clock.json` records the deprecation
+release/tag, publication UTC date, planned removal release, and earliest
+removal UTC date for the compatibility shims and the `ao_simulation_data`
+alias. It is committed in the planned/unpublished state.
+
+- When the deprecation release (the one that first ships the import warnings,
+  currently `0.2.0`) is actually tagged, in that same commit set the clock's
+  `publication_status` to `published`, set `publication_utc_date` to the tag's
+  UTC date, and update `earliest_removal_utc_date` to the later of that date
+  plus `minimum_window_days` and any published subsequent-minor date.
+- When the required subsequent minor release (`0.3.0`) is tagged, set its
+  `subsequent_minor_release.publication_status`/`publication_utc_date` and
+  re-derive `earliest_removal_utc_date`.
+- `shwfs_ao._deprecation.earliest_removal_utc_date` and
+  `removal_boundaries_satisfied` recompute these boundaries;
+  `tests/compat/test_phase_a_isolation.py` fails if the recorded date drifts
+  from the recomputed one. Regenerate `resource_manifest.json` after any clock
+  edit (the manifest hashes the packaged resource). Phase B (deletion) may open
+  only once `removal_boundaries_satisfied` holds. See
+  [migration.md](migration.md).

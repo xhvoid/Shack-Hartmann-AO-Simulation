@@ -155,7 +155,7 @@ The detector-level SH-WFS notebooks simulate lenslet spots, finite detector wind
 
 ```text
 src/shwfs_ao/ namespaced AO implementation; shared core, detector, and native backend APIs
-src/*.py      installed compatibility shims for the existing top-level imports
+src/*.py      installed deprecated compatibility shims for the existing top-level imports (AO-REF-021)
 src/shwfs_ao/resources/  canonical packaged fixtures, schemas, and reference metrics
 notebooks/    research narratives: tutorials/, studies/, experimental/, and archived legacy/original_notebooks/
 examples/     lightweight command-line demonstrations
@@ -173,7 +173,7 @@ DATA_LICENSES.md  third-party data terms and acknowledgement links
 
 ## Code architecture
 
-The installed implementation is rooted at `shwfs_ao`. Shared unit-explicit result types, component protocols, immutable pupil geometry, canonical hashing, and named random streams live under `shwfs_ao.core`. The canonical Shack-Hartmann domain is exposed by `shwfs_ao.wfs.shack_hartmann`: it separates lenslet geometry, optical spot formation, deterministic detector reference calibration, detector-level measurement, and a detector-free geometric sensor. The repository-level deformable-mirror policy lives under `shwfs_ao.dm`, while transparent NumPy atmosphere, Shack-Hartmann diffraction, science-PSF propagation, DM spatial synthesis, and real Zernike modes live under `shwfs_ao.backends.native`. `shwfs_ao.calibration` owns modal/actuator probe bases, full-row interaction matrices, central/forward calibration, matrix diagnostics, and independent mask-aware least-squares, TSVD, and Tikhonov reconstructors with bounded factorization caches. `shwfs_ao.control` owns typed reconstruction-to-command mapping, applied-command-aware leaky integration, the sole frame-latency queue, backend-independent loop sequencing, fixed-length history, and replay-safe control sweeps. `shwfs_ao.science` owns immutable wavelength quadrature, the backend-independent residual-OPD propagation helper and sampling contract, physical angular-grid semantics, and scalar science metrics. Detector configuration and realized pixel maps, typed frame effects, centroid estimators, and validity policy live under `shwfs_ao.detector`; persistent PRNU is explicit, while existing profiles retain the seeded `per_frame_legacy` mode. The PWFS forward model has one installed experimental owner at `shwfs_ao.experimental.pwfs` and is not presented as a stable SCAO backend. Remaining numerical modules are staged one-for-one under `shwfs_ao.legacy` behind silent installed top-level shims. `shwfs_ao.legacy` is an internal compatibility namespace, not a public API for new code. [`docs/architecture.md`](docs/architecture.md) shows the component boundaries and full pipeline.
+The installed implementation is rooted at `shwfs_ao`. Shared unit-explicit result types, component protocols, immutable pupil geometry, canonical hashing, and named random streams live under `shwfs_ao.core`. The canonical Shack-Hartmann domain is exposed by `shwfs_ao.wfs.shack_hartmann`: it separates lenslet geometry, optical spot formation, deterministic detector reference calibration, detector-level measurement, and a detector-free geometric sensor. The repository-level deformable-mirror policy lives under `shwfs_ao.dm`, while transparent NumPy atmosphere, Shack-Hartmann diffraction, science-PSF propagation, DM spatial synthesis, and real Zernike modes live under `shwfs_ao.backends.native`. `shwfs_ao.calibration` owns modal/actuator probe bases, full-row interaction matrices, central/forward calibration, matrix diagnostics, and independent mask-aware least-squares, TSVD, and Tikhonov reconstructors with bounded factorization caches. `shwfs_ao.control` owns typed reconstruction-to-command mapping, applied-command-aware leaky integration, the sole frame-latency queue, backend-independent loop sequencing, fixed-length history, and replay-safe control sweeps. `shwfs_ao.science` owns immutable wavelength quadrature, the backend-independent residual-OPD propagation helper and sampling contract, physical angular-grid semantics, and scalar science metrics. Detector configuration and realized pixel maps, typed frame effects, centroid estimators, and validity policy live under `shwfs_ao.detector`; persistent PRNU is explicit, while existing profiles retain the seeded `per_frame_legacy` mode. The PWFS forward model has one installed experimental owner at `shwfs_ao.experimental.pwfs` and is not presented as a stable SCAO backend. Remaining numerical modules are staged one-for-one under `shwfs_ao.legacy` behind installed top-level shims that AO-REF-021 has deprecated (they emit a `DeprecationWarning` naming the canonical replacement; see [`docs/migration.md`](docs/migration.md)). `shwfs_ao.legacy` is an internal compatibility namespace, not a public API for new code. [`docs/architecture.md`](docs/architecture.md) shows the component boundaries and full pipeline.
 
 | Transitional public import | Main role                                                                                                                                                       |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -329,20 +329,28 @@ python3 -m pip install -c constraints/py314.txt -e ".[test]"  # Python 3.14
 The constraints are CI/test profiles rather than stricter requirements imposed
 on downstream users; see [`constraints/README.md`](constraints/README.md).
 
-### AO-REF-001/012 package and resource migration
+### AO-REF-001/012/021 package, resource, and deprecation migration
 
-All 19 existing top-level module imports remain installed as silent
-compatibility paths. Their warning/removal clock has not started, and the
-examples intentionally continue to use them until canonical component APIs are
-introduced by later tickets. Do not import from `shwfs_ao.legacy` directly.
-Examples and maintenance scripts now require an installed or editable package;
-they no longer modify `sys.path`. Packaged resource names such as
-`data/public/...` remain accepted even though AO-REF-012 moved their sole
-canonical source to `src/shwfs_ao/resources/`. Wheels also contain a generated
-`ao_simulation_data` compatibility alias; it is never edited in the source
-tree. See the
-[AO-REF-001 migration note](docs/refactor/AO_REF_001_MIGRATION.md) for the full
-compatibility and resource-layout contract.
+All 19 existing top-level module imports remain installed compatibility paths,
+and AO-REF-021 Phase A has now started their deprecation clock: importing any
+of them (for example `import dm_model`) emits a `DeprecationWarning` naming the
+canonical `shwfs_ao` replacement and the planned removal release, while
+`import shwfs_ao` and the canonical subpackages stay silent. The shims remain
+installed throughout the compatibility window; nothing is deleted in Phase A.
+The `ao_simulation_data` resource alias warns the same way; read packaged data
+through `shwfs_ao.io.resources`. New code should use the canonical packages and
+avoid the deprecated top-level shims; import `shwfs_ao.legacy.*` only for the
+behavior-compatibility adapters that have no canonical drop-in yet, such as the
+`shwfs_ao.legacy.ao_integration` fast-integration runner. Examples and maintenance scripts
+now use canonical imports and require an installed or editable package; they no
+longer modify `sys.path`. Packaged resource names such as `data/public/...`
+remain accepted even though AO-REF-012 moved their sole canonical source to
+`src/shwfs_ao/resources/`. Wheels also contain the generated `ao_simulation_data`
+compatibility alias; it is never edited in the source tree. See
+[`docs/migration.md`](docs/migration.md) for the deprecation clock and the full
+replacement map, and the
+[AO-REF-001 migration note](docs/refactor/AO_REF_001_MIGRATION.md) for the
+original packaging and resource-layout contract.
 
 ## Running tests
 
@@ -422,7 +430,7 @@ For heavier local reruns, the integration API exposes explicit presets:
 ```python
 from pathlib import Path
 
-from ao_integration import IntegrationConfig, run_integration
+from shwfs_ao.legacy.ao_integration import IntegrationConfig, run_integration
 
 for mode in ("portfolio", "research"):
     output_dir = Path("outputs") / mode

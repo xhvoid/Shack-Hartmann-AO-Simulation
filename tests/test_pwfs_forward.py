@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pwfs_forward import (
+from shwfs_ao.experimental.pwfs import (
     aligned_pupil_images,
     calibrate_pwfs_interaction_matrix,
     check_pwfs_geometry,

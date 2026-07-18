@@ -381,25 +381,33 @@ class FrozenFlowAtmosphere:
         )
 
 
-def _legacy_fourier_phase_screen(
-    config: FrozenFlowAtmosphereConfig,
-    pupil_mask: np.ndarray,
+def fourier_von_karman_phase_realization(
+    size: int,
+    delta_m: float,
+    r0_m: float,
+    outer_scale_m: float | None,
     *,
     rng: np.random.Generator,
 ) -> np.ndarray:
-    """Generate the historical full finite Fourier realization."""
+    """Draw one raw Fourier von Karman phase realization in radians.
 
-    size = config.grid_size
-    frequencies = np.fft.fftfreq(size, d=config.delta_m)
+    This is the repository's single canonical implementation of the frozen
+    Fourier phase-screen spectrum (AO-REF-021): it consumes exactly two
+    ``rng.normal`` draws of shape ``(size, size)`` and returns the full
+    finite screen before any piston removal or RMS normalization.  Both the
+    native frozen-flow atmosphere and the retained
+    :mod:`shwfs_ao.legacy.phase_screen` compatibility wrapper call it, so the
+    historical float-operation sequence stays byte-identical on both paths.
+    """
+
+    frequencies = np.fft.fftfreq(size, d=delta_m)
     frequency_x, frequency_y = np.meshgrid(frequencies, frequencies)
     radial_frequency = np.sqrt(frequency_x**2 + frequency_y**2)
-    inverse_outer_scale = (
-        0.0 if config.outer_scale_m is None else 1.0 / config.outer_scale_m
-    )
+    inverse_outer_scale = 0.0 if outer_scale_m is None else 1.0 / outer_scale_m
     with np.errstate(divide="ignore", invalid="ignore"):
         power_spectrum = (
             0.023
-            * config.r0_m ** (-5.0 / 3.0)
+            * r0_m ** (-5.0 / 3.0)
             * (radial_frequency**2 + inverse_outer_scale**2) ** (-11.0 / 6.0)
         )
     power_spectrum[0, 0] = 0.0
@@ -408,7 +416,24 @@ def _legacy_fourier_phase_screen(
         size=(size, size)
     )
     fourier_coefficients = random_complex * np.sqrt(power_spectrum)
-    phase = np.fft.ifft2(fourier_coefficients).real
+    return np.fft.ifft2(fourier_coefficients).real
+
+
+def _legacy_fourier_phase_screen(
+    config: FrozenFlowAtmosphereConfig,
+    pupil_mask: np.ndarray,
+    *,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Generate the historical full finite Fourier realization."""
+
+    phase = fourier_von_karman_phase_realization(
+        config.grid_size,
+        config.delta_m,
+        config.r0_m,
+        config.outer_scale_m,
+        rng=rng,
+    )
     phase -= masked_mean(phase, pupil_mask)
 
     if config.normalize_rms:

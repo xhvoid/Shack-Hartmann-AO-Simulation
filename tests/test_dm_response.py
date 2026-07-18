@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from dm_model import (
+from shwfs_ao.legacy.dm_model import (
     DMConfig,
     build_dm_model,
     load_dm_config_from_json,
@@ -12,7 +12,7 @@ from dm_model import (
     actuator_metadata,
     fit_static_opd_with_dm,
 )
-from synthetic_instrument_data import ShwfsGeometryConfig, make_pupil_grid_and_mask
+from shwfs_ao.legacy.synthetic_instrument_data import ShwfsGeometryConfig, make_pupil_grid_and_mask
 
 
 def _pupil_grid():

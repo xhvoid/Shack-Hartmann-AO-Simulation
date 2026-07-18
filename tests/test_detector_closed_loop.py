@@ -3,15 +3,15 @@
 import numpy as np
 import pytest
 
-from ao_closed_loop import (
+from shwfs_ao.legacy.ao_closed_loop import (
     ClosedLoopError,
     DetectorLoopConfig,
     loop_history_summary,
     run_detector_integrator_loop,
 )
-from dm_model import DMConfig, build_dm_model, synthesize_dm_phase_rad
-from interaction_matrix import PokeMatrixConfig, build_detector_dm_poke_matrix, expand_controlled_commands
-from synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build_detector_shwfs_calibration
+from shwfs_ao.legacy.dm_model import DMConfig, build_dm_model, synthesize_dm_phase_rad
+from shwfs_ao.legacy.interaction_matrix import PokeMatrixConfig, build_detector_dm_poke_matrix, expand_controlled_commands
+from shwfs_ao.legacy.synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build_detector_shwfs_calibration
 
 
 @pytest.fixture(scope="module")

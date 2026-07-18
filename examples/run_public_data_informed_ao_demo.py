@@ -28,10 +28,10 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from ao_conditions import condition_rows, default_observing_conditions
-from ao_error_budget import ScenarioConfig, run_error_budget_scenario
-from ao_integration import IntegrationConfig, build_integration_system, build_jhk_bandpasses, run_integration
-from data_sources import load_eso_asm_snapshot
+from shwfs_ao.experiments.public_data_conditioned import condition_rows, default_observing_conditions
+from shwfs_ao.experiments.error_budget import ScenarioConfig, run_error_budget_scenario
+from shwfs_ao.legacy.ao_integration import IntegrationConfig, build_integration_system, build_jhk_bandpasses, run_integration
+from shwfs_ao.io.public_data import load_eso_asm_snapshot
 from shwfs_ao.io.artifacts import (
     RUNTIME_V2_HEADER,
     write_csv_rows,

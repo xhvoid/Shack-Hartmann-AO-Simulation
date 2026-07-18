@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from ao_conditions import (
+from shwfs_ao.experiments.public_data_conditioned import (
     REFERENCE_PHASE_AMPLITUDE_NM,
     REFERENCE_SEEING_ARCSEC,
     condition_rows,
@@ -14,7 +14,7 @@ from ao_conditions import (
     phase_amplitude_from_seeing,
     r0_from_seeing_arcsec,
 )
-from data_sources import load_eso_asm_snapshot
+from shwfs_ao.io.public_data import load_eso_asm_snapshot
 
 
 ROOT = Path(__file__).resolve().parents[1]

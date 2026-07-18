@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from zernike import zernike_radial
+from shwfs_ao.legacy.zernike import zernike_radial
 
 
 @pytest.mark.parametrize(

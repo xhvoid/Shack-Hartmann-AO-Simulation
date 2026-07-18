@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from reconstruction import (
+from shwfs_ao.legacy.reconstruction import (
     build_response_matrix,
     measure_slopes,
     numerical_gradient,
@@ -12,7 +12,7 @@ from reconstruction import (
     rms,
     subaperture_masks,
 )
-from zernike import make_pupil_grid, synthesize_wavefront, zernike_named_modes
+from shwfs_ao.legacy.zernike import make_pupil_grid, synthesize_wavefront, zernike_named_modes
 
 
 def test_numerical_gradient_of_linear_wavefront():

@@ -1,0 +1,1092 @@
+{
+  "schema_name": "shwfs_ao.deprecation_inventory",
+  "schema_version": 1,
+  "ticket": "AO-REF-021",
+  "phase": "A",
+  "clock_resource": "deprecation_clock.json",
+  "warned_import_paths_policy": "Import-time DeprecationWarning fires for every root_shims entry and for the ao_simulation_data resource alias. shwfs_ao.legacy modules are the documented non-canonical compatibility layer and stay silent during the Phase A window.",
+  "root_shims": [
+    {
+      "module": "ao_closed_loop",
+      "source_path": "src/ao_closed_loop.py",
+      "import_path": "ao_closed_loop",
+      "replacement": "shwfs_ao.control with shwfs_ao.experiments.scao (canonical loop) or shwfs_ao.legacy.ao_closed_loop (frozen compatibility surface)",
+      "public_symbols": [
+        "ALLOWED_SOURCE_CLASSES",
+        "Any",
+        "ClosedLoopError",
+        "DEFAULT_CENTROID_VALIDITY",
+        "DEFAULT_LOOP_SOURCE_CLASS",
+        "DEFAULT_LOOP_SOURCE_NOTE",
+        "DMModel",
+        "DetectorLoopConfig",
+        "DetectorShwfsCalibration",
+        "LoopHistory",
+        "NM_PER_M",
+        "PHASE_TWO_PI",
+        "PokeMtxResult",
+        "actuator_centers_on_pupil",
+        "annotations",
+        "build_detector_dm_poke_matrix_from_calibration",
+        "build_dm_detector_response_matrix",
+        "build_dm_wfs_response_matrix",
+        "dataclass",
+        "expand_controlled_commands",
+        "frozen_flow_shift",
+        "frozen_flow_shift_physical",
+        "gain_scan",
+        "gaussian_influence_functions",
+        "hashlib",
+        "json",
+        "loop_history_summary",
+        "math",
+        "measure_centroid_shifts",
+        "measure_detector_shwfs",
+        "measure_slopes",
+        "np",
+        "reconstruct_dm_delta",
+        "reference_centroids",
+        "rms",
+        "run_closed_loop_ao",
+        "run_closed_loop_ao_detector",
+        "run_detector_integrator_loop",
+        "shifted_atmosphere",
+        "stable_array_descriptor",
+        "strehl_ratio",
+        "synthesize_dm_phase",
+        "synthesize_dm_phase_rad",
+        "tsvd_reconstruct_commands",
+        "vectorize_detector_measurement"
+      ],
+      "symbol_replacement_overrides": {
+        "DetectorLoopConfig": "shwfs_ao.legacy.ao_closed_loop.DetectorLoopConfig",
+        "LoopHistory": "shwfs_ao.legacy.ao_closed_loop.LoopHistory",
+        "run_detector_integrator_loop": "shwfs_ao.legacy.ao_closed_loop.run_detector_integrator_loop"
+      }
+    },
+    {
+      "module": "ao_conditions",
+      "source_path": "src/ao_conditions.py",
+      "import_path": "ao_conditions",
+      "replacement": "shwfs_ao.experiments.public_data_conditioned",
+      "public_symbols": [
+        "ALLOWED_SOURCE_CLASSES",
+        "AOConditionError",
+        "ARCSEC_PER_RAD",
+        "EsoAsmSnapshot",
+        "ObservingConditionConfig",
+        "REFERENCE_PHASE_AMPLITUDE_NM",
+        "REFERENCE_SEEING_ARCSEC",
+        "Sequence",
+        "annotations",
+        "condition_rows",
+        "dataclass",
+        "default_observing_conditions",
+        "math",
+        "phase_amplitude_from_seeing",
+        "r0_from_seeing_arcsec",
+        "theta0_rad_from_arcsec"
+      ],
+      "symbol_replacement_overrides": {}
+    },
+    {
+      "module": "ao_diagnostics",
+      "source_path": "src/ao_diagnostics.py",
+      "import_path": "ao_diagnostics",
+      "replacement": "shwfs_ao.science.metrics and shwfs_ao.science.bandpass (canonical) or shwfs_ao.legacy.ao_diagnostics (frozen compatibility surface)",
+      "public_symbols": [
+        "ALLOWED_SOURCE_CLASSES",
+        "AODiagnosticsError",
+        "ARCSEC_PER_RAD",
+        "Any",
+        "DEFAULT_DIAGNOSTIC_SOURCE_CLASS",
+        "DEFAULT_DIAGNOSTIC_SOURCE_NOTE",
+        "DMModel",
+        "FilterCurve",
+        "Mapping",
+        "NM_PER_M",
+        "NM_TO_M",
+        "PHASE_TWO_PI",
+        "ScienceBandpass",
+        "SciencePsfMetrics",
+        "Sequence",
+        "annotations",
+        "band_averaged_psf_metrics_from_opd",
+        "bandpass_from_filter_curve",
+        "compute_psf_from_phase",
+        "dataclass",
+        "marechal_strehl",
+        "math",
+        "monochromatic_bandpass",
+        "np",
+        "phase_for_science_wavelength",
+        "phase_rad_to_opd_nm",
+        "remove_piston_opd_nm",
+        "residual_opd_nm_from_command",
+        "science_case_metrics_table",
+        "science_metrics_as_dicts",
+        "science_psf_metrics_from_opd",
+        "synthesize_dm_phase_rad",
+        "top_hat_bandpass"
+      ],
+      "symbol_replacement_overrides": {
+        "ScienceBandpass": "shwfs_ao.science.bandpass.ScienceBandpass",
+        "top_hat_bandpass": "shwfs_ao.science.bandpass.top_hat_bandpass",
+        "bandpass_from_filter_curve": "shwfs_ao.science.bandpass.bandpass_from_filter_curve"
+      }
+    },
+    {
+      "module": "ao_error_budget",
+      "source_path": "src/ao_error_budget.py",
+      "import_path": "ao_error_budget",
+      "replacement": "shwfs_ao.experiments.error_budget",
+      "public_symbols": [
+        "ALLOWED_SOURCE_CLASSES",
+        "AOErrorBudgetError",
+        "Any",
+        "DEFAULT_H_BAND",
+        "DEFAULT_J_BAND",
+        "DEFAULT_K_BAND",
+        "DEFAULT_SCENARIO_SOURCE_CLASS",
+        "DEFAULT_SCENARIO_SOURCE_NOTE",
+        "DMConfig",
+        "DMModel",
+        "DetectorLoopConfig",
+        "DetectorShwfsCalibration",
+        "LoopHistory",
+        "Mapping",
+        "NM_PER_M",
+        "PHASE_TWO_PI",
+        "PokeMtxResult",
+        "REQUIRED_SCENARIO_NAMES",
+        "ScenarioConfig",
+        "ScenarioResult",
+        "ScienceBandpass",
+        "Sequence",
+        "annotations",
+        "band_averaged_psf_metrics_from_opd",
+        "build_control_space_phase_sequence",
+        "dataclass",
+        "default_error_budget_scenarios",
+        "default_jhk_bandpasses",
+        "expand_controlled_commands",
+        "hashlib",
+        "json",
+        "math",
+        "ndimage",
+        "np",
+        "phase_rad_to_opd_nm",
+        "remove_piston_opd_nm",
+        "replace",
+        "residual_opd_nm_from_command",
+        "run_detector_integrator_loop",
+        "run_error_budget_scenario",
+        "run_error_budget_scenarios",
+        "scenario_results_as_dicts",
+        "stable_array_descriptor",
+        "summarize_scenario",
+        "synthesize_dm_phase_rad",
+        "top_hat_bandpass"
+      ],
+      "symbol_replacement_overrides": {}
+    },
+    {
+      "module": "ao_integration",
+      "source_path": "src/ao_integration.py",
+      "import_path": "ao_integration",
+      "replacement": "shwfs_ao.experiments.scao with shwfs_ao.io.artifacts (canonical) or shwfs_ao.legacy.ao_integration (frozen fast-integration surface)",
+      "public_symbols": [
+        "ALLOWED_SOURCE_CLASSES",
+        "AOIntegrationError",
+        "Any",
+        "DEFAULT_INTEGRATION_SOURCE_CLASS",
+        "DEFAULT_INTEGRATION_SOURCE_NOTE",
+        "DEFAULT_OUTPUT_DIR",
+        "DEFAULT_REFERENCE_METRICS_PATH",
+        "DMConfig",
+        "DMModel",
+        "DetectorConfig",
+        "DetectorLoopConfig",
+        "DetectorShwfsCalibration",
+        "IntegrationConfig",
+        "IntegrationRunResult",
+        "Path",
+        "PokeMatrixConfig",
+        "PokeMtxResult",
+        "REFERENCE_TOLERANCES",
+        "REPO_ROOT",
+        "REQUIRED_REFERENCE_FIELDS",
+        "REQUIRED_SCENARIO_NAMES",
+        "ScenarioConfig",
+        "ScenarioResult",
+        "Sequence",
+        "ShwfsGeometryConfig",
+        "VALID_INTEGRATION_MODES",
+        "ValidationCheckResult",
+        "ValidationScanResult",
+        "annotations",
+        "asdict",
+        "bandpass_from_filter_curve",
+        "build_control_space_phase_sequence",
+        "build_detector_dm_poke_matrix",
+        "build_detector_shwfs_calibration",
+        "build_dm_model",
+        "build_integration_system",
+        "build_jhk_bandpasses",
+        "build_reference_metrics",
+        "build_validation_results",
+        "check_centroid_noise_photon_monotonicity",
+        "check_diffraction_scale",
+        "check_dm_fitting_trend",
+        "check_latency_residual_monotonicity",
+        "check_marechal_consistency",
+        "check_scenario_reproducibility",
+        "csv",
+        "dataclass",
+        "default_error_budget_scenarios",
+        "hashlib",
+        "json",
+        "load_reference_metrics",
+        "load_svo_filter_curve",
+        "math",
+        "np",
+        "open_text_resource",
+        "replace",
+        "resource_exists",
+        "run_error_budget_scenario",
+        "run_error_budget_scenarios",
+        "run_fast_integration",
+        "run_integration",
+        "scenario_results_as_dicts",
+        "time",
+        "top_hat_bandpass",
+        "validation_results_as_dicts"
+      ],
+      "symbol_replacement_overrides": {}
+    },
+    {
+      "module": "ao_validation",
+      "source_path": "src/ao_validation.py",
+      "import_path": "ao_validation",
+      "replacement": "shwfs_ao.validation (canonical) or shwfs_ao.legacy.ao_validation (frozen notebook-11 check surface)",
+      "public_symbols": [
+        "ALLOWED_SOURCE_CLASSES",
+        "AOValidationError",
+        "Any",
+        "DEFAULT_VALIDATION_SOURCE_CLASS",
+        "DEFAULT_VALIDATION_SOURCE_NOTE",
+        "DMConfig",
+        "DetectorConfig",
+        "DetectorLoopConfig",
+        "DetectorShwfsCalibration",
+        "PokeMtxResult",
+        "ScenarioResult",
+        "Sequence",
+        "ValidationCheckResult",
+        "ValidationScanResult",
+        "annotations",
+        "build_dm_model",
+        "check_centroid_noise_photon_monotonicity",
+        "check_diffraction_scale",
+        "check_dm_fitting_trend",
+        "check_latency_residual_monotonicity",
+        "check_marechal_consistency",
+        "check_scenario_reproducibility",
+        "dataclass",
+        "fit_static_opd_with_dm",
+        "math",
+        "np",
+        "replace",
+        "run_detector_integrator_loop",
+        "sample_centroid_noise",
+        "science_psf_metrics_from_opd",
+        "validation_results_as_dicts"
+      ],
+      "symbol_replacement_overrides": {}
+    },
+    {
+      "module": "atmosphere_profiles",
+      "source_path": "src/atmosphere_profiles.py",
+      "import_path": "atmosphere_profiles",
+      "replacement": "shwfs_ao.backends.native.atmosphere and shwfs_ao.io.configs (canonical) or shwfs_ao.legacy.atmosphere_profiles (frozen compatibility surface)",
+      "public_symbols": [
+        "ALLOWED_SOURCE_CLASSES",
+        "ARCSEC_PER_RAD",
+        "AtmosphereConfig",
+        "AtmosphereLayerConfig",
+        "AtmospherePhaseCube",
+        "AtmosphereProfileError",
+        "EsoAsmSnapshot",
+        "FRIED_SEEING_COEFFICIENT",
+        "FULL_SCREEN_COVER_FACTOR",
+        "LAYER_WEIGHT_ABS_TOL",
+        "LiteratureAtmosphereProfile",
+        "PHASE_RMS_COEFFICIENT",
+        "PHASE_RMS_REL_TOL",
+        "R0_REFERENCE_WAVELENGTH_M",
+        "R0_STRENGTH_EXPONENT",
+        "R0_WAVELENGTH_EXPONENT",
+        "Sequence",
+        "annotations",
+        "atmosphere_config_from_eso_asm_snapshot",
+        "atmosphere_config_from_literature_profile",
+        "circular_mask_from_grid",
+        "dataclass",
+        "equivalent_r0_500_m",
+        "expected_phase_rms_rad",
+        "fourier_phase_screen",
+        "generate_multilayer_phase_cube",
+        "math",
+        "normalize_layers",
+        "np",
+        "r0_at_wavelength_m",
+        "rms",
+        "seeing_to_r0_m",
+        "shift_full_phase_pixels",
+        "wind_components_ms"
+      ],
+      "symbol_replacement_overrides": {}
+    },
+    {
+      "module": "config_hashing",
+      "source_path": "src/config_hashing.py",
+      "import_path": "config_hashing",
+      "replacement": "shwfs_ao.core.hashing",
+      "public_symbols": [
+        "Any",
+        "annotations",
+        "hashlib",
+        "json",
+        "np",
+        "stable_array_descriptor"
+      ],
+      "symbol_replacement_overrides": {
+        "stable_array_descriptor": "shwfs_ao.core.hashing.stable_array_descriptor"
+      }
+    },
+    {
+      "module": "data_sources",
+      "source_path": "src/data_sources.py",
+      "import_path": "data_sources",
+      "replacement": "shwfs_ao.io.public_data",
+      "public_symbols": [
+        "ALLOWED_SOURCE_CLASSES",
+        "ARCSEC_PER_RADIAN",
+        "ATMOSPHERE_LAYER_UNITS",
+        "Any",
+        "AtmosphereLayer",
+        "CSV_COMMENT_PREFIX",
+        "CSV_METADATA_SEPARATOR",
+        "DataSourceError",
+        "ESO_MEASUREMENT_UNITS",
+        "EsoAsmSnapshot",
+        "FilterCurve",
+        "LITERATURE_SUMMARY_UNITS",
+        "LiteratureAtmosphereProfile",
+        "NORMALIZED_WEIGHT_ABS_TOL",
+        "Path",
+        "Provenance",
+        "REQUIRED_CSV_METADATA",
+        "TargetPhotometry",
+        "annotations",
+        "csv",
+        "dataclass",
+        "json",
+        "load_eso_asm_snapshot",
+        "load_literature_atmosphere_profile",
+        "load_svo_filter_curve",
+        "load_target_photometry",
+        "math",
+        "open_text_resource"
+      ],
+      "symbol_replacement_overrides": {
+        "Provenance": "shwfs_ao.core.provenance.Provenance",
+        "load_svo_filter_curve": "shwfs_ao.io.public_data.load_svo_filter_curve",
+        "load_eso_asm_snapshot": "shwfs_ao.io.public_data.load_eso_asm_snapshot"
+      }
+    },
+    {
+      "module": "dm_model",
+      "source_path": "src/dm_model.py",
+      "import_path": "dm_model",
+      "replacement": "shwfs_ao.dm (canonical) or shwfs_ao.legacy.dm_model (frozen compatibility surface)",
+      "public_symbols": [
+        "ALLOWED_SOURCE_CLASSES",
+        "Any",
+        "DEFAULT_ACTUATOR_MARGIN_FRACTION",
+        "DEFAULT_DM_SOURCE_CLASS",
+        "DEFAULT_DM_SOURCE_NOTE",
+        "DMConfig",
+        "DMFitResult",
+        "DMModel",
+        "DMModelError",
+        "DMSynthesisResult",
+        "MIN_ACTUATORS_ACROSS",
+        "NM_TO_M",
+        "PHASE_TWO_PI",
+        "Path",
+        "Sequence",
+        "VALID_INFLUENCE_MODELS",
+        "actuator_centers_on_pupil",
+        "actuator_metadata",
+        "annotations",
+        "build_dm_model",
+        "clip_commands_nm",
+        "dataclass",
+        "fit_static_opd_with_dm",
+        "json",
+        "load_dm_config_from_json",
+        "math",
+        "np",
+        "open_text_resource",
+        "optimize",
+        "synthesize_dm_opd_nm",
+        "synthesize_dm_phase_rad"
+      ],
+      "symbol_replacement_overrides": {
+        "DMConfig": "shwfs_ao.dm.DMConfig",
+        "DMModelError": "shwfs_ao.dm.DMModelError"
+      }
+    },
+    {
+      "module": "interaction_matrix",
+      "source_path": "src/interaction_matrix.py",
+      "import_path": "interaction_matrix",
+      "replacement": "shwfs_ao.calibration (canonical) or shwfs_ao.legacy.interaction_matrix (frozen compatibility surface)",
+      "public_symbols": [
+        "ALLOWED_SOURCE_CLASSES",
+        "Any",
+        "DEFAULT_CENTROID_VALIDITY",
+        "DEFAULT_NUMERIC_RANK_RTOL",
+        "DEFAULT_POKE_AMPLITUDE_GRID_NM",
+        "DEFAULT_POKE_SOURCE_CLASS",
+        "DEFAULT_POKE_SOURCE_NOTE",
+        "DEFAULT_RCOND_SCAN_GRID",
+        "DEFAULT_TARGET_KEPT_FRACTION",
+        "DMModel",
+        "DetectorMeasurement",
+        "DetectorShwfsCalibration",
+        "InteractionMatrixError",
+        "PokeMatrixConfig",
+        "PokeMtxResult",
+        "RcondScanResult",
+        "Sequence",
+        "TSVDReconstructionResult",
+        "TikhonovReconstructionResult",
+        "annotations",
+        "build_detector_dm_poke_matrix",
+        "choose_rcond_from_singular_values",
+        "dataclass",
+        "expand_controlled_commands",
+        "hashlib",
+        "json",
+        "kept_modes_for_rcond",
+        "math",
+        "measure_detector_shwfs",
+        "noise_amplification_proxy",
+        "np",
+        "poke_amplitude_scan",
+        "poke_matrix_summary",
+        "replace",
+        "scan_tsvd_rcond",
+        "stable_array_descriptor",
+        "synthesize_dm_phase_rad",
+        "tikhonov_reconstruct_commands",
+        "tsvd_reconstruct_commands",
+        "vectorize_detector_measurement"
+      ],
+      "symbol_replacement_overrides": {}
+    },
+    {
+      "module": "phase_screen",
+      "source_path": "src/phase_screen.py",
+      "import_path": "phase_screen",
+      "replacement": "shwfs_ao.backends.native.atmosphere (canonical) or shwfs_ao.legacy.phase_screen (frozen compatibility surface)",
+      "public_symbols": [
+        "annotations",
+        "circular_mask_from_grid",
+        "fourier_phase_screen",
+        "frozen_flow_shift",
+        "frozen_flow_shift_physical",
+        "np",
+        "opd_to_phase",
+        "phase_to_opd",
+        "r0_from_seeing",
+        "remove_piston",
+        "rms",
+        "scale_r0_with_wavelength"
+      ],
+      "symbol_replacement_overrides": {
+        "phase_to_opd": "shwfs_ao.core.wavefront.phase_to_opd",
+        "opd_to_phase": "shwfs_ao.core.wavefront.opd_to_phase",
+        "fourier_phase_screen": "shwfs_ao.backends.native.atmosphere.FrozenFlowAtmosphere"
+      }
+    },
+    {
+      "module": "psf_tools",
+      "source_path": "src/psf_tools.py",
+      "import_path": "psf_tools",
+      "replacement": "shwfs_ao.science.metrics and shwfs_ao.backends.native.propagation (canonical) or shwfs_ao.legacy.psf_tools (frozen compatibility surface)",
+      "public_symbols": [
+        "annotations",
+        "compute_psf_from_phase",
+        "marechal_strehl",
+        "np",
+        "phase_for_science_wavelength",
+        "radial_profile",
+        "strehl_ratio"
+      ],
+      "symbol_replacement_overrides": {}
+    },
+    {
+      "module": "pwfs_forward",
+      "source_path": "src/pwfs_forward.py",
+      "import_path": "pwfs_forward",
+      "replacement": "shwfs_ao.experimental.pwfs",
+      "public_symbols": [
+        "add_detector_noise",
+        "add_tilt_phase",
+        "aligned_pupil_images",
+        "calibrate_pwfs_interaction_matrix",
+        "check_pwfs_geometry",
+        "extract_cutout",
+        "fft2c",
+        "ifft2c",
+        "make_aligned_pupil_mask",
+        "make_modulation_points",
+        "make_pwfs_grid",
+        "np",
+        "pupil_image_centers",
+        "pwfs_detector_measurement_from_phase",
+        "pwfs_detector_signal_from_phase",
+        "pwfs_intensity",
+        "pwfs_measurement_from_phase",
+        "pwfs_reference_signal",
+        "pwfs_signal_from_intensity",
+        "pwfs_signal_from_phase",
+        "pwfs_signal_maps_from_intensity",
+        "pyramid_phase_mask"
+      ],
+      "symbol_replacement_overrides": {}
+    },
+    {
+      "module": "reconstruction",
+      "source_path": "src/reconstruction.py",
+      "import_path": "reconstruction",
+      "replacement": "shwfs_ao.wfs.shack_hartmann.geometric (canonical) or shwfs_ao.legacy.reconstruction (frozen compatibility surface)",
+      "public_symbols": [
+        "annotations",
+        "build_response_matrix",
+        "measure_geometric_slopes",
+        "measure_slopes",
+        "np",
+        "numerical_gradient",
+        "reconstruct_modal_coefficients",
+        "reconstruct_tikhonov",
+        "reconstruct_tsvd",
+        "reconstruct_wavefront",
+        "remove_piston",
+        "residual_wavefront",
+        "rms",
+        "subaperture_masks",
+        "synthesize_from_coefficients"
+      ],
+      "symbol_replacement_overrides": {}
+    },
+    {
+      "module": "runtime_resources",
+      "source_path": "src/runtime_resources.py",
+      "import_path": "runtime_resources",
+      "replacement": "shwfs_ao.io.resources",
+      "public_symbols": [
+        "Iterator",
+        "Path",
+        "RESOURCE_PACKAGE",
+        "SOURCE_REPOSITORY_ROOT",
+        "TextIO",
+        "annotations",
+        "contextmanager",
+        "normalized_resource_name",
+        "open_text_resource",
+        "resource_exists",
+        "resources"
+      ],
+      "symbol_replacement_overrides": {
+        "open_text_resource": "shwfs_ao.io.resources.open_text_resource",
+        "resource_exists": "shwfs_ao.io.resources.resource_exists",
+        "normalized_resource_name": "shwfs_ao.io.resources.normalized_resource_name"
+      }
+    },
+    {
+      "module": "shwfs_detector",
+      "source_path": "src/shwfs_detector.py",
+      "import_path": "shwfs_detector",
+      "replacement": "shwfs_ao.detector and shwfs_ao.wfs.shack_hartmann (canonical) or shwfs_ao.legacy.shwfs_detector (frozen compatibility surface)",
+      "public_symbols": [
+        "add_detector_noise",
+        "annotations",
+        "build_detector_response_matrix",
+        "centroid",
+        "centroid_noise_scan",
+        "crop_center",
+        "lenslet_spot_from_phase",
+        "measure_centroid_shifts",
+        "nominal_lenslet_sampling_shape",
+        "np",
+        "reconstruct_from_centroid_shifts",
+        "reference_centroids",
+        "subaperture_masks"
+      ],
+      "symbol_replacement_overrides": {}
+    },
+    {
+      "module": "synthetic_instrument_data",
+      "source_path": "src/synthetic_instrument_data.py",
+      "import_path": "synthetic_instrument_data",
+      "replacement": "shwfs_ao.detector and shwfs_ao.wfs.shack_hartmann (canonical) or shwfs_ao.legacy.synthetic_instrument_data (frozen compatibility surface)",
+      "public_symbols": [
+        "ALLOWED_SOURCE_CLASSES",
+        "CentroidValidityConfig",
+        "DEFAULT_CENTROID_VALIDITY",
+        "DEFAULT_SOURCE_CLASS",
+        "DEFAULT_WFS_WAVELENGTH_M",
+        "DETECTOR_PRESETS",
+        "DetectorConfig",
+        "DetectorMeasurement",
+        "DetectorPreset",
+        "DetectorResponseMatrix",
+        "DetectorShwfsCalibration",
+        "MIN_VALID_CENTROID_FRACTION",
+        "Sequence",
+        "ShwfsGeometryConfig",
+        "SyntheticInstrumentError",
+        "add_configured_detector_noise",
+        "annotations",
+        "build_detector_shwfs_calibration",
+        "build_tilt_response_matrix",
+        "centroid",
+        "centroid_quality",
+        "crop_center",
+        "dataclass",
+        "detector_preset",
+        "lenslet_spot_from_phase",
+        "make_bad_pixel_mask",
+        "make_pupil_grid_and_mask",
+        "math",
+        "measure_detector_shwfs",
+        "nominal_lenslet_sampling_shape",
+        "np",
+        "phase_tilt_map_rad",
+        "sample_centroid_noise",
+        "subaperture_masks",
+        "zero_phase_centroid_rms_px"
+      ],
+      "symbol_replacement_overrides": {}
+    },
+    {
+      "module": "zernike",
+      "source_path": "src/zernike.py",
+      "import_path": "zernike",
+      "replacement": "shwfs_ao.backends.native.modes (canonical) or shwfs_ao.legacy.zernike (frozen compatibility surface)",
+      "public_symbols": [
+        "annotations",
+        "eval_jacobi",
+        "generate_zernike_modes",
+        "make_pupil_grid",
+        "np",
+        "number_of_zernike_modes",
+        "remove_piston",
+        "rms",
+        "synthesize_wavefront",
+        "zernike_gram_matrix",
+        "zernike_inner_product",
+        "zernike_named_modes",
+        "zernike_nm",
+        "zernike_radial"
+      ],
+      "symbol_replacement_overrides": {
+        "generate_zernike_modes": "shwfs_ao.backends.native.modes.generate_zernike_modes",
+        "number_of_zernike_modes": "shwfs_ao.backends.native.modes.number_of_zernike_modes"
+      }
+    }
+  ],
+  "resource_aliases": [
+    {
+      "kind": "package",
+      "name": "ao_simulation_data",
+      "generator": "build_support/resource_alias.py",
+      "byte_identical_to": "shwfs_ao.resources",
+      "replacement": "shwfs_ao.resources via shwfs_ao.io.resources",
+      "warns_on_import": true
+    },
+    {
+      "kind": "logical_name_aliases",
+      "name": "data/<name> and bare <name> lookups",
+      "generator": "shwfs_ao.io.resources.normalized_resource_name",
+      "byte_identical_to": "shwfs_ao.resources logical names",
+      "replacement": "canonical logical resource names",
+      "warns_on_import": false
+    }
+  ],
+  "legacy_modules": [
+    {
+      "module": "shwfs_ao.legacy._control_adapters",
+      "source_path": "src/shwfs_ao/legacy/_control_adapters.py",
+      "private": true,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-021"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.control",
+        "shwfs_ao.calibration",
+        "shwfs_ao.detector"
+      ],
+      "phase_b_disposition": "remove_after_error_budget_engine_relocation"
+    },
+    {
+      "module": "shwfs_ao.legacy._interaction_adapters",
+      "source_path": "src/shwfs_ao/legacy/_interaction_adapters.py",
+      "private": true,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-021"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.control",
+        "shwfs_ao.calibration",
+        "shwfs_ao.detector"
+      ],
+      "phase_b_disposition": "remove_after_error_budget_engine_relocation"
+    },
+    {
+      "module": "shwfs_ao.legacy._reconstruction_adapters",
+      "source_path": "src/shwfs_ao/legacy/_reconstruction_adapters.py",
+      "private": true,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-021"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.control",
+        "shwfs_ao.calibration",
+        "shwfs_ao.detector"
+      ],
+      "phase_b_disposition": "remove_after_error_budget_engine_relocation"
+    },
+    {
+      "module": "shwfs_ao.legacy.ao_closed_loop",
+      "source_path": "src/shwfs_ao/legacy/ao_closed_loop.py",
+      "private": false,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-006",
+        "AO-REF-007",
+        "AO-REF-008",
+        "AO-REF-009"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.control",
+        "shwfs_ao.experiments.scao",
+        "shwfs_ao.dm",
+        "shwfs_ao.calibration"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.ao_conditions",
+      "source_path": "src/shwfs_ao/legacy/ao_conditions.py",
+      "private": false,
+      "disposition": "pure_facade",
+      "canonical_owner_tickets": [
+        "AO-REF-003",
+        "AO-REF-011"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.experiments.public_data_conditioned"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.ao_diagnostics",
+      "source_path": "src/shwfs_ao/legacy/ao_diagnostics.py",
+      "private": false,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-002",
+        "AO-REF-007",
+        "AO-REF-010",
+        "AO-REF-018"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.science.metrics",
+        "shwfs_ao.science.bandpass",
+        "shwfs_ao.core.wavefront"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.ao_error_budget",
+      "source_path": "src/shwfs_ao/legacy/ao_error_budget.py",
+      "private": false,
+      "disposition": "pure_facade",
+      "canonical_owner_tickets": [
+        "AO-REF-011",
+        "AO-REF-012"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.experiments.error_budget"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.ao_integration",
+      "source_path": "src/shwfs_ao/legacy/ao_integration.py",
+      "private": false,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-011",
+        "AO-REF-012",
+        "AO-REF-018"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.experiments.scao",
+        "shwfs_ao.io.artifacts",
+        "shwfs_ao.validation.regression"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.ao_validation",
+      "source_path": "src/shwfs_ao/legacy/ao_validation.py",
+      "private": false,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-010",
+        "AO-REF-018"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.validation.physical",
+        "shwfs_ao.validation.regression"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.atmosphere_profiles",
+      "source_path": "src/shwfs_ao/legacy/atmosphere_profiles.py",
+      "private": false,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-003",
+        "AO-REF-003A",
+        "AO-REF-011"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.backends.native.atmosphere",
+        "shwfs_ao.io.configs",
+        "shwfs_ao.core.provenance"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.config_hashing",
+      "source_path": "src/shwfs_ao/legacy/config_hashing.py",
+      "private": false,
+      "disposition": "pure_facade",
+      "canonical_owner_tickets": [
+        "AO-REF-003A"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.core.hashing"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.data_sources",
+      "source_path": "src/shwfs_ao/legacy/data_sources.py",
+      "private": false,
+      "disposition": "pure_facade",
+      "canonical_owner_tickets": [
+        "AO-REF-003",
+        "AO-REF-012"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.io.public_data",
+        "shwfs_ao.core.provenance"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.dm_model",
+      "source_path": "src/shwfs_ao/legacy/dm_model.py",
+      "private": false,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-006"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.dm",
+        "shwfs_ao.backends.native.dm"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.interaction_matrix",
+      "source_path": "src/shwfs_ao/legacy/interaction_matrix.py",
+      "private": false,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-007",
+        "AO-REF-008"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.calibration.interaction",
+        "shwfs_ao.calibration.diagnostics",
+        "shwfs_ao.calibration.reconstructors"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.phase_screen",
+      "source_path": "src/shwfs_ao/legacy/phase_screen.py",
+      "private": false,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-002",
+        "AO-REF-003A"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.backends.native.atmosphere",
+        "shwfs_ao.core.wavefront"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.psf_tools",
+      "source_path": "src/shwfs_ao/legacy/psf_tools.py",
+      "private": false,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-010"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.backends.native.propagation",
+        "shwfs_ao.science.metrics"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.pwfs_forward",
+      "source_path": "src/shwfs_ao/legacy/pwfs_forward.py",
+      "private": false,
+      "disposition": "pure_facade",
+      "canonical_owner_tickets": [
+        "AO-REF-005"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.experimental.pwfs"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.reconstruction",
+      "source_path": "src/shwfs_ao/legacy/reconstruction.py",
+      "private": false,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-007",
+        "AO-REF-008"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.wfs.shack_hartmann.geometric",
+        "shwfs_ao.calibration"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.runtime_resources",
+      "source_path": "src/shwfs_ao/legacy/runtime_resources.py",
+      "private": false,
+      "disposition": "pure_facade",
+      "canonical_owner_tickets": [
+        "AO-REF-012"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.io.resources"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.shwfs_detector",
+      "source_path": "src/shwfs_ao/legacy/shwfs_detector.py",
+      "private": false,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-004",
+        "AO-REF-005",
+        "AO-REF-007"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.detector",
+        "shwfs_ao.wfs.shack_hartmann.measurement",
+        "shwfs_ao.backends.native.shwfs"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.synthetic_instrument_data",
+      "source_path": "src/shwfs_ao/legacy/synthetic_instrument_data.py",
+      "private": false,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-003",
+        "AO-REF-004",
+        "AO-REF-005",
+        "AO-REF-006",
+        "AO-REF-011"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.detector",
+        "shwfs_ao.wfs.shack_hartmann.geometry",
+        "shwfs_ao.wfs.shack_hartmann.measurement"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    },
+    {
+      "module": "shwfs_ao.legacy.zernike",
+      "source_path": "src/shwfs_ao/legacy/zernike.py",
+      "private": false,
+      "disposition": "behavior_compat_adapter",
+      "canonical_owner_tickets": [
+        "AO-REF-007"
+      ],
+      "canonical_destinations": [
+        "shwfs_ao.backends.native.modes",
+        "shwfs_ao.core.wavefront"
+      ],
+      "phase_b_disposition": "remove_with_root_shim"
+    }
+  ],
+  "canonical_legacy_import_allowlist": {
+    "shwfs_ao.experiments.error_budget": [
+      "shwfs_ao.legacy.ao_closed_loop",
+      "shwfs_ao.legacy.ao_diagnostics",
+      "shwfs_ao.legacy.dm_model",
+      "shwfs_ao.legacy.interaction_matrix",
+      "shwfs_ao.legacy.synthetic_instrument_data"
+    ]
+  },
+  "behavior_compat_flags": [
+    {
+      "flag": "prnu_mode='per_frame_legacy'",
+      "owner": "shwfs_ao.detector.effects",
+      "status": "retained_contract_behavior"
+    },
+    {
+      "flag": "sort_kind='legacy_quicksort'",
+      "owner": "shwfs_ao.science.metrics",
+      "status": "retained_contract_behavior"
+    }
+  ],
+  "retained_educational_code": []
+}

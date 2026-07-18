@@ -14,13 +14,13 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from ao_diagnostics import bandpass_from_filter_curve, top_hat_bandpass
-from ao_error_budget import default_error_budget_scenarios, run_error_budget_scenarios, scenario_results_as_dicts
-from data_sources import load_svo_filter_curve
-from dm_model import DMConfig, build_dm_model
-from interaction_matrix import PokeMatrixConfig, build_detector_dm_poke_matrix
+from shwfs_ao.science.bandpass import bandpass_from_filter_curve, top_hat_bandpass
+from shwfs_ao.experiments.error_budget import default_error_budget_scenarios, run_error_budget_scenarios, scenario_results_as_dicts
+from shwfs_ao.io.public_data import load_svo_filter_curve
+from shwfs_ao.legacy.dm_model import DMConfig, build_dm_model
+from shwfs_ao.legacy.interaction_matrix import PokeMatrixConfig, build_detector_dm_poke_matrix
 from shwfs_ao.io.resources import resource_exists
-from synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build_detector_shwfs_calibration
+from shwfs_ao.legacy.synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build_detector_shwfs_calibration
 
 
 def _build_fast_demo_system():

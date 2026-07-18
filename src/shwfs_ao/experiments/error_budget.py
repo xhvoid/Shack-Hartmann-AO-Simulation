@@ -21,22 +21,30 @@ from typing import Any, Mapping, Sequence
 import numpy as np
 from scipy import ndimage
 
+from ..core.hashing import stable_array_descriptor
+from ..core.provenance import ALLOWED_SOURCE_CLASSES, Provenance as _Provenance
+from ..dm import DMConfig
+from ..science.bandpass import ScienceBandpass, top_hat_bandpass
+
+# AO-REF-021 Phase A: the frozen scenario engine still consumes the
+# behavior-compatibility adapter surface (legacy-shaped calibration, DM,
+# poke-matrix, nm-unit loop, and nm-unit diagnostics).  These adapters
+# delegate all physics to the canonical packages and never warn on import;
+# the exact allowlist below is pinned by the packaged deprecation inventory
+# and by tests/compat/test_phase_a_isolation.py.  Phase B relocates or
+# removes them together with this dependency.
 from ..legacy.ao_closed_loop import (
     DetectorLoopConfig,
     LoopHistory,
     run_detector_integrator_loop,
 )
 from ..legacy.ao_diagnostics import (
-    ScienceBandpass,
     band_averaged_psf_metrics_from_opd,
     phase_rad_to_opd_nm,
     remove_piston_opd_nm,
     residual_opd_nm_from_command,
-    top_hat_bandpass,
 )
-from ..core.hashing import stable_array_descriptor
-from ..core.provenance import ALLOWED_SOURCE_CLASSES, Provenance as _Provenance
-from ..legacy.dm_model import DMConfig, DMModel, synthesize_dm_phase_rad
+from ..legacy.dm_model import DMModel, synthesize_dm_phase_rad
 from ..legacy.interaction_matrix import PokeMtxResult, expand_controlled_commands
 from ..legacy.synthetic_instrument_data import DetectorShwfsCalibration
 

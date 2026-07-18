@@ -84,6 +84,8 @@ editable_wheel = "build_support.resource_alias.EditableWheelWithResourceAlias"
 [tool.setuptools.package-data]
 "shwfs_ao.resources" = [
     "README.md",
+    "deprecation_clock.json",
+    "deprecation_inventory.json",
     "public/README.md",
     "public/*.csv",
     "public/*.json",
