@@ -145,6 +145,13 @@ two-stage maintainer operation:
 4. accept the unchanged reviewed candidate with a non-empty reason and
    review/issue/PR reference.
 
+The reviewed machine-readable diff is content-complete: it hashes the exact
+candidate and current-baseline bytes and lists every structural change —
+tolerances, criteria, rationale, and provenance included, not just metric
+values. Acceptance recomputes that diff and refuses when anything changed
+after review, so step 4's "unchanged" is enforced byte-for-byte rather than
+assumed.
+
 The cross-backend accepted record additionally carries generator identity,
 source commit, acceptance timestamp, backend/dependency environment, metric
 rationales, and shared input hashes. Ordinary tests, notebook execution, or
