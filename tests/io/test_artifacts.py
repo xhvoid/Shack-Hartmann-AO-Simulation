@@ -394,6 +394,7 @@ def test_packaged_schemas_enforce_authority_branches_and_source_evidence(tmp_pat
 
     schema_names = (
         "artifact_manifest.schema.json",
+        "cross_backend_baseline.schema.json",
         "fast_reference_metrics.schema.json",
         "provenance.schema.json",
         "runtime_table_sidecar.schema.json",
@@ -476,3 +477,87 @@ def test_packaged_schemas_enforce_authority_branches_and_source_evidence(tmp_pat
             }
         )
         assert validator.is_valid(accepted_with_source)
+
+
+def test_packaged_cross_backend_baseline_validates_against_its_schema() -> None:
+    # The packaged JSON Schema resource and the runtime contract in
+    # shwfs_ao.validation.regression describe the same artifact family; the
+    # accepted baseline must satisfy both, and the schema must reject the
+    # governance-relevant mutations (dropped acceptance evidence, missing or
+    # reordered comparison kinds, degenerate tolerances, foreign fields).
+    jsonschema = pytest.importorskip("jsonschema")
+    from shwfs_ao.io.resources import read_text_resource
+    from shwfs_ao.validation.regression import (
+        CROSS_BACKEND_BASELINE_RESOURCE,
+        REQUIRED_COMPARISON_KINDS,
+    )
+
+    schema = json.loads(
+        read_text_resource("schemas/cross_backend_baseline.schema.json")
+    )
+    jsonschema.Draft202012Validator.check_schema(schema)
+    validator = jsonschema.Draft202012Validator(schema)
+
+    baseline = json.loads(read_text_resource(CROSS_BACKEND_BASELINE_RESOURCE))
+    errors = [
+        f"{list(error.absolute_path)}: {error.message}"
+        for error in validator.iter_errors(baseline)
+    ]
+    assert errors == []
+
+    schema_kinds = tuple(
+        item["properties"]["comparison_kind"]["const"]
+        for item in schema["properties"]["comparisons"]["prefixItems"]
+    )
+    assert schema_kinds == REQUIRED_COMPARISON_KINDS
+
+    def rejects(mutate, label: str) -> None:
+        mutated = copy.deepcopy(baseline)
+        mutate(mutated)
+        assert not validator.is_valid(mutated), label
+
+    rejects(lambda doc: doc["acceptance"].pop("reason"), "missing reason")
+    rejects(
+        lambda doc: doc["acceptance"].pop("review_reference"),
+        "missing review reference",
+    )
+    rejects(lambda doc: doc.pop("generator"), "missing generator")
+    rejects(
+        lambda doc: doc.update(unexpected_top_level=1),
+        "unknown top-level field",
+    )
+    rejects(
+        lambda doc: doc.update(
+            artifact_schema_name="shwfs_ao.cross_backend_report"
+        ),
+        "report identity on an accepted baseline",
+    )
+    rejects(lambda doc: doc["comparisons"].pop(3), "dropped comparison kind")
+    rejects(
+        lambda doc: doc["comparisons"].reverse(),
+        "reordered comparison inventory",
+    )
+    rejects(
+        lambda doc: doc["comparisons"][0]["metrics"][2][
+            "pass_criterion"
+        ].update(tolerance=-1e-9),
+        "negative tolerance",
+    )
+    rejects(
+        lambda doc: doc["comparisons"][0]["metrics"][3][
+            "pass_criterion"
+        ].pop("low"),
+        "range without a lower bound",
+    )
+    rejects(
+        lambda doc: doc["comparisons"][0]["metrics"][0].pop("rationale"),
+        "metric without rationale",
+    )
+    rejects(
+        lambda doc: doc["component_hashes"].update(pupil_geometry="Z" * 64),
+        "non-hex component hash",
+    )
+    rejects(
+        lambda doc: doc["comparisons"][2].pop("statistical_definition"),
+        "statistical comparison without estimator definition",
+    )
