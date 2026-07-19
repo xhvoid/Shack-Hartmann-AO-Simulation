@@ -172,6 +172,12 @@ jobs:
           PYTHONPATH= python examples/run_shwfs_centroid_demo.py
           AO_DEMO_OUTPUT_DIR="$RUNNER_TEMP/ao-generated" PYTHONPATH= python examples/run_fast_integration.py
 
+      - name: Execute README native commands from the clean wheel
+        if: matrix.python-version == '3.14'
+        run: |
+          cd "$RUNNER_TEMP/wheel-smoke"
+          PYTHONPATH= python scripts/run_readme_smoke.py --section native --require-wheel-bundle
+
       - name: Enforce accepted baselines and a clean worktree
         run: |
           find src/shwfs_ao/resources figures -type f -print0 | sort -z \
@@ -231,7 +237,11 @@ jobs:
           test "$(grep -c '::' hcipy-collection.txt)" -ge 1
           PYTHONPATH= python -m pytest -c pytest.ini -q --strict-markers -m "hcipy and not slow" tests
           PYTHONPATH= python -m pytest -c pytest.ini -q --strict-markers -m "not hcipy and not slow" tests
-          PYTHONPATH= python examples/run_native_hcipy_validation.py
+
+      - name: Execute README HCIPy commands from the clean wheel
+        run: |
+          cd "$RUNNER_TEMP/wheel-smoke"
+          PYTHONPATH= python scripts/run_readme_smoke.py --section hcipy --require-wheel-bundle
 
       - name: Register the kernel and smoke the HCIPy study notebook from the bundle
         run: |
