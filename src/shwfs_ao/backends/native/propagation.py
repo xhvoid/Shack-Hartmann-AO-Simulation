@@ -16,6 +16,7 @@ import numpy as np
 from ...core.geometry import PupilGeometry
 from ...core.hashing import component_config_hash
 from ...core.types import PsfResult
+from ...core.wavefront import opd_to_phase
 from ...science.propagation import PsfSampling, SciencePropagationError
 
 
@@ -73,10 +74,8 @@ class NativeSciencePropagator:
         wavelength = _positive_float(wavelength_m, label="wavelength_m")
         opd = _validated_opd(opd_m, self.pupil)
 
-        phase_rad = opd.copy()
         with np.errstate(over="ignore", invalid="ignore"):
-            phase_rad *= 2.0 * np.pi
-            phase_rad /= wavelength
+            phase_rad = opd_to_phase(opd, wavelength)
         if not np.all(np.isfinite(phase_rad[self.pupil.pupil_mask])):
             raise SciencePropagationError(
                 "opd_m and wavelength_m must produce finite phase inside the pupil."

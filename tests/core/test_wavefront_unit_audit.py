@@ -316,3 +316,36 @@ def test_seeded_normalized_atmosphere_converts_to_target_opd_rms_m() -> None:
         rel=1.0e-12,
         abs=1.0e-20,
     )
+
+
+def test_canonical_code_routes_phase_opd_conversion_through_core_wavefront():
+    """core.wavefront is the sole non-legacy conversion authority (AO-REF-002).
+
+    Any canonical line combining pi with a wavelength is treated as an
+    inline phase/OPD conversion.  Frozen legacy adapters and the isolated
+    experimental PWFS branch keep their historical formulas and are the
+    only exclusions besides the authority module itself.
+    """
+
+    import re
+    from pathlib import Path
+
+    source_root = Path(__file__).resolve().parents[2] / "src" / "shwfs_ao"
+    if not source_root.is_dir():
+        pytest.skip("source scan requires the repository checkout")
+
+    pi_pattern = re.compile(r"\b(np|numpy|math)\.pi\b")
+    offenders: list[str] = []
+    for path in sorted(source_root.rglob("*.py")):
+        relative = path.relative_to(source_root).as_posix()
+        if (
+            relative == "core/wavefront.py"
+            or relative.startswith("legacy/")
+            or relative.startswith("experimental/")
+        ):
+            continue
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for line_number, line in enumerate(lines, start=1):
+            if pi_pattern.search(line) and "wavelength" in line.lower():
+                offenders.append(f"{relative}:{line_number}: {line.strip()}")
+    assert offenders == []
