@@ -48,6 +48,9 @@ class ShackHartmannCalibration:
     detector_realization_hash: str
     config_hash: str
     provenance: Provenance
+    photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
+        "throughput_scaled"
+    )
 
     def __post_init__(self) -> None:
         if not isinstance(self.geometry, ShackHartmannGeometry):
@@ -97,6 +100,10 @@ class ShackHartmannCalibration:
             raise ShackHartmannCalibrationError(
                 "provenance must be a Provenance."
             )
+        if self.photon_allocation not in ("throughput_scaled", "unit_sum"):
+            raise ShackHartmannCalibrationError(
+                "photon_allocation must be 'throughput_scaled' or 'unit_sum'."
+            )
         config_hash = _nonempty_string(self.config_hash, label="config_hash")
         expected_hash = shack_hartmann_calibration_hash(
             geometry=self.geometry,
@@ -109,6 +116,7 @@ class ShackHartmannCalibration:
             centroid_config=self.centroid_config,
             detector_realization_hash=detector_realization_hash,
             provenance=self.provenance,
+            photon_allocation=self.photon_allocation,
         )
         if config_hash != expected_hash:
             raise ShackHartmannCalibrationError(
@@ -158,12 +166,19 @@ def calibrate_zero_phase_reference(
     random_streams: RandomStreams,
     provenance: Provenance | None = None,
     zero_phase_spots: SpotIntensityResult | None = None,
+    photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
+        "throughput_scaled"
+    ),
 ) -> ShackHartmannCalibration:
     """Build a zero-OPD reference without advancing runtime noise streams.
 
     ``zero_phase_spots`` is an optional already-computed backend result used by
     the sensor factory to avoid a second propagation.  It is validated exactly
-    as a result produced inside this function would be.
+    as a result produced inside this function would be.  ``photon_allocation``
+    is the explicit photon-budget interpretation: ``"throughput_scaled"``
+    multiplies each unit-sum spot by its relative lenslet throughput (the
+    frozen compatibility model), while ``"unit_sum"`` gives every retained
+    subaperture the full configured budget.
     """
 
     if not isinstance(geometry, ShackHartmannGeometry):
@@ -177,6 +192,10 @@ def calibrate_zero_phase_reference(
     if not isinstance(centroid_config, CentroidConfig):
         raise ShackHartmannCalibrationError(
             "centroid_config must be a CentroidConfig."
+        )
+    if photon_allocation not in ("throughput_scaled", "unit_sum"):
+        raise ShackHartmannCalibrationError(
+            "photon_allocation must be 'throughput_scaled' or 'unit_sum'."
         )
     wavelength = _positive_float(wfs_wavelength_m, label="wfs_wavelength_m")
     _validate_realization(detector_config, detector_realization, random_streams)
@@ -234,6 +253,8 @@ def calibrate_zero_phase_reference(
     ):
         transmitted_spot = (
             normalized_spot * float(spots.relative_throughput[index])
+            if photon_allocation == "throughput_scaled"
+            else np.asarray(normalized_spot, dtype=float)
         )
         scoped_streams = random_streams.scoped(
             "shack_hartmann.reference.detector",
@@ -280,6 +301,7 @@ def calibrate_zero_phase_reference(
         centroid_config=centroid_config,
         detector_realization_hash=detector_realization.realization_hash,
         provenance=resolved_provenance,
+        photon_allocation=photon_allocation,
     )
     return ShackHartmannCalibration(
         geometry=geometry,
@@ -294,6 +316,7 @@ def calibrate_zero_phase_reference(
         detector_realization_hash=detector_realization.realization_hash,
         config_hash=config_hash,
         provenance=resolved_provenance,
+        photon_allocation=photon_allocation,
     )
 
 
@@ -309,30 +332,40 @@ def shack_hartmann_calibration_hash(
     centroid_config: CentroidConfig,
     detector_realization_hash: str,
     provenance: Provenance,
+    photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
+        "throughput_scaled"
+    ),
 ) -> str:
     """Hash every configuration and realized datum defining a calibration."""
 
+    payload = {
+        "schema": "shwfs_ao.shack_hartmann_calibration.v1",
+        "geometry": geometry,
+        "reference_centroids_px": np.asarray(
+            reference_centroids_px,
+            dtype=float,
+        ),
+        "wfs_wavelength_m": float(wfs_wavelength_m),
+        "subaperture_ids": tuple(subaperture_ids),
+        "row_ids": tuple(row_ids),
+        "measurement_unit": "pixel",
+        "detector_sampling_hash": detector_sampling.sampling_hash,
+        "detector_config_hash": detector_config.config_hash,
+        "centroid_config_hash": component_config_hash(
+            "centroid",
+            centroid_config,
+        ),
+        "detector_realization_hash": detector_realization_hash,
+        "provenance": provenance.to_record(),
+    }
+    # The frozen throughput_scaled default stays out of the payload: this
+    # hash keys runtime RNG scope derivation and frozen seeded baselines, so
+    # the historical allocation must keep hashing byte-identically while any
+    # non-default choice becomes hash-visible.
+    if photon_allocation != "throughput_scaled":
+        payload["photon_allocation"] = str(photon_allocation)
     return stable_hash(
-        {
-            "schema": "shwfs_ao.shack_hartmann_calibration.v1",
-            "geometry": geometry,
-            "reference_centroids_px": np.asarray(
-                reference_centroids_px,
-                dtype=float,
-            ),
-            "wfs_wavelength_m": float(wfs_wavelength_m),
-            "subaperture_ids": tuple(subaperture_ids),
-            "row_ids": tuple(row_ids),
-            "measurement_unit": "pixel",
-            "detector_sampling_hash": detector_sampling.sampling_hash,
-            "detector_config_hash": detector_config.config_hash,
-            "centroid_config_hash": component_config_hash(
-                "centroid",
-                centroid_config,
-            ),
-            "detector_realization_hash": detector_realization_hash,
-            "provenance": provenance.to_record(),
-        },
+        payload,
         namespace="shack_hartmann_calibration",
     )
 
