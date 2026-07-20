@@ -56,7 +56,11 @@ alias. It is committed in the planned/unpublished state.
   currently `0.2.0`) is actually tagged, in that same commit set the clock's
   `publication_status` to `published`, set `publication_utc_date` to the tag's
   UTC date, and update `earliest_removal_utc_date` to the later of that date
-  plus `minimum_window_days` and any published subsequent-minor date.
+  plus `minimum_window_days` and any published subsequent-minor date. The
+  import-warning wording is derived from this state: while the clock is
+  `planned` the warnings announce the release as scheduled and not yet
+  published, and flipping the status to `published` switches them to the
+  plain "as of release" form with no code change.
 - When the required subsequent minor release (`0.3.0`) is tagged, set its
   `subsequent_minor_release.publication_status`/`publication_utc_date` and
   re-derive `earliest_removal_utc_date`.

@@ -14,44 +14,111 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from shwfs_ao.legacy.ao_diagnostics import (
-    bandpass_from_filter_curve,
-    science_case_metrics_table,
-    science_metrics_as_dicts,
-    top_hat_bandpass,
-)
+from shwfs_ao.core.geometry import PupilGeometry, build_pupil_geometry
 from shwfs_ao.io.public_data import load_svo_filter_curve
 from shwfs_ao.io.resources import resource_exists
+from shwfs_ao.science.bandpass import (
+    ScienceBandpass,
+    bandpass_from_filter_curve,
+    top_hat_bandpass,
+)
+from shwfs_ao.science.metrics import (
+    band_average_scalar_metrics,
+    psf_scalar_metrics,
+)
+from shwfs_ao.science.propagation import PsfSampling, monochromatic_psf
 
 
-def _demo_cases(n_pixels: int = 96) -> tuple[dict[str, np.ndarray], np.ndarray]:
-    coords = np.linspace(-1.0, 1.0, n_pixels)
-    x, y = np.meshgrid(coords, coords)
-    pupil_mask = x**2 + y**2 <= 1.0
+TELESCOPE_DIAMETER_M = 2.0
+PAD_FACTOR = 5
+
+
+def _demo_cases(pupil: PupilGeometry) -> dict[str, np.ndarray]:
+    x = 2.0 * pupil.x_m / pupil.telescope_diameter_m
+    y = 2.0 * pupil.y_m / pupil.telescope_diameter_m
     radius2 = x**2 + y**2
     aberration_nm = 260.0 * (x**2 - y**2) + 160.0 * x * y + 120.0 * (2.0 * radius2 - 1.0)
-    cases = {
-        "open_loop": np.where(pupil_mask, aberration_nm, np.nan),
-        "ideal_closed_loop": np.where(pupil_mask, 0.0, np.nan),
-        "realistic_closed_loop": np.where(pupil_mask, 0.22 * aberration_nm, np.nan),
+    mask = pupil.pupil_mask
+    return {
+        "open_loop": np.where(mask, aberration_nm, np.nan),
+        "ideal_closed_loop": np.where(mask, 0.0, np.nan),
+        "realistic_closed_loop": np.where(mask, 0.22 * aberration_nm, np.nan),
     }
-    return cases, pupil_mask
+
+
+def _band_metrics_row(
+    case_name: str,
+    opd_nm: np.ndarray,
+    pupil: PupilGeometry,
+    bandpass: ScienceBandpass,
+) -> dict[str, float | str]:
+    opd_m = opd_nm * 1.0e-9
+    ideal_opd_m = np.where(pupil.pupil_mask, 0.0, np.nan)
+    sampling = PsfSampling(pad_factor=PAD_FACTOR)
+    per_wavelength = []
+    for wavelength_m in np.asarray(bandpass.wavelength_m, dtype=float):
+        psf = monochromatic_psf(
+            opd_m,
+            pupil,
+            wavelength_m,
+            backend="native",
+            sampling=sampling,
+        )
+        ideal_psf = monochromatic_psf(
+            ideal_opd_m,
+            pupil,
+            wavelength_m,
+            backend="native",
+            sampling=sampling,
+        )
+        per_wavelength.append(
+            psf_scalar_metrics(
+                psf,
+                ideal_psf,
+                opd_m,
+                pupil,
+                TELESCOPE_DIAMETER_M,
+            )
+        )
+    averaged = band_average_scalar_metrics(per_wavelength, bandpass.weights)
+    return {
+        "case_name": case_name,
+        "band_name": bandpass.name,
+        "effective_wavelength_m": bandpass.effective_wavelength_m,
+        "opd_rms_nm": averaged.opd_rms_m * 1.0e9,
+        "strehl_peak": averaged.peak_strehl,
+        "strehl_marechal": averaged.marechal_strehl,
+        "fwhm_lambda_over_d": averaged.fwhm_lambda_over_d,
+        "fwhm_arcsec": averaged.fwhm_arcsec,
+        "ee50_lambda_over_d": averaged.ee50_lambda_over_d,
+        "ee50_arcsec": averaged.ee50_arcsec,
+        "ee80_lambda_over_d": averaged.ee80_lambda_over_d,
+        "ee80_arcsec": averaged.ee80_arcsec,
+        "halo_fraction": averaged.halo_fraction,
+        "source_class": "synthetic_assumed",
+        "source_note": (
+            "Synthetic PSF diagnostic computed from a simulation residual OPD "
+            f"map; bandpass provenance ({bandpass.source_class}): "
+            f"{bandpass.source_note}"
+        ),
+    }
 
 
 def main() -> None:
     output_dir = ROOT / "figures" / "detector_level_SCAO"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    bandpasses = _build_jhk_bandpasses()
-    cases, pupil_mask = _demo_cases()
-    metrics = science_case_metrics_table(
-        cases,
-        pupil_mask,
-        bandpasses,
-        telescope_diameter_m=2.0,
-        pad_factor=5,
+    pupil = build_pupil_geometry(
+        telescope_diameter_m=TELESCOPE_DIAMETER_M,
+        pupil_shape=(96, 96),
     )
-    rows = list(science_metrics_as_dicts(metrics))
+    bandpasses = _build_jhk_bandpasses()
+    cases = _demo_cases(pupil)
+    rows = [
+        _band_metrics_row(case_name, opd_nm, pupil, bandpass)
+        for case_name, opd_nm in cases.items()
+        for bandpass in bandpasses
+    ]
     csv_path = output_dir / "science_psf_metrics.csv"
     pd.DataFrame(rows).to_csv(csv_path, index=False)
 

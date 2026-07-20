@@ -14,17 +14,42 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from shwfs_ao.legacy.shwfs_detector import measure_centroid_shifts
-from shwfs_ao.legacy.zernike import make_pupil_grid, synthesize_wavefront, zernike_named_modes
+from shwfs_ao.backends.native.modes import (
+    polar_pupil_coordinates,
+    synthesize_modes,
+    zernike_named_modes,
+)
+from shwfs_ao.backends.native.shwfs import NativeShackHartmannOptics
+from shwfs_ao.core.random import NamedRandomStreams
+from shwfs_ao.core.wavefront import phase_to_opd
+from shwfs_ao.detector.config import DetectorConfig
+from shwfs_ao.wfs.shack_hartmann.geometry import build_shack_hartmann_geometry
+from shwfs_ao.wfs.shack_hartmann.measurement import (
+    build_detector_shack_hartmann_sensor,
+)
+
+# The demo phase is defined in radians; one wavelength converts it to the
+# OPD the canonical sensor measures and sets the lenslet diffraction scale.
+WAVELENGTH_M = 700.0e-9
 
 
 def main() -> None:
     output_dir = ROOT / "figures" / "detector_level_SCAO"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    X, Y, rho, theta, pupil_mask, _ = make_pupil_grid(N=96, diameter=1.0)
-    modes = zernike_named_modes(rho, theta, pupil_mask)
-    phase = synthesize_wavefront(
+    geometry = build_shack_hartmann_geometry(
+        telescope_diameter_m=1.0,
+        pupil_shape=(96, 96),
+        n_lenslets_across=8,
+        min_fill_fraction=0.35,
+    )
+    rho, theta = polar_pupil_coordinates(
+        geometry.x_m,
+        geometry.y_m,
+        geometry.telescope_diameter_m,
+    )
+    modes = zernike_named_modes(rho, theta, geometry.pupil_mask)
+    phase = synthesize_modes(
         modes,
         {
             "tip_x": 0.12,
@@ -32,25 +57,37 @@ def main() -> None:
             "defocus": 0.20,
             "astig_0": 0.10,
         },
-        pupil_mask,
+        geometry.pupil_mask,
     )
 
-    centers, shifts, spots, diagnostics = measure_centroid_shifts(
-        phase,
-        pupil_mask,
-        X,
-        Y,
-        n_lenslets=8,
-        min_fill=0.35,
+    streams = NamedRandomStreams(7)
+    optics = NativeShackHartmannOptics(
+        geometry,
+        WAVELENGTH_M,
         pad_factor=4,
-        photons=2.0e4,
-        read_noise_e=2.0,
-        background_e=0.05,
-        detector_window_size=32,
-        seed=7,
-        return_spots=True,
-        return_diagnostics=True,
+        detector_window_px=32,
     )
+    sensor = build_detector_shack_hartmann_sensor(
+        geometry,
+        optics,
+        DetectorConfig(
+            photons_per_subap_frame=2.0e4,
+            read_noise_e=2.0,
+            background_e_per_pixel_frame=0.05,
+        ),
+        wfs_wavelength_m=WAVELENGTH_M,
+        random_streams=streams,
+    )
+    measurement = sensor.measure(
+        phase_to_opd(phase, WAVELENGTH_M),
+        random_streams=streams,
+        include_noise=True,
+    )
+    telemetry = measurement.detector_telemetry
+    assert telemetry is not None
+    centers = np.asarray(geometry.subaperture_centers_m, dtype=float)
+    shifts = telemetry.centroids_xy_px - telemetry.reference_centroids_xy_px
+    valid = telemetry.valid_subapertures
 
     table = pd.DataFrame(
         {
@@ -58,17 +95,18 @@ def main() -> None:
             "center_y": centers[:, 1],
             "shift_x_pix": shifts[:, 0],
             "shift_y_pix": shifts[:, 1],
-            "flux_e": diagnostics["fluxes"],
-            "valid": diagnostics["valid"],
+            "flux_e": telemetry.fluxes_e,
+            "valid": valid,
         }
     )
     csv_path = output_dir / "shwfs_centroid_demo.csv"
     table.to_csv(csv_path, index=False)
 
+    X, Y = geometry.x_m, geometry.y_m
     fig, axes = plt.subplots(1, 2, figsize=(10, 4.2), constrained_layout=True)
 
     im = axes[0].imshow(
-        np.where(pupil_mask, phase, np.nan),
+        np.where(geometry.pupil_mask, phase, np.nan),
         origin="lower",
         extent=[X.min(), X.max(), Y.min(), Y.max()],
         cmap="RdBu_r",
@@ -78,10 +116,9 @@ def main() -> None:
     axes[0].set_ylabel("y pupil coordinate")
     fig.colorbar(im, ax=axes[0], label="phase [rad]", fraction=0.046)
 
-    valid = diagnostics["valid"]
     scale = max(np.nanpercentile(np.abs(shifts[valid]), 95), 1e-6)
     axes[1].imshow(
-        pupil_mask,
+        geometry.pupil_mask,
         origin="lower",
         extent=[X.min(), X.max(), Y.min(), Y.max()],
         cmap="Greys",
@@ -109,7 +146,7 @@ def main() -> None:
 
     print(f"Wrote {png_path.relative_to(ROOT)}")
     print(f"Wrote {csv_path.relative_to(ROOT)}")
-    print(f"Valid centroids: {diagnostics['n_valid']} / {diagnostics['n_total']}")
+    print(f"Valid centroids: {int(valid.sum())} / {valid.size}")
 
 
 if __name__ == "__main__":

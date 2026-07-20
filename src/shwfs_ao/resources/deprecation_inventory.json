@@ -789,7 +789,8 @@
         "shwfs_ao.control",
         "shwfs_ao.experiments.scao",
         "shwfs_ao.dm",
-        "shwfs_ao.calibration"
+        "shwfs_ao.calibration",
+        "shwfs_ao.validation.checks"
       ],
       "phase_b_disposition": "remove_with_root_shim"
     },
@@ -852,7 +853,8 @@
       "canonical_destinations": [
         "shwfs_ao.experiments.scao",
         "shwfs_ao.io.artifacts",
-        "shwfs_ao.validation.regression"
+        "shwfs_ao.validation.regression",
+        "shwfs_ao.experiments.integration"
       ],
       "phase_b_disposition": "remove_with_root_shim"
     },
@@ -867,7 +869,8 @@
       ],
       "canonical_destinations": [
         "shwfs_ao.validation.physical",
-        "shwfs_ao.validation.regression"
+        "shwfs_ao.validation.regression",
+        "shwfs_ao.validation.checks"
       ],
       "phase_b_disposition": "remove_with_root_shim"
     },
@@ -926,7 +929,8 @@
       ],
       "canonical_destinations": [
         "shwfs_ao.dm",
-        "shwfs_ao.backends.native.dm"
+        "shwfs_ao.backends.native.dm",
+        "shwfs_ao.experiments.scenario_instrument"
       ],
       "phase_b_disposition": "remove_with_root_shim"
     },
@@ -942,7 +946,8 @@
       "canonical_destinations": [
         "shwfs_ao.calibration.interaction",
         "shwfs_ao.calibration.diagnostics",
-        "shwfs_ao.calibration.reconstructors"
+        "shwfs_ao.calibration.reconstructors",
+        "shwfs_ao.experiments.scenario_instrument"
       ],
       "phase_b_disposition": "remove_with_root_shim"
     },
@@ -1048,7 +1053,8 @@
       "canonical_destinations": [
         "shwfs_ao.detector",
         "shwfs_ao.wfs.shack_hartmann.geometry",
-        "shwfs_ao.wfs.shack_hartmann.measurement"
+        "shwfs_ao.wfs.shack_hartmann.measurement",
+        "shwfs_ao.experiments.scenario_instrument"
       ],
       "phase_b_disposition": "remove_with_root_shim"
     },
@@ -1074,6 +1080,18 @@
       "shwfs_ao.legacy.dm_model",
       "shwfs_ao.legacy.interaction_matrix",
       "shwfs_ao.legacy.synthetic_instrument_data"
+    ],
+    "shwfs_ao.experiments.integration": [
+      "shwfs_ao.legacy.ao_integration"
+    ],
+    "shwfs_ao.experiments.scenario_instrument": [
+      "shwfs_ao.legacy.dm_model",
+      "shwfs_ao.legacy.interaction_matrix",
+      "shwfs_ao.legacy.synthetic_instrument_data"
+    ],
+    "shwfs_ao.validation.checks": [
+      "shwfs_ao.legacy.ao_closed_loop",
+      "shwfs_ao.legacy.ao_validation"
     ]
   },
   "behavior_compat_flags": [

@@ -16,7 +16,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from shwfs_ao.legacy.atmosphere_profiles import atmosphere_config_from_eso_asm_snapshot
+from shwfs_ao.experiments.public_data_conditioned import r0_from_seeing_arcsec
 from shwfs_ao.io.public_data import load_eso_asm_snapshot, load_svo_filter_curve
 from shwfs_ao.io.artifacts import write_csv_rows
 from shwfs_ao.io.resources import open_text_resource
@@ -69,7 +69,14 @@ def main() -> None:
 
     filter_curves = {name: load_svo_filter_curve(path) for name, path in SVO_FILTER_PATHS.items()}
     asm_snapshot = load_eso_asm_snapshot(ESO_ASM_SNAPSHOT_PATH)
-    asm_config = atmosphere_config_from_eso_asm_snapshot(asm_snapshot, seed=24, wind_dir_deg=70.0)
+    # The snapshot records r0 directly; seeing-derived r0 is the documented
+    # fallback for caches without an explicit r0_500_m measurement.
+    asm_r0_500_m = float(
+        asm_snapshot.measurements.get("r0_500_m")
+        or r0_from_seeing_arcsec(
+            float(asm_snapshot.measurements["seeing_arcsec_500nm"])
+        )
+    )
     asm_rows = _read_commented_csv(ESO_ASM_TIMESERIES_PATH)
     ps1_rows = _read_commented_csv(PANSTARRS_PATH)
     tmass_rows = _read_commented_csv(TWOMASS_PATH)
@@ -80,7 +87,7 @@ def main() -> None:
         GENERATED / "public_data_summary.csv",
         filter_curves=filter_curves,
         asm_snapshot=asm_snapshot,
-        asm_config=asm_config,
+        asm_r0_500_m=asm_r0_500_m,
         photon_rows=photon_rows,
         ps1_rows=ps1_rows,
         tmass_rows=tmass_rows,
@@ -412,7 +419,7 @@ def _effective_wavelength_um(curve) -> float:
     return float(np.trapezoid(wavelength_um * transmission, wavelength_um) / np.trapezoid(transmission, wavelength_um))
 
 
-def _write_summary_csv(path: Path, *, filter_curves, asm_snapshot, asm_config, photon_rows, ps1_rows, tmass_rows) -> None:
+def _write_summary_csv(path: Path, *, filter_curves, asm_snapshot, asm_r0_500_m, photon_rows, ps1_rows, tmass_rows) -> None:
     best_photon = photon_rows[0] if photon_rows else {}
     rows = [
         {
@@ -424,10 +431,10 @@ def _write_summary_csv(path: Path, *, filter_curves, asm_snapshot, asm_config, p
         },
         {
             "metric": "eso_asm_r0_500",
-            "value": asm_config.r0_500_m,
+            "value": asm_r0_500_m,
             "unit": "m",
-            "source_class": asm_config.source_class,
-            "source_note": asm_config.source_note,
+            "source_class": asm_snapshot.source_class,
+            "source_note": asm_snapshot.provenance.source_note,
         },
         {
             "metric": "panstarrs_rows",

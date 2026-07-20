@@ -8,7 +8,9 @@ but conditions two inputs on tracked public caches:
 
 The loop, detector, DM, and error-channel model remain synthetic fast-mode
 proxies. The CSV therefore records direct-public conditioning separately from
-the synthetic AO-model provenance.
+the synthetic AO-model provenance. Photon budgets below the detector
+poke-calibration validity floor are recorded as explicitly infeasible rows
+rather than as no-op loop results.
 """
 
 from __future__ import annotations
@@ -30,7 +32,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 from shwfs_ao.experiments.public_data_conditioned import condition_rows, default_observing_conditions
 from shwfs_ao.experiments.error_budget import ScenarioConfig, run_error_budget_scenario
-from shwfs_ao.legacy.ao_integration import IntegrationConfig, build_integration_system, build_jhk_bandpasses, run_integration
+from shwfs_ao.experiments.integration import IntegrationConfig, build_integration_system, build_jhk_bandpasses, run_integration
+from shwfs_ao.experiments.scenario_instrument import InteractionMatrixError
 from shwfs_ao.io.public_data import load_eso_asm_snapshot
 from shwfs_ao.io.artifacts import (
     RUNTIME_V2_HEADER,
@@ -92,33 +95,53 @@ def main() -> None:
                 "DM, detector, and error-channel model remain synthetic fast-mode proxies."
             ),
         )
-        result = run_integration(config, write_outputs=False)
-        all_effects = next(row for row in result.scenario_results if row.scenario_name == "all_effects")
-        rows.append(
-            {
-                "case_name": label,
-                "photons_per_subap_frame": photons,
-                "photon_input_source_class": photon_source_class,
-                "conditioning_atmosphere_source_class": "direct_public_data",
-                "conditioning_bandpass_source_class": "direct_public_data",
-                "ao_model_source_class": config.source_class,
-                "eso_asm_seeing_arcsec_500nm": seeing_arcsec,
-                "eso_asm_r0_500_m": r0_500_m,
-                "phase_amplitude_nm_scaled_from_eso_seeing": phase_amplitude_nm,
-                "svo_h_effective_wavelength_um": h_effective_um,
-                "panstarrs_target_id": direct_target_id,
-                "panstarrs_m_wfs_700nm_interp_mag": direct_m_wfs,
-                "open_rms_nm": all_effects.open_rms_nm,
-                "closed_rms_nm": all_effects.closed_rms_nm,
-                "h_band_strehl": all_effects.strehl_H,
-                "command_rms_nm": all_effects.command_rms_nm,
-                "command_peak_nm": all_effects.command_peak_nm,
-                "saturated_actuator_frac": all_effects.saturated_actuator_frac,
-                "valid_centroid_frac": all_effects.valid_centroid_frac,
-                "config_hash": result.config_hash,
-                "source_note": config.source_note,
-            }
-        )
+        row: dict[str, object] = {
+            "case_name": label,
+            "photons_per_subap_frame": photons,
+            "photon_input_source_class": photon_source_class,
+            "conditioning_atmosphere_source_class": "direct_public_data",
+            "conditioning_bandpass_source_class": "direct_public_data",
+            "ao_model_source_class": config.source_class,
+            "eso_asm_seeing_arcsec_500nm": seeing_arcsec,
+            "eso_asm_r0_500_m": r0_500_m,
+            "phase_amplitude_nm_scaled_from_eso_seeing": phase_amplitude_nm,
+            "svo_h_effective_wavelength_um": h_effective_um,
+            "panstarrs_target_id": direct_target_id,
+            "panstarrs_m_wfs_700nm_interp_mag": direct_m_wfs,
+            "open_rms_nm": float("nan"),
+            "closed_rms_nm": float("nan"),
+            "h_band_strehl": float("nan"),
+            "command_rms_nm": float("nan"),
+            "command_peak_nm": float("nan"),
+            "saturated_actuator_frac": float("nan"),
+            "valid_centroid_frac": float("nan"),
+            "loop_feasible": False,
+            "infeasibility_reason": "",
+            "config_hash": "",
+            "source_note": config.source_note,
+        }
+        # A catalog-derived WFS photon estimate can sit far below the poke
+        # calibration's validity floor; such a case is recorded as an
+        # infeasible row because no loop can be built at all, and a no-op
+        # loop row would misreport the physics.
+        try:
+            result = run_integration(config, write_outputs=False)
+        except InteractionMatrixError as exc:
+            row["infeasibility_reason"] = str(exc)
+        else:
+            all_effects = next(item for item in result.scenario_results if item.scenario_name == "all_effects")
+            row.update(
+                open_rms_nm=all_effects.open_rms_nm,
+                closed_rms_nm=all_effects.closed_rms_nm,
+                h_band_strehl=all_effects.strehl_H,
+                command_rms_nm=all_effects.command_rms_nm,
+                command_peak_nm=all_effects.command_peak_nm,
+                saturated_actuator_frac=all_effects.saturated_actuator_frac,
+                valid_centroid_frac=all_effects.valid_centroid_frac,
+                loop_feasible=True,
+                config_hash=result.config_hash,
+            )
+        rows.append(row)
 
     csv_path = GENERATED / "public_data_informed_ao_photon_scan.csv"
     write_csv_rows(csv_path, rows)
@@ -175,19 +198,31 @@ def main() -> None:
         f"within_limit={runtime_row['within_runtime_limit']})"
     )
     for row in rows:
-        print(
-            f"{row['case_name']}: photons={float(row['photons_per_subap_frame']):.3g}, "
-            f"closed RMS={float(row['closed_rms_nm']):.1f} nm, "
-            f"H Strehl={float(row['h_band_strehl']):.3f}, "
-            f"saturated={float(row['saturated_actuator_frac']):.2f}"
-        )
+        if row["loop_feasible"]:
+            print(
+                f"{row['case_name']}: photons={float(row['photons_per_subap_frame']):.3g}, "
+                f"closed RMS={float(row['closed_rms_nm']):.1f} nm, "
+                f"H Strehl={float(row['h_band_strehl']):.3f}, "
+                f"saturated={float(row['saturated_actuator_frac']):.2f}"
+            )
+        else:
+            print(
+                f"{row['case_name']}: photons={float(row['photons_per_subap_frame']):.3g}, "
+                f"calibration infeasible ({row['infeasibility_reason']})"
+            )
 
     for row in scenario_rows:
-        print(
-            f"{row['condition_name']}: closed RMS={float(row['closed_rms_nm']):.1f} nm, "
-            f"H Strehl={float(row['strehl_H']):.3f}, "
-            f"photons={float(row['photons_per_subap_frame']):.3g}"
-        )
+        if row["loop_feasible"]:
+            print(
+                f"{row['condition_name']}: closed RMS={float(row['closed_rms_nm']):.1f} nm, "
+                f"H Strehl={float(row['strehl_H']):.3f}, "
+                f"photons={float(row['photons_per_subap_frame']):.3g}"
+            )
+        else:
+            print(
+                f"{row['condition_name']}: photons={float(row['photons_per_subap_frame']):.3g}, "
+                f"calibration infeasible ({row['infeasibility_reason']})"
+            )
 
 
 def _read_rows(path: Path) -> list[dict[str, str]]:
@@ -248,7 +283,6 @@ def _run_conditioned_scenarios(conditions) -> list[dict[str, object]]:
                 "condition atmosphere and/or photon inputs; internal AO control terms remain synthetic."
             ),
         )
-        system = build_integration_system(config)
         # The public-data-informed scenario output must describe
         # its phase sequence as an "ESO-ASM-conditioned synthetic phase sequence"
         # (never a "measured wavefront sequence"). The atmosphere amplitude is a
@@ -282,6 +316,66 @@ def _run_conditioned_scenarios(conditions) -> list[dict[str, object]]:
             effects.append("wfs_dm_misregistration_proxy")
         if condition.ncpa_rms_nm > 0.0:
             effects.append("science_path_ncpa")
+        scenario_source_note = (
+            f"{condition.source_note} Seeing/r0 set phase_amplitude_nm; "
+            "tau0 and effective turbulence speed set the temporal proxy."
+        )
+        row: dict[str, object] = {
+            "condition_name": condition.condition_name,
+            "scenario_name": condition.condition_name,
+            "enabled_effects": "+".join(effects),
+            "atmosphere_source": condition.atmosphere_source,
+            "phase_sequence_provenance": phase_sequence_provenance,
+            "photon_source": condition.photon_source,
+            "seeing_arcsec": condition.seeing_arcsec,
+            "r0_500_m": condition.r0_500_m,
+            "tau0_s": condition.tau0_s,
+            "theta0_rad": condition.theta0_rad,
+            "turbulence_speed_m_s": condition.turbulence_speed_m_s,
+            "phase_amplitude_nm": condition.phase_amplitude_nm,
+            "photons_per_subap_frame": condition.photons_per_subap_frame,
+            "read_noise_e": condition.read_noise_e,
+            "latency_frames": condition.latency_frames,
+            "latency_total_s": condition.latency_total_s,
+            "stroke_limit_nm": condition.stroke_limit_nm,
+            "ncpa_rms_nm": condition.ncpa_rms_nm,
+            "misregistration_shift_x_px": condition.misregistration_shift_px[0],
+            "misregistration_shift_y_px": condition.misregistration_shift_px[1],
+            "misregistration_rotation_deg": condition.misregistration_rotation_deg,
+            "misregistration_magnification": condition.misregistration_magnification,
+            "misregistration_shear": condition.misregistration_shear,
+            "open_rms_nm": float("nan"),
+            "wfs_path_closed_rms_proxy_nm": float("nan"),
+            "science_path_closed_without_ncpa_proxy_nm": float("nan"),
+            "science_path_plus_ncpa_rms_nm": float("nan"),
+            "residual_decomposition_note": (
+                "WFS/science residual split is a public-data-informed synthetic diagnostic proxy. "
+                "The core returns NCPA-added closed RMS; without-NCPA RMS is estimated by "
+                "quadrature subtraction of the configured NCPA RMS."
+            ),
+            "closed_rms_nm": float("nan"),
+            "closed_over_open_rms": float("nan"),
+            "strehl_J": float("nan"),
+            "strehl_H": float("nan"),
+            "strehl_K": float("nan"),
+            "command_rms_nm": float("nan"),
+            "command_peak_nm": float("nan"),
+            "saturated_actuator_frac": float("nan"),
+            "valid_centroid_frac": float("nan"),
+            "loop_feasible": False,
+            "infeasibility_reason": "",
+            "source_class": condition.source_class,
+            "source_note": scenario_source_note,
+            "config_hash": "",
+        }
+        # A condition whose photon budget cannot calibrate the WFS is
+        # recorded as infeasible instead of failing the whole table.
+        try:
+            system = build_integration_system(config)
+        except InteractionMatrixError as exc:
+            row["infeasibility_reason"] = str(exc)
+            rows.append(row)
+            continue
         scenario = ScenarioConfig(
             scenario_name=condition.condition_name,
             enabled_effects=tuple(effects),
@@ -305,10 +399,7 @@ def _run_conditioned_scenarios(conditions) -> list[dict[str, object]]:
             detector_noise_seed=211,
             ncpa_seed=307,
             source_class=condition.source_class,
-            source_note=(
-                f"{condition.source_note} Seeing/r0 set phase_amplitude_nm; "
-                "tau0 and effective turbulence speed set the temporal proxy."
-            ),
+            source_note=scenario_source_note,
         )
         result = run_error_budget_scenario(
             system.calibration,
@@ -320,63 +411,39 @@ def _run_conditioned_scenarios(conditions) -> list[dict[str, object]]:
             pad_factor=int(config.pad_factor),
         )
         wfs_closed_proxy = float(max(result.closed_rms_nm**2 - condition.ncpa_rms_nm**2, 0.0) ** 0.5)
-        rows.append(
-            {
-                "condition_name": condition.condition_name,
-                "scenario_name": result.scenario_name,
-                "enabled_effects": "+".join(result.enabled_effects),
-                "atmosphere_source": condition.atmosphere_source,
-                "phase_sequence_provenance": phase_sequence_provenance,
-                "photon_source": condition.photon_source,
-                "seeing_arcsec": condition.seeing_arcsec,
-                "r0_500_m": condition.r0_500_m,
-                "tau0_s": condition.tau0_s,
-                "theta0_rad": condition.theta0_rad,
-                "turbulence_speed_m_s": condition.turbulence_speed_m_s,
-                "phase_amplitude_nm": condition.phase_amplitude_nm,
-                "photons_per_subap_frame": condition.photons_per_subap_frame,
-                "read_noise_e": condition.read_noise_e,
-                "latency_frames": condition.latency_frames,
-                "latency_total_s": condition.latency_total_s,
-                "stroke_limit_nm": condition.stroke_limit_nm,
-                "ncpa_rms_nm": condition.ncpa_rms_nm,
-                "misregistration_shift_x_px": condition.misregistration_shift_px[0],
-                "misregistration_shift_y_px": condition.misregistration_shift_px[1],
-                "misregistration_rotation_deg": condition.misregistration_rotation_deg,
-                "misregistration_magnification": condition.misregistration_magnification,
-                "misregistration_shear": condition.misregistration_shear,
-                "open_rms_nm": result.open_rms_nm,
-                "wfs_path_closed_rms_proxy_nm": wfs_closed_proxy,
-                "science_path_closed_without_ncpa_proxy_nm": wfs_closed_proxy,
-                "science_path_plus_ncpa_rms_nm": result.closed_rms_nm,
-                "residual_decomposition_note": (
-                    "WFS/science residual split is a public-data-informed synthetic diagnostic proxy. "
-                    "The core returns NCPA-added closed RMS; without-NCPA RMS is estimated by "
-                    "quadrature subtraction of the configured NCPA RMS."
-                ),
-                "closed_rms_nm": result.closed_rms_nm,
-                "closed_over_open_rms": result.closed_over_open_rms,
-                "strehl_J": result.strehl_J,
-                "strehl_H": result.strehl_H,
-                "strehl_K": result.strehl_K,
-                "command_rms_nm": result.command_rms_nm,
-                "command_peak_nm": result.command_peak_nm,
-                "saturated_actuator_frac": result.saturated_actuator_frac,
-                "valid_centroid_frac": result.valid_centroid_frac,
-                "source_class": result.source_class,
-                "source_note": result.source_note,
-                "config_hash": result.config_hash,
-            }
+        row.update(
+            scenario_name=result.scenario_name,
+            enabled_effects="+".join(result.enabled_effects),
+            open_rms_nm=result.open_rms_nm,
+            wfs_path_closed_rms_proxy_nm=wfs_closed_proxy,
+            science_path_closed_without_ncpa_proxy_nm=wfs_closed_proxy,
+            science_path_plus_ncpa_rms_nm=result.closed_rms_nm,
+            closed_rms_nm=result.closed_rms_nm,
+            closed_over_open_rms=result.closed_over_open_rms,
+            strehl_J=result.strehl_J,
+            strehl_H=result.strehl_H,
+            strehl_K=result.strehl_K,
+            command_rms_nm=result.command_rms_nm,
+            command_peak_nm=result.command_peak_nm,
+            saturated_actuator_frac=result.saturated_actuator_frac,
+            valid_centroid_frac=result.valid_centroid_frac,
+            loop_feasible=True,
+            source_class=result.source_class,
+            source_note=result.source_note,
+            config_hash=result.config_hash,
         )
+        rows.append(row)
     return rows
 
 
 def _build_validation_rows(scenario_rows: list[dict[str, object]], condition_rows_: list[dict[str, object]]) -> list[dict[str, object]]:
     direct_atmosphere_count = sum("ESO ASM" in str(row["atmosphere_source"]) for row in condition_rows_)
     catalog_condition_count = sum("Pan-STARRS" in str(row["photon_source"]) for row in condition_rows_)
+    feasible_rows = [row for row in scenario_rows if row["loop_feasible"]]
+    infeasible_rows = [row for row in scenario_rows if not row["loop_feasible"]]
     finite_metrics = all(
         np.isfinite(float(row[key]))
-        for row in scenario_rows
+        for row in feasible_rows
         for key in ("open_rms_nm", "closed_rms_nm", "strehl_H", "command_rms_nm", "saturated_actuator_frac")
     )
     provenance_ok = all(str(row["source_class"]) in {"synthetic_assumed", "synthetic_literature_inspired"} for row in scenario_rows)
@@ -408,9 +475,18 @@ def _build_validation_rows(scenario_rows: list[dict[str, object]], condition_row
             "passed": finite_metrics,
             "metric_value": int(finite_metrics),
             "tolerance": 1,
-            "message": "Public-data-informed scenario metrics are finite.",
+            "message": "Public-data-informed scenario metrics are finite for every calibration-feasible condition.",
             "source_class": "synthetic_assumed",
             "source_note": "AO loop metrics are synthetic fast-mode outputs.",
+        },
+        {
+            "check_name": "infeasible_conditions_recorded",
+            "passed": all(str(row["infeasibility_reason"]).strip() for row in infeasible_rows),
+            "metric_value": len(infeasible_rows),
+            "tolerance": len(scenario_rows),
+            "message": "Conditions whose photon budget cannot calibrate the WFS are recorded as infeasible with an explicit reason.",
+            "source_class": "synthetic_assumed",
+            "source_note": "Catalog-derived faint-NGS photon budgets can sit below the detector poke-calibration validity floor.",
         },
         {
             "check_name": "internal_ao_terms_not_direct_public",
@@ -434,16 +510,16 @@ def _build_validation_rows(scenario_rows: list[dict[str, object]], condition_row
 
 
 def _plot(rows: list[dict[str, object]], path: Path) -> None:
-    photons = np.asarray([float(row["photons_per_subap_frame"]) for row in rows])
-    closed = np.asarray([float(row["closed_rms_nm"]) for row in rows])
-    strehl = np.asarray([float(row["h_band_strehl"]) for row in rows])
-    saturation = np.asarray([float(row["saturated_actuator_frac"]) for row in rows])
-    labels = [
-        f"PS1 estimate\n{photons[0]:.2g} ph",
-        "50 ph",
-        "200 ph",
-        "8000 ph",
-    ]
+    feasible_rows = [row for row in rows if row["loop_feasible"]]
+    infeasible_rows = [row for row in rows if not row["loop_feasible"]]
+    if not feasible_rows:
+        raise RuntimeError("No photon case produced a calibratable AO loop; cannot plot the scan.")
+    photons = np.asarray([float(row["photons_per_subap_frame"]) for row in feasible_rows])
+    closed = np.asarray([float(row["closed_rms_nm"]) for row in feasible_rows])
+    strehl = np.asarray([float(row["h_band_strehl"]) for row in feasible_rows])
+    saturation = np.asarray([float(row["saturated_actuator_frac"]) for row in feasible_rows])
+    all_photons = [float(row["photons_per_subap_frame"]) for row in rows]
+    open_rms = float(feasible_rows[0]["open_rms_nm"])
     phase_nm = float(rows[0]["phase_amplitude_nm_scaled_from_eso_seeing"])
     seeing = float(rows[0]["eso_asm_seeing_arcsec_500nm"])
 
@@ -451,11 +527,11 @@ def _plot(rows: list[dict[str, object]], path: Path) -> None:
 
     ax = axes[0]
     ax.semilogx(photons, closed, marker="o", color="#2a9d8f", linewidth=2.0, label="closed RMS")
-    ax.axhline(float(rows[0]["open_rms_nm"]), color="0.55", linestyle="--", linewidth=1.2, label="open RMS")
+    ax.axhline(open_rms, color="0.55", linestyle="--", linewidth=1.2, label="open RMS")
     ax.set_xlabel("WFS photons / subaperture / frame")
     ax.set_ylabel("all-effects residual OPD RMS [nm]")
-    y_min = min(float(rows[0]["open_rms_nm"]), float(closed.min())) - 6.0
-    y_max = max(float(rows[0]["open_rms_nm"]), float(closed.max())) + 16.0
+    y_min = min(open_rms, float(closed.min())) - 6.0
+    y_max = max(open_rms, float(closed.max())) + 16.0
     ax.set_ylim(y_min, y_max)
     ax.grid(True, which="both", alpha=0.25)
     ax.legend(loc="best", fontsize=8)
@@ -475,15 +551,29 @@ def _plot(rows: list[dict[str, object]], path: Path) -> None:
     ax2.set_ylim(0.0, max(0.75, float(saturation.max()) * 1.15))
     ax.set_title("Science Strehl and stroke pressure")
 
-    label_offsets = [(14, 9), (12, 9), (-8, 14), (-10, 14)]
-    label_align = ["left", "left", "right", "right"]
-    for x_value, y_value, label, offset, align in zip(photons, closed, labels, label_offsets, label_align):
+    for axis in axes:
+        axis.set_xlim(min(all_photons) * 0.4, max(all_photons) * 2.5)
+    for row in infeasible_rows:
+        value = float(row["photons_per_subap_frame"])
+        for axis in axes:
+            axis.axvline(value, color="#e76f51", linestyle=":", linewidth=1.3)
         axes[0].annotate(
-            label,
-            xy=(x_value, y_value),
-            xytext=offset,
+            f"{row['case_name']}\n{value:.2g} ph: calibration infeasible",
+            xy=(value, y_max),
+            xytext=(4, -6),
             textcoords="offset points",
-            ha=align,
+            ha="left",
+            va="top",
+            fontsize=7,
+            color="#e76f51",
+        )
+    for x_value, y_value in zip(photons, closed):
+        axes[0].annotate(
+            f"{x_value:g} ph",
+            xy=(x_value, y_value),
+            xytext=(0, 9),
+            textcoords="offset points",
+            ha="center",
             fontsize=7,
         )
 
@@ -499,18 +589,34 @@ def _plot(rows: list[dict[str, object]], path: Path) -> None:
 def _plot_conditioned_scenarios(rows: list[dict[str, object]], path: Path) -> None:
     names = [str(row["condition_name"]) for row in rows]
     x = np.arange(len(rows))
+    feasible = np.asarray([bool(row["loop_feasible"]) for row in rows])
     closed = np.asarray([float(row["closed_rms_nm"]) for row in rows])
     strehl = np.asarray([float(row["strehl_H"]) for row in rows])
     saturation = np.asarray([float(row["saturated_actuator_frac"]) for row in rows])
     fig, ax1 = plt.subplots(figsize=(10.0, 4.8), constrained_layout=True)
-    ax1.bar(x, closed, color="#2a9d8f", label="closed RMS")
+    ax1.bar(x[feasible], closed[feasible], color="#2a9d8f", label="closed RMS")
+    for x_value in x[~feasible]:
+        ax1.annotate(
+            "calibration\ninfeasible",
+            xy=(float(x_value), 0.0),
+            xytext=(0, 10),
+            textcoords="offset points",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            color="#e76f51",
+        )
     ax1.set_ylabel("closed residual OPD RMS [nm]")
+    # Pin the axis to every condition slot: bars exist only for feasible
+    # conditions, and autoscale would otherwise clip the infeasible ones
+    # together with their tick labels and annotations.
+    ax1.set_xlim(-0.6, len(rows) - 0.4)
     ax1.set_xticks(x)
     ax1.set_xticklabels(names, rotation=25, ha="right")
     ax1.grid(axis="y", alpha=0.25)
     ax2 = ax1.twinx()
-    ax2.plot(x, strehl, color="#4361ee", marker="o", linewidth=1.8, label="H Strehl")
-    ax2.plot(x, saturation, color="#e76f51", marker="s", linewidth=1.6, label="saturated actuator frac")
+    ax2.plot(x[feasible], strehl[feasible], color="#4361ee", marker="o", linewidth=1.8, label="H Strehl")
+    ax2.plot(x[feasible], saturation[feasible], color="#e76f51", marker="s", linewidth=1.6, label="saturated actuator frac")
     ax2.set_ylim(0.0, 1.05)
     ax2.set_ylabel("Strehl / fraction")
     handles1, labels1 = ax1.get_legend_handles_labels()

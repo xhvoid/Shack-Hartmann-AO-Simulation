@@ -279,10 +279,10 @@ def build_inventory() -> dict[str, object]:
             {
                 "case": row["case_name"],
                 "photons": _fmt(row["photons_per_subap_frame"]),
-                "closed_rms_nm": _fmt(row["closed_rms_nm"]),
-                "h_strehl": _fmt(row["h_band_strehl"]),
-                "command_rms_nm": _fmt(row["command_rms_nm"]),
-                "saturated_frac": _fmt(row["saturated_actuator_frac"]),
+                "closed_rms_nm": _loop_fmt(row, "closed_rms_nm"),
+                "h_strehl": _loop_fmt(row, "h_band_strehl"),
+                "command_rms_nm": _loop_fmt(row, "command_rms_nm"),
+                "saturated_frac": _loop_fmt(row, "saturated_actuator_frac"),
                 "provenance": f"photon={row['photon_input_source_class']}; loop={row['ao_model_source_class']}",
             }
             for row in photon_scan_rows
@@ -291,14 +291,18 @@ def build_inventory() -> dict[str, object]:
             {
                 "condition": row["condition_name"],
                 "enabled_effects": row["enabled_effects"],
-                "closed_rms_nm": _fmt(row["closed_rms_nm"]),
-                "h_strehl": _fmt(row["strehl_H"]),
-                "valid_centroid_frac": _fmt(row["valid_centroid_frac"]),
-                "command_rms_nm": _fmt(row["command_rms_nm"]),
-                "saturated_frac": _fmt(row["saturated_actuator_frac"]),
+                "closed_rms_nm": _loop_fmt(row, "closed_rms_nm"),
+                "h_strehl": _loop_fmt(row, "strehl_H"),
+                "valid_centroid_frac": _loop_fmt(row, "valid_centroid_frac"),
+                "command_rms_nm": _loop_fmt(row, "command_rms_nm"),
+                "saturated_frac": _loop_fmt(row, "saturated_actuator_frac"),
                 "decomposition": (
-                    f"WFS/science no-NCPA proxy={_fmt(row['science_path_closed_without_ncpa_proxy_nm'])} nm; "
-                    f"plus NCPA={_fmt(row['science_path_plus_ncpa_rms_nm'])} nm"
+                    "infeasible"
+                    if row.get("loop_feasible", "True") == "False"
+                    else (
+                        f"WFS/science no-NCPA proxy={_fmt(row['science_path_closed_without_ncpa_proxy_nm'])} nm; "
+                        f"plus NCPA={_fmt(row['science_path_plus_ncpa_rms_nm'])} nm"
+                    )
                 ),
             }
             for row in conditioned_scenario_rows
@@ -741,6 +745,14 @@ def _fmt(value: object) -> str:
     if abs(number) >= 1000 or (0 < abs(number) < 0.001):
         return f"{number:.6g}"
     return f"{number:.6f}".rstrip("0").rstrip(".")
+
+
+def _loop_fmt(row: dict[str, str], key: str) -> str:
+    # Calibration-infeasible rows carry nan loop metrics by design; the
+    # human-facing tables must say why a value is absent, not print nan.
+    if row.get("loop_feasible", "True") == "False":
+        return "infeasible"
+    return _fmt(row[key])
 
 
 def _md_cell(text: str) -> str:
