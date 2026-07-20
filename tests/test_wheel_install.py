@@ -504,12 +504,14 @@ AO_REF_011_PROFILE_RESOURCES = (
     "synthetic_presets/portfolio_2m_detector.v1.json",
     "synthetic_presets/research_2m_detector.v1.json",
     "synthetic_presets/high_order_10m_geometric.v1.json",
+    "synthetic_presets/high_order_10m_hcipy.v1.json",
 )
 AO_REF_011_SYSTEM_PROFILES = (
     ("fast_2m_detector", 1),
     ("portfolio_2m_detector", 1),
     ("research_2m_detector", 1),
     ("high_order_10m_geometric", 1),
+    ("high_order_10m_hcipy", 1),
 )
 CONTRACT_MANIFEST = (
     ROOT
@@ -645,6 +647,7 @@ def _assert_wheel_layout(
         "shwfs_ao/backends/hcipy/atmosphere.py",
         "shwfs_ao/backends/hcipy/conversion.py",
         "shwfs_ao/backends/hcipy/dm.py",
+        "shwfs_ao/backends/hcipy/factory.py",
         "shwfs_ao/backends/hcipy/propagation.py",
         "shwfs_ao/backends/hcipy/shwfs.py",
         "shwfs_ao/backends/native/__init__.py",
@@ -1673,5 +1676,5 @@ def test_pep660_editable_install_generates_resource_alias_only_in_environment(
         capture_output=True,
         text=True,
     )
-    assert result.stdout.strip() == "editable-resource-alias-ok:37"
+    assert result.stdout.strip() == "editable-resource-alias-ok:38"
     assert not source_alias.exists()

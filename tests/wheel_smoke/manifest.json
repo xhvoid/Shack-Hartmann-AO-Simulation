@@ -230,6 +230,13 @@
       ]
     },
     {
+      "source": "tests/backends/hcipy/test_hcipy_factory.py",
+      "kind": "test",
+      "requires": [
+        "hcipy"
+      ]
+    },
+    {
       "source": "tests/backends/hcipy/test_hcipy_propagation.py",
       "kind": "test",
       "requires": [

@@ -29,12 +29,22 @@ with that install hint.
 | scalar metrics | `science.metrics` | shared | shared |
 | artifacts | `io.artifacts` | shared | shared |
 
-The built-in profile-level `ScaoBackendComponentFactory` is currently
-`native`. The HCIPy package supplies tested component adapters and the
-native-versus-HCIPy validation assembly, but it does **not** install a complete
-HCIPy `SystemConfig` factory. Therefore `build_scao_system()` with
-`backend="hcipy"` fails closed unless an application has explicitly registered
-a matching factory; it never silently substitutes native components.
+The built-in profile-level `ScaoBackendComponentFactory` registrations are
+`native` and `hcipy`. The HCIPy factory
+(`shwfs_ao.backends.hcipy.factory.HCIPY_SCAO_COMPONENT_FACTORY`) builds the
+detector-level lenslet SH-WFS on fixed block windows, the single-layer von
+Kármán frozen-flow atmosphere, the matched Gaussian DM, and the Fraunhofer
+science propagator; `high_order_10m_hcipy@1` is its packaged profile. The
+serialized fields keep one meaning across backends: `wfs.pad_factor` is the
+spot sampling in detector pixels per lambda/d — realized natively by FFT
+zero-padding and by the equivalent lenslet f-number under HCIPy — and
+`wfs.detector_window_px` must equal `pupil_pixels // lenslets_across`, the
+block window the HCIPy lenslet model actually measures on. Profiles the HCIPy
+backend cannot represent (geometric WFS, `static` or `native_frozen_flow`
+atmospheres, RMS-normalized seeing) fail closed with a factory error rather
+than silently substituting native components, and resolving the registration
+never imports HCIPy: building without the optional dependency raises the
+canonical `OptionalDependencyError` with its install hint.
 
 ### Known backend scope
 

@@ -142,11 +142,13 @@ canonical shared SCAO contracts directly.
 | `shwfs_ao.io` | strict profile/public-data/resource loading and explicit artifact serialization | physical propagation or control |
 | `shwfs_ao.experimental.pwfs` | frozen exploratory PWFS forward model | stable SH-WFS protocol conformance or validated PWFS control |
 
-`build_scao_system()` currently has a built-in native profile factory. Optional
-factories may be registered explicitly; an unknown or unregistered backend
-fails closed and never falls back to native. HCIPy component adapters are used
-directly by cross-backend validation, and science propagation also exposes the
-registered `backend="hcipy"` path.
+`build_scao_system()` has built-in native and HCIPy profile factories; the
+HCIPy registration resolves without the optional dependency and fails closed
+on profiles its backend cannot represent. Further factories may be registered
+explicitly; an unknown or unregistered backend fails closed and never falls
+back to native. HCIPy component adapters are also used directly by
+cross-backend validation, and science propagation exposes the registered
+`backend="hcipy"` path as well.
 
 ## 2. AO runtime data flow
 
