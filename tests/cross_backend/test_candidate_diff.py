@@ -71,9 +71,10 @@ def _candidate_document() -> dict:
     document = json.loads(json.dumps(dict(load_cross_backend_baseline())))
     del document["acceptance"]
     document["generator"] = {
-        "generator_name": "scripts/generate_cross_backend_candidate.py",
-        "generator_version": "1",
+        "generator_name": script.GENERATOR_NAME,
+        "generator_version": script.GENERATOR_VERSION,
         "source_commit": "f" * 40,
+        "source_tree_clean": True,
     }
     return document
 

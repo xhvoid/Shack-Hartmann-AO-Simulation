@@ -1,8 +1,8 @@
 {
   "acceptance": {
-    "accepted_at_utc": "2026-07-17T13:16:42.343788+00:00",
-    "reason": "Initial AO-REF-018 cross-backend baseline for the small deterministic comparison profile",
-    "review_reference": "AO-REF-018"
+    "accepted_at_utc": "2026-07-19T19:56:00.996554+00:00",
+    "reason": "Wire the recorded command and time-grid fixtures into consumed comparisons, record the realization standard errors backing the atmosphere range criteria, and record the verified constraints/hcipy-py314.txt generation environment; gating values are unchanged except ULP-level HCIPy drift from the AO-REF-002 conversion routing, far inside every tolerance.",
+    "review_reference": "AO-REF-018 implementation review F6/F7/F13"
   },
   "artifact_schema_name": "shwfs_ao.cross_backend_baseline",
   "artifact_schema_version": 1,
@@ -255,9 +255,39 @@
           "rationale": "Same physical expectation as the native screen generator.",
           "units": "ratio",
           "value": 2.9661323087324907
+        },
+        {
+          "level": "informational",
+          "name": "rms_ratio_standard_error",
+          "pass_criterion": {
+            "type": "informational"
+          },
+          "rationale": "First-order standard error of the RMS ratio across the independent realizations; recorded so the range criterion is checkably wider than the observed scatter.",
+          "units": "ratio",
+          "value": 0.03262830644569808
+        },
+        {
+          "level": "informational",
+          "name": "native_structure_function_ratio_standard_error",
+          "pass_criterion": {
+            "type": "informational"
+          },
+          "rationale": "Standard error of the native structure-function lag ratio across the independent realizations.",
+          "units": "ratio",
+          "value": 0.09088349234490858
+        },
+        {
+          "level": "informational",
+          "name": "hcipy_structure_function_ratio_standard_error",
+          "pass_criterion": {
+            "type": "informational"
+          },
+          "rationale": "Standard error of the HCIPy structure-function lag ratio across the independent realizations.",
+          "units": "ratio",
+          "value": 0.11859553285658325
         }
       ],
-      "statistical_definition": "4 independent realizations per backend at t=0; estimator: masked pupil RMS and the ratio of mean-square column differences at lags 4px/2px; uncertainty handled by wide range criteria sized to more than three times the observed realization scatter."
+      "statistical_definition": "4 independent realizations per backend at t=0; estimator: masked pupil RMS and the ratio of mean-square column differences at lags 4px/2px; uncertainty: first-order standard errors of each ratio estimator across the realizations, recorded as informational metrics, and every recorded value is verified at generation time to sit more than three standard errors inside its range criterion."
     },
     {
       "attribution": "One shared tilt fixture drives both detector-level sensors through the identical repository detector and centroid chain; gain differences come from each backend's window truncation and the HCIPy full-field lenslet crosstalk.",
@@ -355,7 +385,7 @@
           },
           "rationale": "The y axis must behave like the x axis on both backends.",
           "units": "ratio",
-          "value": 0.9469986885986941
+          "value": 0.946998688598694
         }
       ]
     },
@@ -409,12 +439,12 @@
           },
           "rationale": "Full-field crosstalk pulls the HCIPy window centroid slightly toward its reference compared with the isolated native lenslet propagation.",
           "units": "ratio",
-          "value": 0.9442976970367405
+          "value": 0.9442976970367426
         }
       ]
     },
     {
-      "attribution": "Both mirrors use the same repository actuator layout and the same analytic Gaussian with in-pupil peak normalization; outside the pupil the HCIPy surface keeps its analytic tail while the native construction stores zeros.",
+      "attribution": "Both mirrors use the same repository actuator layout and the same analytic Gaussian with in-pupil peak normalization; outside the pupil the HCIPy surface keeps its analytic tail while the native construction stores zeros. The shared seeded command fixture drives both mirrors through opd_from_commands, so multi-actuator command application is compared on the recorded identical input.",
       "comparison_kind": "dm_single_actuator_influence",
       "metrics": [
         {
@@ -439,6 +469,18 @@
           "rationale": "Matched Gaussian construction must agree to numerical precision inside the pupil.",
           "units": "unit-peak influence",
           "value": 3.6637359812630166e-15
+        },
+        {
+          "level": "tight_numerical",
+          "name": "max_in_pupil_command_surface_abs_diff_m",
+          "pass_criterion": {
+            "expected": 0.0,
+            "tolerance": 1e-09,
+            "type": "abs_tolerance"
+          },
+          "rationale": "Applying the shared 100 nm-scale random command fixture through both mirrors must produce the same in-pupil surface to numerical precision.",
+          "units": "m_opd",
+          "value": 3.8381180422460484e-22
         }
       ]
     },
@@ -547,7 +589,7 @@
           },
           "rationale": "Normalized spectra agree to the optical-gain-shape level; a 0.10 envelope is several times the observed difference on the pinned environments.",
           "units": "normalized sigma",
-          "value": 0.04522552672313718
+          "value": 0.045225526723151055
         }
       ]
     },
@@ -607,7 +649,7 @@
           },
           "rationale": "Same Marechal expectation for the HCIPy backend.",
           "units": "Strehl",
-          "value": 0.7471292764402587
+          "value": 0.7471292764402592
         },
         {
           "level": "physical_tolerance",
@@ -619,14 +661,25 @@
           },
           "rationale": "Independent focal grids agree far better than the 0.005 envelope; the tolerance covers cross-platform FFT noise.",
           "units": "Strehl",
-          "value": 6.300205757125976e-05
+          "value": 6.300205757170385e-05
         }
       ]
     },
     {
-      "attribution": "Both loops replay the same native atmosphere realization with identical controller settings; only the DM and WFS optics backends differ, so residual-trend differences reflect the measured optical-gain differences.",
+      "attribution": "Both loops replay the same native atmosphere realization on the shared recorded time grid with identical controller settings; only the DM and WFS optics backends differ, so residual-trend differences reflect the measured optical-gain differences.",
       "comparison_kind": "closed_loop_residual",
       "metrics": [
+        {
+          "level": "exact",
+          "name": "executed_time_grid_matches_shared_fixture",
+          "pass_criterion": {
+            "expected": true,
+            "type": "equals"
+          },
+          "rationale": "Both replayed loops must sample the shared frozen-flow atmosphere on exactly the recorded shared time grid; its recorded hash is this comparison's timing contract.",
+          "units": "boolean",
+          "value": true
+        },
         {
           "level": "exact",
           "name": "native_backend_name",
@@ -671,7 +724,7 @@
           },
           "rationale": "Same correction expectation for the all-HCIPy loop.",
           "units": "mean corrected over uncorrected rms",
-          "value": 0.7189659225449374
+          "value": 0.7189659225449418
         },
         {
           "level": "physical_tolerance",
@@ -683,7 +736,7 @@
           },
           "rationale": "Optical-gain and window differences shift the residual level over a four-step run without changing the closed-loop behaviour; the band is several times the observed difference.",
           "units": "ratio",
-          "value": 0.9922745605979825
+          "value": 0.9922745605979886
         }
       ]
     },
@@ -699,7 +752,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.0054487363280107575
+          "value": 0.005250791708628337
         },
         {
           "level": "informational",
@@ -709,7 +762,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.002306305648138126
+          "value": 0.0023770139863093695
         },
         {
           "level": "informational",
@@ -719,7 +772,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.0010842776391655207
+          "value": 0.0011028749868273735
         },
         {
           "level": "informational",
@@ -729,7 +782,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.0009188610129058361
+          "value": 0.0009164303385963043
         },
         {
           "level": "informational",
@@ -739,7 +792,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "mebibytes",
-          "value": 2.5270986557006836
+          "value": 2.527377128601074
         }
       ]
     }
@@ -763,8 +816,8 @@
     "residual_sign_convention": "residual_opd_m = atmosphere_opd_m - dm_correction_opd_m"
   },
   "environment": {
-    "dependency_constraint_file": "constraints/hcipy-py311.txt",
-    "dependency_constraint_sha256": "ac7fff17d8fa36a0339b701e91d52074bd83ca22d09c2e89f588ee8da4143252",
+    "dependency_constraint_file": "constraints/hcipy-py314.txt",
+    "dependency_constraint_sha256": "09d0dc5d6910b4bb2a43e9d5b6d0ed7ba88fe10eada1372d4e79588341d522fc",
     "hcipy_version": "0.7.0",
     "numpy_version": "2.5.0",
     "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
@@ -780,8 +833,9 @@
   },
   "generator": {
     "generator_name": "scripts/generate_cross_backend_candidate.py",
-    "generator_version": "1",
-    "source_commit": "4a97daabe950f0d2523a0701bc17c1f3d7448633"
+    "generator_version": "2",
+    "source_commit": "075c94d20531d18ceac258e2fc62d556e4e3efdc",
+    "source_tree_clean": true
   },
   "root_seed": 118
 }
