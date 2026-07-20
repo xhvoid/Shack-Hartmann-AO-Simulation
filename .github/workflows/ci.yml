@@ -316,6 +316,15 @@ jobs:
           cd "$RUNNER_TEMP/wheel-smoke"
           PYTHONPATH= python scripts/run_notebook_smoke.py --class fast
 
+      - name: Execute the slow studies in their fast smoke parameterization
+        # The representative fast parameterization promised by the notebook
+        # manifest: FAST_SMOKE = True is injected after each study's tagged
+        # parameters cell, so every slow study's full code path guards fast
+        # CI while the scheduled lane executes the full-size study.
+        run: |
+          cd "$RUNNER_TEMP/wheel-smoke"
+          PYTHONPATH= python scripts/run_notebook_smoke.py --class slow --fast-smoke
+
       - name: Enforce accepted baselines and a clean worktree
         run: |
           find src/shwfs_ao/resources figures -type f -print0 | sort -z \
