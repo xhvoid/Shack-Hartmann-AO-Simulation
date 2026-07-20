@@ -84,7 +84,7 @@
     },
     {
       "logical_name": "reference_metrics/refactor_contract_manifest.json",
-      "sha256": "82ccbfc8bf7d37a86a5f6976766815d539f6e27ff06ecf76a08b18700f6bfdd5"
+      "sha256": "346dce7218a57daa172c2b072acf069b2b066e6da3f7b812c8834bcfee8564ea"
     },
     {
       "logical_name": "samples/eso_asm_snapshot_sample.json",

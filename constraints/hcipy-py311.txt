@@ -1,29 +1,58 @@
 # Exact HCIPy-lane CI environment resolved from PyPI for CPython 3.11 on
-# Linux: the `.[test,hcipy]` extras plus the wheel-build frontend.  Runtime
-# lower bounds remain in pyproject.toml; this file is a reproducible
-# tested-install profile, not the package's public dependency policy.
+# Linux: the `.[test,hcipy,notebook-test]` extras plus the wheel-build
+# frontend.  Runtime lower bounds remain in pyproject.toml; this file is a
+# reproducible tested-install profile, not the package's public dependency
+# policy.  Complete resolved lock: every distribution the HCIPy lanes
+# install is pinned here, including the Jupyter execution stack.
+# scripts/verify_environment_lock.py enforces installed == pinned in every
+# lane; refresh with the relock procedure in constraints/README.md.
 asdf==5.3.1
 asdf-standard==1.5.0
 astropy==8.0.1
 astropy-iers-data==0.2026.7.13.0.54.2
+asttokens==3.0.2
 attrs==26.1.0
 build==1.5.0
+comm==0.2.3
 contourpy==1.3.3
 cycler==0.12.1
+debugpy==1.8.21
+decorator==5.3.1
+executing==2.2.1
+fastjsonschema==2.21.2
 fonttools==4.63.0
 hcipy==0.7.0
 imageio==2.37.3
 importlib-metadata==9.0.0
 iniconfig==2.3.0
+ipykernel==7.3.0
+ipython==9.15.0
+ipython-pygments-lexers==1.1.1
+jedi==0.20.0
 jmespath==1.1.0
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+jupyter-client==8.9.1
+jupyter-core==5.9.1
 kiwisolver==1.5.0
 matplotlib==3.11.0
+matplotlib-inline==0.2.2
+nbclient==0.11.0
+nbformat==5.10.4
+nest-asyncio2==1.7.2
 numexpr==2.14.1
 numpy==2.4.6
 packaging==26.2
 pandas==3.0.3
+parso==0.8.7
+pexpect==4.9.0
 pillow==12.3.0
+platformdirs==4.10.1
 pluggy==1.6.0
+prompt-toolkit==3.0.52
+psutil==7.2.2
+ptyprocess==0.7.0
+pure-eval==0.2.3
 pyerfa==2.0.1.5
 pygments==2.20.0
 pyparsing==3.3.2
@@ -31,16 +60,19 @@ pyproject-hooks==1.2.0
 pytest==9.1.1
 python-dateutil==2.9.0.post0
 pyyaml==6.0.3
+pyzmq==27.1.0
+referencing==0.37.0
+rpds-py==2026.6.3
 scipy==1.17.1
 semantic-version==2.10.0
 setuptools==83.0.0
 six==1.17.0
+stack-data==0.6.3
+tornado==6.5.7
 tqdm==4.68.4
+traitlets==5.15.1
+typing-extensions==4.16.0
+wcwidth==0.8.2
 wheel==0.47.0
 xxhash==3.8.1
 zipp==4.1.0
-# notebook-test extra (native_vs_hcipy study smoke): declared packages pinned
-# here; the Jupyter execution stack resolves under these pins.
-ipykernel==7.3.0
-nbclient==0.11.0
-nbformat==5.10.4
