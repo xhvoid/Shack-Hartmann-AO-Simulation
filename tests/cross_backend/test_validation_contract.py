@@ -40,14 +40,20 @@ from shwfs_ao.validation.regression import (
     CROSS_BACKEND_BASELINE_SCHEMA_NAME,
     CROSS_BACKEND_BASELINE_SCHEMA_VERSION,
     CROSS_BACKEND_REPORT_SCHEMA_NAME,
+    CROSS_BACKEND_BASELINE_SCHEMA_RESOURCE,
     REQUIRED_COMPARISON_KINDS,
+    REQUIRED_COMPONENT_HASH_KEYS,
+    REQUIRED_FIXTURE_HASH_KEYS,
+    REQUIRED_METRIC_NAMES,
     BaselineContractError,
     baseline_from_report,
     evaluate_report_against_baseline,
     load_cross_backend_baseline,
+    validate_baseline_against_schema,
     validate_cross_backend_baseline,
     validate_cross_backend_report,
 )
+from shwfs_ao.io.resources import read_text_resource
 
 
 HCIPY_INSTALLED = hcipy_installed()
@@ -68,26 +74,11 @@ TICKET_COMPARISON_KINDS = (
     "runtime_and_memory",
 )
 
-SHARED_FIXTURE_HASH_KEYS = {
-    "static_opd_m",
-    "tilt_x_opd_m",
-    "tilt_y_opd_m",
-    "command_fixture_opd_m",
-    "time_grid_s",
-}
+# The library is the single source of truth for the required inventory; the
+# packaged baseline and every synthetic contract fixture reuse it.
+SHARED_FIXTURE_HASH_KEYS = set(REQUIRED_FIXTURE_HASH_KEYS)
 
-COMPONENT_HASH_KEYS = {
-    "pupil_geometry",
-    "shack_hartmann_geometry",
-    "native_wfs_optics",
-    "hcipy_wfs_optics",
-    "native_dm",
-    "hcipy_dm",
-    "native_science",
-    "hcipy_science",
-    "wfs_row_ids",
-    "dm_actuator_ids",
-}
+COMPONENT_HASH_KEYS = set(REQUIRED_COMPONENT_HASH_KEYS)
 
 
 def _hash64(seed: str) -> str:
@@ -95,12 +86,15 @@ def _hash64(seed: str) -> str:
 
 
 def _probe_comparison(kind: str) -> dict:
+    # Emit exactly the required metric inventory for the kind so the synthetic
+    # report satisfies the completeness contract; every probe metric is a
+    # neutral physical-tolerance range that no structural test depends on.
     return {
         "comparison_kind": kind,
         "attribution": "Synthetic comparison for contract tests.",
         "metrics": [
             {
-                "name": f"{kind}_probe_value",
+                "name": name,
                 "level": "physical_tolerance",
                 "units": "ratio",
                 "value": 1.0,
@@ -110,7 +104,8 @@ def _probe_comparison(kind: str) -> dict:
                     "high": 1.5,
                 },
                 "rationale": "Contract-test probe metric.",
-            },
+            }
+            for name in sorted(REQUIRED_METRIC_NAMES[kind])
         ],
     }
 
@@ -128,8 +123,12 @@ def _minimal_report() -> dict:
             ),
             "measurement_unit": "pixel",
         },
-        "component_hashes": {"pupil_geometry": _hash64("pupil")},
-        "fixture_hashes": {"static_opd_m": _hash64("fixture")},
+        "component_hashes": {
+            key: _hash64(key) for key in REQUIRED_COMPONENT_HASH_KEYS
+        },
+        "fixture_hashes": {
+            key: _hash64(key) for key in REQUIRED_FIXTURE_HASH_KEYS
+        },
         "environment": {
             "python_version": "3.14.0",
             "numpy_version": "2.5.0",
@@ -152,6 +151,7 @@ def _minimal_baseline() -> dict:
             "generator_name": "contract-test-generator",
             "generator_version": "1",
             "source_commit": _hash64("commit")[:40],
+            "source_tree_clean": True,
         },
         acceptance={
             "reason": "Contract-test acceptance.",
@@ -385,6 +385,70 @@ class TestDocumentContract:
             match="canonical order",
         ):
             validate_cross_backend_report(report)
+
+    def test_report_rejects_a_missing_or_extra_required_hash_key(self):
+        report = _minimal_report()
+        del report["fixture_hashes"]["atmosphere_opd_cube_m"]
+        with pytest.raises(BaselineContractError, match="exactly the required"):
+            validate_cross_backend_report(report)
+        report = _minimal_report()
+        report["component_hashes"]["unreviewed_extra"] = _hash64("extra")
+        with pytest.raises(BaselineContractError, match="exactly the required"):
+            validate_cross_backend_report(report)
+
+    def test_report_rejects_a_dropped_or_added_required_metric(self):
+        report = _minimal_report()
+        _remove_metric(
+            report,
+            "closed_loop_residual",
+            "both_loops_consumed_shared_opd_cube",
+        )
+        with pytest.raises(
+            BaselineContractError,
+            match="exactly its required metrics",
+        ) as excinfo:
+            validate_cross_backend_report(report)
+        assert "both_loops_consumed_shared_opd_cube" in str(excinfo.value)
+
+    def test_report_requires_exact_metrics_to_gate_on_equality(self):
+        report = _minimal_report()
+        metric = report["comparisons"][0]["metrics"][0]
+        metric["level"] = "exact"
+        # An exact metric may not gate on a wideable range.
+        metric["pass_criterion"] = {"type": "range", "low": 0.0, "high": 1.0e9}
+        with pytest.raises(BaselineContractError, match="must be 'equals'"):
+            validate_cross_backend_report(report)
+
+    def test_baseline_requires_equal_value_for_an_equals_criterion(self):
+        baseline = _minimal_baseline()
+        metric = baseline["comparisons"][0]["metrics"][0]
+        metric["level"] = "exact"
+        metric["value"] = 3
+        metric["pass_criterion"] = {"type": "equals", "expected": 4}
+        with pytest.raises(
+            BaselineContractError,
+            match="must equal the criterion expectation",
+        ):
+            validate_cross_backend_baseline(baseline)
+
+    def test_baseline_rejects_forged_or_unknown_source_commit(self):
+        for forged in ("unknown", "abc123", "F" * 40):
+            baseline = _minimal_baseline()
+            baseline["generator"]["source_commit"] = forged
+            with pytest.raises(
+                BaselineContractError,
+                match="40-character lowercase git",
+            ):
+                validate_cross_backend_baseline(baseline)
+
+    def test_baseline_requires_a_recorded_clean_state_flag(self):
+        baseline = _minimal_baseline()
+        del baseline["generator"]["source_tree_clean"]
+        with pytest.raises(
+            BaselineContractError,
+            match="source_tree_clean must be recorded",
+        ):
+            validate_cross_backend_baseline(baseline)
 
     @pytest.mark.parametrize(
         "criterion, message",
@@ -718,6 +782,39 @@ class TestPackagedBaseline:
             )
             == ()
         )
+
+    def test_packaged_baseline_validates_against_the_json_schema(
+        self,
+        packaged_baseline,
+    ):
+        # The independent structural gate the acceptance workflow also runs.
+        validate_baseline_against_schema(packaged_baseline)
+
+    def test_schema_enumerations_match_the_required_inventory(self):
+        # The JSON Schema and the Python inventory are one contract: they must
+        # name the same required hash keys and per-kind metrics, so neither can
+        # drift from the other without a deliberate, reviewed edit to both.
+        schema = json.loads(read_text_resource(CROSS_BACKEND_BASELINE_SCHEMA_RESOURCE))
+        properties = schema["properties"]
+        assert set(properties["fixture_hashes"]["required"]) == set(
+            REQUIRED_FIXTURE_HASH_KEYS
+        )
+        assert set(properties["component_hashes"]["required"]) == set(
+            REQUIRED_COMPONENT_HASH_KEYS
+        )
+        for item in properties["comparisons"]["prefixItems"]:
+            kind = item["properties"]["comparison_kind"]["const"]
+            schema_names = {
+                clause["contains"]["properties"]["name"]["const"]
+                for clause in item["properties"]["metrics"]["allOf"]
+            }
+            assert schema_names == set(REQUIRED_METRIC_NAMES[kind]), kind
+
+    def test_schema_validation_rejects_a_removed_required_field(self):
+        broken = _report_copy(load_cross_backend_baseline())
+        del broken["conventions"]
+        with pytest.raises(BaselineContractError, match="JSON Schema"):
+            validate_baseline_against_schema(broken)
 
 
 class TestEvaluationSemantics:

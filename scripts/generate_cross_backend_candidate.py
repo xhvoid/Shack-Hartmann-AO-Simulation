@@ -130,7 +130,11 @@ def _generate_candidate(candidate_dir: Path) -> None:
     validate_cross_backend_report(candidate)
 
     candidate_bytes = _canonical_bytes(candidate)
-    diff = _build_diff(candidate, candidate_bytes)
+    # Derive the diff and its Markdown from the persisted canonical bytes, not
+    # the in-memory document: acceptance re-reads the file, so building from
+    # the same round-tripped form makes the reviewed diff exactly reproducible
+    # and lets acceptance bind both the machine and human renderings.
+    diff = _build_diff(json.loads(candidate_bytes), candidate_bytes)
     (candidate_dir / CANDIDATE_FILE).write_bytes(candidate_bytes)
     (candidate_dir / DIFF_JSON).write_bytes(_canonical_bytes(diff))
     (candidate_dir / DIFF_MARKDOWN).write_text(
@@ -154,6 +158,7 @@ def _accept_reviewed_candidate(
 
     from shwfs_ao.validation.regression import (
         baseline_from_report,
+        validate_baseline_against_schema,
         validate_cross_backend_report,
     )
 
@@ -184,6 +189,18 @@ def _accept_reviewed_candidate(
             "Candidate or accepted baseline changed after diff generation; "
             "regenerate and review the diff."
         )
+    # The human reviews the Markdown, so it too must still describe exactly the
+    # candidate and baseline being accepted, not a stale rendering.
+    checked_markdown_path = candidate_dir / DIFF_MARKDOWN
+    if not checked_markdown_path.is_file():
+        raise SystemExit(
+            f"Missing generated human-readable diff: {checked_markdown_path}"
+        )
+    if checked_markdown_path.read_text(encoding="utf-8") != _render_diff_markdown(diff):
+        raise SystemExit(
+            "The reviewed Markdown diff no longer matches the candidate and "
+            "baseline; regenerate and review the diff."
+        )
 
     report_body = {
         key: value for key, value in candidate.items() if key != "generator"
@@ -197,6 +214,9 @@ def _accept_reviewed_candidate(
             "accepted_at_utc": datetime.now(timezone.utc).isoformat(),
         },
     )
+    # The acceptance workflow is the only writer of the packaged baseline, so
+    # it must satisfy the packaged JSON Schema as well as the custom contract.
+    validate_baseline_against_schema(baseline)
     DESTINATION_DIR.mkdir(parents=True, exist_ok=True)
     target = DESTINATION_DIR / BASELINE_NAME
     target.write_text(
@@ -452,17 +472,40 @@ def _constraint_profile_name() -> str:
     return f"constraints/hcipy-py{version.major}{version.minor}.txt"
 
 
+_IGNORED_LOCK_DISTRIBUTIONS = frozenset(
+    {"pip", "shack-hartmann-ao-simulation"}
+)
+
+
+def _installed_distributions() -> dict[str, str]:
+    """Normalized name -> version for every non-ignored installed dist."""
+
+    from importlib import metadata
+
+    installed: dict[str, str] = {}
+    for distribution in metadata.distributions():
+        name = distribution.metadata["Name"]
+        if name is None:
+            continue
+        normalized = re.sub(r"[-_.]+", "-", name.strip()).lower()
+        if normalized in _IGNORED_LOCK_DISTRIBUTIONS:
+            continue
+        installed[normalized] = distribution.version
+    return installed
+
+
 def _verified_constraint_identity() -> tuple[str, str]:
     """Return the (file, sha256) constraint identity of this environment.
 
-    The named profile is only recorded after verification: the profile must
-    exist for the running Python minor version, must pin numpy and hcipy,
-    and every pinned distribution that is installed must match its pin.  A
-    baseline can therefore never again name a constraint profile that could
-    not have produced the recorded interpreter and library versions.
+    The named profile is only recorded after a strict lock check that mirrors
+    scripts/verify_environment_lock.py: the profile must exist for the running
+    Python minor version, must pin numpy and hcipy, and every installed
+    distribution must appear in the profile at exactly its installed version.
+    Skipping missing pins or tolerating installed-but-unpinned distributions
+    would let a drifted or foreign-platform profile — the profiles are
+    resolved per platform — silently generate the baseline; an installed
+    distribution the profile does not pin surfaces that here instead.
     """
-
-    from importlib import metadata
 
     profile = _constraint_profile_name()
     path = ROOT / profile
@@ -479,15 +522,17 @@ def _verified_constraint_identity() -> tuple[str, str]:
             raise SystemExit(
                 f"Constraint profile {profile} does not pin {required}."
             )
+    installed = _installed_distributions()
     mismatches = []
-    for name, pinned in sorted(pins.items()):
-        try:
-            installed = metadata.version(name)
-        except metadata.PackageNotFoundError:
-            continue
-        if installed != pinned:
+    for name in sorted(installed):
+        if name not in pins:
             mismatches.append(
-                f"{name}: installed {installed} != pinned {pinned}"
+                f"{name}=={installed[name]} is installed but {profile} does "
+                "not pin it"
+            )
+        elif pins[name] != installed[name]:
+            mismatches.append(
+                f"{name}: installed {installed[name]} != pinned {pins[name]}"
             )
     if mismatches:
         raise SystemExit(
@@ -511,6 +556,13 @@ def _parse_constraint_pins(text: str) -> dict[str, str]:
 
 
 def _source_commit() -> str:
+    """Return the current 40-character commit, or refuse to generate.
+
+    A failed lookup previously became the accepted string ``"unknown"``, so a
+    baseline could be generated with unverifiable provenance.  A candidate is
+    now refused unless git reports a real commit hash.
+    """
+
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -519,9 +571,17 @@ def _source_commit() -> str:
             text=True,
             check=True,
         )
-    except (OSError, subprocess.CalledProcessError):
-        return "unknown"
-    return result.stdout.strip() or "unknown"
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise SystemExit(
+            "Cannot record source provenance: 'git rev-parse HEAD' failed. "
+            "A cross-backend baseline must be generated from a real commit."
+        ) from exc
+    commit = result.stdout.strip()
+    if not re.fullmatch(r"[0-9a-f]{40}", commit):
+        raise SystemExit(
+            f"Refusing to record a non-canonical source commit {commit!r}."
+        )
+    return commit
 
 
 def _source_tree_clean() -> bool:
