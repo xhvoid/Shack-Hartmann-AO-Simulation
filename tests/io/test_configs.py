@@ -85,6 +85,40 @@ def test_profile_round_trip_is_exact_and_deterministic() -> None:
         first.pupil_pixels = 64  # type: ignore[misc]
 
 
+def test_wfs_photon_allocation_is_serialized_defaulted_and_hashed() -> None:
+    profile = load_system_profile("fast_2m_detector", 1)
+    # Compatibility default: profiles written before the field existed load as
+    # the historical throughput-scaled allocation policy.
+    assert profile.wfs.photon_allocation == "throughput_scaled"
+
+    # The choice is a serialized, round-tripping part of the WFS block.
+    record = system_config_to_mapping(profile)
+    assert record["config"]["wfs"]["photon_allocation"] == "throughput_scaled"
+    assert system_config_from_mapping(record) == profile
+
+    # A legacy record that predates the field still loads, defaulting the value
+    # rather than failing the strict field check.
+    legacy = copy.deepcopy(record)
+    del legacy["config"]["wfs"]["photon_allocation"]
+    assert system_config_from_mapping(legacy) == profile
+
+    # Switching the policy is a real configuration change: it round-trips and
+    # moves the WFS component hash (which keys the seeded RNG scope).
+    unit_sum = replace(
+        profile, wfs=replace(profile.wfs, photon_allocation="unit_sum")
+    )
+    assert unit_sum.wfs.photon_allocation == "unit_sum"
+    assert (
+        unit_sum.component_config_hashes["wfs"]
+        != profile.component_config_hashes["wfs"]
+    )
+    assert system_config_from_mapping(system_config_to_mapping(unit_sum)) == unit_sum
+
+    # Unknown policies are rejected at construction.
+    with pytest.raises(SystemConfigError, match="photon_allocation"):
+        replace(profile.wfs, photon_allocation="per_lenslet")  # type: ignore[arg-type]
+
+
 def test_2m_profiles_change_scale_without_changing_observing_conditions() -> None:
     profiles = [load_system_profile(name, 1) for name, _ in EXPECTED_PROFILES[:3]]
     assert [(p.pupil_pixels, p.lenslets_across, p.actuators_across) for p in profiles] == [

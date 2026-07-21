@@ -140,6 +140,9 @@ class NativeScaoComponentFactory:
         centroid_config: CentroidConfig,
         validity_config: CentroidValidityConfig,
         random_streams: RandomStreams,
+        photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
+            "throughput_scaled"
+        ),
     ) -> WavefrontSensor:
         def geometric() -> WavefrontSensor:
             return NativeGeometricShackHartmannSensor(geometry)
@@ -159,6 +162,7 @@ class NativeScaoComponentFactory:
                 random_streams=random_streams.scoped("native-detector-wfs"),
                 centroid_config=centroid_config,
                 validity_config=validity_config,
+                photon_allocation=photon_allocation,
             )
 
         builders: dict[str, Callable[[], WavefrontSensor]] = {
