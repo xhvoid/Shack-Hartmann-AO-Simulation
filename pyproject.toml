@@ -130,10 +130,19 @@ select = ["E4", "E7", "E9", "F"]
 "tests/**" = ["E402"]
 
 [tool.mypy]
-# AO-REF-020 static type gate, scoped to the public protocols and unit-typed
-# result/geometry contracts under shwfs_ao.core.  Widening the checked set is
-# welcome; shrinking it needs a ticket.
-files = ["src/shwfs_ao/core"]
+# AO-REF-020 static type gate.  It covers the public protocols and unit-typed
+# result/geometry contracts under shwfs_ao.core, plus the public SCAO factory
+# protocol and both built-in backend factories so a factory that does not
+# statically implement the protocol is caught here.  follow_imports = silent
+# keeps the gate scoped to these files without forcing the whole dependency
+# tree green.  Widening the checked set is welcome; shrinking it needs a ticket.
+files = [
+    "src/shwfs_ao/core",
+    "src/shwfs_ao/experiments/scao.py",
+    "src/shwfs_ao/backends/native/factory.py",
+    "src/shwfs_ao/backends/hcipy/factory.py",
+]
+follow_imports = "silent"
 python_version = "3.14"
 warn_unused_ignores = true
 warn_redundant_casts = true

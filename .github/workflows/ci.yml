@@ -379,7 +379,8 @@ jobs:
 
       - name: Scoped static type gate
         # [tool.mypy] checks the public protocols and unit-typed result
-        # contracts under shwfs_ao.core.
+        # contracts under shwfs_ao.core, plus the public SCAO factory protocol
+        # and both built-in backend factories.
         run: python -m mypy
 
       - name: No sys.path.insert in runtime code
