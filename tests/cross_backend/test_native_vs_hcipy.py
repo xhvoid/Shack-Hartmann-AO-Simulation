@@ -206,7 +206,8 @@ def test_the_report_round_trips_into_a_valid_baseline_without_writing(
         generator={
             "generator_name": "tests/cross_backend/test_native_vs_hcipy.py",
             "generator_version": "1",
-            "source_commit": "in-test-round-trip",
+            "source_commit": "0" * 40,
+            "source_tree_clean": True,
         },
         acceptance={
             "reason": "In-memory round-trip check only; never persisted.",
