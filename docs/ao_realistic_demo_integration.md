@@ -92,7 +92,7 @@ references.
 The integration API exposes three presets:
 
 ```python
-from ao_integration import IntegrationConfig, run_integration
+from shwfs_ao.experiments.integration import IntegrationConfig, run_integration
 
 fast = IntegrationConfig.from_mode("fast")
 portfolio = IntegrationConfig.from_mode("portfolio")
