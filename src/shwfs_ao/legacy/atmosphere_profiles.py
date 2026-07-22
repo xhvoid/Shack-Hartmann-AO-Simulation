@@ -730,7 +730,9 @@ def _atmosphere_provenance(source_class: str, source_note: str) -> _Provenance:
     """Build canonical provenance while retaining atmosphere-specific errors."""
 
     try:
-        return _Provenance(source_class=source_class, source_note=str(source_note))
+        # source_class is a runtime-validated str; physical modules must not
+        # import SourceClass from core, so narrow it with a scoped ignore.
+        return _Provenance(source_class=source_class, source_note=str(source_note))  # type: ignore[arg-type]
     except (TypeError, ValueError) as exc:
         if source_class not in ALLOWED_SOURCE_CLASSES:
             raise AtmosphereProfileError(

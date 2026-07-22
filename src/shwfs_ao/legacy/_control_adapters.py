@@ -13,8 +13,10 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 import math
 from types import MappingProxyType
+from typing import Any, Final, cast
 
 import numpy as np
+import numpy.typing as npt
 
 from ..calibration.diagnostics import interaction_diagnostics
 from ..calibration.interaction import (
@@ -28,7 +30,7 @@ from ..control import (
     run_closed_loop,
 )
 from ..core.hashing import component_config_hash
-from ..core.provenance import Provenance
+from ..core.provenance import Provenance, SourceClass
 from ..core.random import NamedRandomStreams
 from ..core.types import (
     DmCommandVector,
@@ -54,7 +56,7 @@ from .synthetic_instrument_data import (
 
 _NM_PER_M = 1.0e9
 _PHASE_TWO_PI = 2.0 * np.pi
-_COMMAND_UNIT = "m_opd_equivalent"
+_COMMAND_UNIT: Final = "m_opd_equivalent"
 
 
 @dataclass(frozen=True)
@@ -533,7 +535,7 @@ def _legacy_interaction_matrix(
     )
     coordinate_ids = tuple(dm.actuator_ids[int(index)] for index in controlled_indices)
     provenance = Provenance(
-        source_class=poke_result.source_class,
+        source_class=cast(SourceClass, poke_result.source_class),
         source_note=poke_result.source_note,
         references=(
             "legacy pixels-per-nm poke matrix adapted to canonical pixels-per-metre",
@@ -556,7 +558,7 @@ def _legacy_interaction_matrix(
             "reference_centroids_px": calibration.reference_centroids_px,
         },
     )
-    values = {
+    values: dict[str, Any] = {
         "matrix": matrix,
         "row_valid": row_valid,
         "row_ids": wfs.row_ids,
@@ -588,7 +590,7 @@ def _legacy_interaction_matrix(
     )
 
 
-def _readonly(value: object, *, dtype: object) -> np.ndarray:
+def _readonly(value: object, *, dtype: npt.DTypeLike) -> np.ndarray:
     contiguous = np.ascontiguousarray(np.array(value, dtype=dtype, copy=True))
     immutable = np.frombuffer(
         contiguous.tobytes(order="C"),
@@ -608,7 +610,9 @@ def _nonnegative(value: object, *, label: str) -> float:
     if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{label} must be a finite number.")
     try:
-        result = float(value)
+        # value is arbitrary runtime input; non-convertible cases raise here
+        # and are caught below.
+        result = float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{label} must be a finite number.") from exc
     if not math.isfinite(result) or result < 0.0:

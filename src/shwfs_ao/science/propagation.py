@@ -15,6 +15,7 @@ from typing import ClassVar
 import numpy as np
 
 from ..core.geometry import PupilGeometry
+from ..core.protocols import SciencePropagator
 from ..core.types import PsfResult
 
 
@@ -75,6 +76,7 @@ def monochromatic_psf(
 
     # Local imports keep this construction layer backend-neutral and avoid a
     # module cycle while the native backend imports the sampling contract.
+    propagator: SciencePropagator
     if backend == "native":
         from ..backends.native.propagation import NativeSciencePropagator
 

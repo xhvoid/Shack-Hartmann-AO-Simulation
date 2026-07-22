@@ -597,7 +597,9 @@ def _positive_float(value: object, *, label: str) -> float:
     if isinstance(value, (bool, np.bool_)):
         raise ShackHartmannCalibrationError(f"{label} must be positive and finite.")
     try:
-        result = float(value)
+        # Defensive coercion of arbitrary input; non-numeric raises here and
+        # is caught below.
+        result = float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError) as exc:
         raise ShackHartmannCalibrationError(
             f"{label} must be positive and finite."

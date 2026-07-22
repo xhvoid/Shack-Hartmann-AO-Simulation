@@ -16,13 +16,17 @@ from dataclasses import dataclass, replace
 import hashlib
 import json
 import math
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, Sequence, cast
 
 import numpy as np
 from scipy import ndimage
 
 from ..core.hashing import stable_array_descriptor
-from ..core.provenance import ALLOWED_SOURCE_CLASSES, Provenance as _Provenance
+from ..core.provenance import (
+    ALLOWED_SOURCE_CLASSES,
+    Provenance as _Provenance,
+    SourceClass,
+)
 from ..dm import DMConfig
 from ..science.bandpass import ScienceBandpass, top_hat_bandpass
 
@@ -310,7 +314,7 @@ def default_error_budget_scenarios(
 ) -> tuple[ScenarioConfig, ...]:
     """Return the required 8-row fast scenario matrix."""
 
-    common = {
+    common: dict[str, Any] = {
         "n_steps": int(n_steps),
         "phase_amplitude_nm": float(phase_amplitude_nm),
         "phase_seed": 101,
@@ -527,8 +531,10 @@ def build_control_space_phase_sequence(
         else:
             controlled_commands = base
         full_commands = expand_controlled_commands(controlled_commands, poke_result, dm_model)
+        # synthesize_dm_phase_rad accepts array-likes at runtime (np.asarray);
+        # its public annotation is frozen as Sequence[float].
         phase_rad, _ = synthesize_dm_phase_rad(
-            full_commands,
+            full_commands,  # type: ignore[arg-type]
             dm_model,
             wavelength_m=calibration.geometry.wfs_wavelength_m,
             remove_piston=True,
@@ -900,7 +906,10 @@ def _validate_source(source_class: str, source_note: str) -> None:
 
 def _scenario_provenance(source_class: str, source_note: str) -> _Provenance:
     try:
-        return _Provenance(source_class=source_class, source_note=str(source_note))
+        return _Provenance(
+            source_class=cast(SourceClass, source_class),
+            source_note=str(source_note),
+        )
     except (TypeError, ValueError) as exc:
         if source_class not in ALLOWED_SOURCE_CLASSES:
             raise AOErrorBudgetError(

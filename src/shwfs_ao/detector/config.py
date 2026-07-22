@@ -81,7 +81,7 @@ class DetectorConfig:
                 f"prnu_mode must be one of {sorted(_PRNU_MODES)}; "
                 f"got {self.prnu_mode!r}."
             )
-        prnu_mode = cast(PrnuMode, self.prnu_mode)
+        prnu_mode = self.prnu_mode
         bad_pixel_mask = _immutable_optional_mask(self.bad_pixel_mask)
 
         object.__setattr__(self, "photons_per_subap_frame", photons_per_subap_frame)
@@ -305,7 +305,9 @@ def _immutable_optional_mask(value: object) -> np.ndarray | None:
 
 def _finite(field_name: str, value: object) -> float:
     try:
-        result = float(value)
+        # Defensive coercion of arbitrary input; non-numeric raises here and
+        # is caught below.
+        result = float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError) as exc:
         raise SyntheticInstrumentError(
             f"{field_name} must be finite; got {value!r}."

@@ -669,12 +669,14 @@ def _resolved_calibration_seeds(
             "calibration_legacy_seeds must match the subaperture count."
         )
     normalized: list[int | None] = []
-    for seed in supplied:
-        if seed is not None and (type(seed) is not int or seed < 0):
+    for supplied_seed in supplied:
+        if supplied_seed is not None and (
+            type(supplied_seed) is not int or supplied_seed < 0
+        ):
             raise ShackHartmannMeasurementError(
                 "calibration legacy seeds must be non-negative integers or None."
             )
-        normalized.append(seed)
+        normalized.append(supplied_seed)
     resolved = tuple(normalized)
     if resolved != expected:
         raise ShackHartmannMeasurementError(

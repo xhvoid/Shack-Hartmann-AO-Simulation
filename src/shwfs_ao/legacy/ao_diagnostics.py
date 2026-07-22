@@ -452,7 +452,9 @@ def _assert_masked_finite(values: np.ndarray, pupil_mask: np.ndarray, label: str
 
 def _validate_source(source_class: str, source_note: str) -> None:
     try:
-        _Provenance(source_class=source_class, source_note=str(source_note))
+        # source_class is a runtime-validated str; physical modules must not
+        # import SourceClass from core, so narrow it with a scoped ignore.
+        _Provenance(source_class=source_class, source_note=str(source_note))  # type: ignore[arg-type]
     except (TypeError, ValueError) as exc:
         if source_class not in ALLOWED_SOURCE_CLASSES:
             raise AODiagnosticsError(

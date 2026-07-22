@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping as _Mapping
+from typing import cast as _cast
+
 import numpy as np
 
 from ..core.geometry import PupilGeometry as _PupilGeometry
@@ -102,7 +105,7 @@ def measure_slopes(
         min_fill=min_fill,
     )
     root_seed = (
-        int(np.random.SeedSequence().entropy)
+        int(_cast("int", np.random.SeedSequence().entropy))
         if seed is None
         else int(seed)
     )
@@ -151,7 +154,7 @@ def _legacy_shack_hartmann_geometry(
         raise ValueError("X and Y must span the same pupil diameter.")
     sampled_pupil = _PupilGeometry(
         telescope_diameter_m=diameter_x,
-        pupil_shape=tuple(int(value) for value in x_m.shape),
+        pupil_shape=(int(x_m.shape[0]), int(x_m.shape[1])),
         pupil_mask=pupil,
         x_m=x_m,
         y_m=y_m,
@@ -185,8 +188,9 @@ def build_response_matrix(
     names = list(modes.keys())
     if not names:
         # Historical behavior does not build lenslet geometry for an empty
-        # dictionary and therefore returns ``None`` for the centers.
-        return np.empty((0, 0)), names, None
+        # dictionary and therefore returns ``None`` for the centers; the public
+        # return annotation is frozen as np.ndarray, so narrow it here.
+        return np.empty((0, 0)), names, None  # type: ignore[return-value]
 
     geometry = _legacy_shack_hartmann_geometry(
         X,
@@ -197,7 +201,7 @@ def build_response_matrix(
     )
     sensor = _NativeGeometricShackHartmannSensor(geometry)
     response, calibrated_names = _calibrate_legacy_modal_columns(
-        modes,
+        _cast("_Mapping[object, np.ndarray]", modes),
         pupil_mask,
         sensor,
         coefficient_amplitude=1.0,
@@ -207,7 +211,7 @@ def build_response_matrix(
     )
     return (
         np.array(response, dtype=float, copy=True),
-        list(calibrated_names),
+        list(_cast("list[str]", calibrated_names)),
         np.array(geometry.subaperture_centers_m, dtype=float, copy=True),
     )
 

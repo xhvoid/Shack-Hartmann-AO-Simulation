@@ -6,13 +6,14 @@ from dataclasses import dataclass
 import math
 from numbers import Integral, Real
 import re
-from typing import ClassVar
+from typing import ClassVar, cast
 
 import numpy as np
+import numpy.typing as npt
 
 from ...core.geometry import GeometryError, PupilGeometry, build_pupil_geometry
 from ...core.hashing import geometry_hash as _geometry_hash
-from ...core.provenance import ALLOWED_SOURCE_CLASSES, Provenance
+from ...core.provenance import ALLOWED_SOURCE_CLASSES, Provenance, SourceClass
 from ...detector.config import DEFAULT_SOURCE_CLASS, SyntheticInstrumentError
 
 
@@ -494,7 +495,7 @@ def _mask(
     return array.astype(bool, copy=False)
 
 
-def _readonly_array(values: object, *, dtype: object) -> np.ndarray:
+def _readonly_array(values: npt.ArrayLike, *, dtype: npt.DTypeLike) -> np.ndarray:
     contiguous = np.ascontiguousarray(values, dtype=dtype)
     return np.frombuffer(contiguous.tobytes(order="C"), dtype=contiguous.dtype).reshape(
         contiguous.shape
@@ -526,7 +527,9 @@ def _legacy_require_finite(field_name: str, value: float) -> None:
 
 def _instrument_provenance(source_class: str, source_note: str) -> Provenance:
     try:
-        return Provenance(source_class=source_class, source_note=str(source_note))
+        return Provenance(
+            source_class=cast(SourceClass, source_class), source_note=str(source_note)
+        )
     except (TypeError, ValueError) as exc:
         if source_class not in ALLOWED_SOURCE_CLASSES:
             raise SyntheticInstrumentError(

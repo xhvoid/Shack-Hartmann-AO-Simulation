@@ -348,12 +348,12 @@ def build_detector_dm_poke_matrix(
     if rank < 1:
         raise InteractionMatrixError("Poke matrix has zero numerical rank.")
     rcond = choose_rcond_from_singular_values(
-        singular_values,
+        singular_values,  # type: ignore[arg-type]  # frozen Sequence[float] param accepts ndarray at runtime
         config.rcond_scan_grid,
         target_kept_mode_fraction=config.target_kept_mode_fraction,
         minimum_kept_modes=config.minimum_kept_modes,
     )
-    kept_modes = kept_modes_for_rcond(singular_values, rcond)
+    kept_modes = kept_modes_for_rcond(singular_values, rcond)  # type: ignore[arg-type]
     condition_proxy = _condition_proxy(singular_values)
     row_valid = np.all(np.isfinite(poke_matrix), axis=1)
     settings = _calibration_settings(
@@ -367,7 +367,7 @@ def build_detector_dm_poke_matrix(
         row_valid,
     )
     scan_summary = tuple(
-        {"rcond": float(value), "kept_modes": int(kept_modes_for_rcond(singular_values, value))}
+        {"rcond": float(value), "kept_modes": int(kept_modes_for_rcond(singular_values, value))}  # type: ignore[arg-type]
         for value in config.rcond_scan_grid
     )
 
@@ -646,7 +646,7 @@ def poke_amplitude_scan(
                 "largest_singular_value_px_per_nm": float(poke.singular_values[0]),
                 "smallest_singular_value_px_per_nm": float(poke.singular_values[-1]),
                 "condition_proxy": float(poke.condition_proxy),
-                "noise_amplification_proxy": noise_amplification_proxy(poke.singular_values, poke.rcond),
+                "noise_amplification_proxy": noise_amplification_proxy(poke.singular_values, poke.rcond),  # type: ignore[arg-type]
                 "matrix_unit": "detector_px / nm_OPD_equivalent",
                 "source_class": poke.source_class,
             }
@@ -665,7 +665,8 @@ def poke_matrix_summary(poke_result: PokeMtxResult) -> dict[str, Any]:
         "smallest_singular_value": float(poke_result.singular_values[-1]),
         "condition_proxy": float(poke_result.condition_proxy),
         "noise_amplification_proxy": noise_amplification_proxy(
-            poke_result.singular_values, poke_result.rcond
+            poke_result.singular_values,  # type: ignore[arg-type]
+            poke_result.rcond,
         ),
         "matrix_unit": "detector_px / nm_OPD_equivalent",
         "kept_modes": int(poke_result.kept_modes),
@@ -731,7 +732,7 @@ def _finite_singular_values(matrix: np.ndarray) -> np.ndarray:
     return _validate_singular_values(diagnostics.singular_values)
 
 
-def _validate_singular_values(singular_values: Sequence[float]) -> np.ndarray:
+def _validate_singular_values(singular_values: Sequence[float] | np.ndarray) -> np.ndarray:
     values = np.asarray(singular_values, dtype=float).reshape(-1)
     _assert_all_finite(values, "SVD singular values")
     if np.any(values < -1.0e-14):
@@ -742,7 +743,7 @@ def _validate_singular_values(singular_values: Sequence[float]) -> np.ndarray:
     return values
 
 
-def _numerical_rank(singular_values: Sequence[float], matrix_shape: tuple[int, int]) -> int:
+def _numerical_rank(singular_values: Sequence[float] | np.ndarray, matrix_shape: tuple[int, int]) -> int:
     values = _validate_singular_values(singular_values)
     if values.size == 0:
         return 0
@@ -750,7 +751,7 @@ def _numerical_rank(singular_values: Sequence[float], matrix_shape: tuple[int, i
     return int(np.sum(values > tol))
 
 
-def _condition_proxy(singular_values: Sequence[float]) -> float:
+def _condition_proxy(singular_values: Sequence[float] | np.ndarray) -> float:
     values = _validate_singular_values(singular_values)
     positive = values[values > 0.0]
     if positive.size == 0:
@@ -853,7 +854,9 @@ def _poke_provenance(source_class: str, source_note: str) -> _Provenance:
     """Build canonical provenance while retaining legacy calibration errors."""
 
     try:
-        return _Provenance(source_class=source_class, source_note=str(source_note))
+        # source_class is a runtime-validated str; physical modules must not
+        # import SourceClass from core, so narrow it with a scoped ignore.
+        return _Provenance(source_class=source_class, source_note=str(source_note))  # type: ignore[arg-type]
     except (TypeError, ValueError) as exc:
         if source_class not in ALLOWED_SOURCE_CLASSES:
             raise InteractionMatrixError(
