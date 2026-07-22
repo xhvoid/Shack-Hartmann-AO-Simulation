@@ -91,7 +91,7 @@ def test_importing_shwfs_ao_never_imports_hcipy_eagerly():
         "factory = shwfs_ao.experiments.scao._factory_for('hcipy')\n"
         "assert factory.backend_name == 'hcipy'\n"
         "config = shwfs_ao.io.configs.load_system_profile("
-        "'high_order_10m_hcipy', 1)\n"
+        "'high_order_10m_hcipy', 2)\n"
         "assert config.backend == 'hcipy'\n"
         "raise SystemExit(1 if 'hcipy' in sys.modules else 0)\n"
     )
@@ -347,7 +347,7 @@ class TestWithoutHcipy:
         from shwfs_ao.experiments.scao import build_scao_system
         from shwfs_ao.io.configs import load_system_profile
 
-        config = load_system_profile("high_order_10m_hcipy", 1)
+        config = load_system_profile("high_order_10m_hcipy", 2)
         with pytest.raises(OptionalDependencyError) as excinfo:
             build_scao_system(config)
         assert "pip install 'shack-hartmann-ao-simulation[hcipy]'" in str(

@@ -83,30 +83,51 @@ def test_network_guard_denies_outbound_ip_but_allows_loopback():
 
     saved_connect = socket.socket.connect
     saved_connect_ex = socket.socket.connect_ex
+    saved_sendto = socket.socket.sendto
+    saved_sendmsg = socket.socket.sendmsg
     try:
-        # Install a recorder as the real connect so allowed addresses fall
-        # through to it instead of touching the network; the guard source
-        # captures this recorder when it runs.
+        # Install recorders as the real operations so allowed addresses fall
+        # through to them instead of touching the network; the guard source
+        # captures these recorders when it runs.
         recorded: list = []
         socket.socket.connect = lambda self, address: recorded.append(address)
         socket.socket.connect_ex = lambda self, address: recorded.append(address)
+        socket.socket.sendto = lambda self, data, *args: recorded.append(args[-1])
+        socket.socket.sendmsg = (
+            lambda self, *args: recorded.append(args[3] if len(args) >= 4 else None)
+        )
         exec(runner.NETWORK_GUARD_SOURCE, {})
 
         probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             with pytest.raises(OSError, match="denies outbound network"):
                 probe.connect(("93.184.216.34", 80))
             with pytest.raises(OSError, match="denies outbound network"):
                 probe.connect_ex(("8.8.8.8", 53))
-            # Loopback by address and by name fall through to the recorder.
+            # A connectionless UDP datagram to a public resolver is denied even
+            # though it never calls connect().
+            with pytest.raises(OSError, match="denies outbound network"):
+                udp.sendto(b"x", ("8.8.8.8", 53))
+            with pytest.raises(OSError, match="denies outbound network"):
+                udp.sendmsg([b"x"], [], 0, ("8.8.8.8", 53))
+            # Loopback by address and by name fall through to the recorders.
             probe.connect(("127.0.0.1", 12345))
             probe.connect(("localhost", 12345))
+            udp.sendto(b"x", ("127.0.0.1", 12345))
         finally:
             probe.close()
-        assert recorded == [("127.0.0.1", 12345), ("localhost", 12345)]
+            udp.close()
+        assert recorded == [
+            ("127.0.0.1", 12345),
+            ("localhost", 12345),
+            ("127.0.0.1", 12345),
+        ]
     finally:
         socket.socket.connect = saved_connect
         socket.socket.connect_ex = saved_connect_ex
+        socket.socket.sendto = saved_sendto
+        socket.socket.sendmsg = saved_sendmsg
 
 
 def test_kernel_receives_the_isolated_environment_and_the_override(

@@ -13,11 +13,13 @@ implementation of any physical model. Everything here is one of two things:
    packages; they own the *boundary conversion*, not the model.
 
 `shwfs_ao.core` and any backend-independent canonical module must never import
-from `shwfs_ao.legacy`. The only sanctioned canonical importer of a legacy
-module is `shwfs_ao.experiments.error_budget`, which still consumes the
-behavior-compatibility adapter surface; that dependency is pinned in
-`shwfs_ao/resources/deprecation_inventory.json` under
-`canonical_legacy_import_allowlist` and will be removed or relocated in Phase B.
+from `shwfs_ao.legacy`. The sanctioned canonical importers of a legacy module
+are `shwfs_ao.experiments.error_budget`, `shwfs_ao.experiments.integration`,
+`shwfs_ao.experiments.scenario_instrument`, and `shwfs_ao.validation.checks`,
+which still consume the behavior-compatibility adapter surface; those
+dependencies are pinned in `shwfs_ao/resources/deprecation_inventory.json`
+under `canonical_legacy_import_allowlist` and will be removed or relocated in
+Phase B.
 
 Importing `shwfs_ao.legacy.*` does **not** emit a deprecation warning during the
 AO-REF-021 compatibility window. The warning-emitting deprecated surface is the

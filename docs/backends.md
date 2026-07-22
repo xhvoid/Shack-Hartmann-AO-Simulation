@@ -34,7 +34,7 @@ The built-in profile-level `ScaoBackendComponentFactory` registrations are
 (`shwfs_ao.backends.hcipy.factory.HCIPY_SCAO_COMPONENT_FACTORY`) builds the
 detector-level lenslet SH-WFS on fixed block windows, the single-layer von
 Kármán frozen-flow atmosphere, the matched Gaussian DM, and the Fraunhofer
-science propagator; `high_order_10m_hcipy@1` is its packaged profile. The
+science propagator; `high_order_10m_hcipy@2` is its packaged profile. The
 serialized fields keep one meaning across backends: `wfs.pad_factor` is the
 spot sampling in detector pixels per lambda/d — realized natively by FFT
 zero-padding and by the equivalent lenslet f-number under HCIPy — and
@@ -95,7 +95,7 @@ inheritance is not required.
 
 | Protocol | Required public members | Contract |
 | --- | --- | --- |
-| `RandomStreams` | `root_seed`, `derivation_scheme_id`, `reset()`, `generator(domain)`, `keyed_generator(domain, key=...)`, `stream_id(domain, key=())`, `scoped(scope, key=())` | stable registered RNG domains; keyed/scoped children do not advance unrelated persistent generators |
+| `RandomStreams` | `root_seed`, `derivation_scheme_id`, `registered_domains`, `reset()`, `generator(domain)`, `keyed_generator(domain, key=...)`, `stream_id(domain, key=())`, `scoped(scope, key=())` | stable registered RNG domains (`registered_domains` lists them in registration order); keyed/scoped children do not advance unrelated persistent generators |
 | `AtmosphereModel` | `backend_name`, `config_hash`, `metadata`, `reset(realization_index=0)`, `opd_at(time_s)` | non-decreasing absolute time; piston-removed OPD m; same realization index replays within a backend |
 | `ShackHartmannOpticsBackend` | `backend_name`, `config_hash`, `spot_intensities(residual_opd_m)` | returns `SpotIntensityResult`; owns no detector or validity behavior |
 | `WavefrontSensor` | `config_hash`, `row_ids`, `measure(residual_opd_m, random_streams=..., include_noise=...)` | returns `WfsMeasurement` in the immutable row layout |
@@ -380,7 +380,7 @@ loop/result types.
 | `random_streams`, `atmosphere`, `wfs`, `dm` | constructed truth, sensor, and correction components |
 | `interaction_matrix`, `reconstructor`, `command_projector`, `controller` | calibrated inverse and real-time-control chain |
 | `science_propagator` | configured physical-axis PSF backend |
-| `component_hashes`, `config_hash` | immutable component map and serialized profile identity |
+| `component_hashes`, `config_hash`, `source_config` | immutable component map, serialized profile identity, and the `SystemConfig` the system was built from (`config_hash` equals `source_config.config_hash`) |
 
 The detector layer also returns detector-state and detector-local records;
 `DetectorTelemetry` is their backend-neutral aggregate.

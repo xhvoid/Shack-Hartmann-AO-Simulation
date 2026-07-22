@@ -500,18 +500,18 @@ CORE_EXPORTS = (
     *HASHING_EXPORTS,
 )
 AO_REF_011_PROFILE_RESOURCES = (
-    "synthetic_presets/fast_2m_detector.v1.json",
-    "synthetic_presets/portfolio_2m_detector.v1.json",
-    "synthetic_presets/research_2m_detector.v1.json",
-    "synthetic_presets/high_order_10m_geometric.v1.json",
-    "synthetic_presets/high_order_10m_hcipy.v1.json",
+    "synthetic_presets/fast_2m_detector.v2.json",
+    "synthetic_presets/portfolio_2m_detector.v2.json",
+    "synthetic_presets/research_2m_detector.v2.json",
+    "synthetic_presets/high_order_10m_geometric.v2.json",
+    "synthetic_presets/high_order_10m_hcipy.v2.json",
 )
 AO_REF_011_SYSTEM_PROFILES = (
-    ("fast_2m_detector", 1),
-    ("portfolio_2m_detector", 1),
-    ("research_2m_detector", 1),
-    ("high_order_10m_geometric", 1),
-    ("high_order_10m_hcipy", 1),
+    ("fast_2m_detector", 2),
+    ("portfolio_2m_detector", 2),
+    ("research_2m_detector", 2),
+    ("high_order_10m_geometric", 2),
+    ("high_order_10m_hcipy", 2),
 )
 CONTRACT_MANIFEST = (
     ROOT
