@@ -598,6 +598,18 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
         baseline_rationale=cast(str, root["baseline_rationale"]),
         provenance=_provenance(root["provenance"]),
     )
+    # The two versions are independent axes, but not every pairing is coherent.
+    # A schema-v1 record omits wfs.photon_allocation, so a record claiming a
+    # profile version from the v2 review would present a *defaulted* allocation
+    # as the explicitly reviewed one — exactly the ambiguity schema v2 exists to
+    # remove.  The converse stays legal and is the serializer's own output: a
+    # version-1 profile re-serialized into the current record schema.
+    if schema_version == 1 and profile.profile_version != 1:
+        raise SystemConfigError(
+            f"profile {profile.profile_id} cannot be recorded under schema "
+            "version 1: that schema predates wfs.photon_allocation, so the "
+            "profile's allocation policy would be defaulted rather than stated."
+        )
     values = _mapping(root["config"], "config")
     _keys(values, _SYSTEM_FIELDS, "config")
     return SystemConfig(

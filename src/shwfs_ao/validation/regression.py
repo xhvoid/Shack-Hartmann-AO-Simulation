@@ -1024,6 +1024,26 @@ def _finite_number(value: object) -> bool:
     )
 
 
+def _value_kind(value: object) -> str | None:
+    """Classify a metric value, or ``None`` if it is not a comparable scalar.
+
+    Testing ``isinstance(value, bool)`` is not enough to recognise a flag:
+    NumPy's ``bool_`` is *not* a Python ``bool``, yet it compares equal to 0 and
+    1, so it would satisfy a numeric gate while failing a boolean one — the
+    kind check exactly inverted.  A NumPy scalar advertises its kind through
+    ``dtype.kind``, which is ``'b'`` for booleans, so it is read here rather
+    than importing NumPy into a module that does not otherwise need it.
+    """
+
+    if isinstance(value, bool) or getattr(getattr(value, "dtype", None), "kind", None) == "b":
+        return "flag"
+    if isinstance(value, Real):
+        return "number"
+    if isinstance(value, str):
+        return "text"
+    return None
+
+
 def _same_value(left: object, right: object) -> bool:
     """Equality that never lets a flag stand in for a number, or the reverse.
 
@@ -1032,10 +1052,14 @@ def _same_value(left: object, right: object) -> bool:
     is part of its meaning here — ``rank_difference`` is a count, and a
     shared-cube consumption flag is a flag — so the two must agree in kind
     before they can agree in value.  Widths stay interchangeable within a kind:
-    an integer-valued measurement serialized as ``4.0`` still equals ``4``.
+    an integer-valued measurement serialized as ``4.0`` still equals ``4``, and
+    a NumPy scalar is the same kind of thing as the Python scalar it wraps.
+    A value of no recognised kind never compares equal, so an object with a
+    permissive ``__eq__`` cannot satisfy a gate by asserting that it does.
     """
 
-    if isinstance(left, bool) != isinstance(right, bool):
+    kind = _value_kind(left)
+    if kind is None or kind != _value_kind(right):
         return False
     return bool(left == right)
 
