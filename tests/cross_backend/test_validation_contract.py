@@ -41,6 +41,7 @@ from shwfs_ao.validation.regression import (
     CROSS_BACKEND_BASELINE_SCHEMA_VERSION,
     CROSS_BACKEND_REPORT_SCHEMA_NAME,
     CROSS_BACKEND_BASELINE_SCHEMA_RESOURCE,
+    COMPARISONS_REQUIRING_STATISTICAL_DEFINITION,
     METRIC_CONTRACT,
     REQUIRED_COMPARISON_KINDS,
     REQUIRED_COMPONENT_HASH_KEYS,
@@ -122,7 +123,7 @@ def _probe_metric(kind: str, name: str) -> dict:
 def _probe_comparison(kind: str) -> dict:
     # Emit exactly the required metric inventory for the kind, each metric shaped
     # to satisfy its pinned scientific-meaning contract.
-    return {
+    comparison = {
         "comparison_kind": kind,
         "attribution": "Synthetic comparison for contract tests.",
         "metrics": [
@@ -130,6 +131,13 @@ def _probe_comparison(kind: str) -> dict:
             for name in sorted(REQUIRED_METRIC_NAMES[kind])
         ],
     }
+    # An estimated comparison must state its estimator and uncertainty.
+    if kind in COMPARISONS_REQUIRING_STATISTICAL_DEFINITION:
+        comparison["statistical_definition"] = (
+            "Synthetic contract-test estimator: probe values over 1 realization; "
+            "uncertainty is not measured in this fixture."
+        )
+    return comparison
 
 
 def _minimal_report() -> dict:
@@ -458,6 +466,60 @@ class TestDocumentContract:
         ):
             validate_cross_backend_baseline(baseline)
 
+    def test_baseline_never_lets_a_boolean_satisfy_a_numeric_expectation(self):
+        # bool is a subclass of int in Python, so False == 0 and 1 == True.  A
+        # baseline that records a count as a flag (or a flag as a count) would
+        # otherwise validate and then gate on a value of a different kind.
+        baseline = _minimal_baseline()
+        _set_metric_value(
+            baseline,
+            "interaction_matrix_identity",
+            "rank_difference",
+            False,  # the criterion expects the integer 0
+        )
+        with pytest.raises(
+            BaselineContractError,
+            match="must equal the criterion expectation",
+        ):
+            validate_cross_backend_baseline(baseline)
+
+        baseline = _minimal_baseline()
+        _set_metric_value(
+            baseline,
+            "pupil_mask_and_throughput",
+            "mask_round_trip_identical",
+            1,  # the criterion expects the boolean True
+        )
+        with pytest.raises(
+            BaselineContractError,
+            match="must equal the criterion expectation",
+        ):
+            validate_cross_backend_baseline(baseline)
+
+    def test_a_comparison_estimated_from_realizations_must_define_its_statistics(
+        self,
+    ):
+        # The packaged JSON Schema requires this prose; so must the application
+        # validator, because acceptance is the only writer of a baseline and a
+        # ratio without its estimator and uncertainty is uninterpretable.
+        assert COMPARISONS_REQUIRING_STATISTICAL_DEFINITION == frozenset(
+            {"atmosphere_statistics"}
+        )
+        for absent in (None, "", "   "):
+            baseline = _minimal_baseline()
+            for comparison in baseline["comparisons"]:
+                if comparison["comparison_kind"] != "atmosphere_statistics":
+                    continue
+                if absent is None:
+                    del comparison["statistical_definition"]
+                else:
+                    comparison["statistical_definition"] = absent
+            with pytest.raises(
+                BaselineContractError,
+                match="must record its statistical_definition",
+            ):
+                validate_cross_backend_baseline(baseline)
+
     def test_metric_contract_forbids_gating_an_identity_on_the_wrong_value(self):
         # both_loops_consumed_shared_opd_cube is a pinned exact/equals(True)
         # gate; recording it as equals(False) — even self-consistently — must be
@@ -548,15 +610,26 @@ class TestDocumentContract:
         baseline["generator"]["source_patch_sha256"] = _hash64("patch-evidence")
         validate_cross_backend_baseline(baseline)
 
-    def test_baseline_rejects_malformed_patch_evidence_when_clean(self):
+    def test_baseline_rejects_any_patch_evidence_when_the_tree_is_clean(self):
+        # A clean tree has no divergence from the recorded commit, so patch
+        # evidence of one contradicts it — and a well-formed hash is the
+        # dangerous case, because it is the one that looks like real evidence.
+        for contradiction in ("not-a-hash", _hash64("well-formed"), ""):
+            baseline = _minimal_baseline()
+            assert baseline["generator"]["source_tree_clean"] is True
+            baseline["generator"]["source_patch_sha256"] = contradiction
+            with pytest.raises(
+                BaselineContractError,
+                match="must be null or absent when source_tree_clean is true",
+            ):
+                validate_cross_backend_baseline(baseline)
+
+        # Null and absent both mean "nothing diverged", and both are accepted.
         baseline = _minimal_baseline()
-        assert baseline["generator"]["source_tree_clean"] is True
-        baseline["generator"]["source_patch_sha256"] = "not-a-hash"
-        with pytest.raises(
-            BaselineContractError,
-            match="source_patch_sha256 must be null or a 64-character",
-        ):
-            validate_cross_backend_baseline(baseline)
+        baseline["generator"]["source_patch_sha256"] = None
+        validate_cross_backend_baseline(baseline)
+        del baseline["generator"]["source_patch_sha256"]
+        validate_cross_backend_baseline(baseline)
 
     @pytest.mark.parametrize(
         "criterion, message",
@@ -1064,6 +1137,60 @@ class TestEvaluationSemantics:
         assert (
             evaluate_report_against_baseline(report, packaged_baseline) == ()
         )
+
+    def test_informational_metrics_are_required_evidence_even_though_they_never_gate(
+        self, packaged_baseline
+    ):
+        # Their values are free, but their absence is not: the standard errors
+        # qualify the atmosphere ratios and the runtime block is the only
+        # measurement of cost, so a report that drops them has lost the evidence
+        # its gated numbers are read against.
+        report = _report_copy(packaged_baseline)
+        report["comparisons"] = [
+            comparison
+            for comparison in report["comparisons"]
+            if comparison["comparison_kind"] != "runtime_and_memory"
+        ]
+        failures = evaluate_report_against_baseline(report, packaged_baseline)
+        assert len(failures) == 5
+        assert all("runtime_and_memory" in failure for failure in failures)
+        assert all("<absent: missing from the fresh report>" in failure for failure in failures)
+
+        report = _report_copy(packaged_baseline)
+        for comparison in report["comparisons"]:
+            if comparison["comparison_kind"] != "atmosphere_statistics":
+                continue
+            comparison["metrics"] = [
+                metric
+                for metric in comparison["metrics"]
+                if "standard_error" not in metric["name"]
+            ]
+        failures = evaluate_report_against_baseline(report, packaged_baseline)
+        assert len(failures) == 3
+        assert all("standard_error" in failure for failure in failures)
+
+    def test_a_boolean_observation_never_satisfies_a_numeric_gate(
+        self, packaged_baseline
+    ):
+        # bool is a Python Real, so True would otherwise be measured as 1.0 and
+        # could land inside a Strehl range or a residual tolerance it never met.
+        for kind, name in (
+            ("strehl_ratio", "native_strehl"),
+            ("closed_loop_residual", "native_correction_effect"),
+        ):
+            report = _report_copy(packaged_baseline)
+            _set_metric_value(report, kind, name, True)
+            failures = evaluate_report_against_baseline(report, packaged_baseline)
+            assert len(failures) == 1
+            assert f"metric={name}" in failures[0]
+            assert "observed=True" in failures[0]
+
+        # And the reverse: an equality gate on a count is not met by a flag.
+        report = _report_copy(packaged_baseline)
+        _set_metric_value(report, "interaction_matrix_identity", "rank_difference", False)
+        failures = evaluate_report_against_baseline(report, packaged_baseline)
+        assert len(failures) == 1
+        assert "observed=False" in failures[0]
 
     def test_evaluation_flags_convention_and_seed_drift(self, packaged_baseline):
         # A report whose config_hash and metric values coincide with the

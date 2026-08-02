@@ -30,10 +30,15 @@ RESOURCE_SOURCE_ROOT = SOURCE_ROOT / "shwfs_ao" / "resources"
 MANIFEST_PATH = RESOURCE_SOURCE_ROOT / "reference_metrics/refactor_contract_manifest.json"
 RESOURCE_MANIFEST_PATH = RESOURCE_SOURCE_ROOT / "resource_manifest.json"
 AO_REF_011_PROFILE_RESOURCES = (
+    "synthetic_presets/fast_2m_detector.v1.json",
     "synthetic_presets/fast_2m_detector.v2.json",
+    "synthetic_presets/portfolio_2m_detector.v1.json",
     "synthetic_presets/portfolio_2m_detector.v2.json",
+    "synthetic_presets/research_2m_detector.v1.json",
     "synthetic_presets/research_2m_detector.v2.json",
+    "synthetic_presets/high_order_10m_geometric.v1.json",
     "synthetic_presets/high_order_10m_geometric.v2.json",
+    "synthetic_presets/high_order_10m_hcipy.v1.json",
     "synthetic_presets/high_order_10m_hcipy.v2.json",
 )
 

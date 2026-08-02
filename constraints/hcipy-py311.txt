@@ -1,5 +1,5 @@
 # Exact HCIPy-lane CI environment resolved from PyPI for CPython 3.11 on
-# Linux: the `.[test,hcipy,notebook-test]` extras plus the wheel-build
+# Linux-x86-64: the `.[test,hcipy,notebook-test]` extras plus the wheel-build
 # frontend.  Runtime lower bounds remain in pyproject.toml; this file is a
 # reproducible tested-install profile, not the package's public dependency
 # policy.  Complete resolved lock: every distribution the HCIPy lanes

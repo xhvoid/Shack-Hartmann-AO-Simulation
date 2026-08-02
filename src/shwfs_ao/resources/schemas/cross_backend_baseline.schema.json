@@ -2526,7 +2526,52 @@
             }
           ]
         }
-      }
+      },
+      "allOf": [
+        {
+          "$comment": "A clean tree has no divergence from the recorded commit, so it cannot also carry patch evidence of one.",
+          "if": {
+            "required": [
+              "source_tree_clean"
+            ],
+            "properties": {
+              "source_tree_clean": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "source_patch_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "$comment": "A dirty tree must record the content hash of exactly what diverged from the recorded commit.",
+          "if": {
+            "required": [
+              "source_tree_clean"
+            ],
+            "properties": {
+              "source_tree_clean": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "source_patch_sha256"
+            ],
+            "properties": {
+              "source_patch_sha256": {
+                "$ref": "#/$defs/content_hash"
+              }
+            }
+          }
+        }
+      ]
     },
     "root_seed": {
       "type": "integer"

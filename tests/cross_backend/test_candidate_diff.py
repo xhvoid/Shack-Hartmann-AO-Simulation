@@ -15,6 +15,7 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
 import sys
 
 import pytest
@@ -35,6 +36,26 @@ assert _SCRIPT_SPEC is not None and _SCRIPT_SPEC.loader is not None
 script = importlib.util.module_from_spec(_SCRIPT_SPEC)
 sys.modules[_SCRIPT_SPEC.name] = script
 _SCRIPT_SPEC.loader.exec_module(script)
+
+
+def _git_init(repository: Path) -> None:
+    """A throwaway repository with one commit, so HEAD exists."""
+
+    def run(*arguments: str) -> None:
+        subprocess.run(
+            ["git", *arguments],
+            cwd=repository,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    run("init", "--quiet")
+    run("config", "user.email", "contract-test@example.invalid")
+    run("config", "user.name", "Contract Test")
+    (repository / "tracked.txt").write_text("tracked\n", encoding="utf-8")
+    run("add", "tracked.txt")
+    run("commit", "--quiet", "--message", "seed")
 
 
 @pytest.fixture()
@@ -73,7 +94,9 @@ def _candidate_document() -> dict:
     document["generator"] = {
         "generator_name": script.GENERATOR_NAME,
         "generator_version": script.GENERATOR_VERSION,
-        "source_commit": "f" * 40,
+        # A real commit of this repository: acceptance verifies the object
+        # exists, so a placeholder hash is no longer an acceptable stand-in.
+        "source_commit": script._source_commit(),
         "source_tree_clean": True,
     }
     return document
@@ -200,11 +223,13 @@ class TestDiffContentCompleteness:
         ]
 
 
-_PLATFORM_PROSE = {"linux": "Linux", "macos-arm64": "macOS-arm64"}
+# The declared prose for each tag, inverted from the script's own table so a
+# new platform can never be added to one side alone.
+_PLATFORM_PROSE = {tag: name for name, tag in script._LOCK_PLATFORMS.items()}
 
 
 def _lock_header(platform_tag: str | None = None) -> str:
-    """A lock header declaring a platform, as the verifier requires."""
+    """A lock header declaring a platform and architecture, as required."""
 
     tag = platform_tag or script._current_platform_tag()
     return f"# Exact environment resolved for this interpreter on {_PLATFORM_PROSE[tag]}.\n"
@@ -317,6 +342,159 @@ class TestEnvironmentVerification:
     def test_source_tree_cleanliness_is_reported_as_a_boolean(self):
         assert isinstance(script._source_tree_clean(), bool)
 
+    def test_untracked_paths_survive_quoting_renames_and_odd_bytes(self):
+        # git quotes any path with a space, a quote, or a non-ASCII byte in its
+        # default output; -z emits them raw, and NUL is the one byte a path
+        # cannot contain.  A rename's origin path is a separate field and must
+        # never be read as a status record of its own.  Paths are handled as
+        # bytes, so a name that is not valid UTF-8 survives too.
+        umlaut = "messkurve-fräsen.npy".encode("utf-8")
+        status = (
+            b"?? input data.npy\0"
+            b"?? plain.npy\0"
+            b'?? "quoted".npy\0'
+            b"?? " + umlaut + b"\0"
+            b"?? undecodable-\xff\xfe.npy\0"
+            b"R  renamed/new.py\0renamed/?? origin.py\0"
+            b"C  copied/new.py\0copied/old.py\0"
+            b"UU conflicted.py\0"
+            b" M tracked.py\0"
+            b"?? nested/deep file.txt"  # no trailing NUL
+        )
+        assert script._untracked_paths(status) == [
+            b'"quoted".npy',
+            b"input data.npy",
+            umlaut,
+            b"nested/deep file.txt",
+            b"plain.npy",
+            b"undecodable-\xff\xfe.npy",
+        ]
+        assert script._untracked_paths(b"") == []
+
+    def test_a_dirty_patch_hash_follows_the_contents_of_a_spaced_untracked_file(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        # The review's reproduction: an untracked scientific input whose name
+        # contains a space.  Its contents can change the generated result, so
+        # two different contents must never share one patch hash.
+        repository = tmp_path / "repo"
+        repository.mkdir()
+        _git_init(repository)
+        monkeypatch.setattr(script, "REPO_ROOT", repository)
+        assert script._source_patch_sha256() is None
+
+        spaced = repository / "input data.npy"
+        spaced.write_bytes(b"first contents")
+        first = script._source_patch_sha256()
+        assert first is not None
+        spaced.write_bytes(b"second contents")
+        second = script._source_patch_sha256()
+        assert second is not None and second != first
+
+    def test_a_dirty_patch_hash_follows_the_contents_of_a_tracked_binary_input(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        # The same defect class as the untracked case: a plain `git diff HEAD`
+        # reduces a modified binary to "Binary files differ" plus abbreviated
+        # blob hashes, so the evidence would not bind the bytes the run read.
+        # The second fixture has no NUL, so git classifies it as *text* and
+        # emits its raw non-UTF-8 bytes inline — the diff must never be decoded.
+        repository = tmp_path / "repo"
+        repository.mkdir()
+        _git_init(repository)
+        (repository / "high-bytes.npy").write_bytes(b"\x93NUMPY" + b"A" * 32)
+        fixture = repository / "input.npy"
+        fixture.write_bytes(b"\x93NUMPY\x01\x00" + b"A" * 64)
+        subprocess.run(
+            ["git", "add", "input.npy", "high-bytes.npy"],
+            cwd=repository,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "commit", "--quiet", "--message", "fixture"],
+            cwd=repository,
+            check=True,
+            capture_output=True,
+        )
+        monkeypatch.setattr(script, "REPO_ROOT", repository)
+        assert script._source_patch_sha256() is None
+
+        fixture.write_bytes(b"\x93NUMPY\x01\x00" + b"B" * 64)
+        first = script._source_patch_sha256()
+        fixture.write_bytes(b"\x93NUMPY\x01\x00" + b"C" * 64)
+        second = script._source_patch_sha256()
+        assert first is not None and second is not None and first != second
+
+        # A git-classified *text* file whose bytes are not valid UTF-8 must not
+        # crash the hash, and its contents must still move it.
+        fixture.write_bytes(b"\x93NUMPY\x01\x00" + b"A" * 64)
+        (repository / "high-bytes.npy").write_bytes(b"\x93NUMPY" + b"B" * 32)
+        third = script._source_patch_sha256()
+        (repository / "high-bytes.npy").write_bytes(b"\x93NUMPY" + b"C" * 32)
+        fourth = script._source_patch_sha256()
+        assert third is not None and fourth is not None and third != fourth
+
+    def test_an_unreadable_untracked_input_fails_closed(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        # Hashing a placeholder would give every unreadable input the same
+        # evidence, which is the opposite of what the hash is for.
+        repository = tmp_path / "repo"
+        repository.mkdir()
+        _git_init(repository)
+        monkeypatch.setattr(script, "REPO_ROOT", repository)
+        broken = repository / "dangling.npy"
+        broken.symlink_to(repository / "missing-target.npy")
+        with pytest.raises(SystemExit, match="could not be read"):
+            script._source_patch_sha256()
+
+    def test_the_platform_tag_names_the_architecture(self):
+        # A lock is resolved for one operating system and one architecture; an
+        # arch-blind tag could be claimed by a machine it was never resolved on.
+        tag = script._current_platform_tag()
+        assert tag in set(script._LOCK_PLATFORMS.values())
+        assert tag in ("linux-x86-64", "linux-aarch64", "macos-arm64")
+        assert tag != "linux"
+
+        # A lock still declaring the arch-blind platform is refused outright.
+        with pytest.raises(SystemExit, match="does not declare its platform"):
+            script._lock_platform_tag(
+                "# Exact environment resolved on Linux.\n", "stale.txt"
+            )
+        # The declaration is still found when the header prose wraps it across
+        # comment lines, which is how the packaged locks are written.
+        assert (
+            script._lock_platform_tag(
+                "# Exact environment resolved for CPython 3.11 on\n"
+                "# Linux-x86-64: the extras.\n",
+                "wrapped.txt",
+            )
+            == "linux-x86-64"
+        )
+
+    def test_every_selectable_lock_declares_a_platform_and_architecture(self):
+        # Generation selects its profile by Python version alone, so every lock
+        # it can select must declare the platform to match against — and the
+        # declaration has to be findable in the file as written, not only in a
+        # synthetic header.  (The py3xx CI locks are AO-REF-000 frozen contract
+        # evidence and are never selected here.)
+        locks = sorted((ROOT / "constraints").glob("hcipy-py*.txt"))
+        assert locks, "no selectable constraint profiles"
+        for lock in locks:
+            tag = script._lock_platform_tag(
+                lock.read_text(encoding="utf-8"), lock.name
+            )
+            assert tag in set(script._LOCK_PLATFORMS.values())
+        # The lock this interpreter would actually select is one of them.
+        assert (ROOT / script._constraint_profile_name()) in set(locks)
+
     def test_generation_refuses_a_foreign_platform_lock(
         self,
         tmp_path,
@@ -327,7 +505,7 @@ class TestEnvironmentVerification:
         # a foreign-platform profile silently generate the baseline.
         monkeypatch.setattr(script, "ROOT", tmp_path)
         current = script._current_platform_tag()
-        other = "linux" if current != "linux" else "macos-arm64"
+        other = next(tag for tag in _PLATFORM_PROSE if tag != current)
         pins = dict(script._installed_distributions())
         pins.setdefault("hcipy", "9.9.9")
         profile = tmp_path / script._constraint_profile_name()
@@ -377,7 +555,7 @@ class TestAcceptanceFreshness:
         )
         assert accepted["acceptance"]["review_reference"] == "AO-REF-018-TEST"
         assert accepted["acceptance"]["accepted_at_utc"]
-        assert accepted["generator"]["source_commit"] == "f" * 40
+        assert accepted["generator"]["source_commit"] == script._source_commit()
         manifest = json.loads(
             (
                 packaged_tree.parents[1] / "resource_manifest.json"
@@ -388,6 +566,97 @@ class TestAcceptanceFreshness:
             "reference_metrics/cross_backend/cross_backend_baseline.json"
             in names
         )
+
+    def test_acceptance_refuses_a_candidate_naming_a_nonexistent_commit(
+        self,
+        packaged_tree,
+        tmp_path,
+    ):
+        # 40 hexadecimal characters is a shape, not a provenance.  Acceptance is
+        # the only step that runs inside the source repository, so it is the
+        # only place the claimed commit can actually be looked up.
+        candidate_dir = tmp_path / "candidate"
+        document = _candidate_document()
+        document["generator"]["source_commit"] = "f" * 40
+        _write_candidate(candidate_dir, document)
+        with pytest.raises(SystemExit, match="is not a commit in this repository"):
+            script._accept_reviewed_candidate(
+                candidate_dir,
+                reason="forged commit",
+                review_reference="AO-REF-018-TEST",
+            )
+
+    def test_acceptance_refuses_a_commit_that_is_not_a_commit_object(
+        self,
+        packaged_tree,
+        tmp_path,
+    ):
+        # A tree or blob hash exists in the repository but is not a commit, so
+        # it cannot be the origin the baseline is reproducible from.
+        tree = subprocess.run(
+            ["git", "rev-parse", "HEAD^{tree}"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        candidate_dir = tmp_path / "candidate"
+        document = _candidate_document()
+        document["generator"]["source_commit"] = tree
+        _write_candidate(candidate_dir, document)
+        with pytest.raises(SystemExit, match="is not a commit in this repository"):
+            script._accept_reviewed_candidate(
+                candidate_dir,
+                reason="tree hash",
+                review_reference="AO-REF-018-TEST",
+            )
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        (
+            ("generator_name", "scripts/some_other_generator.py"),
+            ("generator_version", "1"),
+        ),
+    )
+    def test_acceptance_refuses_a_foreign_generator_identity(
+        self,
+        packaged_tree,
+        tmp_path,
+        field,
+        value,
+    ):
+        # The generator block is credited as the producer of the baseline, so a
+        # candidate written by something else must not be accepted under this
+        # script's identity.
+        candidate_dir = tmp_path / "candidate"
+        document = _candidate_document()
+        document["generator"][field] = value
+        _write_candidate(candidate_dir, document)
+        with pytest.raises(SystemExit, match=f"generator.{field} is"):
+            script._accept_reviewed_candidate(
+                candidate_dir,
+                reason="foreign generator",
+                review_reference="AO-REF-018-TEST",
+            )
+
+    def test_acceptance_refuses_a_clean_tree_carrying_patch_evidence(
+        self,
+        packaged_tree,
+        tmp_path,
+    ):
+        # The two records contradict each other and acceptance cannot tell which
+        # is true, so it refuses rather than believing one of them.
+        candidate_dir = tmp_path / "candidate"
+        document = _candidate_document()
+        document["generator"]["source_tree_clean"] = True
+        document["generator"]["source_patch_sha256"] = "a" * 64
+        _write_candidate(candidate_dir, document)
+        with pytest.raises(SystemExit, match="A clean tree has no divergence"):
+            script._accept_reviewed_candidate(
+                candidate_dir,
+                reason="contradictory provenance",
+                review_reference="AO-REF-018-TEST",
+            )
 
     def test_a_post_review_tolerance_edit_is_refused(
         self,
