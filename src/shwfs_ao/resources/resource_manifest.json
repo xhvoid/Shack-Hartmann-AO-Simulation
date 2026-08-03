@@ -84,7 +84,7 @@
     },
     {
       "logical_name": "reference_metrics/refactor_contract_manifest.json",
-      "sha256": "992f94662802b3551e1f5126366d96808227679ce4a7d66e9e99c6851f606175"
+      "sha256": "daa87394145356403086d6d8dff4d12c3dc35778afc21e41714f9c49de2314f1"
     },
     {
       "logical_name": "samples/eso_asm_snapshot_sample.json",
@@ -108,7 +108,7 @@
     },
     {
       "logical_name": "schemas/cross_backend_baseline.schema.json",
-      "sha256": "5b4095b34b08a9e9a32de97ca426636de4d2ae7401a13db861911e80f3e63a90"
+      "sha256": "71d261ea8279a38e7ef71a7ad53acca017552415be8d8ebe0e79a8b820c9d354"
     },
     {
       "logical_name": "schemas/fast_reference_metrics.schema.json",

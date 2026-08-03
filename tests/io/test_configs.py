@@ -176,12 +176,21 @@ def test_a_schema_v1_record_cannot_claim_a_later_profile_identity() -> None:
 
 
 def test_every_packaged_profile_identity_is_pinned() -> None:
-    """A published profile's identity must never move without being noticed.
+    """A profile's identity must not move without being noticed.
 
-    ``config_hash`` covers ``baseline_rationale`` and the provenance note, so an
-    edit to a profile's *prose* silently relabels every result that cites it.
-    These hashes are the tripwire: a change here is only ever correct alongside
-    a deliberate profile-version bump, or before the profile is released.
+    ``config_hash`` is the hash of the canonical serialization, so it covers
+    more than the physics: ``baseline_rationale`` and the provenance note are in
+    it, and so is ``schema_version``.  An edit to a profile's *prose*, or a bump
+    of the record schema, therefore relabels every result that cites the
+    profile.  These hashes are the tripwire.
+
+    They are the *current* identities, not the originally published ones. The
+    ``@1`` identities have already moved twice without a version bump — once
+    when AO-REF-019 rewrote a notebook path inside the provenance references,
+    and once when the record schema went to v2 — so a result labelled ``@1`` by
+    an older checkout will not reproduce the hash recorded here. That history is
+    the reason this test exists; it cannot undo it. Changing a value below is
+    only ever correct alongside a deliberate profile-version bump.
     """
 
     expected = {
