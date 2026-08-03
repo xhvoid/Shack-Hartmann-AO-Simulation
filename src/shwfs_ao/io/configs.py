@@ -28,12 +28,21 @@ PROFILE_SCHEMA_NAME = "shwfs_ao.system_profile"
 # profiles omitted it and relied on the "throughput_scaled" default on load,
 # which left their recorded WFS/system identity implicit; the reviewed v2
 # profiles record it explicitly so their identity is unambiguous.  v2 is what
-# the serializer writes, but v1 records are still *read*: retiring the reading
-# side would break exact-version reproducibility of every result labelled with
-# a v1 profile, so both schema versions load and both profile versions remain
-# packaged.
+# a *new* record is written under, but v1 records are still read *and written
+# back under their own schema*: the record schema version is inside the hashed
+# mapping, so re-serializing a v1 profile as a v2 record would change the
+# ``config_hash`` of a resource nobody edited and silently relabel every result
+# that cites it.  Each config therefore carries the record schema version it
+# belongs to (:attr:`SystemConfig.record_schema_version`), and that is the
+# version it serializes and hashes under.
 PROFILE_SCHEMA_VERSION = 2
 SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2)
+# The WFS photon allocation the schema-v1 profiles were reviewed and published
+# under.  A v1 record omits the field entirely, so this is the only allocation a
+# configuration claiming record schema 1 can legitimately hold.  It must stay
+# equal to :class:`WfsConfig`'s default, which is what a v1 record's omission
+# resolves to on load; ``tests/io/test_configs.py`` holds the two together.
+_V1_PHOTON_ALLOCATION = "throughput_scaled"
 _PROFILE_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
     ("fast_2m_detector", 1): "synthetic_presets/fast_2m_detector.v1.json",
@@ -446,6 +455,12 @@ class SystemConfig:
     science: ScienceConfig
     random: RandomSeedConfig
     profile: ProfileProvenance
+    # Which profile record schema this configuration is a member of.  It is the
+    # schema a parsed record declared, and the schema this configuration
+    # serializes and hashes under, so a published record's identity never moves
+    # because a later schema version was added.  Configurations built in code
+    # rather than read from a record belong to the current schema.
+    record_schema_version: int = PROFILE_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
         if self.backend not in {"native", "hcipy"}:
@@ -487,6 +502,40 @@ class SystemConfig:
             raise SystemConfigError("modal calibration requires a modal command projector.")
         if self.calibration.probe_kind == "dm_actuator" and self.command_projector.kind == "modal":
             raise SystemConfigError("DM-actuator calibration cannot use a modal projector.")
+        record_version = _integer(
+            self.record_schema_version, "record_schema_version", minimum=1
+        )
+        if record_version not in SUPPORTED_PROFILE_SCHEMA_VERSIONS:
+            raise SystemConfigError(
+                f"unsupported profile schema_version={self.record_schema_version!r}; "
+                f"supported={list(SUPPORTED_PROFILE_SCHEMA_VERSIONS)}."
+            )
+        # A configuration may only claim a record schema that can express it.
+        # Schema v1 has no wfs.photon_allocation field and predates the v2
+        # profile review, so a v1 record carrying either a non-default
+        # allocation or a later profile version would present a *defaulted*
+        # policy as the explicitly reviewed one — exactly the ambiguity schema
+        # v2 exists to remove.  Refusing is the only outcome that keeps a
+        # record and the identity it hashes to describing the same thing:
+        # silently promoting to v2 would move a published hash, and silently
+        # dropping the field would lose physics.
+        if record_version == 1:
+            if self.profile.profile_version != 1:
+                raise SystemConfigError(
+                    f"profile {self.profile.profile_id} cannot be recorded under "
+                    "schema version 1: that schema predates "
+                    "wfs.photon_allocation, so the profile's allocation policy "
+                    "would be defaulted rather than stated."
+                )
+            if self.wfs.photon_allocation != _V1_PHOTON_ALLOCATION:
+                raise SystemConfigError(
+                    "record_schema_version=1 cannot express "
+                    f"wfs.photon_allocation={self.wfs.photon_allocation!r}: that "
+                    "schema has no such field, so the value would be lost. Build "
+                    f"this configuration from a schema-{PROFILE_SCHEMA_VERSION} "
+                    "profile instead."
+                )
+        object.__setattr__(self, "record_schema_version", record_version)
 
     @property
     def config_hash(self) -> str:
@@ -598,18 +647,9 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
         baseline_rationale=cast(str, root["baseline_rationale"]),
         provenance=_provenance(root["provenance"]),
     )
-    # The two versions are independent axes, but not every pairing is coherent.
-    # A schema-v1 record omits wfs.photon_allocation, so a record claiming a
-    # profile version from the v2 review would present a *defaulted* allocation
-    # as the explicitly reviewed one — exactly the ambiguity schema v2 exists to
-    # remove.  The converse stays legal and is the serializer's own output: a
-    # version-1 profile re-serialized into the current record schema.
-    if schema_version == 1 and profile.profile_version != 1:
-        raise SystemConfigError(
-            f"profile {profile.profile_id} cannot be recorded under schema "
-            "version 1: that schema predates wfs.photon_allocation, so the "
-            "profile's allocation policy would be defaulted rather than stated."
-        )
+    # The two versions are independent axes, but not every pairing is coherent;
+    # :meth:`SystemConfig.__post_init__` owns that rule, because it must hold
+    # for a configuration however it was made, not only for a parsed record.
     values = _mapping(root["config"], "config")
     _keys(values, _SYSTEM_FIELDS, "config")
     return SystemConfig(
@@ -638,36 +678,39 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
         science=_construct(ScienceConfig, values["science"], _SCIENCE_FIELDS, "science"),
         random=_construct(RandomSeedConfig, values["random"], _RANDOM_FIELDS, "random"),
         profile=profile,
+        record_schema_version=schema_version,
     )
 
 
 def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
-    """Serialize a system config to the deterministic current profile schema.
+    """Serialize a system config to its own deterministic record schema.
 
-    Serialization is always to :data:`PROFILE_SCHEMA_VERSION`, whatever schema
-    version a config was read from: this mapping is the canonical hashing basis,
-    so one config always has one serialized form.  The record's schema version
-    is independent of ``profile_version`` — a v1 *profile* re-serializes as a v2
-    *record* that still identifies itself as ``…@1`` and parses back equal.
+    Serialization is to :attr:`SystemConfig.record_schema_version` — the schema
+    the configuration belongs to, which for a parsed record is the schema that
+    record declared.  This mapping is the canonical hashing basis, so one config
+    always has one serialized form, and a record round-trips to a byte-identical
+    mapping through the schema it was published under.
 
-    Note what that costs, because it is easy to be surprised by: the schema
-    version is *inside* the hashed mapping, so bumping
-    :data:`PROFILE_SCHEMA_VERSION` changes ``SystemConfig.config_hash`` for
-    every profile, including ones whose physics and whose packaged record did
-    not change.  A result labelled with a profile from before the bump will not
-    reproduce the hash the same profile reports afterwards.  The v2 bump already
-    did this to the ``@1`` profiles.  A future schema version must therefore be
-    a deliberate decision about identity, not only about record format;
-    ``tests/io/test_configs.py`` pins every packaged identity so the change
-    cannot pass unnoticed.
+    That is what keeps a published identity stable, because the schema version
+    is *inside* the hashed mapping.  Serializing every configuration under the
+    newest schema would change ``SystemConfig.config_hash`` for profiles whose
+    physics and whose packaged record never changed, so a result labelled with
+    such a profile would stop reproducing its own hash.  Adding a schema version
+    therefore only affects records written under it; ``tests/io/test_configs.py``
+    pins every packaged identity so any movement is caught.
     """
 
     if not isinstance(config, SystemConfig):
         raise SystemConfigError("config must be a SystemConfig.")
     profile = config.profile
+    wfs_fields = _dataclass_mapping(config.wfs)
+    if config.record_schema_version < 2:
+        # Schema v1 has no such field, and __post_init__ has already refused any
+        # configuration whose value this omission would lose.
+        del wfs_fields["photon_allocation"]
     return {
         "schema_name": PROFILE_SCHEMA_NAME,
-        "schema_version": PROFILE_SCHEMA_VERSION,
+        "schema_version": config.record_schema_version,
         "profile_name": profile.profile_name,
         "profile_version": profile.profile_version,
         "baseline_rationale": profile.baseline_rationale,
@@ -684,7 +727,7 @@ def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
             "science_wavelengths_m": list(config.science_wavelengths_m),
             "atmosphere": _dataclass_mapping(config.atmosphere),
             "detector": _dataclass_mapping(config.detector),
-            "wfs": _dataclass_mapping(config.wfs),
+            "wfs": wfs_fields,
             "dm": _dataclass_mapping(config.dm),
             "calibration": _dataclass_mapping(config.calibration),
             "reconstructor": _dataclass_mapping(config.reconstructor),

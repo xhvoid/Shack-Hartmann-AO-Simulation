@@ -11,21 +11,33 @@ The kernel environment (``MPLBACKEND=Agg``) is passed explicitly through
 has no ``env`` trait, so a constructor argument would be silently dropped.
 The runner imports only the installed package, so it validates that a
 notebook runs from a built, non-editable wheel without source-tree imports
-or hidden local files.  Offline execution is actively enforced inside the
-kernel process rather than merely assumed: an injected first cell denies
-outbound IPv4/IPv6 connections and non-loopback name resolution there
-(blocking, for example, ``pandas.read_csv(url)`` before it can even emit a DNS
-query) while leaving loopback — Jupyter's own ZMQ transport — and local Unix
-sockets working.  It is an in-process tripwire, not a sandbox: a cell that
-spawns a subprocess (``!curl``, ``%pip``, ``subprocess.run``) or calls the
-private ``_socket`` module directly reaches the network regardless, so a
-canonical notebook must not do those things.
+or hidden local files.
+
+Offline execution is enforced at two levels, because one of them is not
+enough.  The outer level is the real one: the runner subprocess and the kernel
+it starts are placed in their own network namespace containing nothing but
+loopback, so *no* code they run can reach the network — a ``!curl`` cell, a
+``%pip install``, a ``subprocess.run``, a C extension, or a direct call into
+the private ``_socket`` module.  Loopback is brought up inside the namespace
+because Jupyter's own ZMQ channels use it.  The inner level is an injected
+first cell that denies outbound IPv4/IPv6 connections and non-loopback name
+resolution inside the kernel, which turns an attempted access into a clear
+Python error naming the address instead of an opaque "Network is unreachable"
+from somewhere deep in a library.
+
+Namespace isolation is a Linux facility, so ``--network-isolation`` states what
+to do when it is unavailable.  The default, ``required``, refuses to run: a
+notebook lane that quietly degraded to the in-kernel tripwire would report a
+contract it did not enforce.  ``auto`` runs anyway with the tripwire alone and
+says so; ``off`` disables the namespace entirely.  Continuous integration runs
+on Linux and therefore gets the real thing without asking for it.
 
 Usage::
 
     python scripts/run_notebook_smoke.py NOTEBOOK [NOTEBOOK ...]
     python scripts/run_notebook_smoke.py --class fast   # from the manifest
     python scripts/run_notebook_smoke.py --class slow --fast-smoke
+    python scripts/run_notebook_smoke.py --class fast --network-isolation auto
 
 ``--class`` selects every canonical notebook whose manifest execution class
 matches (``fast`` is the default CI selection).  ``--fast-smoke`` injects
@@ -56,17 +68,25 @@ DEFAULT_CELL_TIMEOUT_S = 120
 DEFAULT_NOTEBOOK_BUDGET_S = 600
 PARAMETERS_TAG = "parameters"
 FAST_SMOKE_OVERRIDE_SOURCE = "FAST_SMOKE = True"
+NETWORK_ISOLATION_MODES = ("required", "auto", "off")
+DEFAULT_NETWORK_ISOLATION = "required"
+
+# Brings loopback up inside the new namespace and then becomes the runner, so
+# the kernel's own ZMQ transport keeps working while nothing else is reachable.
+# ``$0``/``$@`` carry the real command, so no argument is ever re-parsed by the
+# shell — a notebook path may contain any character a path can contain.
+_NAMESPACE_SHELL = 'ip link set lo up && exec "$0" "$@"'
 
 # Injected as the first executed cell so it is active for every real cell.
-# Temporary-directory isolation and import scans do not stop a cell from
-# reaching the network (for example ``pandas.read_csv(url)``); this denies
-# outbound IPv4/IPv6 traffic inside the kernel while leaving loopback — the
-# transport Jupyter's own ZMQ channels already use — and local Unix sockets
-# untouched, so a canonical notebook must run from packaged data.  Three layers
-# are covered, because blocking only the last one still leaks: name resolution,
-# forward and reverse, which every real client reaches first; connection-
-# oriented calls (connect/connect_ex); and connectionless, address-bearing
-# sends (sendto/sendmsg), so a UDP datagram cannot slip past either.
+# The namespace around the process is what actually denies the network; this
+# is the layer that makes an attempt legible, turning "Network is unreachable"
+# from inside a third-party library into an error naming the address a cell
+# asked for.  It also stands alone under ``--network-isolation auto`` on a
+# platform with no namespaces.  Three layers are covered, because blocking only
+# the last one still leaks: name resolution, forward and reverse, which every
+# real client reaches first; connection-oriented calls (connect/connect_ex);
+# and connectionless, address-bearing sends (sendto/sendmsg), so a UDP datagram
+# cannot slip past either.
 NETWORK_GUARD_SOURCE = '''\
 import ipaddress as _ipaddress
 import socket as _socket
@@ -309,6 +329,109 @@ def _execute_in_process(
         client.execute(env=_kernel_environment())
 
 
+def _network_namespace_prefix() -> list[str] | None:
+    """A command prefix that runs its argument in a loopback-only namespace.
+
+    Returns ``None`` when this platform cannot provide one.  Availability is
+    established by *doing* it rather than by inspecting the platform: unshare
+    and ip must exist, the namespace must actually be created, and it must
+    contain loopback and nothing else.  A probe that merely started is not
+    evidence, so the interface list is read back and checked — an unexpected
+    result means the prefix is not returned rather than silently used.
+
+    Two forms are tried because which one works is an environment question, not
+    a platform one.  A process that already has CAP_SYS_ADMIN — a root shell,
+    most CI containers — needs only a network namespace; everyone else needs a
+    user namespace first, which some hardened kernels and AppArmor profiles
+    refuse to hand to an unprivileged process.
+    """
+
+    if sys.platform != "linux":
+        return None
+    unshare = shutil.which("unshare")
+    if unshare is None or shutil.which("ip") is None:
+        return None
+    for prefix in (
+        [unshare, "--net", "--"],
+        [unshare, "--user", "--map-root-user", "--net", "--"],
+    ):
+        try:
+            probe = subprocess.run(
+                [*prefix, "sh", "-c", "ip link set lo up && ip -o link show"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if probe.returncode != 0:
+            continue
+        interfaces = {
+            line.split(":", 2)[1].strip().split("@", 1)[0]
+            for line in probe.stdout.splitlines()
+            if line.count(":") >= 2
+        }
+        if interfaces == {"lo"}:
+            return prefix
+    return None
+
+
+def _resolve_network_isolation(mode: str) -> list[str]:
+    """Return the command prefix demanded by ``mode``, or refuse.
+
+    ``required`` is the default because the alternative is a lane that reports
+    an offline contract it did not enforce.  The in-kernel guard cannot stand in
+    for the namespace: a subprocess, a C extension, or a direct ``_socket`` call
+    walks straight past it.
+    """
+
+    if mode == "off":
+        return []
+    prefix = _network_namespace_prefix()
+    if prefix is not None:
+        return prefix
+    if mode == "required":
+        raise SystemExit(
+            "Network isolation is unavailable on this platform, so the "
+            "notebooks cannot be executed under the offline contract: the "
+            "in-kernel guard is a tripwire, not a sandbox, and a subprocess or "
+            "a direct _socket call reaches the network past it. Linux with "
+            "unshare(1), ip(8) and unprivileged user namespaces provides it; "
+            "pass --network-isolation auto to run anyway with the tripwire "
+            "alone, knowing the contract is not enforced."
+        )
+    print(
+        "WARNING: no network namespace available; notebooks run with the "
+        "in-kernel guard only, which a subprocess or a direct _socket call "
+        "bypasses. The offline contract is NOT enforced in this run."
+    )
+    return []
+
+
+def _runner_command(
+    notebook_path: Path,
+    *,
+    cell_timeout_s: int,
+    fast_smoke: bool,
+    isolation_prefix: list[str],
+) -> list[str]:
+    """The full argv for one runner subprocess, isolation included."""
+
+    runner = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "--single",
+        str(notebook_path),
+        "--cell-timeout",
+        str(cell_timeout_s),
+    ]
+    if fast_smoke:
+        runner.append("--fast-smoke")
+    if not isolation_prefix:
+        return runner
+    return [*isolation_prefix, "sh", "-c", _NAMESPACE_SHELL, *runner]
+
+
 def _kill_process_group(process: subprocess.Popen) -> None:
     """Kill the runner and its kernel; both live in one session/group."""
 
@@ -328,19 +451,16 @@ def _run_with_budget(
     cell_timeout_s: int,
     budget_s: int,
     fast_smoke: bool,
+    isolation_prefix: list[str] | None = None,
 ) -> float:
     """Execute one notebook in a subprocess killed at the wall-clock budget."""
 
-    command = [
-        sys.executable,
-        str(Path(__file__).resolve()),
-        "--single",
-        str(notebook_path),
-        "--cell-timeout",
-        str(cell_timeout_s),
-    ]
-    if fast_smoke:
-        command.append("--fast-smoke")
+    command = _runner_command(
+        notebook_path,
+        cell_timeout_s=cell_timeout_s,
+        fast_smoke=fast_smoke,
+        isolation_prefix=[] if isolation_prefix is None else isolation_prefix,
+    )
     start = time.perf_counter()
     process = subprocess.Popen(
         command,
@@ -362,7 +482,7 @@ def _run_with_budget(
     return time.perf_counter() - start
 
 
-def main(argv: list[str] | None = None) -> int:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("notebooks", nargs="*", type=Path)
     parser.add_argument(
@@ -383,11 +503,28 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help=(
             "Internal runner mode: execute exactly one notebook in-process "
-            "without budget enforcement (the parent enforces the budget)."
+            "without budget enforcement, and without isolating the network "
+            "again — the parent enforces both, and this process is already "
+            "inside the namespace it created."
         ),
     )
     parser.add_argument("--cell-timeout", type=int, default=DEFAULT_CELL_TIMEOUT_S)
     parser.add_argument("--notebook-budget", type=int, default=DEFAULT_NOTEBOOK_BUDGET_S)
+    parser.add_argument(
+        "--network-isolation",
+        choices=NETWORK_ISOLATION_MODES,
+        default=DEFAULT_NETWORK_ISOLATION,
+        help=(
+            "'required' (default) refuses to run where the kernel cannot be "
+            "placed in a loopback-only network namespace; 'auto' falls back to "
+            "the in-kernel guard alone and says so; 'off' never isolates."
+        ),
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
     args = parser.parse_args(argv)
 
     if args.single:
@@ -408,6 +545,9 @@ def main(argv: list[str] | None = None) -> int:
     if not selected:
         parser.error("provide notebook paths or --class to select from the manifest.")
 
+    # Resolved once: the probe starts a process, and the answer cannot change
+    # between notebooks in one run.
+    isolation_prefix = _resolve_network_isolation(args.network_isolation)
     failures = 0
     for notebook_path in selected:
         resolved = notebook_path if notebook_path.is_absolute() else ROOT / notebook_path
@@ -417,6 +557,7 @@ def main(argv: list[str] | None = None) -> int:
                 cell_timeout_s=args.cell_timeout,
                 budget_s=args.notebook_budget,
                 fast_smoke=args.fast_smoke,
+                isolation_prefix=isolation_prefix,
             )
         except SystemExit as exit_error:
             print(f"FAIL {notebook_path}: {exit_error}")
