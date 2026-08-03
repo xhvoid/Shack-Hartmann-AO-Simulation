@@ -121,16 +121,29 @@ def _generate_candidate(candidate_dir: Path) -> None:
     from shwfs_ao.validation.regression import validate_cross_backend_report
 
     constraint_file, constraint_sha256 = _verified_constraint_identity()
+    # Establish provenance before the suite, not after.  Both checks can refuse,
+    # and the suite takes minutes: a maintainer should learn that the tree
+    # cannot be recorded before paying for a run that will be discarded.
+    source_commit = _source_commit()
+    source_patch = _source_patch_sha256()
+
     report = run_cross_backend_report(
         dependency_constraint_file=constraint_file,
         dependency_constraint_sha256=constraint_sha256,
     )
+    # The recorded evidence must describe the tree that produced these results,
+    # so a suite that modified the working tree invalidates it.
+    if _source_patch_sha256() != source_patch:
+        raise SystemExit(
+            "The working tree changed while the comparison suite ran, so the "
+            "recorded source_patch_sha256 would not describe the tree that "
+            "produced this report. Re-run from a quiescent tree."
+        )
     candidate: dict[str, Any] = dict(report)
-    source_patch = _source_patch_sha256()
     candidate["generator"] = {
         "generator_name": GENERATOR_NAME,
         "generator_version": GENERATOR_VERSION,
-        "source_commit": _source_commit(),
+        "source_commit": source_commit,
         "source_tree_clean": source_patch is None,
         "source_patch_sha256": source_patch,
     }
@@ -625,13 +638,22 @@ def _current_platform_tag() -> str:
 def _lock_platform_tag(header_text: str, profile: str) -> str:
     """The platform a constraint lock declares in its header prose.
 
-    The declaration may be wrapped across the header's comment lines, so a
-    single comment continuation between ``on`` and the platform name is
-    accepted; nothing else is, because a lock that does not name its
-    architecture cannot be matched to the environment that resolved it.
+    Only the leading comment block is read.  The body is a list of pins, and a
+    package name, URL or note there that happens to contain a platform token is
+    not a declaration — searching the whole file would let a lock that declares
+    nothing at all resolve from an incidental mention.  The declaration may be
+    wrapped across the header's comment lines, so a single comment continuation
+    between ``on`` and the platform name is accepted; nothing else is, because a
+    lock that does not name its architecture cannot be matched to the
+    environment that resolved it.
     """
 
-    match = _LOCK_PLATFORM_DECLARATION.search(header_text)
+    header_lines: list[str] = []
+    for line in header_text.splitlines():
+        if not line.lstrip().startswith("#"):
+            break
+        header_lines.append(line)
+    match = _LOCK_PLATFORM_DECLARATION.search("\n".join(header_lines))
     if match is None:
         expected = ", ".join(f"'on {name}'" for name in sorted(_LOCK_PLATFORMS))
         raise SystemExit(
@@ -767,7 +789,14 @@ def _source_patch_sha256() -> str | None:
             # modified binary input — a .npy fixture, say — records only
             # "Binary files differ" plus abbreviated blob hashes, which is not
             # evidence of what the run actually read.
-            ["git", "diff", "HEAD", "--binary"],
+            #
+            # --no-ext-diff and --no-textconv make the diff independent of the
+            # environment it runs in.  git otherwise honours an external diff
+            # driver (GIT_EXTERNAL_DIFF, diff.external, or a .gitattributes
+            # textconv), and a driver that prints nothing turns a dirty tree
+            # into an empty diff — which this function would then record as a
+            # clean checkout of the recorded commit.
+            ["git", "diff", "HEAD", "--binary", "--no-ext-diff", "--no-textconv"],
             cwd=REPO_ROOT,
             capture_output=True,
             check=True,
@@ -790,15 +819,35 @@ def _source_patch_sha256() -> str | None:
     untracked = _untracked_paths(status)
     if not tracked and not untracked:
         return None
+    # Every field is length-prefixed.  Separator bytes alone do not frame this
+    # stream, because a file's *contents* may legally contain them: an untracked
+    # file holding the separator sequence could otherwise imitate a second file,
+    # so two different working trees would record the same evidence.  A length
+    # cannot be imitated by the bytes it counts.
     hasher = hashlib.sha256()
-    hasher.update(b"tracked-diff\0")
-    hasher.update(tracked)
+
+    def absorb(label: bytes, payload: bytes) -> None:
+        hasher.update(label)
+        hasher.update(len(payload).to_bytes(8, "big"))
+        hasher.update(payload)
+
+    absorb(b"tracked-diff", tracked)
+    absorb(b"untracked-count", len(untracked).to_bytes(8, "big"))
     for path in untracked:
-        hasher.update(b"\0untracked\0")
-        hasher.update(path)
-        hasher.update(b"\0content\0")
+        absorb(b"untracked-path", path)
         try:
             contents = (REPO_ROOT / os.fsdecode(path)).read_bytes()
+        except IsADirectoryError as exc:
+            # git reports an untracked directory as a single record only when it
+            # is a repository of its own, which this one cannot read or hash.
+            raise SystemExit(
+                "Cannot record source provenance: the untracked path "
+                f"{os.fsdecode(path)!r} is a directory, which git reports as a "
+                "single entry when it contains its own .git — a nested clone or "
+                "worktree. Its contents cannot be hashed as evidence. Move it "
+                "outside the repository, or add it to .gitignore if it cannot "
+                "affect a generated result."
+            ) from exc
         except OSError as exc:
             # Fail closed.  A placeholder standing in for unreadable contents
             # gives two different working trees the same patch hash, which is
@@ -810,7 +859,7 @@ def _source_patch_sha256() -> str | None:
                 "stood in a placeholder for them would not be evidence of "
                 "anything."
             ) from exc
-        hasher.update(contents)
+        absorb(b"untracked-content", contents)
     return hasher.hexdigest()
 
 
