@@ -27,6 +27,7 @@ from shwfs_ao.backends.hcipy import (
 from shwfs_ao.validation.cross_backend import (
     CrossBackendConfig,
     CrossBackendError,
+    comparison_config_record,
     run_cross_backend_report,
 )
 from shwfs_ao.validation.physical import (
@@ -131,21 +132,51 @@ def _probe_comparison(kind: str) -> dict:
             for name in sorted(REQUIRED_METRIC_NAMES[kind])
         ],
     }
-    # An estimated comparison must state its estimator and uncertainty.
+    # An estimated comparison must state its estimator and uncertainty, and
+    # must do so as the four checkable fields rather than as prose.
     if kind in COMPARISONS_REQUIRING_STATISTICAL_DEFINITION:
-        comparison["statistical_definition"] = (
-            "Synthetic contract-test estimator: probe values over 1 realization; "
-            "uncertainty is not measured in this fixture."
-        )
+        comparison["statistical_definition"] = _probe_statistical_definition()
     return comparison
+
+
+def _probe_statistical_definition() -> dict:
+    """The smallest statistical_definition the contract accepts.
+
+    Written out in full rather than built from a helper in the source package,
+    so a field quietly dropped from the contract shows up here as a test that
+    stops exercising it instead of as a fixture that follows it silently.
+    """
+
+    return {
+        "sample_count": 2,
+        "estimator": "Synthetic contract-test estimator over probe values.",
+        "bins_or_lags": {
+            "kind": "contract_test_lags_px",
+            "values": [4, 2],
+        },
+        "uncertainty_method": (
+            "Synthetic contract-test standard error across the probe values."
+        ),
+        "narrative": (
+            "Synthetic contract-test estimator: probe values over 2 "
+            "realizations; uncertainty is not measured in this fixture."
+        ),
+    }
+
+
+# One real configuration, so the report's comparison_config is a record the
+# producer could have minted: the contract now binds config_hash to the fields
+# beside it, and a stub mapping carrying an arbitrary hash is exactly what that
+# binding exists to reject.
+_CONTRACT_TEST_CONFIG = CrossBackendConfig(root_seed=7)
 
 
 def _minimal_report() -> dict:
     return {
         "artifact_schema_name": CROSS_BACKEND_REPORT_SCHEMA_NAME,
         "artifact_schema_version": CROSS_BACKEND_BASELINE_SCHEMA_VERSION,
-        "comparison_config": {"config_hash": _hash64("config")},
-        "root_seed": 7,
+        "comparison_config": comparison_config_record(_CONTRACT_TEST_CONFIG),
+        "root_seed": _CONTRACT_TEST_CONFIG.root_seed,
         "conventions": {
             "command_unit": "m_opd_equivalent",
             "residual_sign_convention": (
@@ -198,6 +229,24 @@ def packaged_baseline() -> dict:
 
 def _report_copy(baseline: dict) -> dict:
     return json.loads(json.dumps(baseline))
+
+
+def _reconfigured_report(baseline: dict, **overrides) -> dict:
+    """A copy of ``baseline`` that honestly describes a different configuration.
+
+    Overwriting ``config_hash`` in place no longer produces a document anything
+    will evaluate: the hash is bound to the fields recorded beside it, and the
+    seed is recorded twice and required to agree, so an edited field without a
+    reminted hash is malformed rather than merely different.  Reaching the
+    evaluation-time identity gate therefore means minting a real configuration
+    record — which is also the only thing a second run could actually produce.
+    """
+
+    report = _report_copy(baseline)
+    config = CrossBackendConfig(**overrides)
+    report["comparison_config"] = comparison_config_record(config)
+    report["root_seed"] = config.root_seed
+    return report
 
 
 def _set_metric_value(document: dict, kind: str, name: str, value) -> None:
@@ -503,13 +552,16 @@ class TestDocumentContract:
     def test_a_comparison_estimated_from_realizations_must_define_its_statistics(
         self,
     ):
-        # The packaged JSON Schema requires this prose; so must the application
+        # The packaged JSON Schema requires this record; so must the application
         # validator, because acceptance is the only writer of a baseline and a
-        # ratio without its estimator and uncertainty is uninterpretable.
+        # ratio without its estimator and uncertainty is uninterpretable.  Prose
+        # is refused outright: any non-empty string satisfied the old contract,
+        # so "x" documented nothing at all.
         assert COMPARISONS_REQUIRING_STATISTICAL_DEFINITION == frozenset(
             {"atmosphere_statistics"}
         )
-        for absent in (None, "", "   "):
+        prose = "4 realizations; estimator: RMS; uncertainty: standard error."
+        for absent in (None, "", "   ", "x", prose):
             baseline = _minimal_baseline()
             for comparison in baseline["comparisons"]:
                 if comparison["comparison_kind"] != "atmosphere_statistics":
@@ -520,7 +572,51 @@ class TestDocumentContract:
                     comparison["statistical_definition"] = absent
             with pytest.raises(
                 BaselineContractError,
-                match="must record its statistical_definition",
+                match="statistical_definition",
+            ):
+                validate_cross_backend_baseline(baseline)
+
+    def test_a_statistical_definition_must_carry_all_four_elements(self):
+        """Each element is required in its own right and in its own type.
+
+        The four are not interchangeable: a sample count without an estimator
+        does not say what was averaged, and an estimator without a sample count
+        does not say over how much.  Dropping any one, or degrading its type,
+        must be refused individually rather than covered by the presence of the
+        others.
+        """
+
+        degradations = (
+            {"sample_count": 1},
+            {"sample_count": True},
+            {"sample_count": "4"},
+            {"estimator": ""},
+            {"uncertainty_method": "   "},
+            {"narrative": ""},
+            {"bins_or_lags": {"kind": "lags", "values": []}},
+            {"bins_or_lags": {"kind": "", "values": [4]}},
+            {"bins_or_lags": {"values": [4]}},
+            {"bins_or_lags": [4, 2]},
+        )
+        for override in degradations:
+            baseline = _minimal_baseline()
+            for comparison in baseline["comparisons"]:
+                if comparison["comparison_kind"] != "atmosphere_statistics":
+                    continue
+                comparison["statistical_definition"].update(override)
+            with pytest.raises(
+                BaselineContractError, match="statistical_definition"
+            ):
+                validate_cross_backend_baseline(baseline)
+
+        for dropped in _probe_statistical_definition():
+            baseline = _minimal_baseline()
+            for comparison in baseline["comparisons"]:
+                if comparison["comparison_kind"] != "atmosphere_statistics":
+                    continue
+                del comparison["statistical_definition"][dropped]
+            with pytest.raises(
+                BaselineContractError, match="statistical_definition"
             ):
                 validate_cross_backend_baseline(baseline)
 
@@ -886,9 +982,22 @@ class TestPackagedBaseline:
             if comparison["comparison_kind"] == "atmosphere_statistics"
         )
         definition = atmosphere["statistical_definition"]
-        assert "realizations" in definition
-        assert "estimator" in definition
-        assert "uncertainty" in definition
+        # The four elements are read as fields, not searched for as words: the
+        # packaged artifact must be interpretable by a consumer that never
+        # parses English.
+        assert definition["sample_count"] >= 2
+        assert definition["estimator"].strip()
+        assert definition["uncertainty_method"].strip()
+        assert definition["bins_or_lags"]["kind"].strip()
+        assert definition["bins_or_lags"]["values"]
+        # The sample count must be the realization count the suite actually
+        # ran, not a number written beside it.
+        assert definition["sample_count"] == (
+            packaged_baseline["comparison_config"]["atmosphere_realizations"]
+        )
+        # The reviewed paragraph survives beside the structured fields; it is
+        # what a human reads, and it is not a substitute for them.
+        assert "realizations" in definition["narrative"]
 
     def test_packaged_range_criteria_exceed_the_recorded_dispersion(
         self,
@@ -905,7 +1014,13 @@ class TestPackagedBaseline:
         metrics = {
             metric["name"]: metric for metric in atmosphere["metrics"]
         }
-        assert "three standard errors" in atmosphere["statistical_definition"]
+        # The artifact must state the three-standard-error margin it is about
+        # to be held to, so the check below verifies a documented claim rather
+        # than one this test invented.
+        definition = atmosphere["statistical_definition"]
+        assert "standard error" in definition["uncertainty_method"]
+        assert "three" in definition["uncertainty_method"]
+        assert "three standard errors" in definition["narrative"]
         pairs = (
             ("rms_ratio_hcipy_over_native", "rms_ratio_standard_error"),
             (
@@ -951,7 +1066,12 @@ class TestPackagedBaseline:
         packaged_baseline,
     ):
         generator = packaged_baseline["generator"]
-        assert generator["generator_version"] == "2"
+        # Pinned, not read from the script: a baseline accepted under an earlier
+        # generator must fail this rather than silently re-describe itself as
+        # the current one.  Version 3 is the first to verify every executed
+        # submodule's origin, to refuse assume-unchanged/skip-worktree trees,
+        # and to sample the source identity atomically.
+        assert generator["generator_version"] == "3"
         assert generator["source_tree_clean"] is True
         commit = generator["source_commit"]
         assert len(commit) == 40
@@ -1304,19 +1424,37 @@ class TestEvaluationSemantics:
             for failure in convention_failures
         )
 
-        seed_report = _report_copy(packaged_baseline)
-        seed_report["root_seed"] = int(packaged_baseline["root_seed"]) + 1
+        # A seed cannot drift quietly any more.  It is recorded twice — at the
+        # top level and inside comparison_config — the two are required to
+        # agree, and the configuration record is bound to its own hash, so a
+        # reseeded run is a different configuration by construction.  Editing
+        # the top-level value alone no longer produces a comparable document at
+        # all; it produces one that fails validation before evaluation begins.
+        half_edited = _report_copy(packaged_baseline)
+        half_edited["root_seed"] = int(packaged_baseline["root_seed"]) + 1
+        with pytest.raises(BaselineContractError, match="disagree"):
+            evaluate_report_against_baseline(half_edited, packaged_baseline)
+
+        # Reseeded consistently, it is still refused — at the configuration
+        # identity, which is the gate that now carries the seed.
+        seed_report = _reconfigured_report(packaged_baseline, root_seed=119)
         seed_failures = evaluate_report_against_baseline(
             seed_report, packaged_baseline
         )
-        assert any("root_seed mismatch" in failure for failure in seed_failures)
+        assert any(
+            "comparison_config.config_hash mismatch" in failure
+            for failure in seed_failures
+        )
 
     def test_a_config_hash_mismatch_short_circuits_metric_checks(
         self,
         packaged_baseline,
     ):
-        report = _report_copy(packaged_baseline)
-        report["comparison_config"]["config_hash"] = _hash64("other-config")
+        # A report that genuinely describes another configuration, rather than
+        # one whose hash was overwritten: the recorded fields and the hash are
+        # bound to each other now, so a bare relabelling is refused as
+        # malformed and would never reach evaluation.
+        report = _reconfigured_report(packaged_baseline, root_seed=119)
         _set_metric_value(
             report,
             "interaction_matrix_identity",
@@ -1371,12 +1509,26 @@ class TestEvaluationSemantics:
         report = _report_copy(packaged_baseline)
         for comparison in report["comparisons"]:
             if comparison["comparison_kind"] == "atmosphere_statistics":
-                comparison["statistical_definition"] = (
-                    "1 realization per backend; estimator: unspecified."
-                )
+                comparison["statistical_definition"] = {
+                    **comparison["statistical_definition"],
+                    "sample_count": 2,
+                    "bins_or_lags": {
+                        "kind": "structure_function_lags_px",
+                        "values": [8, 2],
+                    },
+                }
         failures = evaluate_report_against_baseline(report, packaged_baseline)
+        # Reported element by element, so the message names which part of the
+        # estimator moved rather than printing two records and leaving the
+        # reader to diff them.
         assert any(
-            "atmosphere_statistics'].statistical_definition mismatch" in failure
+            "statistical_definition['sample_count'] mismatch" in failure
+            and "observed=2" in failure
+            and "expected=4" in failure
+            for failure in failures
+        )
+        assert any(
+            "statistical_definition['bins_or_lags'] mismatch" in failure
             for failure in failures
         )
 
@@ -1387,7 +1539,7 @@ class TestEvaluationSemantics:
             comparison.pop("statistical_definition", None)
         with pytest.raises(
             BaselineContractError,
-            match="must record its statistical_definition",
+            match="statistical_definition",
         ):
             evaluate_report_against_baseline(dropped, packaged_baseline)
 
