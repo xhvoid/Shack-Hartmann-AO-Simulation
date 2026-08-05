@@ -95,8 +95,17 @@ def test_v1_profiles_stay_loadable_beside_their_v2_successors() -> None:
 
     Each v1 profile keeps its own identity (``…@1``, its own config hash) while
     describing the same physics as its v2 successor: the v2 review made
-    ``photon_allocation`` explicit at the value v1 already ran with, so every
-    physical component hash is unchanged and only the profile provenance moves.
+    ``photon_allocation`` explicit at the value v1 already ran with, so the two
+    hold equal component *values* throughout.
+
+    Their published component *identities* still differ in one entry.  The
+    nested WFS hash is taken from the ``WfsConfig`` dataclass, whose field set
+    schema v2 extended, so a v1 record's ``"wfs"`` identity is the digest of the
+    twelve-field shape it was published under and a v2 record's is the digest of
+    the thirteen-field one.  Keeping them equal would mean moving one of the
+    two, and the published one is not ours to move.  Equal physics with distinct
+    published identities is the correct outcome, and it is asserted both ways
+    below.
     """
 
     for name, _ in CURRENT_2M_PROFILES + (
@@ -112,9 +121,22 @@ def test_v1_profiles_stay_loadable_beside_their_v2_successors() -> None:
         # reviewed and published under, not a silently different one.
         assert v1.wfs.photon_allocation == v2.wfs.photon_allocation == "throughput_scaled"
 
+        # Same physics: every component compares equal as a value, including
+        # the WFS block, so nothing about the sensing policy changed at v2.
+        assert v1.wfs == v2.wfs
+        assert (v1.atmosphere, v1.detector, v1.dm, v1.controller) == (
+            v2.atmosphere,
+            v2.detector,
+            v2.dm,
+            v2.controller,
+        )
+
         physics = dict(v1.component_config_hashes)
         successor = dict(v2.component_config_hashes)
         assert physics.pop("profile") != successor.pop("profile")
+        # The WFS entry is the one identity the schema change moved, and it is
+        # pinned on both sides by test_every_packaged_nested_wfs_identity_is_pinned.
+        assert physics.pop("wfs") != successor.pop("wfs")
         assert physics == successor
         # Distinct published identities never collide.
         assert v1.config_hash != v2.config_hash
@@ -289,6 +311,79 @@ def test_every_packaged_profile_identity_is_pinned() -> None:
     }
     assert set(observed) == set(expected)
     assert observed == expected
+
+
+def test_every_packaged_nested_wfs_identity_is_pinned() -> None:
+    """The nested WFS hash is published too, and moves under the same rules.
+
+    ``component_config_hashes`` is the public per-component identity: a stored
+    result cites the ``"wfs"`` entry to say which sensing policy produced it.
+    It is hashed from the ``WfsConfig`` dataclass rather than from the record
+    mapping, and :func:`shwfs_ao.core.hashing.canonicalize_for_hash` walks a
+    dataclass through its *declared* fields, so adding ``photon_allocation``
+    moved the nested identity of the five packaged v1 profiles even though
+    ``SystemConfig.config_hash`` was kept stable for them.  The v1 values below
+    are the ones those records hashed to before the field existed; the v2 values
+    are the current shape.  They differ on purpose, and neither may move without
+    a deliberate edit to the corresponding packaged record.
+    """
+
+    expected = {
+        ("fast_2m_detector", 1): "92c752a0ae71abb97e5894742bdfc319a63090da59d80194b57f19d1a40ae204",
+        ("fast_2m_detector", 2): "dbf9dd715cb775abed56a42551734817868c101395339cbac69e6ed4d01add03",
+        ("portfolio_2m_detector", 1): "58ec89ed72496cbb7e562efaa88149969c4f1aea57b6ac4956c7f7d93dd81c30",
+        ("portfolio_2m_detector", 2): "f44dd42a39c0f67318484e3d01b3b43195f379719be65d0c491a4e31a875eb0e",
+        ("research_2m_detector", 1): "84448107529e71309fdef7a41db7663d2e62c3996a1ab27c89e5259ff42b273d",
+        ("research_2m_detector", 2): "241f18d74988683fab9b4e8d748a86d11e5482bc6020d338a0d66b24c0b6c469",
+        ("high_order_10m_geometric", 1): "d8b7d58d7b898624bd64d8151d2203959d8399f309d14e72a738d265dd7d9ce5",
+        ("high_order_10m_geometric", 2): "0dca580f4af5fccdf3ba0126a697f1549fd11753c93c97d121faa148aa72584a",
+        ("high_order_10m_hcipy", 1): "5f83323a842d7f73f04b02aab3e12ed95cd315bdbed4496c2e9f0d666982e48b",
+        ("high_order_10m_hcipy", 2): "45b4f2e0544cdab27e89ef1e88caed8b86c9012270cdfd1e1a7e4a45e64b6078",
+    }
+    observed = {
+        key: load_system_profile(*key).component_config_hashes["wfs"]
+        for key in available_system_profiles()
+    }
+    assert set(observed) == set(expected)
+    assert observed == expected
+
+
+def test_a_bare_wfs_config_hashes_under_the_current_record_schema() -> None:
+    """``WfsConfig.config_hash`` answers for the shape the class actually has.
+
+    The schema-aware variant exists so a *record* keeps the identity it was
+    published with, not so a ``WfsConfig`` can hide a field.  A bare block
+    therefore hashes under the newest schema, which is the same convention
+    ``SystemConfig.record_schema_version`` defaults to, and two blocks that
+    differ only in ``photon_allocation`` must never share a digest.
+    """
+
+    v1 = load_system_profile("fast_2m_detector", 1)
+    v2 = load_system_profile("fast_2m_detector", 2)
+
+    # Identical physics, so the bare-object identity is identical: only the
+    # record schema each one belongs to distinguishes their nested hashes.
+    assert v1.wfs == v2.wfs
+    assert v1.wfs.config_hash == v2.wfs.config_hash
+    assert v2.wfs.config_hash == v2.component_config_hashes["wfs"]
+    assert v1.wfs.config_hash != v1.component_config_hashes["wfs"]
+    assert v1.wfs.config_hash == v1.wfs.config_hash_for_record_schema(
+        PROFILE_SCHEMA_VERSION
+    )
+
+    # The v1 payload drops the field, so hashing a non-default allocation under
+    # schema 1 would publish an identity that silently omits a real change to
+    # the WFS photon budget.  That is refused rather than approximated.
+    unit_sum = replace(v2.wfs, photon_allocation="unit_sum")
+    assert unit_sum.config_hash != v2.wfs.config_hash
+    with pytest.raises(SystemConfigError, match="cannot express"):
+        unit_sum.config_hash_for_record_schema(1)
+
+    # An unknown schema is not silently treated as the newest one.
+    with pytest.raises(SystemConfigError, match="unsupported profile schema_version"):
+        v2.wfs.config_hash_for_record_schema(3)
+    with pytest.raises(SystemConfigError, match="record_schema_version must be an integer"):
+        v2.wfs.config_hash_for_record_schema(True)  # type: ignore[arg-type]
 
 
 def test_profile_round_trip_is_exact_and_deterministic() -> None:

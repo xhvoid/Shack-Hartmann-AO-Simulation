@@ -12,10 +12,12 @@ comparison suite itself.
 from __future__ import annotations
 
 import importlib.util
+import itertools
 import os
 from pathlib import Path
 import subprocess
 import sys
+import types
 
 import pytest
 
@@ -221,6 +223,88 @@ def test_the_executed_package_check_accepts_this_checkout():
     assert generator._require_executed_package_is_this_checkout() == (
         (ROOT / "src" / "shwfs_ao").resolve()
     )
+
+
+def test_a_cached_foreign_submodule_cannot_execute_under_this_commit(
+    monkeypatch,
+    tmp_path,
+):
+    """The parent package's ``__path__`` says nothing about its submodules.
+
+    Import binds each submodule to the file it was first loaded from and caches
+    it in ``sys.modules`` for the life of the process.  A foreign
+    ``shwfs_ao.validation.cross_backend`` cached before this checkout reached the
+    import path therefore keeps computing the comparison while
+    ``shwfs_ao.__path__`` points here, and the candidate would credit this commit
+    with numbers a different tree produced.
+    """
+
+    foreign_directory = tmp_path / "foreign" / "shwfs_ao" / "validation"
+    foreign_directory.mkdir(parents=True)
+    foreign_file = foreign_directory / "cross_backend.py"
+    foreign_file.write_text("", encoding="utf-8")
+    foreign = types.ModuleType("shwfs_ao.validation.cross_backend")
+    foreign.__file__ = str(foreign_file)
+    monkeypatch.setitem(sys.modules, "shwfs_ao.validation.cross_backend", foreign)
+
+    with pytest.raises(SystemExit) as excinfo:
+        generator._require_executed_package_is_this_checkout()
+    message = str(excinfo.value)
+    assert "shwfs_ao.validation.cross_backend" in message
+    assert str(foreign_file) in message
+
+
+def test_a_cached_foreign_subpackage_cannot_execute_under_this_commit(
+    monkeypatch,
+    tmp_path,
+):
+    # A package contributes a search path as well as a file, and that path is
+    # where every further submodule of it will be loaded from, so it has to be
+    # located too rather than trusted because its parent resolved correctly.
+    foreign_directory = tmp_path / "foreign" / "shwfs_ao" / "validation"
+    foreign_directory.mkdir(parents=True)
+    (foreign_directory / "__init__.py").write_text("", encoding="utf-8")
+    foreign = types.ModuleType("shwfs_ao.validation")
+    foreign.__file__ = str(foreign_directory / "__init__.py")
+    foreign.__path__ = [str(foreign_directory)]
+    monkeypatch.setitem(sys.modules, "shwfs_ao.validation", foreign)
+
+    with pytest.raises(SystemExit) as excinfo:
+        generator._require_executed_package_is_this_checkout()
+    message = str(excinfo.value)
+    assert "shwfs_ao.validation" in message
+    assert str(foreign_directory) in message
+
+
+def test_a_shwfs_ao_module_without_a_location_fails_closed(monkeypatch):
+    # A module that cannot say where it came from is exactly the one this check
+    # cannot clear, so skipping it would turn the guard into a formality that
+    # any module object without a __file__ walks straight past.
+    ghost = types.ModuleType("shwfs_ao.validation.ghost")
+    monkeypatch.setitem(sys.modules, "shwfs_ao.validation.ghost", ghost)
+
+    with pytest.raises(SystemExit, match="reports no filesystem location"):
+        generator._require_executed_package_is_this_checkout()
+
+
+def test_a_source_identity_read_across_a_moving_head_is_refused(monkeypatch):
+    """The commit and the patch hash are two reads, not one observation.
+
+    ``_require_source_unchanged`` compares a commit and a patch hash that come
+    from separate git invocations on each side of the run.  Sampled
+    non-atomically, a pair can describe two different clean commits — the commit
+    from before a move and the patch from after it — so both comparisons pass
+    against a state the checkout was never in.  A checkout that will not present
+    one self-consistent identity is refused instead.
+    """
+
+    before = "a" * 40
+    moving = itertools.cycle((before, "b" * 40))
+    monkeypatch.setattr(generator, "_source_commit", lambda: next(moving))
+    monkeypatch.setattr(generator, "_source_patch_sha256", lambda: None)
+
+    with pytest.raises(SystemExit, match="did not settle"):
+        generator._require_source_unchanged(before, None)
 
 
 def test_a_candidate_is_refused_when_head_moves_while_the_suite_runs(monkeypatch):

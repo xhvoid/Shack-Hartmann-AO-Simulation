@@ -61,10 +61,36 @@ REQUIRED_COMPARISON_KINDS = (
 # The atmosphere comparison is the estimated one: its ratios are averages over
 # independent realizations, so its recorded values mean nothing without the
 # estimator and uncertainty definition behind them.  The packaged JSON Schema
-# requires that prose; the application validator must require it too, or the
-# acceptance workflow — the only writer of a baseline — could drop it and still
-# satisfy every custom check.
+# requires that definition; the application validator must require it too, or
+# the acceptance workflow — the only writer of a baseline — could drop it and
+# still satisfy every custom check.
 COMPARISONS_REQUIRING_STATISTICAL_DEFINITION = frozenset({"atmosphere_statistics"})
+# What AO-REF-018 requires an estimated comparison to state, as fields rather
+# than as prose.  A paragraph cannot be validated — any non-empty string passes,
+# including a single character, and two documents that estimated their numbers
+# differently can each carry a sentence that says so without anything noticing —
+# so the four required elements are separate, separately checkable fields: how
+# many samples the estimate averages, what the estimator is, over which bins or
+# lags it was evaluated, and how its uncertainty was obtained.  ``narrative`` is
+# required beside them because the structured fields are what a validator
+# compares and the prose is what a reviewer reads; dropping either would lose
+# something the other does not carry.
+STATISTICAL_DEFINITION_FIELDS = (
+    "sample_count",
+    "estimator",
+    "bins_or_lags",
+    "uncertainty_method",
+    "narrative",
+)
+# A single realization has no dispersion, so it cannot support the uncertainty
+# such a comparison is required to report; two is the smallest sample count from
+# which any of it is estimable.  The suite's own configuration refuses fewer for
+# the same reason, and this is the document-side statement of that rule.
+MINIMUM_STATISTICAL_SAMPLE_COUNT = 2
+# A bins/lags statement is a *kind* and the values of that kind: "structure
+# function lags in pixels, [4, 2]" is checkable evidence, where a bare list of
+# numbers would leave a reader guessing what they index.
+_BINS_OR_LAGS_FIELDS = ("kind", "values")
 # Metrics whose recorded value is a measured magnitude, so a negative one is
 # not a small error but a value of a kind the metric cannot take.  These are all
 # informational, which is precisely why the rule is needed: their values are
@@ -370,6 +396,8 @@ __all__ = (
     "REQUIRED_FIXTURE_HASH_KEYS",
     "REQUIRED_METRIC_NAMES",
     "COMPARISONS_REQUIRING_STATISTICAL_DEFINITION",
+    "STATISTICAL_DEFINITION_FIELDS",
+    "MINIMUM_STATISTICAL_SAMPLE_COUNT",
     "NONNEGATIVE_METRIC_VALUES",
     "METRIC_CONTRACT",
     "BaselineContractError",
@@ -447,6 +475,16 @@ def _validate_report_structure(
         raise BaselineContractError(
             "comparison_config must be a mapping with a config_hash."
         )
+    recorded_hash = config["config_hash"]
+    if not isinstance(recorded_hash, str) or not _CONTENT_HASH_64.fullmatch(
+        recorded_hash
+    ):
+        raise BaselineContractError(
+            "comparison_config.config_hash must be a 64-character lowercase "
+            f"hexadecimal content hash; got {recorded_hash!r}."
+        )
+    _validate_root_seed(document, config)
+    _require_config_hash_binds_its_contents(config)
     _require_fields(
         document["conventions"],
         _REQUIRED_CONVENTION_FIELDS,
@@ -789,15 +827,13 @@ def evaluate_report_against_baseline(
         # reader with one terse line instead.
         if kind not in reported_kinds:
             continue
-        expected = comparison.get("statistical_definition")
-        observed = _statistical_definition(report, kind)
-        if observed != expected:
-            failures.append(
-                f"comparisons[{kind!r}].statistical_definition mismatch: "
-                f"observed={observed!r} expected={expected!r}; the estimator or "
-                "its uncertainty changed, so the reviewed tolerances were not "
-                "set against these numbers."
+        failures.extend(
+            _statistical_definition_failures(
+                kind,
+                _statistical_definition(report, kind),
+                comparison.get("statistical_definition"),
             )
+        )
     if failures:
         return tuple(failures)
 
@@ -847,6 +883,51 @@ def _statistical_definition(document: Mapping[str, Any], kind: str) -> Any:
         if comparison["comparison_kind"] == kind:
             return comparison.get("statistical_definition")
     return None
+
+
+def _statistical_definition_failures(
+    kind: str,
+    observed: Any,
+    expected: Any,
+) -> list[str]:
+    """Element-wise differences between two statistical definitions.
+
+    Both documents have been validated by the time this runs, so both
+    definitions are complete records and the comparison can name the element
+    that moved — the sample count, the estimator, the bins or lags, the
+    uncertainty method, or the narrative — instead of printing two whole
+    records and leaving the reader to diff them.  A definition that is somehow
+    not a record still fails, whole and unparsed: an unreadable definition is
+    not a matching one.
+    """
+
+    if observed == expected:
+        return []
+    if not isinstance(observed, Mapping) or not isinstance(expected, Mapping):
+        return [
+            f"comparisons[{kind!r}].statistical_definition mismatch: "
+            f"observed={observed!r} expected={expected!r}; the estimator or "
+            "its uncertainty changed, so the reviewed tolerances were not set "
+            "against these numbers."
+        ]
+    # The required elements first, in contract order; then anything either
+    # record carries beyond them, so a difference can never go unreported
+    # merely because the contract did not anticipate the field.
+    compared = list(STATISTICAL_DEFINITION_FIELDS) + sorted(
+        (set(observed) | set(expected)) - set(STATISTICAL_DEFINITION_FIELDS)
+    )
+    failures: list[str] = []
+    for field in compared:
+        if observed.get(field) == expected.get(field):
+            continue
+        failures.append(
+            f"comparisons[{kind!r}].statistical_definition[{field!r}] "
+            f"mismatch: observed={observed.get(field)!r} "
+            f"expected={expected.get(field)!r}; the estimator or its "
+            "uncertainty changed, so the reviewed tolerances were not set "
+            "against these numbers."
+        )
+    return failures
 
 
 def _inventory_failures(
@@ -992,6 +1073,82 @@ def _evaluate_metric(
     )
 
 
+def _validate_root_seed(
+    document: Mapping[str, Any],
+    config: Mapping[str, Any],
+) -> None:
+    """Require one non-negative integer seed, recorded identically twice.
+
+    The seed is the whole of what makes a run repeatable, and the document
+    states it twice: at the top level, where evaluation compares it against the
+    baseline, and inside the configuration record, where the suite actually
+    reads it.  Two different values leave the document unable to say which
+    realization it describes — evaluation would compare one seed while the run
+    used the other — so they are required to agree rather than reconciled.
+
+    A negative value is refused because no generator here accepts one, and
+    ``True`` is refused because ``bool`` is an ``int`` in Python: a document
+    seeded with ``True`` would otherwise pass as seed 1 and evaluate against a
+    baseline it shares no realization with.
+    """
+
+    seeds = (
+        ("root_seed", document["root_seed"]),
+        ("comparison_config.root_seed", config.get("root_seed")),
+    )
+    for label, seed in seeds:
+        # ``type`` rather than ``isinstance``: ``isinstance(True, int)`` is
+        # true, and a flag is not a seed.
+        if type(seed) is not int or seed < 0:
+            raise BaselineContractError(
+                f"{label} must be a non-negative integer seed; got {seed!r}."
+            )
+    if document["root_seed"] != config["root_seed"]:
+        raise BaselineContractError(
+            f"root_seed {document['root_seed']!r} and "
+            f"comparison_config.root_seed {config['root_seed']!r} disagree; "
+            "the document cannot say which seed produced the realization it "
+            "reports."
+        )
+
+
+def _require_config_hash_binds_its_contents(config: Mapping[str, Any]) -> None:
+    """Require ``config_hash`` to be the hash of the record that carries it.
+
+    Unbound, the hash is a label rather than an identity, and it is the label
+    every consumer trusts: evaluation compares ``config_hash`` alone before it
+    will compare a single metric, precisely so a tolerance can never paper over
+    changed inputs.  A document whose recorded seed, pupil sampling, or
+    realization count was edited while the hash was left alone therefore passes
+    as the reviewed configuration and evaluates clean against tolerances that
+    were never set for it.
+
+    The recomputation goes through the producer that mints the hash rather than
+    through a second definition written here, so the two cannot drift apart and
+    every baseline accepted under the existing definition still verifies.  The
+    import is deferred because the producer imports this module at import time;
+    by the time a document is validated, both modules are loaded.
+    """
+
+    from .cross_backend import CrossBackendError, comparison_config_hash
+
+    try:
+        recomputed = comparison_config_hash(config)
+    except CrossBackendError as exc:
+        raise BaselineContractError(
+            "comparison_config does not describe a cross-backend comparison "
+            f"configuration, so its config_hash cannot be verified: {exc}"
+        ) from exc
+    if recomputed != config["config_hash"]:
+        raise BaselineContractError(
+            "comparison_config.config_hash does not match the configuration it "
+            f"records: recorded={config['config_hash']}, "
+            f"recomputed={recomputed}. The recorded inputs were edited without "
+            "reminting the hash that identifies them; regenerate the document "
+            "rather than adjusting either half."
+        )
+
+
 def _validate_comparison(comparison: object) -> None:
     if not isinstance(comparison, Mapping):
         raise BaselineContractError("each comparison must be a mapping.")
@@ -1007,14 +1164,10 @@ def _validate_comparison(comparison: object) -> None:
             "metrics."
         )
     if comparison["comparison_kind"] in COMPARISONS_REQUIRING_STATISTICAL_DEFINITION:
-        definition = comparison.get("statistical_definition")
-        if not isinstance(definition, str) or not definition.strip():
-            raise BaselineContractError(
-                f"comparison {comparison['comparison_kind']!r} is estimated "
-                "from repeated realizations, so it must record its "
-                "statistical_definition: the estimator and the uncertainty "
-                "behind every value it reports."
-            )
+        _validate_statistical_definition(
+            comparison["comparison_kind"],
+            comparison.get("statistical_definition"),
+        )
     seen_names: set[str] = set()
     for metric in metrics:
         if not isinstance(metric, Mapping):
@@ -1132,6 +1285,86 @@ def _validate_comparison(comparison: object) -> None:
             )
         seen_names.add(metric["name"])
         _enforce_metric_contract(comparison["comparison_kind"], metric)
+
+
+def _validate_statistical_definition(kind: str, definition: object) -> None:
+    """Require the four AO-REF-018 elements as fields, each one checkable.
+
+    A comparison estimated from repeated realizations reports averages, and an
+    average means nothing on its own: the same three ratios can be produced from
+    two samples or two hundred, by different estimators, over different lags,
+    with uncertainties obtained in incompatible ways.  Recording that as prose
+    made it unenforceable — ``"x"`` satisfied every check the contract had — so
+    each element is required in its own right and in its own type here, and the
+    packaged JSON Schema mirrors exactly these rules.
+    """
+
+    if not isinstance(definition, Mapping):
+        raise BaselineContractError(
+            f"comparison {kind!r} is estimated from repeated realizations, so "
+            "its statistical_definition must be a record of the sample count, "
+            "estimator, bins or lags, and uncertainty method behind every "
+            f"value it reports; got {definition!r}."
+        )
+    missing = [
+        field for field in STATISTICAL_DEFINITION_FIELDS if field not in definition
+    ]
+    unexpected = sorted(set(definition) - set(STATISTICAL_DEFINITION_FIELDS))
+    if missing or unexpected:
+        raise BaselineContractError(
+            f"comparison {kind!r} must record its statistical_definition as "
+            f"exactly the fields {list(STATISTICAL_DEFINITION_FIELDS)}; "
+            f"missing={missing}, unexpected={unexpected}."
+        )
+    sample_count = definition["sample_count"]
+    # ``type`` rather than ``isinstance``: ``True`` is an ``int`` in Python and
+    # would otherwise be read as a sample count of 1.
+    if (
+        type(sample_count) is not int
+        or sample_count < MINIMUM_STATISTICAL_SAMPLE_COUNT
+    ):
+        raise BaselineContractError(
+            f"comparison {kind!r} statistical_definition.sample_count must be "
+            f"an integer of at least {MINIMUM_STATISTICAL_SAMPLE_COUNT}: fewer "
+            "samples cannot carry the uncertainty this comparison is required "
+            f"to report. Got {sample_count!r}."
+        )
+    for field in ("estimator", "uncertainty_method", "narrative"):
+        value = definition[field]
+        if not isinstance(value, str) or not value.strip():
+            raise BaselineContractError(
+                f"comparison {kind!r} statistical_definition.{field} must be a "
+                f"non-empty description; got {value!r}."
+            )
+    bins_or_lags = definition["bins_or_lags"]
+    if not isinstance(bins_or_lags, Mapping) or set(bins_or_lags) != set(
+        _BINS_OR_LAGS_FIELDS
+    ):
+        raise BaselineContractError(
+            f"comparison {kind!r} statistical_definition.bins_or_lags must be "
+            f"a record of exactly {list(_BINS_OR_LAGS_FIELDS)}, naming what the "
+            "estimator was evaluated over and at which values; got "
+            f"{bins_or_lags!r}."
+        )
+    if not isinstance(bins_or_lags["kind"], str) or not bins_or_lags[
+        "kind"
+    ].strip():
+        raise BaselineContractError(
+            f"comparison {kind!r} statistical_definition.bins_or_lags.kind "
+            "must name what the recorded values are — a bare list of numbers "
+            f"says nothing about what they index. Got {bins_or_lags['kind']!r}."
+        )
+    values = bins_or_lags["values"]
+    if (
+        not isinstance(values, list)
+        or not values
+        or not all(_finite_number(value) for value in values)
+    ):
+        raise BaselineContractError(
+            f"comparison {kind!r} statistical_definition.bins_or_lags.values "
+            "must be a non-empty list of finite numbers; got "
+            f"{values!r}."
+        )
 
 
 def _enforce_metric_contract(kind: str, metric: Mapping[str, Any]) -> None:
