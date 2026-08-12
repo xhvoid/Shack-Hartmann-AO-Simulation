@@ -29,6 +29,7 @@ from shwfs_ao.validation.cross_backend import (
     CrossBackendError,
     comparison_config_record,
     run_cross_backend_report,
+    statistical_definition_for,
 )
 from shwfs_ao.validation.physical import (
     PhysicalEstimatorError,
@@ -139,36 +140,36 @@ def _probe_comparison(kind: str) -> dict:
     return comparison
 
 
-def _probe_statistical_definition() -> dict:
-    """The smallest statistical_definition the contract accepts.
-
-    Written out in full rather than built from a helper in the source package,
-    so a field quietly dropped from the contract shows up here as a test that
-    stops exercising it instead of as a fixture that follows it silently.
-    """
-
-    return {
-        "sample_count": 2,
-        "estimator": "Synthetic contract-test estimator over probe values.",
-        "bins_or_lags": {
-            "kind": "contract_test_lags_px",
-            "values": [4, 2],
-        },
-        "uncertainty_method": (
-            "Synthetic contract-test standard error across the probe values."
-        ),
-        "narrative": (
-            "Synthetic contract-test estimator: probe values over 2 "
-            "realizations; uncertainty is not measured in this fixture."
-        ),
-    }
-
-
 # One real configuration, so the report's comparison_config is a record the
 # producer could have minted: the contract now binds config_hash to the fields
 # beside it, and a stub mapping carrying an arbitrary hash is exactly what that
 # binding exists to reject.
 _CONTRACT_TEST_CONFIG = CrossBackendConfig(root_seed=7)
+
+
+def _probe_statistical_definition() -> dict:
+    """The smallest statistical_definition the contract accepts.
+
+    The prose is written out here rather than imported, so a field quietly
+    dropped from the contract shows up as a test that stops exercising it.  The
+    sample count and the lag record are not prose and are not written out: they
+    are determined by the configuration this fixture reports under, and the
+    contract now requires them to agree with it.  Stating them independently
+    would make this fixture the one document in the suite whose statistics
+    describe a different run than its own configuration.
+    """
+
+    return {
+        **statistical_definition_for(_CONTRACT_TEST_CONFIG),
+        "estimator": "Synthetic contract-test estimator over probe values.",
+        "uncertainty_method": (
+            "Synthetic contract-test standard error across the probe values."
+        ),
+        "narrative": (
+            "Synthetic contract-test estimator over the probe values; "
+            "uncertainty is not measured in this fixture."
+        ),
+    }
 
 
 def _minimal_report() -> dict:
@@ -1109,10 +1110,12 @@ class TestPackagedBaseline:
         generator = packaged_baseline["generator"]
         # Pinned, not read from the script: a baseline accepted under an earlier
         # generator must fail this rather than silently re-describe itself as
-        # the current one.  Version 3 is the first to verify every executed
-        # submodule's origin, to refuse assume-unchanged/skip-worktree trees,
-        # and to sample the source identity atomically.
-        assert generator["generator_version"] == "3"
+        # the current one.  Version 3 was the first to verify every executed
+        # submodule's origin and to refuse assume-unchanged/skip-worktree trees;
+        # version 4 is the first to run from a controlled bytecode cache, to
+        # sample provenance ahead of every repository import, and to bracket
+        # each sample so its two git reads describe one state.
+        assert generator["generator_version"] == "4"
         assert generator["source_tree_clean"] is True
         commit = generator["source_commit"]
         assert len(commit) == 40
@@ -1552,26 +1555,44 @@ class TestEvaluationSemantics:
             if comparison["comparison_kind"] == "atmosphere_statistics":
                 comparison["statistical_definition"] = {
                     **comparison["statistical_definition"],
-                    "sample_count": 2,
-                    "bins_or_lags": {
-                        "kind": "structure_function_lags_px",
-                        "values": [8, 2],
-                    },
+                    "estimator": "a different estimator entirely",
                 }
         failures = evaluate_report_against_baseline(report, packaged_baseline)
         # Reported element by element, so the message names which part of the
         # estimator moved rather than printing two records and leaving the
         # reader to diff them.
         assert any(
-            "statistical_definition['sample_count'] mismatch" in failure
-            and "observed=2" in failure
-            and "expected=4" in failure
+            "statistical_definition['estimator'] mismatch" in failure
+            and "a different estimator entirely" in failure
             for failure in failures
         )
-        assert any(
-            "statistical_definition['bins_or_lags'] mismatch" in failure
-            for failure in failures
-        )
+
+        # The two elements the configuration determines cannot drift this far:
+        # they are bound to comparison_config, so a document that restates them
+        # is refused outright rather than compared. Editing both documents the
+        # same way — which used to evaluate clean, because nothing related the
+        # estimator to the run it described — is refused for the same reason.
+        for edited in ("report only", "both documents"):
+            drifted = _report_copy(packaged_baseline)
+            targets = [drifted]
+            if edited == "both documents":
+                targets.append(_report_copy(packaged_baseline))
+            for document in targets:
+                for comparison in document["comparisons"]:
+                    if comparison["comparison_kind"] != "atmosphere_statistics":
+                        continue
+                    comparison["statistical_definition"] = {
+                        **comparison["statistical_definition"],
+                        "sample_count": 999,
+                        "bins_or_lags": {
+                            "kind": "invented_lags",
+                            "values": [11, 5],
+                        },
+                    }
+            with pytest.raises(
+                BaselineContractError, match="the configuration it was produced under"
+            ):
+                evaluate_report_against_baseline(drifted, targets[-1])
 
         # Dropping it entirely never becomes a silent pass either: the report is
         # then structurally invalid, which evaluation refuses outright.

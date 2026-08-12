@@ -36,7 +36,7 @@ GENERATOR_NAME = "scripts/generate_cross_backend_candidate.py"
 # without looking for concealed index entries, that its commit and patch hash
 # were sampled non-atomically, or that only the top-level package was checked
 # against this checkout.  Version 3 is the first that closes all three.
-GENERATOR_VERSION = "3"
+GENERATOR_VERSION = "4"
 CANDIDATE_FILE = "cross_backend_candidate.json"
 DIFF_JSON = "cross_backend_diff.json"
 DIFF_MARKDOWN = "cross_backend_diff.md"
@@ -89,6 +89,13 @@ def main() -> None:
 
     candidate_dir = args.candidate_dir.expanduser().resolve()
     _reject_packaged_destination(candidate_dir, parser)
+
+    # Both operations execute repository code and write provenance about it, so
+    # both run in an interpreter whose bytecode cache and import state this
+    # script controls.  Placed after argument validation so a mistyped command
+    # is still answered immediately, by the process the maintainer started.
+    if not os.environ.get(_CONTROLLED_INTERPRETER):
+        _reexec_in_a_controlled_interpreter()
     if args.generate_candidate:
         if args.reason is not None or args.review_reference is not None:
             parser.error("Acceptance metadata is not valid during candidate generation.")
@@ -112,7 +119,69 @@ def main() -> None:
     )
 
 
+_CONTROLLED_INTERPRETER = "SHWFS_AO_CROSS_BACKEND_CONTROLLED_INTERPRETER"
+
+
+def _reexec_in_a_controlled_interpreter() -> None:
+    """Re-run this generation in a fresh interpreter, and exit with its status.
+
+    Two properties a baseline's provenance depends on cannot be established from
+    inside a process that is already running, because both are decided before
+    the first line of it executes.
+
+    The first is which bytes actually execute.  ``source_commit`` and
+    ``source_patch_sha256`` describe tracked ``.py`` files, but CPython runs
+    whatever it finds in ``__pycache__``, and ``__pycache__`` is ignored by git —
+    so it contributes nothing to the patch hash and leaves the tree looking
+    clean.  A ``.pyc`` whose recorded size and mtime match its source is used
+    without recompiling, which makes a poisoned cache a way to run uncommitted
+    code under a tracked path with clean provenance.  Pointing
+    ``PYTHONPYCACHEPREFIX`` at an empty directory moves the whole cache lookup
+    out of the checkout: nothing is found there, every module is compiled from
+    the ``.py`` the hash covers, and the poisoned entries are simply never
+    consulted.  It has to be an environment variable on a new interpreter
+    because the cache location is read at startup.
+
+    The second is that provenance is sampled before any repository code loads.
+    In a process that has already imported part of ``shwfs_ao``, the earliest
+    possible sample still comes after those imports, so a checkout that moved
+    in between is invisible: the sample and the post-run re-read agree with each
+    other and with the tree, while the loaded modules came from a commit neither
+    of them names.  A fresh interpreter has imported nothing yet, so the sample
+    can precede every import and the re-read can close the bracket.
+
+    The child is invoked with this process's own argv, so it takes exactly the
+    same arguments through exactly the same parser.
+    """
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix="shwfs-ao-pycache-") as cache_dir:
+        environment = dict(os.environ)
+        environment[_CONTROLLED_INTERPRETER] = "1"
+        environment["PYTHONPYCACHEPREFIX"] = cache_dir
+        # Belt and braces: -B stops the child writing bytecode anywhere, so the
+        # fresh cache stays empty and a second run cannot inherit the first's.
+        completed = subprocess.run(
+            [sys.executable, "-B", *sys.argv],
+            env=environment,
+        )
+    raise SystemExit(completed.returncode)
+
+
 def _generate_candidate(candidate_dir: Path) -> None:
+    # The recorded commit describes this repository, so the code that runs must
+    # be this repository's — otherwise the baseline is credited to a checkout
+    # Read before shwfs_ao is imported at all — including by the package-origin
+    # check below, whose own `import shwfs_ao` executes repository code.  A
+    # checkout that moves between the import and the sample lets the suite run
+    # one commit's code while the candidate records another, and both halves
+    # look clean because they are: the recorded commit exists, the tree matches
+    # it, and only the already-loaded modules disagree.  Sampling first makes
+    # the post-run re-read (below) able to catch exactly that, because the two
+    # reads then bracket every import instead of sitting on one side of them.
+    source_commit, source_patch = _sample_source_identity()
+
     # The recorded commit describes this repository, so the code that runs must
     # be this repository's — otherwise the baseline is credited to a checkout
     # that never produced it.  Checked before anything is created on disk.
@@ -138,12 +207,6 @@ def _generate_candidate(candidate_dir: Path) -> None:
     _require_executed_package_is_this_checkout()
 
     constraint_file, constraint_sha256 = _verified_constraint_identity()
-    # Establish provenance before the suite, not after.  Both halves can refuse,
-    # and the suite takes minutes: a maintainer should learn that the tree
-    # cannot be recorded before paying for a run that will be discarded.  The
-    # commit and the patch hash are read together so the pair describes one
-    # state of the checkout rather than two.
-    source_commit, source_patch = _sample_source_identity()
 
     report = run_cross_backend_report(
         dependency_constraint_file=constraint_file,
@@ -299,20 +362,42 @@ def _sample_source_identity() -> tuple[str, str | None]:
     than described by whichever sample happened to be last.
     """
 
-    previous = (_source_commit(), _source_patch_sha256())
+    def bracketed() -> tuple[str, str | None] | None:
+        """One sample whose own two git calls describe a single state, or None.
+
+        Re-reading until two *samples* agree is not enough on its own, because a
+        sample is itself two git invocations: HEAD can move between them, and
+        the resulting pair — a commit from before the move, a patch hash from
+        after — never described the checkout at any instant.  Two such pairs can
+        even agree with each other.  Reading the commit again on the far side
+        closes that window: a commit that is the same before and after the patch
+        was hashed is a commit the patch was hashed under.
+        """
+
+        opening = _source_commit()
+        patch = _source_patch_sha256()
+        if _source_commit() != opening:
+            return None
+        return (opening, patch)
+
+    previous = bracketed()
     for _ in range(_SOURCE_IDENTITY_ATTEMPTS - 1):
-        current = (_source_commit(), _source_patch_sha256())
-        if current == previous:
+        current = bracketed()
+        if current is not None and current == previous:
             return current
         previous = current
+    last_seen = (
+        "no sample completed with HEAD stationary across it"
+        if previous is None
+        else f"last seen commit {previous[0]} with patch {previous[1]!r}"
+    )
     raise SystemExit(
         "The source identity did not settle: the commit or the working tree "
-        f"changed on every one of {_SOURCE_IDENTITY_ATTEMPTS} consecutive "
-        f"reads (last seen commit {previous[0]} with patch {previous[1]!r}). A "
-        "baseline names one commit and one patch hash as the origin of its "
-        "numbers, so it cannot be generated from a checkout that is being "
-        "written to. Stop whatever is moving HEAD or the working tree and "
-        "re-run."
+        f"changed during or between every one of {_SOURCE_IDENTITY_ATTEMPTS} "
+        f"consecutive reads ({last_seen}). A baseline names one commit and one "
+        "patch hash as the origin of its numbers, so it cannot be generated "
+        "from a checkout that is being written to. Stop whatever is moving HEAD "
+        "or the working tree and re-run."
     )
 
 
@@ -512,6 +597,26 @@ def _verify_candidate_provenance(generator: dict[str, Any]) -> None:
             "Candidate generator records source_tree_clean=true together with "
             f"source_patch_sha256={generator['source_patch_sha256']!r}. A clean "
             "tree has no divergence to hash; regenerate the candidate."
+        )
+    # A dirty candidate may be generated and read — that is how a maintainer
+    # inspects work in progress — but it may never become the packaged
+    # baseline.  The patch hash is a digest of a divergence that is recorded
+    # nowhere: acceptance can confirm it is well formed and that it matches the
+    # tree at this instant, and nothing more.  The moment the working tree moves
+    # on, the bytes it summarised are gone, so the baseline names a state no
+    # checkout can be returned to.  AO-REF-018 asks for provenance that is
+    # reproducible rather than merely labelled dirty, and a hash of vanished
+    # bytes is the second of those, so this refuses instead of pretending.
+    if generator.get("source_tree_clean") is not True:
+        raise SystemExit(
+            "Candidate generator records source_tree_clean="
+            f"{generator.get('source_tree_clean')!r} with source_patch_sha256="
+            f"{generator.get('source_patch_sha256')!r}. A baseline must be "
+            "reproducible from the commit it names, and a patch hash summarises "
+            "a divergence this repository does not store: whoever checks out "
+            "that commit cannot reconstruct the tree these numbers came from. "
+            "Commit or stash the divergence and regenerate the candidate from a "
+            "clean checkout."
         )
 
 

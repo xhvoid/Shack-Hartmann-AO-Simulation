@@ -78,10 +78,32 @@ DEFAULT_NETWORK_ISOLATION = "required"
 # shell — a notebook path may contain any character a path can contain.
 _NAMESPACE_SHELL = 'ip link set lo up && exec "$0" "$@"'
 
+# Run inside a candidate namespace to decide whether it may be used.  Bringing
+# loopback up is what the kernel needs; everything after it is evidence.  ``$1``
+# is the *outer* network namespace — the one the notebook must not be able to
+# return to — so nsenter's refusal to enter it is the observation that a network
+# namespace alone would not have produced, and that a bare `unshare --net`
+# would have failed.  Printed as a word rather than signalled by exit status,
+# because the interface listing has to come back from the same run.
+_NAMESPACE_PROBE = (
+    'ip link set lo up && ip -o link show && '
+    'if nsenter --net="$1" true 2>/dev/null; '
+    "then echo ESCAPE_SUCCEEDED; else echo ESCAPE_REFUSED; fi"
+)
+
 # Run by _kill_process_group when the group it must end is owned by root.  The
 # process group id arrives as an argument rather than being interpolated, so
 # nothing is re-parsed and the call is the same killpg the parent just tried.
-_REISSUE_KILLPG = "import os, signal, sys; os.killpg(int(sys.argv[1]), signal.SIGKILL)"
+_REISSUE_KILLPG = (
+    "import os, signal, sys\n"
+    "try:\n"
+    "    os.killpg(int(sys.argv[1]), signal.SIGKILL)\n"
+    "except ProcessLookupError:\n"
+    # Expected, not exceptional: this pass runs whenever the group was started
+    # privileged, so an unprivileged kill that already reaped every member
+    # leaves nothing here to signal.
+    "    pass\n"
+)
 
 # Injected as the first executed cell so it is active for every real cell.
 # The namespace around the process is what actually denies the network; this
@@ -336,28 +358,32 @@ def _execute_in_process(
 
 
 def _namespace_prefix_candidates() -> Iterator[list[str]]:
-    """The prefixes worth probing here, cheapest and least privileged first.
+    """The prefixes worth probing here, least privileged first.
 
-    Which form works is an environment question, not a platform one, so all
-    three are offered and the caller decides by trying them:
+    Every form creates a child *user* namespace as well as a network one, and
+    that is a correctness requirement rather than a preference.  A network
+    namespace on its own does not confine a process that holds CAP_SYS_ADMIN in
+    the namespace's owning user namespace: setns(2) grants entry to any network
+    namespace the caller has that capability over, so notebook code under a bare
+    ``unshare --net`` — and equally under ``sudo unshare --net``, which is more
+    privileged, not less — can reopen ``/proc/<pid>/ns/net`` and step straight
+    back onto the host network.  Reading the interface list proves only where
+    the process started, not where it is able to go.  Entering a child user
+    namespace is what drops that capability with respect to the parent, so the
+    two forms that survive are:
 
-    1. ``unshare --net`` alone, for a process that already holds CAP_SYS_ADMIN —
-       a root shell, most CI containers.  It costs one syscall and leaves the
-       kernel running as the invoking user.
-    2. ``unshare --user --map-root-user --net``, which asks for a user namespace
-       first.  This is the ordinary unprivileged path.
-    3. the same thing behind passwordless ``sudo``.
+    1. ``unshare --user --map-root-user --net``, the ordinary unprivileged path;
+    2. the same thing behind passwordless ``sudo``.
 
-    The order matters in both directions.  Escalating when a cheaper form would
-    have worked runs the notebook kernel as root for nothing, so sudo comes
-    last; but leaving it out entirely is what made this function unable to serve
-    its own contract on the configured hosted runner.  ``ubuntu-latest`` is
-    Ubuntu 24.04, which ships ``kernel.apparmor_restrict_unprivileged_userns=1``:
-    AppArmor denies the capabilities form 2 needs, form 1 wants a CAP_SYS_ADMIN
-    the runner user does not have, and with only those two probed the required
-    notebook lanes had no namespace at all and aborted.  GitHub-hosted runners
-    do provide passwordless sudo, so form 3 is what keeps ``required`` a
-    contract the lane can actually meet rather than one it dies on.
+    Sudo comes last because escalating when the cheaper form would have worked
+    runs the notebook kernel as root for nothing.  It is offered at all because
+    ``ubuntu-latest`` is Ubuntu 24.04, which ships
+    ``kernel.apparmor_restrict_unprivileged_userns=1``: AppArmor denies the
+    capabilities form 1 needs, and without form 2 the required notebook lanes
+    had no namespace and aborted.  The restriction is on *unprivileged* user
+    namespaces, so the same unshare succeeds once sudo has made it privileged —
+    and because that form still enters a child user namespace, it confines the
+    kernel rather than merely relocating it.
 
     Generating the list lazily is deliberate: the sudo probe below runs a real
     command, and a process that already satisfies form 1 must not pay for — or
@@ -365,9 +391,14 @@ def _namespace_prefix_candidates() -> Iterator[list[str]]:
     """
 
     unshare = shutil.which("unshare")
-    if unshare is None or shutil.which("ip") is None:
+    # nsenter is required, not optional: it is how the probe below observes that
+    # the namespace it just made cannot be left again.  Without it the only
+    # thing standing behind the offline contract would be the argument that
+    # these forms confine, and this module's whole discipline is that an
+    # argument is not evidence.  util-linux ships unshare and nsenter together,
+    # so demanding both costs nothing an environment that has one would notice.
+    if unshare is None or shutil.which("ip") is None or shutil.which("nsenter") is None:
         return
-    yield [unshare, "--net", "--"]
     yield [unshare, "--user", "--map-root-user", "--net", "--"]
     sudo = shutil.which("sudo")
     if sudo is None:
@@ -386,7 +417,7 @@ def _namespace_prefix_candidates() -> Iterator[list[str]]:
         return
     if elevation.returncode != 0:
         return
-    yield [sudo, "-n", unshare, "--net", "--"]
+    yield [sudo, "-n", unshare, "--user", "--map-root-user", "--net", "--"]
 
 
 def _sudo_escalation(isolation_prefix: list[str]) -> list[str]:
@@ -424,10 +455,11 @@ def _network_namespace_prefix() -> list[str] | None:
 
     if sys.platform != "linux":
         return None
+    outer_net_namespace = f"/proc/{os.getpid()}/ns/net"
     for prefix in _namespace_prefix_candidates():
         try:
             probe = subprocess.run(
-                [*prefix, "sh", "-c", "ip link set lo up && ip -o link show"],
+                [*prefix, "sh", "-c", _NAMESPACE_PROBE, "sh", outer_net_namespace],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -441,8 +473,16 @@ def _network_namespace_prefix() -> list[str] | None:
             for line in probe.stdout.splitlines()
             if line.count(":") >= 2
         }
-        if interfaces == {"lo"}:
-            return prefix
+        # Both questions must be answered, and answered affirmatively. Where the
+        # process starts is the interface list; whether it can leave is the
+        # escape attempt. A prefix that passes the first and fails the second is
+        # precisely the privileged form this function used to return: loopback
+        # only, and one setns away from the host network.
+        if interfaces != {"lo"}:
+            continue
+        if "ESCAPE_REFUSED" not in probe.stdout:
+            continue
+        return prefix
     return None
 
 
@@ -541,8 +581,21 @@ def _kill_process_group(process: subprocess.Popen, escalation: list[str]) -> Non
         except ProcessLookupError:
             pass
         except PermissionError:
+            # Nothing to escalate through means the budget could not be
+            # enforced, and a budget that silently failed to kill was never a
+            # budget. Surface it rather than returning as though it worked.
             if not escalation:
                 raise
+        if escalation:
+            # Unconditional, not a fallback for EPERM. kill(2) reports success
+            # when the signal reached *at least one* member of the group, and
+            # under sudo the group holds both the signalable sudo process and
+            # the root descendants it started. Killing sudo alone therefore
+            # returns success while the kernel — the thing the budget exists to
+            # stop — keeps running with the notebook still executing in it. The
+            # privileged pass is the only one that can reach those descendants,
+            # so it runs whenever the group was started privileged, whatever the
+            # unprivileged attempt reported.
             subprocess.run(
                 [*escalation, sys.executable, "-c", _REISSUE_KILLPG, str(process.pid)],
                 check=False,
