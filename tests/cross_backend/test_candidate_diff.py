@@ -221,10 +221,20 @@ class TestDiffContentCompleteness:
         self,
         packaged_tree,
     ):
-        # Regenerating at the commit the packaged baseline was accepted at
-        # produces a candidate that differs from it in nothing at all, so the
-        # diff must be empty rather than reporting a change it cannot name.
+        # Both halves are stated against the baseline's own recorded commit
+        # rather than against HEAD.  Whether HEAD happens to equal the commit
+        # the packaged baseline was accepted at is a property of when this test
+        # runs, not of the diff, and pinning it to HEAD made the test pass
+        # immediately after a regeneration and fail on the next commit.
+        baseline_commit = dict(load_cross_backend_baseline())["generator"][
+            "source_commit"
+        ]
+
+        # Regenerated at that commit, the candidate differs from the packaged
+        # baseline in nothing at all, so the diff must be empty rather than
+        # reporting a change it cannot name.
         document = _candidate_document()
+        document["generator"]["source_commit"] = baseline_commit
         unchanged = script._build_diff(
             document, script._canonical_bytes(document)
         )
@@ -234,13 +244,17 @@ class TestDiffContentCompleteness:
         # complete structural diff must contain exactly that one path:
         # everything else is covered and genuinely unchanged.  A real commit,
         # because acceptance verifies the object exists.
-        document["generator"]["source_commit"] = subprocess.run(
-            ["git", "rev-parse", "HEAD~1"],
+        history = subprocess.run(
+            ["git", "rev-list", "-n", "10", "HEAD"],
             cwd=ROOT,
             capture_output=True,
             text=True,
             check=True,
-        ).stdout.strip()
+        ).stdout.split()
+        other_commit = next(
+            commit for commit in history if commit != baseline_commit
+        )
+        document["generator"]["source_commit"] = other_commit
         diff = script._build_diff(document, script._canonical_bytes(document))
         assert [entry["path"] for entry in diff["changes"]] == [
             "generator.source_commit"

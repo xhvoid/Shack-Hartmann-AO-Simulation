@@ -2625,8 +2625,10 @@
   },
   "$defs": {
     "nonempty_string": {
+      "description": "A string carrying at least one non-whitespace character. minLength alone admits \"   \", which the application validators reject with str.strip(): a schema that accepted it would be the weaker of the two gates while claiming to mirror them, and an all-whitespace estimator, rationale or acceptance reason documents nothing.",
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "pattern": "\\S"
     },
     "root_seed": {
       "description": "A seed is a non-negative integer. JSON booleans are not integers here, so a document seeded with true is rejected rather than read as seed 1.",
