@@ -1114,8 +1114,11 @@ class TestPackagedBaseline:
         # submodule's origin and to refuse assume-unchanged/skip-worktree trees;
         # version 4 is the first to run from a controlled bytecode cache, to
         # sample provenance ahead of every repository import, and to bracket
-        # each sample so its two git reads describe one state.
-        assert generator["generator_version"] == "4"
+        # each sample so its two git reads describe one state; version 5 is the
+        # first to establish those interpreter conditions by checking them
+        # rather than by trusting the marker that claims them, which a v4
+        # candidate could have been produced without.
+        assert generator["generator_version"] == "5"
         assert generator["source_tree_clean"] is True
         commit = generator["source_commit"]
         assert len(commit) == 40
