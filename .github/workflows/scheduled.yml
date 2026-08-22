@@ -61,9 +61,9 @@ jobs:
         run: python scripts/verify_environment_lock.py --constraints constraints/py314.txt
 
       - name: Run slow-marked native tests when any exist
-        # The slow marker is registered but currently carried only by the
-        # study notebooks below; this step activates automatically once a
-        # slow-marked test lands, instead of tripping a zero-collection guard.
+        # The physical-atmosphere and accepted-baseline reruns live here.  Keep
+        # the collection guard so a future refactor cannot silently turn the
+        # scheduled test selection into an empty success.
         run: |
           count="$(python -m pytest -q --collect-only -m "slow and not hcipy" | grep -c '::' || true)"
           if [ "$count" -gt 0 ]; then

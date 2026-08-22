@@ -139,6 +139,12 @@ EXPECTED_CONFIG_SIGNATURES = {
         "ncpa_seed",
         "source_class",
         "source_note",
+        # Appended after source_note when the physical disturbance source
+        # landed, so positional construction of the older fields is unchanged.
+        "phase_source",
+        "r0_m",
+        "outer_scale_m",
+        "r0_reference_wavelength_m",
     ),
 }
 

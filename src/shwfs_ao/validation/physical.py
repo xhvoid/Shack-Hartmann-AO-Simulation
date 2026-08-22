@@ -91,6 +91,16 @@ def mean_square_column_difference(values: np.ndarray, lag_px: int) -> float:
         raise PhysicalEstimatorError(
             "lag_px must be an integer in [1, columns)."
         )
+    # NaN marks "outside the pupil" here and is legitimately skipped, but an
+    # infinity is a numerical failure.  ``isfinite`` rejects both alike, so an
+    # inf would be dropped as quietly as a masked pixel and the estimator would
+    # report a clean number for a broken array.  Check before subtracting so
+    # ``inf - inf`` cannot emit a misleading runtime warning first.
+    if np.isinf(array).any():
+        raise PhysicalEstimatorError(
+            "values contain infinite samples; only NaN is accepted as an "
+            "outside-pupil marker."
+        )
     lag = int(lag_px)
     differences = array[:, lag:] - array[:, :-lag]
     finite = np.isfinite(differences)

@@ -81,6 +81,58 @@ experiment is being evaluated. Schema-v2 remains readable; schema 3 adds
 structured provenance/reproducibility and authority. See
 [Artifact schemas](artifact_schemas.md).
 
+## Two disturbance sources, two baseline sets
+
+The seeded fast baseline above records the **control-space proxy**: a
+disturbance synthesized by driving the deformable mirror and reading back its
+own surface. It lies entirely inside the mirror's controllable span, so a
+budget built on it contains *no fitting error at all* — the DM reproduces the
+input to machine precision (measured residual ~1e-13 nm). There is no `r0` and
+no outer scale on that path; the amplitude is the free parameter
+`phase_amplitude_nm`.
+
+That makes it a legitimate instrument for isolating temporal, noise, stroke,
+misregistration, and NCPA terms *from* fitting error. It does not make it an
+atmosphere, and a Strehl read off it is not an AO performance prediction.
+
+The **physical workflow** (`shwfs_ao.experiments.physical_integration`) runs
+the same instrument, the same validation row set, and the same artifact
+contract against a calibrated von Kármán screen with a two-frame command
+latency. Its disturbance amplitude follows `r0` and the outer scale, and it
+carries real fitting error, real servo lag, and real aliasing.
+
+| | proxy (`fast_*`) | physical (`physical_*`) |
+| --- | --- | --- |
+| disturbance | DM surface | von Kármán screen, `subharmonic_von_karman_v2` |
+| amplitude set by | `phase_amplitude_nm` | `r0_m`, `outer_scale_m` |
+| fitting error | none, by construction | present (~43 % of the screen at 5×5 actuators) |
+| latency | 0 frames | 2 frames |
+| `workflow` label | `fast_integration` | `physical_integration` |
+
+Both baseline sets are packaged and governed the same way, by separate tools
+so that neither can move the other:
+
+```
+scripts/update_fast_regression_baselines.py       # fast_*      (frozen engine)
+scripts/update_physical_regression_baselines.py   # physical_*  (atmosphere)
+```
+
+Each tool separates candidate generation from acceptance, refuses to write
+into the packaged resource directory during generation, refuses to accept
+while pytest is running, requires a written reason and a review reference, and
+records the accepted file hashes. The physical tool additionally refuses any
+candidate whose `workflow` label is not `physical_integration`, so a proxy
+artifact can never be accepted as a physical baseline.
+
+The physical regression tests that rerun the experiment carry the `slow`
+marker and run in the scheduled lane. The reason is cost and it is not the
+atmosphere's: `summarize_scenario` evaluates PSF metrics once per frame, per
+band, per wavelength sample — 5784 evaluations and 23136 array sorts per
+scenario at the packaged 24-frame length — so a scenario costs about 75 s
+whichever disturbance drives it (measured: 74.8 s physical, 72.0 s proxy).
+Generating the phase screen itself costs 0.1 s. Tests that only read the
+packaged artifacts stay in the fast lane.
+
 ## Native-versus-HCIPy suite
 
 `shwfs_ao.validation.cross_backend.run_cross_backend_report()` and the accepted

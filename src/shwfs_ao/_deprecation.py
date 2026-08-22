@@ -18,10 +18,12 @@ or any physics module.
 
 from __future__ import annotations
 
+from collections.abc import Mapping as _Mapping
 import datetime as _datetime
 from functools import lru_cache as _lru_cache
 from importlib import resources as _resources
 import json as _json
+from types import MappingProxyType as _MappingProxyType
 from typing import Any as _Any
 
 _RESOURCE_PACKAGE = "shwfs_ao.resources"
@@ -55,8 +57,31 @@ def _load_json_resource(name: str) -> dict[str, _Any]:
     return data
 
 
+def _deep_freeze_json_object(value: dict[str, _Any]) -> _Mapping[str, _Any]:
+    """Return an immutable recursive view of one JSON object.
+
+    Both public metadata loaders cache their result.  Freezing only the outer
+    dictionary would still expose the nested dictionaries and lists from that
+    cached object, allowing one caller to corrupt every later read in the
+    process.  JSON arrays become tuples and every nested JSON object gets its
+    own read-only mapping proxy.
+    """
+
+    return _MappingProxyType(
+        {key: _deep_freeze_json_value(item) for key, item in value.items()}
+    )
+
+
+def _deep_freeze_json_value(value: _Any) -> _Any:
+    if isinstance(value, dict):
+        return _deep_freeze_json_object(value)
+    if isinstance(value, list):
+        return tuple(_deep_freeze_json_value(item) for item in value)
+    return value
+
+
 @_lru_cache(maxsize=1)
-def deprecation_clock() -> dict[str, _Any]:
+def deprecation_clock() -> _Mapping[str, _Any]:
     """Return the validated machine-readable deprecation clock."""
 
     clock = _load_json_resource(CLOCK_RESOURCE_NAME)
@@ -85,7 +110,7 @@ def deprecation_clock() -> dict[str, _Any]:
         (
             "subsequent_minor_release.publication_status",
             clock["subsequent_minor_release"].get("publication_status")
-            if isinstance(clock["subsequent_minor_release"], dict)
+            if isinstance(clock["subsequent_minor_release"], _Mapping)
             else None,
         ),
     ):
@@ -102,11 +127,11 @@ def deprecation_clock() -> dict[str, _Any]:
             f"{recorded.isoformat()} does not match the recomputed boundary "
             f"{recomputed.isoformat()}."
         )
-    return clock
+    return _deep_freeze_json_object(clock)
 
 
 @_lru_cache(maxsize=1)
-def deprecation_inventory() -> dict[str, _Any]:
+def deprecation_inventory() -> _Mapping[str, _Any]:
     """Return the machine-readable Phase A deprecation inventory."""
 
     inventory = _load_json_resource(INVENTORY_RESOURCE_NAME)
@@ -114,7 +139,7 @@ def deprecation_inventory() -> dict[str, _Any]:
         raise DeprecationMetadataError(
             "Deprecation inventory schema_name must be 'shwfs_ao.deprecation_inventory'."
         )
-    return inventory
+    return _deep_freeze_json_object(inventory)
 
 
 def parse_utc_date(value: object) -> _datetime.date:
@@ -128,7 +153,7 @@ def parse_utc_date(value: object) -> _datetime.date:
         raise DeprecationMetadataError(f"Invalid UTC date {value!r}: {exc}.") from exc
 
 
-def earliest_removal_utc_date(clock: dict[str, _Any]) -> _datetime.date:
+def earliest_removal_utc_date(clock: _Mapping[str, _Any]) -> _datetime.date:
     """Compute the earliest legal Phase B removal date from clock fields.
 
     The boundary is the later of the publication date plus
@@ -146,7 +171,7 @@ def earliest_removal_utc_date(clock: dict[str, _Any]) -> _datetime.date:
         )
     boundary = publication + _datetime.timedelta(days=window_days)
     subsequent = clock["subsequent_minor_release"]
-    if not isinstance(subsequent, dict):
+    if not isinstance(subsequent, _Mapping):
         raise DeprecationMetadataError("subsequent_minor_release must be an object.")
     published_date = subsequent.get("publication_utc_date")
     if published_date is not None:
@@ -155,7 +180,7 @@ def earliest_removal_utc_date(clock: dict[str, _Any]) -> _datetime.date:
 
 
 def removal_boundaries_satisfied(
-    clock: dict[str, _Any],
+    clock: _Mapping[str, _Any],
     on_utc_date: _datetime.date,
 ) -> bool:
     """Return whether both Phase B boundaries have elapsed on ``on_utc_date``.
@@ -169,6 +194,8 @@ def removal_boundaries_satisfied(
     if clock["publication_status"] != "published":
         return False
     subsequent = clock["subsequent_minor_release"]
+    if not isinstance(subsequent, _Mapping):
+        raise DeprecationMetadataError("subsequent_minor_release must be an object.")
     if subsequent.get("publication_status") != "published":
         return False
     if subsequent.get("publication_utc_date") is None:

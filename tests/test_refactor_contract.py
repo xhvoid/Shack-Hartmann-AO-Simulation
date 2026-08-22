@@ -260,6 +260,28 @@ def test_all_legacy_import_names_are_exact_deprecated_shims_over_relocated_imple
                         "per_frame_legacy"
                     )
                     assert actual_signature.parameters["bad_pixel_fraction"].default == 0.0
+                elif (
+                    record["name"] == "ao_error_budget"
+                    and symbol["name"] == "ScenarioConfig"
+                ):
+                    # The physical disturbance source preserves every historical
+                    # field in its original position and adds only trailing
+                    # atmosphere selectors, defaulted so that a scenario written
+                    # before they existed still selects the control-space proxy.
+                    assert list(actual_signature.parameters)[-4:] == [
+                        "phase_source",
+                        "r0_m",
+                        "outer_scale_m",
+                        "r0_reference_wavelength_m",
+                    ]
+                    assert str(actual_signature).startswith(
+                        expected_signature[: expected_signature.rindex(")")]
+                    )
+                    assert (
+                        actual_signature.parameters["phase_source"].default
+                        == "control_space_proxy"
+                    )
+                    assert actual_signature.parameters["r0_m"].default is None
                 else:
                     assert str(actual_signature) == expected_signature
         for class_record in record["public_classes"]:
@@ -278,6 +300,10 @@ def test_all_legacy_import_names_are_exact_deprecated_shims_over_relocated_imple
                     record["name"] == "synthetic_instrument_data"
                     and class_record["name"] == "DetectorConfig"
                 )
+                scenario_extension = (
+                    record["name"] == "ao_error_budget"
+                    and class_record["name"] == "ScenarioConfig"
+                )
                 if provenance_extension:
                     assert actual_names == [*expected_names, "references"]
                     assert actual_fields[-1].default == ()
@@ -291,6 +317,18 @@ def test_all_legacy_import_names_are_exact_deprecated_shims_over_relocated_imple
                     assert actual_fields[-2].default == "per_frame_legacy"
                     assert repr(actual_fields[-1].type) == "'float'"
                     assert actual_fields[-1].default == 0.0
+                elif scenario_extension:
+                    # Trailing atmosphere selectors only; every historical field
+                    # keeps its position and default.
+                    assert actual_names == [
+                        *expected_names,
+                        "phase_source",
+                        "r0_m",
+                        "outer_scale_m",
+                        "r0_reference_wavelength_m",
+                    ]
+                    assert actual_fields[-4].default == "control_space_proxy"
+                    assert actual_fields[-3].default is None
                 else:
                     assert actual_names == expected_names
                 for actual_field, expected_field in zip(actual_fields, expected_fields):

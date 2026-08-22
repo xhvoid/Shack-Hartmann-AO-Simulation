@@ -388,8 +388,11 @@ def test_v2_reader_uses_packaged_compatibility_name() -> None:
 
 
 def test_packaged_schemas_enforce_authority_branches_and_source_evidence(tmp_path) -> None:
-    jsonschema = pytest.importorskip("jsonschema")
-    referencing = pytest.importorskip("referencing")
+    # These are part of the declared ``test`` extra.  A direct import makes a
+    # broken test environment fail instead of silently skipping schema
+    # validation and advertising coverage that never ran.
+    import jsonschema
+    import referencing
     from shwfs_ao.io.resources import read_text_resource
 
     schema_names = (
@@ -485,7 +488,8 @@ def test_packaged_cross_backend_baseline_validates_against_its_schema() -> None:
     # accepted baseline must satisfy both, and the schema must reject the
     # governance-relevant mutations (dropped acceptance evidence, missing or
     # reordered comparison kinds, degenerate tolerances, foreign fields).
-    jsonschema = pytest.importorskip("jsonschema")
+    # jsonschema is a required member of the project's ``test`` extra.
+    import jsonschema
     from shwfs_ao.io.resources import read_text_resource
     from shwfs_ao.validation.regression import (
         CROSS_BACKEND_BASELINE_RESOURCE,

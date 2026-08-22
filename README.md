@@ -224,6 +224,7 @@ canonical notebook is recorded in `notebooks/notebook_manifest.json`.
 | SVO 2MASS J/H/Ks curves | direct public data | weights scalar wavelength diagnostics |
 | Pan-STARRS/2MASS rows | direct public data | photometric anchors for an engineering photon estimate |
 | atmosphere screens | synthetic or literature-inspired | generated wavefronts, even when public seeing conditions their amplitude |
+| error-budget disturbance | **two sources, and they differ fundamentally** | see the note below — the packaged `fast` budget is not driven by an atmosphere |
 | detector and WFS thresholds | synthetic/internal | not measured camera calibration |
 | DM influences and interaction matrix | synthetic calibration | not a hardware poke matrix |
 | controller/latency | compact simulation policy | not an operational RTC model |
@@ -232,6 +233,49 @@ canonical notebook is recorded in `notebooks/notebook_manifest.json`.
 See [docs/provenance.md](docs/provenance.md) and [DATA_LICENSES.md](DATA_LICENSES.md)
 for the five source classes, structured fields, cache terms, and
 redistribution caveats.
+
+### The error-budget disturbance: read this before quoting a Strehl
+
+The packaged `fast` error budget, its reference metrics, and the figure below
+are built on `PHASE_SOURCE_CONTROL_SPACE` — a disturbance synthesized by
+driving the deformable mirror and reading back its own surface. It therefore
+lies entirely inside the mirror's controllable span, and the budget built on it
+**contains no fitting error at all**: the DM reproduces the input to machine
+precision. There is no `r0` and no outer scale on that path; the amplitude is a
+free parameter.
+
+`PHASE_SOURCE_ATMOSPHERIC_SCREEN` is the physical alternative: a calibrated von
+Kármán screen in frozen flow whose amplitude follows `r0` and the outer scale,
+with a two-frame command latency. Fitting error, temporal error, and aliasing
+all appear on their own. On this 2 m / 5×5-actuator scale the two disagree by
+far more than a refinement:
+
+Both are packaged, accepted baselines, so these are the repository's own
+recorded numbers rather than an illustration:
+
+| `all_effects` row | open-loop | closed-loop | ratio | Strehl J / H / K |
+| --- | --- | --- | --- | --- |
+| control-space proxy (`fast_*`) | 77.2 nm | 59.4 nm | 0.77 | 0.915 / 0.950 / 0.971 |
+| von Kármán screen (`physical_*`) | 645.4 nm | 595.3 nm | 0.92 | 0.320 / 0.533 / 0.673 |
+
+The proxy row is the packaged `fast_*` baseline at its own 12-frame length; the
+physical row is the packaged `physical_*` baseline at 24 frames. They are read
+straight out of
+`src/shwfs_ao/resources/reference_metrics/*_error_budget_regression_baseline.csv`.
+
+A 5×5 actuator grid simply cannot correct a von Kármán screen across a 2 m
+pupil — fitting error alone leaves roughly 43 % of it uncorrected — and the
+proxy disturbance is constructed so that it can. The physical baseline lives in
+`src/shwfs_ao/resources/reference_metrics/physical_*`, is governed by
+`scripts/update_physical_regression_baselines.py`, and is enforced by
+`tests/experiments/test_physical_integration.py`. A side-by-side run of both
+tables is available from a source checkout with
+`scripts/compare_error_budget_disturbances.py`.
+
+The proxy is retained because every accepted baseline was generated with it,
+and because it remains a legitimate way to isolate temporal and noise terms
+*from* fitting error. It is not an atmosphere, and a Strehl quoted from it is
+not an AO performance prediction.
 
 ## Validation and reproducibility
 
@@ -288,6 +332,10 @@ performance claims.
 
 ![Fast detector-level error-budget scenarios](figures/detector_level_SCAO/fast_error_budget.png)
 
+This figure is the control-space-proxy budget, so its near-unity Strehl values
+reflect a disturbance the mirror can correct exactly. See
+[the error-budget disturbance note](#the-error-budget-disturbance-read-this-before-quoting-a-strehl).
+
 ![High-order SCAO J/H/K PSF diagnostic](figures/high_order_ao_jhk_psf.png)
 
 ![Noise, latency, and gain stability scan](figures/noise_latency_gain_stability.png)
@@ -300,6 +348,12 @@ The PWFS images are exploratory only:
 
 - Not an observatory digital twin.
 - Not calibrated to a specific ESO instrument.
+- The packaged `fast` error budget is driven by a control-space proxy, not an
+  atmosphere, so it carries no fitting error; use
+  `physical_error_budget_scenarios()` for an atmosphere-driven budget.
+- The historical `native_frozen_flow` screen is retained byte-identical for
+  baseline reproducibility despite a known low-frequency deficit; new work
+  should select `native_frozen_flow_v2`.
 - Synthetic DM influence functions and interaction calibration.
 - Synthetic/internal detector assumptions and centroid-validity thresholds.
 - Limited single-line-of-sight atmosphere; no complete scintillation or

@@ -47,19 +47,29 @@ _PROFILE_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
     ("fast_2m_detector", 1): "synthetic_presets/fast_2m_detector.v1.json",
     ("fast_2m_detector", 2): "synthetic_presets/fast_2m_detector.v2.json",
+    ("fast_2m_detector", 3): "synthetic_presets/fast_2m_detector.v3.json",
     ("portfolio_2m_detector", 1): "synthetic_presets/portfolio_2m_detector.v1.json",
     ("portfolio_2m_detector", 2): "synthetic_presets/portfolio_2m_detector.v2.json",
+    ("portfolio_2m_detector", 3): "synthetic_presets/portfolio_2m_detector.v3.json",
     ("research_2m_detector", 1): "synthetic_presets/research_2m_detector.v1.json",
     ("research_2m_detector", 2): "synthetic_presets/research_2m_detector.v2.json",
+    ("research_2m_detector", 3): "synthetic_presets/research_2m_detector.v3.json",
     ("high_order_10m_geometric", 1): "synthetic_presets/high_order_10m_geometric.v1.json",
     ("high_order_10m_geometric", 2): "synthetic_presets/high_order_10m_geometric.v2.json",
+    ("high_order_10m_geometric", 3): "synthetic_presets/high_order_10m_geometric.v3.json",
     ("high_order_10m_hcipy", 1): "synthetic_presets/high_order_10m_hcipy.v1.json",
     ("high_order_10m_hcipy", 2): "synthetic_presets/high_order_10m_hcipy.v2.json",
+    ("high_order_10m_hcipy", 3): "synthetic_presets/high_order_10m_hcipy.v3.json",
 }
 
 BackendName = Literal["native", "hcipy"]
 WfsModel = Literal["geometric", "detector_level"]
-AtmosphereModelName = Literal["static", "native_frozen_flow", "hcipy"]
+AtmosphereModelName = Literal[
+    "static",
+    "native_frozen_flow",
+    "native_frozen_flow_v2",
+    "hcipy",
+]
 
 
 class SystemConfigError(ValueError):
@@ -602,7 +612,12 @@ class SystemConfig:
             raise SystemConfigError("backend must be native or hcipy.")
         if self.wfs_model not in {"geometric", "detector_level"}:
             raise SystemConfigError("wfs_model must be geometric or detector_level.")
-        if self.atmosphere_model not in {"static", "native_frozen_flow", "hcipy"}:
+        if self.atmosphere_model not in {
+            "static",
+            "native_frozen_flow",
+            "native_frozen_flow_v2",
+            "hcipy",
+        }:
             raise SystemConfigError("unsupported atmosphere_model.")
         object.__setattr__(self, "telescope_diameter_m", _positive(self.telescope_diameter_m, "telescope_diameter_m"))
         for name in ("pupil_pixels", "lenslets_across", "actuators_across"):
