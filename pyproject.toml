@@ -40,6 +40,13 @@ test = [
 hcipy = [
     "hcipy>=0.7,<0.8",
 ]
+tiptop = [
+    # Supplemental manual study, validated with these upstream versions; requires
+    # Python >=3.11 through astro-tiptop. Not part of the core AO backend.
+    "astro-tiptop==1.5.1",
+    "astro-p3==1.6.2",
+    "mastsel==1.5.2",
+]
 docs = [
     "reportlab>=4.0",
 ]

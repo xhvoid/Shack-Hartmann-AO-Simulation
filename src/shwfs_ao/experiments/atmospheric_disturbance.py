@@ -20,11 +20,12 @@ The distinction the two disturbance sources encode is not cosmetic:
     the outer scale, advanced sub-pixel between frames.  Fitting error,
     temporal error, and aliasing all appear on their own.
 
-On the shipped 2 m / 5x5-actuator scale the packaged proxy ``all_effects`` row
-reports J/H/K Strehl 0.915/0.950/0.971 and a closed/open RMS ratio of 0.77; the
-packaged atmospheric row reports 0.320/0.533/0.673 and 0.92.  The large gap is
-expected because fitting error alone leaves roughly 43 % of a von Karman screen
-uncorrected there.
+The shipped synthetic DM has 13 illuminated actuators on a 5x5 grid and
+4.4 percent nearest-neighbour coupling. Its fitting error depends on this
+specific influence-function basis. The physical ``all_effects`` row also has
+a restrictive 120 nm OPD-equivalent stroke limit: its residual includes
+saturation and cannot be interpreted as a universal 5x5-DM fitting floor.
+See README.md and the accepted ``physical_*`` artifacts for current results.
 """
 
 from __future__ import annotations

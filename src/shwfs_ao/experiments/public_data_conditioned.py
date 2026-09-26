@@ -141,7 +141,13 @@ def phase_amplitude_from_seeing(
     reference_seeing_arcsec: float = REFERENCE_SEEING_ARCSEC,
     reference_phase_amplitude_nm: float = REFERENCE_PHASE_AMPLITUDE_NM,
 ) -> float:
-    """Return a documented engineering phase-amplitude proxy from seeing."""
+    """Return the historical linear control-space amplitude proxy.
+
+    This is not pupil OPD RMS or a physical atmosphere normalization.
+    At fixed aperture and outer scale, atmospheric RMS scales as seeing to
+    the 5/6 power; use the r0-driven atmosphere for that physical relation.
+    The linear proxy is retained for existing conditioned fast artifacts.
+    """
 
     _require_positive("seeing_arcsec", seeing_arcsec)
     _require_positive("reference_seeing_arcsec", reference_seeing_arcsec)

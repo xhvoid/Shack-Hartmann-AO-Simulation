@@ -7,6 +7,7 @@ import math
 
 import numpy as np
 import pytest
+from scipy.special import j1
 
 from shwfs_ao.core import PsfResult
 from shwfs_ao.backends.native.propagation import NativeSciencePropagator
@@ -152,7 +153,7 @@ def test_irregular_rectangular_gaussian_has_analytic_physical_metrics() -> None:
 
     assert fwhm_rad == pytest.approx(
         2.0 * math.sqrt(2.0 * math.log(2.0)) * sigma_rad,
-        rel=0.04,
+        rel=5.0e-4,
     )
     assert ee50_rad == pytest.approx(
         sigma_rad * math.sqrt(2.0 * math.log(2.0)),
@@ -163,6 +164,90 @@ def test_irregular_rectangular_gaussian_has_analytic_physical_metrics() -> None:
         rel=0.02,
     )
     assert halo == pytest.approx(math.exp(-2.0), rel=0.02)
+
+
+@pytest.mark.parametrize(
+    ("samples_per_lambda_over_d", "relative_tolerance"),
+    [(3, 0.03), (4, 0.004), (8, 0.001), (16, 0.0005)],
+)
+def test_airy_fwhm_converges_to_analytic_diameter(
+    samples_per_lambda_over_d: int,
+    relative_tolerance: float,
+) -> None:
+    """Check the estimator separately from any discretized pupil or FFT."""
+
+    lod_rad = 8.0e-7
+    axis = lod_rad * np.linspace(
+        -8.0,
+        8.0,
+        16 * samples_per_lambda_over_d + 1,
+    )
+    x, y = np.meshgrid(axis, axis)
+    bessel_argument = np.pi * np.hypot(x, y) / lod_rad
+    brightness = np.ones_like(bessel_argument)
+    nonzero = bessel_argument != 0.0
+    brightness[nonzero] = (
+        2.0 * j1(bessel_argument[nonzero]) / bessel_argument[nonzero]
+    ) ** 2
+
+    actual = fwhm_diameter_from_angular_surface_brightness(
+        brightness,
+        axis,
+        axis,
+    )
+
+    # Twice the root of [2 J1(pi*r)/(pi*r)]**2 = 1/2, in lambda/D.
+    expected = 1.0289939699621886 * lod_rad
+    assert actual == pytest.approx(expected, rel=relative_tolerance)
+
+
+@pytest.mark.parametrize("angular_scale", [1.0e-3, 1.0, 1.0e3])
+def test_irregular_gaussian_fwhm_uses_physical_radii_after_translation(
+    angular_scale: float,
+) -> None:
+    x_axis, y_axis, brightness, _, sigma_rad = _gaussian_grid()
+    offset_x = 1.7 * sigma_rad * angular_scale
+    offset_y = -0.9 * sigma_rad * angular_scale
+
+    actual = fwhm_diameter_from_angular_surface_brightness(
+        brightness,
+        x_axis * angular_scale + offset_x,
+        y_axis * angular_scale + offset_y,
+        center_angle_rad=(offset_x, offset_y),
+    )
+
+    expected = 2.0 * math.sqrt(2.0 * math.log(2.0)) * sigma_rad * angular_scale
+    assert actual == pytest.approx(expected, rel=5.0e-4, abs=0.0)
+
+
+@pytest.mark.parametrize(
+    ("pad_factor", "relative_tolerance"),
+    [(3, 0.03), (4, 0.004), (8, 0.0015), (16, 0.0015)],
+)
+def test_native_airy_fwhm_converges_with_focal_sampling(
+    pad_factor: int,
+    relative_tolerance: float,
+) -> None:
+    pupil = build_pupil_geometry(
+        telescope_diameter_m=2.0,
+        pupil_shape=(96, 96),
+    )
+    opd_m = np.where(pupil.pupil_mask, 0.0, np.nan)
+    wavelength_m = 1.0e-6
+    psf = NativeSciencePropagator(pupil, PsfSampling(pad_factor)).psf_from_opd(
+        opd_m,
+        wavelength_m,
+    )
+
+    actual = fwhm_diameter_from_angular_surface_brightness(
+        discrete_flux_to_angular_surface_brightness(psf),
+        psf.x_angle_rad,
+        psf.y_angle_rad,
+    )
+
+    # Unlike the analytic fixture above, this also has finite pupil sampling.
+    expected = 1.0289939699621886 * wavelength_m / 2.0
+    assert actual == pytest.approx(expected, rel=relative_tolerance)
 
 
 def test_discrete_flux_conversion_uses_irregular_pixel_solid_angle() -> None:
