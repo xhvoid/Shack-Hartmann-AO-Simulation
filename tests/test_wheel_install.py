@@ -736,6 +736,7 @@ def _assert_wheel_layout(
         "shwfs_ao/validation/__init__.py",
         "shwfs_ao/validation/checks.py",
         "shwfs_ao/validation/cross_backend.py",
+        "shwfs_ao/validation/numerical_identity.py",
         "shwfs_ao/validation/physical.py",
         "shwfs_ao/validation/regression.py",
         "shwfs_ao/wfs/__init__.py",
