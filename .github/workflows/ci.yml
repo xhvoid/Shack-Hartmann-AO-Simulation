@@ -14,9 +14,9 @@ jobs:
     # editable installation but cannot substitute for the wheel gate below.
     name: Source development Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
-    # The full suite takes about 21 minutes on hosted runners; Python 3.14
-    # then executes a separate ~12-minute integration example.
-    timeout-minutes: 45
+    # Allow headroom for the full suite and a separate integration example
+    # on shared hosted runners, whose simulation runtimes vary with load.
+    timeout-minutes: 60
     env:
       PYTHONPATH: ""
       PIP_CONSTRAINT: ${{ github.workspace }}/${{ matrix.constraints }}
@@ -97,7 +97,9 @@ jobs:
     # non-editable wheel, outside the source checkout.
     name: Wheel gate Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Python 3.14 executes the complete integration twice: once as a bundle
+    # example and once through the README. Both runs retain their full checks.
+    timeout-minutes: 60
     env:
       PYTHONPATH: ""
       MPLBACKEND: Agg
