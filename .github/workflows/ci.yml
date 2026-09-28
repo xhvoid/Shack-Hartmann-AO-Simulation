@@ -256,17 +256,11 @@ jobs:
           PYTHONPATH= python scripts/run_readme_smoke.py --section hcipy --require-wheel-bundle
 
       - name: Allow the notebook lane to open a network namespace
-        # ubuntu-latest is Ubuntu 24.04, which ships
-        # kernel.apparmor_restrict_unprivileged_userns=1: AppArmor denies the
-        # capabilities `unshare --user --map-root-user --net` needs, and plain
-        # `unshare --net` wants a CAP_SYS_ADMIN this user does not have. With
-        # neither form available the smoke runner's default
-        # --network-isolation=required has nothing to enforce the offline
-        # contract with and aborts the job. Clearing the knob restores the
-        # unprivileged form, which is the one that leaves the notebook kernel
-        # running as the runner user rather than root. The runner also falls
-        # back to these images' passwordless sudo, so this step is a preference
-        # rather than a prerequisite; an image without the knob is not an error.
+        # Ubuntu's AppArmor policy can deny unprivileged user namespaces.
+        # Enable the preferred path; the runner also supports passwordless
+        # sudo for setup followed by a verified drop to the invoking user's
+        # credentials with no capabilities. Neither path runs notebooks with
+        # host root privileges. An image without this knob needs no change.
         run: |
           if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
             sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
@@ -332,6 +326,19 @@ jobs:
       - name: Verify the environment is exactly the constraint lock
         run: python scripts/verify_environment_lock.py --constraints constraints/py314.txt
 
+      - name: Allow the notebook lane to open a network namespace
+        # See the identical step in the hcipy-wheel job: ubuntu-latest is Ubuntu
+        # 24.04, whose default AppArmor policy denies capabilities inside an
+        # unprivileged user namespace. Enable the preferred path before the
+        # governance tests as well as notebook execution; the sudo fallback
+        # is exercised separately by the kernel integration test.
+        run: |
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          else
+            echo "No AppArmor unprivileged-userns restriction on this image."
+          fi
+
       - name: Run notebook-governance tests
         # Static layout/manifest/rules tests read the checkout, so they run
         # here rather than from the bundle.
@@ -339,19 +346,6 @@ jobs:
 
       - name: Prepare the portable wheel-smoke bundle
         run: python scripts/prepare_wheel_smoke_bundle.py --output "$RUNNER_TEMP/wheel-smoke"
-
-      - name: Allow the notebook lane to open a network namespace
-        # See the identical step in the hcipy-wheel job: ubuntu-latest is Ubuntu
-        # 24.04, whose default AppArmor policy denies capabilities inside an
-        # unprivileged user namespace, so without this the smoke runner's
-        # required network isolation is unobtainable and both notebook steps
-        # below abort.
-        run: |
-          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
-            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-          else
-            echo "No AppArmor unprivileged-userns restriction on this image."
-          fi
 
       - name: Register the kernel
         run: python -m ipykernel install --user --name python3

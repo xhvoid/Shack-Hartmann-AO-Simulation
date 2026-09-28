@@ -15,6 +15,12 @@ from shwfs_ao.legacy import pwfs_forward as legacy
 
 
 ROOT = Path(__file__).resolve().parents[2]
+FROZEN_SAMPLES = Path(__file__).with_name("pwfs_frozen_samples.npz")
+FROZEN_HASHES = {
+    "intensity": "bdb17d575c92bdf66c47409e73d80cf096de843ac5b8ed86fa43180433428a64",
+    "signal": "6454603ffb99d15aacc6a2115542b9a987ae64a426659155b29f2e27ad2dfe84",
+    "noisy": "cfdea5e0c35986ab84750f359f9214e0edf82bac99f66158023eb2d1f193b884",
+}
 
 FROZEN_LEGACY_PUBLIC_NAMES = {
     "add_detector_noise",
@@ -107,6 +113,25 @@ def test_experimental_pwfs_retains_the_frozen_seeded_numerical_output():
     def digest(array: np.ndarray) -> str:
         return hashlib.sha256(np.asarray(array, dtype="<f8").tobytes()).hexdigest()
 
-    assert digest(intensity) == "bdb17d575c92bdf66c47409e73d80cf096de843ac5b8ed86fa43180433428a64"
-    assert digest(signal) == "6454603ffb99d15aacc6a2115542b9a987ae64a426659155b29f2e27ad2dfe84"
-    assert digest(noisy) == "cfdea5e0c35986ab84750f359f9214e0edf82bac99f66158023eb2d1f193b884"
+    # Preserve the original full arrays and verify their historical hashes,
+    # without requiring libm/FFT implementations to agree in their last bits.
+    # The absolute optical tolerances cover cancellation near zero; they are
+    # at most ten float64 epsilons in these dimensionless outputs.
+    with np.load(FROZEN_SAMPLES, allow_pickle=False) as samples:
+        for name, expected_digest in FROZEN_HASHES.items():
+            assert digest(samples[name]) == expected_digest
+        assert intensity.shape == samples["intensity"].shape == (32, 32)
+        assert signal.shape == samples["signal"].shape == (72,)
+        np.testing.assert_allclose(
+            intensity, samples["intensity"], rtol=2.0e-14, atol=2.0e-16,
+        )
+        np.testing.assert_allclose(
+            signal, samples["signal"], rtol=2.0e-14, atol=2.0e-15,
+        )
+        # Optical roundoff does not change this fixture's Poisson samples.
+        # Retain exact seed/draw-order/clipping protection for the detector.
+        np.testing.assert_array_equal(noisy, samples["noisy"])
+    assert np.all(intensity >= 0.0)
+    np.testing.assert_allclose(
+        np.sum(intensity), np.sum(pupil), rtol=2.0e-15, atol=0.0,
+    )

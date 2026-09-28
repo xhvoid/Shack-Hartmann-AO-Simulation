@@ -184,9 +184,17 @@ claim of equal turbulence samples.
 | `physical_tolerance` | atmosphere statistics, spot width/gain, spectrum shape, Strehl, closed-loop residual | documented range or absolute tolerance with scientific rationale |
 | `informational` | runtime and memory | reported, never gates ordinary correctness CI |
 
-The evaluator first requires the exact comparison-config hash and every
-component/shared-fixture hash. If an input hash differs, numerical tolerances do
-not apply. Each metric record names its value, units, comparison level,
+The evaluator first requires exact comparison configuration, geometry, ordered
+IDs, and DM semantic identity. Schema v2 retains raw component/fixture hashes
+and lossless compressed witnesses for all six numerical fixtures and both DM
+influence stacks. It verifies those hashes against the arrays or canonical DM
+hash payload, then compares every numerical sample with fixed roundoff limits:
+relative tolerance `1e-12`, plus `1e-20 m` for OPD, `1e-14` for dimensionless
+influences, or `1e-15 s` for the time grid. Shapes and NaN pupil masks must match
+exactly. These checks accommodate low-bit differences in platform math/FFT
+libraries; rounded hashes would still fail at quantization boundaries. Any
+larger input drift stops evaluation before the unchanged scientific metric
+criteria apply. Each metric record names its value, units, comparison level,
 criterion, and rationale. A failure reports observed/expected values, tolerance
 and units, plus the compared hashes.
 

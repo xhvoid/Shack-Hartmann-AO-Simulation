@@ -494,8 +494,15 @@ def _encircled_energy_radius_from_discrete_flux(
             "sort_kind must be 'stable', 'quicksort', or 'legacy_quicksort'."
         )
     numpy_sort_kind = "quicksort" if sort_kind == "legacy_quicksort" else sort_kind
+    # NumPy's x86 SIMD argsort has an unstable tie order that differs from
+    # scalar quicksort, and interpolation at the first
+    # pixel of a new radius can therefore change even for an identical PSF.
+    # Object comparisons select the generic scalar implementation on every
+    # CPU, preserving the reviewed historical ordering without changing the
+    # public metric's stable sort or rounding physical radii.
+    sort_values = radius.astype(object) if sort_kind == "legacy_quicksort" else radius
     order = np.argsort(
-        radius,
+        sort_values,
         kind=cast('Literal["quicksort", "stable"]', numpy_sort_kind),
     )
     radius_sorted = radius[order]

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import copy
 from dataclasses import FrozenInstanceError, replace
+from importlib.resources import files
 import inspect
 import json
 import math
-from pathlib import Path
 
 import pytest
 
@@ -35,8 +35,6 @@ from shwfs_ao.io.configs import (
     system_config_to_mapping,
 )
 
-
-ROOT = Path(__file__).resolve().parents[2]
 
 # Every published profile version stays packaged and loadable: a result
 # labelled with a v1 profile must remain exactly reproducible after the v2
@@ -170,10 +168,10 @@ def test_canonical_serialization_reproduces_the_packaged_record() -> None:
     result cites would silently describe something nobody reviewed.
     """
 
-    resource_root = ROOT / "src" / "shwfs_ao" / "resources" / "synthetic_presets"
+    resource_root = files("shwfs_ao.resources").joinpath("synthetic_presets")
     for name, version in EXPECTED_PROFILES:
         packaged = json.loads(
-            (resource_root / f"{name}.v{version}.json").read_text(encoding="utf-8")
+            resource_root.joinpath(f"{name}.v{version}.json").read_text(encoding="utf-8")
         )
         assert system_config_to_mapping(load_system_profile(name, version)) == packaged
 

@@ -11,9 +11,13 @@ tolerance contract.  Exact-level metrics require equality with the baseline
 value; ``tight_numerical`` and ``physical_tolerance`` metrics require the
 freshly observed value to satisfy the criterion recorded in the baseline
 (absolute tolerance around the expected value, or an explicit range);
-``informational`` metrics are reported but never gate.  Fixture and
-configuration hashes must match exactly before any metric is compared, so a
-tolerance can never paper over changed inputs.
+``informational`` metrics are reported but never gate. Configuration, layout
+and semantic identities must match exactly before any metric is compared.
+Schema v2 also records lossless numerical input witnesses: their raw hashes
+are verified, and every sample must reproduce the baseline within fixed
+roundoff tolerances, with identical shapes and NaN masks. This permits
+platform-dependent low bits without allowing metric tolerances to hide
+changed inputs.
 """
 
 from __future__ import annotations
@@ -25,11 +29,18 @@ from numbers import Real
 from typing import Any, Mapping, cast
 
 from ..io.resources import read_text_resource
+from ..core.hashing import stable_hash
+from .numerical_identity import (
+    NUMERICAL_INPUTS,
+    dm_source_failure,
+    numerical_input_failure,
+    numerical_input_values,
+)
 
 
 CROSS_BACKEND_REPORT_SCHEMA_NAME = "shwfs_ao.cross_backend_report"
 CROSS_BACKEND_BASELINE_SCHEMA_NAME = "shwfs_ao.cross_backend_baseline"
-CROSS_BACKEND_BASELINE_SCHEMA_VERSION = 1
+CROSS_BACKEND_BASELINE_SCHEMA_VERSION = 2
 CROSS_BACKEND_BASELINE_RESOURCE = (
     "reference_metrics/cross_backend/cross_backend_baseline.json"
 )
@@ -445,6 +456,7 @@ def _validate_report_structure(
             "conventions",
             "component_hashes",
             "fixture_hashes",
+            "numerical_inputs",
             "environment",
             "comparisons",
         ),
@@ -512,6 +524,18 @@ def _validate_report_structure(
                 f"{group} must record exactly the required keys; "
                 f"missing={missing}, unexpected={unexpected}."
             )
+    numerical_inputs = document["numerical_inputs"]
+    if not isinstance(numerical_inputs, Mapping) or set(numerical_inputs) != set(
+        NUMERICAL_INPUTS
+    ):
+        raise BaselineContractError(
+            "numerical_inputs must record exactly the required input witnesses."
+        )
+    for key, record in numerical_inputs.items():
+        try:
+            numerical_input_values(record)
+        except ValueError as exc:
+            raise BaselineContractError(f"numerical_inputs[{key!r}]: {exc}") from exc
     _require_fields(
         document["environment"],
         _REQUIRED_ENVIRONMENT_FIELDS,
@@ -580,6 +604,9 @@ def validate_cross_backend_baseline(document: Mapping[str, Any]) -> Mapping[str,
     """
 
     validate_cross_backend_report(document)
+    input_failures = _numerical_input_basis_failures(document, document)
+    if input_failures:
+        raise BaselineContractError("; ".join(input_failures))
     if document["artifact_schema_name"] != CROSS_BACKEND_BASELINE_SCHEMA_NAME:
         raise BaselineContractError(
             "baseline artifact_schema_name must be "
@@ -778,6 +805,10 @@ def evaluate_report_against_baseline(
         return tuple(failures)
     for group in _REQUIRED_HASH_GROUPS:
         for key, expected in baseline[group].items():
+            if key in NUMERICAL_INPUTS:
+                # Derived floats carry full-array witnesses, verified below.
+                # Every other configuration/layout hash remains an exact gate.
+                continue
             observed = report[group].get(key)
             if observed != expected:
                 failures.append(
@@ -785,6 +816,7 @@ def evaluate_report_against_baseline(
                     f"expected={expected}; shared inputs drifted, so metric "
                     "tolerances do not apply."
                 )
+    failures.extend(_numerical_input_basis_failures(report, baseline))
     # The measurement conventions and the root seed are part of the comparison
     # basis just as much as the hashes: a report measured under a different
     # command/residual/detector-sign convention, or from a different seed, is
@@ -928,6 +960,34 @@ def _statistical_definition_failures(
             "uncertainty changed, so the reviewed tolerances were not set "
             "against these numbers."
         )
+    return failures
+
+
+def _numerical_input_basis_failures(
+    report: Mapping[str, Any], baseline: Mapping[str, Any],
+) -> list[str]:
+    """Bind raw hashes to witnesses, then compare every numerical input value."""
+    failures: list[str] = []
+    for name, (group, _, _, _) in NUMERICAL_INPUTS.items():
+        observed = report["numerical_inputs"][name]
+        expected = baseline["numerical_inputs"][name]
+        detail = None
+        if observed["source_hash"] != report[group][name]:
+            detail = "raw hash does not match the numerical input witness"
+        elif group == "fixture_hashes" and stable_hash(
+            numerical_input_values(observed), namespace="cross_backend_fixture",
+        ) != report[group][name]:
+            detail = "raw fixture hash does not match the witnessed array"
+        elif group == "component_hashes" and dm_source_failure(name, observed):
+            detail = dm_source_failure(name, observed)
+        else:
+            detail = numerical_input_failure(name, observed, expected)
+        if detail is not None:
+            failures.append(
+                f"{group}[{name!r}] mismatch: observed={report[group][name]} "
+                f"expected={baseline[group][name]}; {detail}; shared inputs "
+                "drifted, so metric tolerances do not apply."
+            )
     return failures
 
 

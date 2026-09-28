@@ -58,6 +58,16 @@ from shwfs_ao.validation.regression import (
     validate_cross_backend_report,
 )
 from shwfs_ao.io.resources import read_text_resource
+from shwfs_ao.core.hashing import (
+    HASH_SCHEMA_ID, canonical_json_bytes, stable_array_descriptor, stable_hash,
+)
+from shwfs_ao.validation.numerical_identity import (
+    NUMERICAL_INPUTS,
+    dm_semantic_hash,
+    numerical_input_failure,
+    numerical_input_record,
+    numerical_input_values,
+)
 
 
 HCIPY_INSTALLED = hcipy_installed()
@@ -173,7 +183,7 @@ def _probe_statistical_definition() -> dict:
 
 
 def _minimal_report() -> dict:
-    return {
+    report = {
         "artifact_schema_name": CROSS_BACKEND_REPORT_SCHEMA_NAME,
         "artifact_schema_version": CROSS_BACKEND_BASELINE_SCHEMA_VERSION,
         "comparison_config": comparison_config_record(_CONTRACT_TEST_CONFIG),
@@ -204,6 +214,52 @@ def _minimal_report() -> dict:
             _probe_comparison(kind) for kind in REQUIRED_COMPARISON_KINDS
         ],
     }
+    report["numerical_inputs"] = {}
+    for index, (name, (group, _, _, _)) in enumerate(NUMERICAL_INPUTS.items()):
+        values = np.array([float(index)])
+        payload = None
+        backend_payload = None
+        config_hash = _hash64(name)
+        if group == "fixture_hashes":
+            report[group][name] = stable_hash(
+                values, namespace="cross_backend_fixture",
+            )
+        else:
+            config = dict.fromkeys((
+                "config", "sampled_x_m", "sampled_y_m", "pupil_mask",
+                "actuator_ids", "actuator_centers_m", "actuator_pitch_m",
+                "dead_actuator_mask", "stuck_actuator_mask", "command_unit",
+                "command_convention", "synthesis_convention", "backend_identity",
+                "backend_name", "backend_config_hash", "influence_functions",
+            ))
+            config["influence_functions"] = values
+            backend_name = name.removesuffix("_dm")
+            config["backend_name"] = backend_name
+            config["backend_identity"] = (
+                "shwfs_ao.backends.native.dm.NativeDmBackend" if name == "native_dm"
+                else "shwfs_ao.backends.hcipy.dm.HcipyDmBackend"
+            )
+            backend_payload = canonical_json_bytes({
+                "hash_schema": HASH_SCHEMA_ID, "namespace": "component_config",
+                "value": {"component_name": f"{backend_name}.dm_spatial_backend",
+                          "config": {"influence_functions": values,
+                                     "command_unit": "m_opd_equivalent"}},
+            }).decode()
+            config["backend_config_hash"] = hashlib.sha256(backend_payload.encode()).hexdigest()
+            payload = canonical_json_bytes({
+                "hash_schema": HASH_SCHEMA_ID, "namespace": "component_config",
+                "value": {"component_name": "deformable_mirror", "config": config},
+            }).decode()
+            report[group][name] = hashlib.sha256(payload.encode()).hexdigest()
+            config_hash = dm_semantic_hash(payload, backend_payload)
+        report["numerical_inputs"][name] = numerical_input_record(
+            values,
+            source_hash=report[group][name],
+            configuration_hash=config_hash,
+            source_payload=payload,
+            backend_source_payload=backend_payload,
+        )
+    return report
 
 
 def _minimal_baseline() -> dict:
@@ -221,6 +277,196 @@ def _minimal_baseline() -> dict:
             "accepted_at_utc": "2026-07-17T00:00:00+00:00",
         },
     )
+
+
+def _replace_numerical_input(report: dict, name: str, values: np.ndarray) -> None:
+    """Simulate a fresh platform run, including honest byte provenance."""
+    group = NUMERICAL_INPUTS[name][0]
+    record = report["numerical_inputs"][name]
+    payload = None
+    backend_payload = None
+    if group == "fixture_hashes":
+        source_hash = stable_hash(values, namespace="cross_backend_fixture")
+    else:
+        backend = json.loads(record["backend_source_payload"])
+        backend_config = dict(dict(backend["$mapping"])["value"]["$mapping"])["config"]["$mapping"]
+        for pair in backend_config:
+            if pair[0] == "influence_functions":
+                pair[1] = {"$array": stable_array_descriptor(values)}
+        backend_payload = json.dumps(backend, sort_keys=True, separators=(",", ":"))
+        parsed = json.loads(record["source_payload"])
+        envelope = dict(parsed["$mapping"])
+        config = dict(envelope["value"]["$mapping"])["config"]["$mapping"]
+        for pair in config:
+            if pair[0] == "influence_functions":
+                pair[1] = {"$array": stable_array_descriptor(values)}
+            if pair[0] == "backend_config_hash":
+                pair[1] = hashlib.sha256(backend_payload.encode()).hexdigest()
+        payload = json.dumps(parsed, sort_keys=True, separators=(",", ":"))
+        source_hash = hashlib.sha256(payload.encode()).hexdigest()
+    report[group][name] = source_hash
+    report["numerical_inputs"][name] = numerical_input_record(
+        values, source_hash=source_hash,
+        configuration_hash=record["configuration_hash"],
+        source_payload=payload,
+        backend_source_payload=backend_payload,
+    )
+
+
+@pytest.mark.parametrize("name", tuple(NUMERICAL_INPUTS))
+def test_platform_roundoff_keeps_numerical_identity(name, packaged_baseline):
+    report = _report_copy(packaged_baseline)
+    values = numerical_input_values(report["numerical_inputs"][name]).copy()
+    # Perturb every value, including zero and sign changes in tiny samples.
+    # No rounding bins are used, so adjacent floats remain comparable even
+    # when they straddle a decimal quantization boundary.
+    for _ in range(8):
+        values = np.nextafter(values, np.inf)
+    _replace_numerical_input(report, name, values)
+    group = NUMERICAL_INPUTS[name][0]
+    assert report[group][name] != packaged_baseline[group][name]
+    assert evaluate_report_against_baseline(report, packaged_baseline) == ()
+
+
+@pytest.mark.parametrize("name", tuple(NUMERICAL_INPUTS))
+def test_one_drifted_input_sample_fails_before_physics(name, packaged_baseline):
+    report = _report_copy(packaged_baseline)
+    values = numerical_input_values(report["numerical_inputs"][name]).copy()
+    _, units, rtol, atol = NUMERICAL_INPUTS[name]
+    index = np.unravel_index(int(np.nanargmax(np.abs(values))), values.shape)
+    values[index] += 100 * (atol + rtol * abs(values[index]))
+    _replace_numerical_input(report, name, values)
+    failures = evaluate_report_against_baseline(report, packaged_baseline)
+    assert len(failures) == 1
+    assert name in failures[0]
+    assert "sample" in failures[0]
+    assert units in failures[0]
+    assert "metric tolerances do not apply" in failures[0]
+
+
+def test_same_dm_hash_does_not_hide_a_changed_influence(packaged_baseline):
+    report = _report_copy(packaged_baseline)
+    record = report["numerical_inputs"]["native_dm"]
+    values = numerical_input_values(record).copy()
+    values.flat[0] += 1e-7
+    report["numerical_inputs"]["native_dm"] = numerical_input_record(
+        values, source_hash=record["source_hash"],
+        configuration_hash=record["configuration_hash"],
+        source_payload=record["source_payload"],
+        backend_source_payload=record["backend_source_payload"],
+    )
+    failures = evaluate_report_against_baseline(report, packaged_baseline)
+    assert len(failures) == 1
+    assert "native_dm" in failures[0]
+
+
+def test_changed_dm_semantics_fail_even_with_identical_arrays(packaged_baseline):
+    report = _report_copy(packaged_baseline)
+    report["numerical_inputs"]["hcipy_dm"]["configuration_hash"] = _hash64("new")
+    failures = evaluate_report_against_baseline(report, packaged_baseline)
+    assert len(failures) == 1
+    assert "configuration_hash does not bind" in failures[0]
+
+
+@pytest.mark.parametrize("name", ["native_dm", "hcipy_dm"])
+def test_self_consistent_arbitrary_dm_hash_is_rejected(name):
+    baseline = _minimal_baseline()
+    report = _report_copy(baseline)
+    report["component_hashes"][name] = "f" * 64
+    report["numerical_inputs"][name]["source_hash"] = "f" * 64
+    failures = evaluate_report_against_baseline(report, baseline)
+    assert len(failures) == 1
+    assert "raw DM hash does not match source_payload" in failures[0]
+    with pytest.raises(BaselineContractError, match="raw DM hash"):
+        validate_cross_backend_baseline(report)
+
+
+@pytest.mark.parametrize("change", ["whitespace", "duplicate", "backend_hash", "component_name", "sibling"])
+def test_noncanonical_or_unbound_dm_payload_is_rejected(change):
+    baseline = _minimal_baseline()
+    report = _report_copy(baseline)
+    record = report["numerical_inputs"]["native_dm"]
+    parsed = json.loads(record["source_payload"])
+    config = dict(dict(parsed["$mapping"])["value"]["$mapping"])["config"]["$mapping"]
+    if change == "duplicate":
+        config.insert(0, ["command_unit", "incorrect_and_discarded"])
+    elif change == "backend_hash":
+        next(pair for pair in config if pair[0] == "backend_config_hash")[1] = "f" * 64
+    elif change == "component_name":
+        value = dict(parsed["$mapping"])["value"]["$mapping"]
+        next(pair for pair in value if pair[0] == "component_name")[1] = "native.dm_spatial_backend"
+    elif change == "sibling":
+        parsed["discarded"] = "invalid canonical sibling"
+    payload = (
+        json.dumps(parsed, indent=2) if change == "whitespace" else
+        json.dumps(parsed, sort_keys=True, separators=(",", ":"))
+    )
+    record["source_payload"] = payload
+    record["source_hash"] = hashlib.sha256(payload.encode()).hexdigest()
+    report["component_hashes"]["native_dm"] = record["source_hash"]
+    failures = evaluate_report_against_baseline(report, baseline)
+    assert len(failures) == 1
+    assert "source_payload" in failures[0]
+    with pytest.raises(BaselineContractError, match="source_payload"):
+        validate_cross_backend_baseline(report)
+
+
+def test_inner_backend_semantics_remain_exact_even_with_matching_influences():
+    baseline = _minimal_baseline()
+    report = _report_copy(baseline)
+    record = report["numerical_inputs"]["native_dm"]
+    parsed = json.loads(record["backend_source_payload"])
+    config = dict(dict(parsed["$mapping"])["value"]["$mapping"])["config"]["$mapping"]
+    next(pair for pair in config if pair[0] == "command_unit")[1] = "different"
+    backend_payload = json.dumps(parsed, sort_keys=True, separators=(",", ":"))
+    parsed = json.loads(record["source_payload"])
+    config = dict(dict(parsed["$mapping"])["value"]["$mapping"])["config"]["$mapping"]
+    next(pair for pair in config if pair[0] == "backend_config_hash")[1] = hashlib.sha256(backend_payload.encode()).hexdigest()
+    payload = json.dumps(parsed, sort_keys=True, separators=(",", ":"))
+    record.update(
+        source_payload=payload, backend_source_payload=backend_payload,
+        source_hash=hashlib.sha256(payload.encode()).hexdigest(),
+        configuration_hash=dm_semantic_hash(payload, backend_payload),
+    )
+    report["component_hashes"]["native_dm"] = record["source_hash"]
+    failures = evaluate_report_against_baseline(report, baseline)
+    assert len(failures) == 1
+    assert "configuration_hash differs" in failures[0]
+
+
+def test_numerical_mask_is_exact_even_when_finite_values_agree():
+    options = {"source_hash": _hash64("source"), "configuration_hash": _hash64("cfg")}
+    expected = numerical_input_record(np.array([1e-7, np.nan]), **options)
+    observed = numerical_input_record(np.array([1e-7, 0.0]), **options)
+    assert numerical_input_failure("static_opd_m", expected, expected) is None
+    assert numerical_input_failure("static_opd_m", observed, expected) == "non-finite pupil-mask locations differ"
+
+
+def test_numerical_witness_is_endian_independent_and_content_checked():
+    values = np.array([0, -1, 0.123456789012345, 1e-20])
+    options = {"source_hash": _hash64("source"), "configuration_hash": _hash64("cfg")}
+    record = numerical_input_record(values.astype("<f8"), **options)
+    assert record == numerical_input_record(values.astype(">f8"), **options)
+    np.testing.assert_array_equal(numerical_input_values(record), values)
+    record["values_sha256"] = _hash64("wrong data")
+    with pytest.raises(ValueError, match="does not match its data"):
+        numerical_input_values(record)
+
+
+@pytest.mark.parametrize("change", ["missing", "shape", "encoding", "data", "extra"])
+def test_report_rejects_incomplete_or_corrupt_numerical_witness(change):
+    report = _minimal_report()
+    inputs = report["numerical_inputs"]
+    if change == "missing":
+        del inputs["static_opd_m"]
+    elif change == "extra":
+        inputs["static_opd_m"]["rtol"] = 1e9
+    else:
+        inputs["static_opd_m"][change] = {
+            "shape": [1000000000000], "encoding": "unknown", "data": "broken",
+        }[change]
+    with pytest.raises(BaselineContractError, match="numerical_input"):
+        validate_cross_backend_report(report)
 
 
 @pytest.fixture(scope="module")
@@ -395,6 +641,7 @@ class TestDocumentContract:
             "conventions",
             "component_hashes",
             "fixture_hashes",
+            "numerical_inputs",
             "environment",
             "comparisons",
         ),
