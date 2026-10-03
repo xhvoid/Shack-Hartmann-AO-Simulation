@@ -10,6 +10,8 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import os
+import shlex
+import shutil
 import signal
 import subprocess
 import sys
@@ -484,8 +486,20 @@ def test_network_isolation_is_required_by_default():
 def test_required_isolation_refuses_where_no_namespace_is_available(monkeypatch, capsys):
     monkeypatch.setattr(runner, "_network_namespace_prefix", lambda: None)
 
-    with pytest.raises(SystemExit, match="Network isolation is unavailable"):
+    with pytest.raises(SystemExit, match="Network isolation is unavailable") as refusal:
         runner._resolve_network_isolation("required")
+    # The remedy names every tool the candidates demand and both routes to a
+    # namespace; a requirement the message left out is one a reader would
+    # discover only by failing again.
+    for requirement in (
+        "unshare(1)",
+        "ip(8)",
+        "nsenter(1)",
+        "user namespace",
+        "passwordless sudo",
+        "setpriv(1)",
+    ):
+        assert requirement in str(refusal.value), requirement
 
     # 'auto' is the documented escape hatch, and it must say what was lost
     # rather than pass silently.
@@ -595,6 +609,8 @@ def _fake_linux_namespace_environment(
     are offered, in which order, which are skipped, and what the probe accepts
     as evidence.  The namespace itself stays covered by the Linux-only tests
     at the end of this module, which is where it can be created for real.
+    These fakes answer the same whatever the probe script asks, so the script
+    is not exercised here; the stub-binary tests below run it for real.
     """
 
     executed: list[list[str]] = []
@@ -783,8 +799,9 @@ def test_a_form_that_needs_no_elevation_never_asks_sudo_for_anything(monkeypatch
     """Ordering is the whole point of the list, so it is asserted, not assumed.
 
     Where the unprivileged user namespace is available the kernel keeps the
-    invoking user's credentials; reaching for sudo there would elevate for
-    nothing and run the kernel as root.
+    invoking user's credentials without any root-owned step; reaching for sudo
+    there would elevate for nothing, running the namespace setup as root where
+    no root was needed.
     """
 
     executed = _fake_linux_namespace_environment(
@@ -845,6 +862,273 @@ def test_required_isolation_still_refuses_when_not_even_sudo_isolates(monkeypatc
         runner._resolve_network_isolation("required")
 
 
+_STATUS_FIELDS_THE_RUNNER_READS = (
+    "Uid",
+    "Gid",
+    "Groups",
+    "NoNewPrivs",
+    "CapInh",
+    "CapPrm",
+    "CapEff",
+    "CapBnd",
+    "CapAmb",
+)
+
+# The probe runs as ``sh -c`` through PATH; the stubs standing in for its
+# binaries are ``#!/bin/sh`` scripts.
+_needs_posix_sh = pytest.mark.skipif(
+    os.name != "posix"
+    or shutil.which("sh") is None
+    or not os.access("/bin/sh", os.X_OK),
+    reason="the namespace probe is a POSIX shell script",
+)
+
+
+def _proc_self_status(overrides: dict[str, str | None] | None = None) -> str:
+    """A ``/proc/self/status`` for a process setpriv returned to the caller.
+
+    Written in the kernel's own format — a tab after each colon, four
+    tab-separated ids, a space after the (empty) group list — and with fields
+    the runner ignores around the ones it reads, so the parser meets the lines
+    a real probe hands it.  An override of ``None`` removes the field, as a
+    kernel that predates it would.
+    """
+
+    uid, gid = os.geteuid(), os.getegid()
+    fields: dict[str, str | None] = {
+        "Name": "cat",
+        "Umask": "0022",
+        "State": "R (running)",
+        "Tgid": "4242",
+        "Pid": "4242",
+        "PPid": "4241",
+        "Uid": "\t".join([str(uid)] * 4),
+        "Gid": "\t".join([str(gid)] * 4),
+        "FDSize": "64",
+        "Groups": " ",
+        "Threads": "1",
+        **dict.fromkeys(
+            ("CapInh", "CapPrm", "CapEff", "CapBnd", "CapAmb"), "0000000000000000"
+        ),
+        "NoNewPrivs": "1",
+        "Seccomp": "0",
+        "Cpus_allowed_list": "0-3",
+    }
+    fields.update(overrides or {})
+    return "".join(
+        f"{key}:\t{value}\n" for key, value in fields.items() if value is not None
+    )
+
+
+# Names the directory each stub below reads its answer from and records its
+# calls into, so the scripts themselves can be shared by every test.
+_PROBE_STUB_STATE = "NB_SMOKE_PROBE_STUB_STATE"
+
+
+@pytest.fixture(scope="module")
+def probe_stub_bin(tmp_path_factory) -> Path:
+    """Stand-ins for the binaries the real probe calls.
+
+    Only what cannot run here is replaced: ``sudo -n`` runs its command with
+    the other stubs first on PATH, ``ip -o link show`` prints a loopback-only
+    namespace, ``cat /proc/self/status`` prints the status a test chose, and
+    ``nsenter`` succeeds or refuses as told.  ``sudo``, ``ip`` and ``cat``
+    refuse any other invocation; ``nsenter`` cannot, because its failure reads
+    as a refused escape, so its arguments are asserted from the record every
+    stub keeps of the calls it receives.  ``test`` is a shell builtin, so the
+    canary check is never stubbed: it runs against the real file.
+
+    Written once per module because macOS scans a newly written executable on
+    its first run, which costs more than the probe itself; what varies between
+    tests lives in the state directory instead.
+    """
+
+    stubs = tmp_path_factory.mktemp("probe-stub-bin")
+    state = '"${' + _PROBE_STUB_STATE + ':?}"'
+
+    def write(name: str, body: str) -> None:
+        script = stubs / name
+        script.write_text(
+            f'#!/bin/sh\nprintf "%s\\n" "$*" >> {state}/{name}.calls\n{body}',
+            encoding="utf-8",
+        )
+        script.chmod(0o755)
+
+    write(
+        "sudo",
+        '[ "$1" = -n ] || exit 64\n'
+        "shift\n"
+        f'PATH={shlex.quote(str(stubs))}:"$PATH"\n'
+        "export PATH\n"
+        'exec "$@"\n',
+    )
+    write(
+        "ip",
+        '[ "$*" = "-o link show" ] || exit 2\n'
+        f"printf %s {shlex.quote(_LOOPBACK_ONLY_LINKS)}\n",
+    )
+    write(
+        "cat",
+        '[ "$#" -eq 1 ] && [ "$1" = /proc/self/status ] || exit 2\n'
+        # cat is this script, so the status is copied out line by line;
+        # ``IFS= read -r`` keeps the tabs and the trailing space intact.
+        f'while IFS= read -r line; do printf "%s\\n" "$line"; done < {state}/status\n',
+    )
+    write("nsenter", f"[ -e {state}/escape-succeeds ]\n")
+    return stubs
+
+
+def _namespace_probe_stubs(
+    tmp_path: Path,
+    monkeypatch,
+    stub_bin: Path,
+    *,
+    status: str,
+    escape_succeeds: bool = False,
+) -> tuple[list[str], Path]:
+    """A sudo-shaped prefix through the stubs, and this test's state directory.
+
+    The prefix is sudo-shaped because that is the form whose credentials the
+    runner reads from the probe's output.
+    """
+
+    state = tmp_path / "stub-state"
+    state.mkdir()
+    (state / "status").write_text(status, encoding="utf-8")
+    if escape_succeeds:
+        (state / "escape-succeeds").touch()
+    monkeypatch.setenv(_PROBE_STUB_STATE, str(state))
+    return [str(stub_bin / "sudo"), "-n"], state
+
+
+def _stub_calls(state: Path, name: str) -> list[str]:
+    calls = state / f"{name}.calls"
+    return calls.read_text(encoding="utf-8").splitlines() if calls.exists() else []
+
+
+def _run_the_real_probe(monkeypatch, prefix: list[str], canary: Path):
+    monkeypatch.setattr(runner, "_namespace_prefix_candidates", lambda: iter([prefix]))
+    return runner._probe_namespace_candidates(f"/proc/{os.getpid()}/ns/net", canary)
+
+
+@_needs_posix_sh
+def test_the_real_probe_script_supplies_every_observation_the_runner_requires(
+    tmp_path, monkeypatch, probe_stub_bin
+):
+    """The probe script itself is evidence, so it is run rather than assumed.
+
+    The fake Linux harness above answers the same whatever the script asks, so
+    deleting the canary check or the credential read from ``_NAMESPACE_PROBE``
+    left every one of those tests passing.  Here the script runs as written
+    with only its external binaries replaced, and the runner's own parser
+    decides: a probe that dropped the credential read would hand it no
+    ``Uid``, and the sudo form would be refused.
+    """
+
+    prefix, state = _namespace_probe_stubs(
+        tmp_path, monkeypatch, probe_stub_bin, status=_proc_self_status()
+    )
+    canary = tmp_path / "caller-owned"
+    canary.touch(mode=0o600)
+
+    assert _run_the_real_probe(monkeypatch, prefix, canary) == prefix
+    assert _stub_calls(state, "ip") == ["-o link show"]
+    assert _stub_calls(state, "cat") == ["/proc/self/status"]
+    # The escape attempt targets the outer namespace, not the canary.
+    assert _stub_calls(state, "nsenter") == [f"--net=/proc/{os.getpid()}/ns/net true"]
+
+
+@_needs_posix_sh
+def test_the_real_probe_refuses_a_namespace_that_cannot_read_caller_files(
+    tmp_path, monkeypatch, probe_stub_bin
+):
+    """``test -r "$2"`` is the only clause that observes caller file access.
+
+    The canary is a path that does not exist rather than one with its read
+    bits cleared, because root may read any existing file and the answer must
+    not depend on who runs the suite.  Everything else the probe reports is the
+    accepted case above, so the canary is what this refusal turns on.
+    """
+
+    prefix, state = _namespace_probe_stubs(
+        tmp_path, monkeypatch, probe_stub_bin, status=_proc_self_status()
+    )
+
+    assert _run_the_real_probe(monkeypatch, prefix, tmp_path / "unreadable") is None
+    # The probe did run; a stub that never started it would refuse as well.
+    assert len(_stub_calls(state, "sudo")) == 1
+
+
+@_needs_posix_sh
+def test_the_real_probe_reports_an_escape_and_the_runner_refuses_it(
+    tmp_path, monkeypatch, probe_stub_bin
+):
+    prefix, state = _namespace_probe_stubs(
+        tmp_path,
+        monkeypatch,
+        probe_stub_bin,
+        status=_proc_self_status(),
+        escape_succeeds=True,
+    )
+    canary = tmp_path / "caller-owned"
+    canary.touch(mode=0o600)
+
+    assert _run_the_real_probe(monkeypatch, prefix, canary) is None
+    assert _stub_calls(state, "nsenter") == [f"--net=/proc/{os.getpid()}/ns/net true"]
+
+
+@_needs_posix_sh
+@pytest.mark.parametrize(
+    "field, value",
+    [
+        pytest.param(
+            "Uid",
+            "{other_uid}\t{other_uid}\t{other_uid}\t{other_uid}",
+            id="uid-not-dropped",
+        ),
+        # A saved id left behind is a way back: setresuid can restore it.
+        pytest.param("Uid", "{uid}\t{uid}\t{other_uid}\t{uid}", id="saved-uid-kept"),
+        pytest.param(
+            "Gid",
+            "{other_gid}\t{other_gid}\t{other_gid}\t{other_gid}",
+            id="gid-not-dropped",
+        ),
+        pytest.param("Gid", "{gid}\t{gid}\t{other_gid}\t{gid}", id="saved-gid-kept"),
+        pytest.param("Groups", "27 ", id="supplementary-group-kept"),
+        pytest.param("NoNewPrivs", "0", id="new-privileges-allowed"),
+        *[
+            pytest.param(field, "000001ffffffffff", id=f"{field}-full")
+            for field in ("CapInh", "CapPrm", "CapEff", "CapBnd", "CapAmb")
+        ],
+        # A field the kernel did not report has not been shown to be dropped.
+        *[
+            pytest.param(field, None, id=f"{field}-absent")
+            for field in _STATUS_FIELDS_THE_RUNNER_READS
+        ],
+    ],
+)
+def test_the_real_probe_status_must_show_every_privilege_dropped(
+    tmp_path, monkeypatch, probe_stub_bin, field, value
+):
+    uid, gid = os.geteuid(), os.getegid()
+    if value is not None:
+        value = value.format(uid=uid, other_uid=uid + 1, gid=gid, other_gid=gid + 1)
+    prefix, state = _namespace_probe_stubs(
+        tmp_path,
+        monkeypatch,
+        probe_stub_bin,
+        status=_proc_self_status({field: value}),
+    )
+    canary = tmp_path / "caller-owned"
+    canary.touch(mode=0o600)
+
+    assert _run_the_real_probe(monkeypatch, prefix, canary) is None
+    # Refused on what the status said, not because the probe stopped short of
+    # reporting it: the script ran to its escape attempt.
+    assert _stub_calls(state, "cat") == ["/proc/self/status"]
+    assert len(_stub_calls(state, "nsenter")) == 1
+
+
 def test_only_a_sudo_prefix_yields_something_to_escalate_a_signal_through():
     assert runner._sudo_escalation(_SUDO_NET) == [_FAKE_SUDO, "-n"]
     assert runner._sudo_escalation(_USER_NET) == []
@@ -853,13 +1137,15 @@ def test_only_a_sudo_prefix_yields_something_to_escalate_a_signal_through():
 
 
 def test_the_budget_kill_is_reissued_through_sudo_for_a_root_owned_group(monkeypatch):
-    """An unprivileged parent cannot signal the root group sudo started.
+    """An unprivileged parent cannot signal the root-owned part of a sudo group.
 
     kill(2) delivers a signal only when the sender's real or effective uid
-    matches the target's real or saved uid, and everything behind sudo has both
-    set to root, so killpg raises EPERM.  Left unhandled the budget would report
-    PermissionError instead of the budget message and the notebook it was meant
-    to bound would keep running.
+    matches the target's real or saved uid.  The runner and kernel run as the
+    caller once setpriv has dropped privileges, but the sudo wrapper and the
+    namespace setup it runs are root-owned, so a killpg that reaches only those
+    raises EPERM.  Left unhandled the budget would report PermissionError
+    instead of the budget message and the notebook it was meant to bound would
+    keep running.
     """
 
     refused: list[tuple[int, int]] = []
@@ -1020,12 +1306,11 @@ def test_a_successful_killpg_still_gets_the_privileged_pass(monkeypatch):
     """Success from killpg does not mean the group is gone.
 
     kill(2) reports success when the signal reached *at least one* member of the
-    group.  Behind sudo the group holds the signalable sudo process and the root
-    descendants it started, so killing sudo alone returns success while the
-    kernel keeps running and the notebook keeps executing in it.  Escalating
-    only on PermissionError therefore missed exactly the case the escalation
-    exists for, so the privileged pass runs whenever the group was started
-    privileged.
+    group.  Behind sudo the group can hold caller-owned processes beside the
+    root-owned sudo wrapper and namespace setup, so signalling the former
+    returns success while the latter keep running.  Escalating only on
+    PermissionError therefore missed exactly the case the escalation exists
+    for, so the privileged pass runs whenever the group was started privileged.
     """
 
     escalated: list[list[str]] = []
