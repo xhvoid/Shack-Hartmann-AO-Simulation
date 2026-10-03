@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import matplotlib
@@ -28,8 +29,17 @@ from shwfs_ao.experiments.scenario_instrument import (
 )
 
 
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
 def main() -> None:
-    output_dir = ROOT / "figures" / "detector_level_SCAO"
+    output_dir = Path(
+        os.environ.get("AO_DEMO_OUTPUT_DIR", ROOT / "figures" / "detector_level_SCAO")
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
 
     geometry = ShwfsGeometryConfig(
@@ -139,10 +149,10 @@ def main() -> None:
     plt.close(fig2)
 
     summary = poke_matrix_summary(poke)
-    print(f"Wrote {png_path.relative_to(ROOT)}")
-    print(f"Wrote {csv_path.relative_to(ROOT)}")
-    print(f"Wrote {amplitude_png.relative_to(ROOT)}")
-    print(f"Wrote {amplitude_csv.relative_to(ROOT)}")
+    print(f"Wrote {_display_path(png_path)}")
+    print(f"Wrote {_display_path(csv_path)}")
+    print(f"Wrote {_display_path(amplitude_png)}")
+    print(f"Wrote {_display_path(amplitude_csv)}")
     print(
         "Poke matrix: "
         f"shape={tuple(summary['matrix_shape'])}, "
