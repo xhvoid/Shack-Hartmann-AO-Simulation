@@ -17,7 +17,12 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +45,10 @@ GENERATOR_VERSION = "6"
 CANDIDATE_FILE = "cross_backend_candidate.json"
 DIFF_JSON = "cross_backend_diff.json"
 DIFF_MARKDOWN = "cross_backend_diff.md"
+# Version of the shwfs_ao.cross_backend_diff document, not of the candidate.
+# Version 2 adds the per-witness ``numerical_inputs`` summary; the candidate
+# bytes it describes are unchanged, so GENERATOR_VERSION is not bumped for it.
+DIFF_SCHEMA_VERSION = 2
 DESTINATION_DIR = (
     ROOT / "src" / "shwfs_ao" / "resources" / "reference_metrics" / "cross_backend"
 )
@@ -377,6 +386,21 @@ def _accept_reviewed_candidate(
     if not checked_diff_path.is_file():
         raise SystemExit(f"Missing generated machine-readable diff: {checked_diff_path}")
     checked_diff = json.loads(checked_diff_path.read_text(encoding="utf-8"))
+    # A diff written by an earlier diff format differs from the recomputed one
+    # even though neither document moved, so it is named for what it is rather
+    # than reported as a post-review edit.  Either way the remedy is the same.
+    if (
+        isinstance(checked_diff, dict)
+        and checked_diff.get("schema_name") == diff["schema_name"]
+        and checked_diff.get("schema_version") != diff["schema_version"]
+    ):
+        raise SystemExit(
+            f"The reviewed diff is {diff['schema_name']} version "
+            f"{checked_diff.get('schema_version')!r}, but this script writes "
+            f"version {diff['schema_version']!r}, so what was reviewed is not "
+            "what acceptance checks; regenerate the candidate and review the "
+            "new diff."
+        )
     if checked_diff != diff:
         raise SystemExit(
             "Candidate or accepted baseline changed after diff generation; "
@@ -760,7 +784,7 @@ def _build_diff(
         )
     return {
         "schema_name": "shwfs_ao.cross_backend_diff",
-        "schema_version": 1,
+        "schema_version": DIFF_SCHEMA_VERSION,
         "baseline_present": current is not None,
         "old_config_hash": (
             None
@@ -775,6 +799,7 @@ def _build_diff(
         ),
         "candidate_sha256": hashlib.sha256(candidate_bytes).hexdigest(),
         "metrics": entries,
+        "numerical_inputs": _witness_summaries(current, candidate),
         "changes": _document_changes(current, candidate),
     }
 
@@ -874,6 +899,212 @@ def _keyed_elements(
     return keyed
 
 
+# The numerical-input witnesses are zlib/base64 arrays and canonical DM hash
+# payloads.  As plain leaves they were unreviewable: a v1 -> v2 diff rendered the
+# whole subtree as one table cell on a single 136,574-character line, and a
+# changed witness read as one base64 string replacing another, which says
+# nothing about whether the samples moved by roundoff or by real input drift.
+# The review therefore reports what that decision needs — shape, identity
+# hashes, and the largest sample change measured against the evaluator's own
+# tolerance — and stands a length and a SHA-256 in for every blob.  The
+# machine-readable ``changes`` list still carries each changed witness leaf in
+# full.
+_WITNESS_PATH = "numerical_inputs"
+_WITNESS_HASH_FIELDS = ("values_sha256", "source_hash", "configuration_hash")
+_WITNESS_BLOB_FIELDS = ("data", "source_payload", "backend_source_payload")
+# A SHA-256 hex digest: the longest field value recorded verbatim.
+_WITNESS_VERBATIM_CHARACTERS = 64
+# Enough of a SHA-256 to tell two digests apart in review, as git abbreviates.
+_HASH_PREFIX_CHARACTERS = 12
+
+
+def _witness_summaries(
+    current: dict[str, Any] | None,
+    candidate: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Summarise every numerical-input witness, candidate against baseline.
+
+    A witness present on both sides is compared exactly as the evaluator would
+    compare a new run with this baseline: the candidate is the observation and
+    the current baseline the expectation, the verdict is
+    ``numerical_input_failure``'s own, and the reported ``max_delta_over_allowed``
+    uses the same ``NUMERICAL_INPUTS`` tolerances, so a ratio at or below one is
+    roundoff the contract already accepts.  A witness on one side only (every
+    witness, when a schema-v1 baseline is replaced) is summarised by shape and
+    hash prefixes rather than compared.
+    """
+
+    # Already imported through shwfs_ao.validation.regression, which both callers
+    # import and then clear with the executed-package guard, so this binds no
+    # module that guard has not judged.
+    from shwfs_ao.validation.numerical_identity import NUMERICAL_INPUTS
+
+    old_records = _witness_records(current)
+    new_records = _witness_records(candidate)
+    summaries: list[dict[str, Any]] = []
+    for name in sorted(set(old_records) | set(new_records)):
+        old = old_records.get(name, _ABSENT)
+        new = new_records.get(name, _ABSENT)
+        old_side, reference = _witness_side(old)
+        new_side, observed = _witness_side(new)
+        if old is _ABSENT:
+            change = "added"
+        elif new is _ABSENT:
+            change = "removed"
+        else:
+            change = "unchanged" if old == new else "changed"
+        contract = NUMERICAL_INPUTS.get(name)
+        summaries.append(
+            {
+                "witness": name,
+                "change": change,
+                "contract_tolerance": (
+                    None
+                    if contract is None
+                    else {
+                        "group": contract[0],
+                        "units": contract[1],
+                        "rtol": contract[2],
+                        "atol": contract[3],
+                    }
+                ),
+                "old": old_side,
+                "new": new_side,
+                "changed_fields": _witness_changed_fields(old, new),
+                "comparison": _witness_comparison(
+                    name, old, new, reference, observed
+                ),
+            }
+        )
+    return summaries
+
+
+def _witness_records(document: dict[str, Any] | None) -> dict[str, Any]:
+    records = None if document is None else document.get(_WITNESS_PATH)
+    return dict(records) if isinstance(records, dict) else {}
+
+
+def _witness_side(record: Any) -> tuple[dict[str, Any] | None, np.ndarray | None]:
+    """A bounded summary of one side's record, plus its decoded samples."""
+
+    if record is _ABSENT:
+        return None, None
+    from shwfs_ao.validation.numerical_identity import numerical_input_values
+
+    fields = record if isinstance(record, dict) else {}
+    summary: dict[str, Any] = {
+        key: _witness_verbatim(fields.get(key))
+        for key in ("shape", "encoding", *_WITNESS_HASH_FIELDS)
+    }
+    summary.update(
+        {key: _witness_fingerprint(fields.get(key)) for key in _WITNESS_BLOB_FIELDS}
+    )
+    try:
+        values = numerical_input_values(record)
+    except ValueError as exc:
+        summary["decode_error"] = str(exc)
+        return summary, None
+    summary["decode_error"] = None
+    return summary, values
+
+
+def _witness_fingerprint(value: Any) -> dict[str, Any] | None:
+    """Length and SHA-256 of a witness blob, standing in for the blob itself."""
+
+    if value is None:
+        return None
+    text = value if isinstance(value, str) else json.dumps(value, sort_keys=True)
+    return {
+        "characters": len(text),
+        "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+    }
+
+
+def _witness_verbatim(value: Any) -> Any:
+    """``value`` itself when it is no longer than a digest, else its fingerprint.
+
+    Shapes, encodings and hashes are short in every valid record; the bound only
+    keeps a malformed baseline record from reintroducing a giant line.
+    """
+
+    text = value if isinstance(value, str) else json.dumps(value, sort_keys=True)
+    if len(text) <= _WITNESS_VERBATIM_CHARACTERS:
+        return value
+    return _witness_fingerprint(value)
+
+
+def _witness_changed_fields(old: Any, new: Any) -> list[str]:
+    """Every record field whose value differs, when both sides have a record."""
+
+    if old is _ABSENT or new is _ABSENT:
+        return []
+    old_fields = old if isinstance(old, dict) else {}
+    new_fields = new if isinstance(new, dict) else {}
+    return sorted(
+        key
+        for key in set(old_fields) | set(new_fields)
+        if old_fields.get(key, _ABSENT) != new_fields.get(key, _ABSENT)
+    )
+
+
+def _witness_comparison(
+    name: str,
+    old: Any,
+    new: Any,
+    reference: np.ndarray | None,
+    observed: np.ndarray | None,
+) -> dict[str, Any] | None:
+    """Sample-level comparison of a witness present and decodable on both sides.
+
+    ``passes_contract`` and ``contract_failure`` are ``numerical_input_failure``
+    verbatim, so the verdict is the evaluator's — configuration hash, shape, NaN
+    mask and tolerance — rather than a re-derivation of it.  The magnitudes are
+    taken over the samples finite on both sides with the tolerance expression
+    that function applies; where the NaN masks agree that is exactly the set it
+    checks, and where they do not the magnitudes still describe the rest.
+    """
+
+    if reference is None or observed is None:
+        return None
+    import numpy as np
+
+    from shwfs_ao.validation.numerical_identity import (
+        NUMERICAL_INPUTS,
+        numerical_input_failure,
+    )
+
+    comparison: dict[str, Any] = {
+        "shape_equal": observed.shape == reference.shape,
+        "nan_mask_equal": None,
+        "max_abs_delta": None,
+        "max_delta_over_allowed": None,
+        "passes_contract": None,
+        "contract_failure": None,
+    }
+    contract = NUMERICAL_INPUTS.get(name)
+    if observed.shape == reference.shape:
+        reference_nan = np.isnan(reference)
+        observed_nan = np.isnan(observed)
+        comparison["nan_mask_equal"] = bool(
+            np.array_equal(reference_nan, observed_nan)
+        )
+        compared = ~(reference_nan | observed_nan)
+        difference = np.abs(observed[compared] - reference[compared])
+        if difference.size:
+            comparison["max_abs_delta"] = float(difference.max())
+            if contract is not None:
+                _, _, rtol, atol = contract
+                allowed = atol + rtol * np.abs(reference[compared])
+                comparison["max_delta_over_allowed"] = float(
+                    (difference / allowed).max()
+                )
+    if contract is not None:
+        failure = numerical_input_failure(name, new, old)
+        comparison["passes_contract"] = failure is None
+        comparison["contract_failure"] = failure
+    return comparison
+
+
 def _canonical_bytes(document: dict[str, Any]) -> bytes:
     return (json.dumps(document, indent=2, sort_keys=True) + "\n").encode(
         "utf-8"
@@ -913,6 +1144,7 @@ def _render_diff_markdown(diff: dict[str, Any]) -> str:
             f"| {_md_cell(entry['comparison_kind'])} | {_md_cell(entry['metric'])} "
             f"| {_md_cell(entry['old_value'])} | {_md_cell(entry['new_value'])} |"
         )
+    lines.extend(_render_witness_markdown(diff["numerical_inputs"]))
     lines.extend(
         (
             "",
@@ -928,17 +1160,210 @@ def _render_diff_markdown(diff: dict[str, Any]) -> str:
             entry["path"].endswith(".value")
             and entry["path"].startswith("comparisons[")
         )
+        and not _witness_change_is_summarised(entry)
     ]
     if not changes:
         lines.append("None.")
     else:
         lines.extend(("| path | old | new |", "| --- | --- | --- |"))
         for entry in changes:
+            # Only a witness subtree the section above could not read (one that
+            # is not a mapping) reaches here, and it is bounded like the rest.
+            render = (
+                _md_witness_value
+                if _is_witness_path(entry["path"])
+                else _md_cell
+            )
             lines.append(
-                f"| `{_md_cell(entry['path'])}` | {_md_cell(entry['old'])} | "
-                f"{_md_cell(entry['new'])} |"
+                f"| `{_md_cell(entry['path'])}` | {render(entry['old'])} | "
+                f"{render(entry['new'])} |"
             )
     return "\n".join(lines) + "\n"
+
+
+def _is_witness_path(path: str) -> bool:
+    return path == _WITNESS_PATH or path.startswith(
+        (f"{_WITNESS_PATH}.", f"{_WITNESS_PATH}[")
+    )
+
+
+def _witness_change_is_summarised(entry: dict[str, Any]) -> bool:
+    """Whether the witness section accounts for this change on its own.
+
+    Every path below one witness is reported there field by field.  The subtree
+    root is too when each side is absent or a mapping, because its witnesses
+    are then listed as added or removed; anything else stays in the generic
+    table, so no change can drop out of the review.
+    """
+
+    path = entry["path"]
+    if path.startswith(f"{_WITNESS_PATH}."):
+        return True
+    return path == _WITNESS_PATH and all(
+        value is None or isinstance(value, dict)
+        for value in (entry["old"], entry["new"])
+    )
+
+
+def _md_witness_value(value: object) -> str:
+    """A table-safe witness value that can never be a blob."""
+
+    if (
+        isinstance(value, dict)
+        and set(value) == {"characters", "sha256"}
+        and isinstance(value["sha256"], str)
+    ):
+        return (
+            f"{value['characters']} chars, SHA-256 "
+            f"`{value['sha256'][:_HASH_PREFIX_CHARACTERS]}`"
+        )
+    verbatim = _witness_verbatim(value)
+    if verbatim is not value:
+        return _md_witness_value(verbatim)
+    return "null" if value is None else _md_cell(value)
+
+
+def _md_witness_hash(value: object) -> str:
+    if isinstance(value, str):
+        return f"`{_md_cell(value[:_HASH_PREFIX_CHARACTERS])}`"
+    return _md_witness_value(value)
+
+
+def _md_witness_field(
+    entry: dict[str, Any],
+    key: str,
+    render: Callable[[Any], str],
+    *,
+    same: str | None = "same",
+) -> str:
+    """One field across both sides: the change, or the one side present.
+
+    An unchanged field reads ``same`` unless ``same`` is None, in which case
+    the shared value itself is shown.
+    """
+
+    old_side, new_side = entry["old"], entry["new"]
+    if old_side is None or new_side is None:
+        return render((new_side or old_side)[key])
+    if old_side[key] == new_side[key]:
+        return render(new_side[key]) if same is None else same
+    return f"{render(old_side[key])} → {render(new_side[key])}"
+
+
+def _render_witness_markdown(witnesses: list[dict[str, Any]]) -> list[str]:
+    lines = ["", "## Numerical input witnesses", ""]
+    if not witnesses:
+        lines.append("None on either side.")
+        return lines
+    tabled = {"shape", *_WITNESS_HASH_FIELDS}
+    lines.extend(
+        (
+            "Hashes are abbreviated to their first "
+            f"{_HASH_PREFIX_CHARACTERS} characters and blobs to a length and",
+            "SHA-256 prefix; the machine-readable diff carries every changed "
+            "witness",
+            "field in full, so these paths are not repeated under All other "
+            "changes.",
+            "",
+            "| witness | change | shape | values_sha256 | source_hash "
+            "| configuration_hash | other changed fields |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
+        )
+    )
+    details: list[str] = []
+    for entry in witnesses:
+        name = _md_cell(entry["witness"])
+        others = [field for field in entry["changed_fields"] if field not in tabled]
+        shape = _md_witness_field(entry, "shape", _md_witness_value, same=None)
+        hashes = " | ".join(
+            _md_witness_field(entry, key, _md_witness_hash)
+            for key in _WITNESS_HASH_FIELDS
+        )
+        if entry["old"] is None or entry["new"] is None:
+            changed = "n/a"
+        else:
+            changed = _md_cell(", ".join(others)) if others else "none"
+        lines.append(
+            f"| `{name}` | {entry['change']} | {shape} | {hashes} | {changed} |"
+        )
+        for field in others:
+            if field in entry["new"] and entry["old"][field] != entry["new"][field]:
+                change = _md_witness_field(entry, field, _md_witness_value)
+            else:
+                # A field the summary does not carry, or one absent on one side
+                # and null on the other, which summarise alike.  Either way the
+                # record lacks the exact witness field set, so it cannot decode
+                # and the failure list below says why.
+                change = "not summarised; a record that does not decode"
+            details.append(f"- `{name}` {_md_cell(field)}: {change}")
+    if details:
+        lines.extend(("", "Other changed witness fields:", "", *details))
+
+    compared = [entry for entry in witnesses if entry["comparison"] is not None]
+    lines.extend(
+        (
+            "",
+            "### Candidate samples against the current baseline",
+            "",
+            "Compared as the evaluator compares a run with the baseline "
+            "(`numerical_input_failure`):",
+            "allowed = atol + rtol * abs(baseline sample), so max delta / "
+            "allowed at or below 1 is",
+            "roundoff the contract accepts. Shapes, NaN pupil masks and "
+            "configuration_hash must match exactly.",
+            "",
+        )
+    )
+    if not compared:
+        lines.append(
+            "None: no witness is present and decodable on both sides, so "
+            "there is nothing to compare."
+        )
+    else:
+        lines.extend(
+            (
+                "| witness | tolerance | max abs delta | max delta / allowed "
+                "| NaN mask | contract check |",
+                "| --- | --- | --- | --- | --- | --- |",
+            )
+        )
+        for entry in compared:
+            comparison = entry["comparison"]
+            contract = entry["contract_tolerance"]
+            units = "" if contract is None else f" {_md_cell(contract['units'])}"
+            tolerance = (
+                "none recorded"
+                if contract is None
+                else f"{contract['atol']:g}{units} + {contract['rtol']:g} * "
+                "abs(baseline)"
+            )
+            delta = comparison["max_abs_delta"]
+            ratio = comparison["max_delta_over_allowed"]
+            mask = comparison["nan_mask_equal"]
+            verdict = comparison["passes_contract"]
+            lines.append(
+                f"| `{_md_cell(entry['witness'])}` | {tolerance} | "
+                f"{'n/a' if delta is None else f'{delta:.3g}{units}'} | "
+                f"{'n/a' if ratio is None else f'{ratio:.3g}'} | "
+                f"{'n/a' if mask is None else 'equal' if mask else 'differs'} | "
+                f"{'n/a' if verdict is None else 'pass' if verdict else 'fail'} |"
+            )
+    failures = [
+        f"- `{_md_cell(entry['witness'])}`: "
+        f"{_md_cell(entry['comparison']['contract_failure'])}"
+        for entry in compared
+        if entry["comparison"]["contract_failure"] is not None
+    ]
+    failures.extend(
+        f"- `{_md_cell(entry['witness'])}` ({side} side does not decode): "
+        f"{_md_cell(entry[side]['decode_error'])}"
+        for entry in witnesses
+        for side in ("old", "new")
+        if entry[side] is not None and entry[side]["decode_error"] is not None
+    )
+    if failures:
+        lines.extend(("", "Contract failures:", "", *failures))
+    return lines
 
 
 def _metric_values(document: dict[str, Any]) -> dict[tuple[str, str], Any]:
