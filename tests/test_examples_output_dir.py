@@ -1,18 +1,22 @@
-"""The CI-smoked demos honour ``AO_DEMO_OUTPUT_DIR`` and leave ``figures/`` alone.
+"""Examples that default to ``figures/detector_level_SCAO`` honour ``AO_DEMO_OUTPUT_DIR``.
 
-``examples/run_psf_strehl_demo.py`` and ``examples/run_shwfs_centroid_demo.py``
-default to the tracked ``figures/detector_level_SCAO`` directory, whose files
-are not bit-portable across platforms, so CI redirects them.  Each demo runs
-here as a subprocess, exactly as CI invokes it, with the override pointing at
-a directory that does not exist yet.  Every output must land there, every
-``Wrote`` line must name the file actually written, and no file or directory
-under ``figures/`` may be created, removed, or rewritten (content and mtime).
-The examples are located relative to this file, so the test runs unchanged
-from a checkout or from a wheel-smoke bundle that ships the examples.
+That tracked directory's files are not bit-portable across platforms, so CI
+redirects the demos it runs.  A static check requires every
+``detector_level_SCAO`` literal under ``examples/`` to be the default of an
+``os.environ.get("AO_DEMO_OUTPUT_DIR", ...)`` lookup.  The two CI-smoked demos
+and the interaction-matrix demo also run here as subprocesses from the
+repository root, as CI runs them but by absolute script path, with the override
+pointing at a directory that does not exist yet.  Every output must land there,
+every ``Wrote`` line must name the file actually written, and no file or
+directory under ``figures/`` may be created, removed, or rewritten (content and
+mtime).  The slower examples are covered only by the static check.  The
+examples are located relative to this file; the wheel-smoke bundle manifest
+does not list this test, so the wheel job does not run it.
 """
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import os
 from pathlib import Path
@@ -26,6 +30,12 @@ ROOT = Path(__file__).resolve().parents[1]
 FIGURES = ROOT / "figures"
 
 _DEMO_OUTPUTS = {
+    "run_interaction_matrix_demo.py": (
+        "poke_matrix_singular_values.png",
+        "poke_matrix_singular_values.csv",
+        "poke_amplitude_scan.png",
+        "poke_amplitude_scan.csv",
+    ),
     "run_psf_strehl_demo.py": ("psf_strehl_demo.png", "psf_strehl_demo.csv"),
     "run_shwfs_centroid_demo.py": (
         "shwfs_centroid_demo.png",
@@ -49,6 +59,53 @@ def _tree_state(directory: Path) -> dict[str, tuple[int, int, str] | None]:
         else:
             state[key] = None
     return state
+
+
+def _unredirected_output_literals(source: str) -> list[int]:
+    """Lines of ``detector_level_SCAO`` literals outside the override default.
+
+    A literal is redirected when it lies inside the default argument of
+    ``os.environ.get("AO_DEMO_OUTPUT_DIR", default)``.  Docstrings and other
+    bare string statements are prose, not paths, and are ignored.
+    """
+
+    tree = ast.parse(source)
+    exempt: set[int] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant):
+            exempt.add(id(node.value))
+        elif (
+            isinstance(node, ast.Call)
+            and ast.unparse(node.func) == "os.environ.get"
+            and len(node.args) == 2
+            and isinstance(node.args[0], ast.Constant)
+            and node.args[0].value == "AO_DEMO_OUTPUT_DIR"
+        ):
+            exempt.update(id(child) for child in ast.walk(node.args[1]))
+    return [
+        node.lineno
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and "detector_level_SCAO" in node.value
+        and id(node) not in exempt
+    ]
+
+
+def test_every_example_path_into_tracked_figures_honours_the_override():
+    sources = {
+        path.name: path.read_text(encoding="utf-8")
+        for path in sorted((ROOT / "examples").glob("*.py"))
+    }
+    writers = {name for name, source in sources.items() if "detector_level_SCAO" in source}
+    # The subprocess-checked demos keep this scan from passing vacuously.
+    assert set(_DEMO_OUTPUTS) <= writers
+    unredirected = {
+        name: lines
+        for name in sorted(writers)
+        if (lines := _unredirected_output_literals(sources[name]))
+    }
+    assert unredirected == {}, "hard-coded figures/detector_level_SCAO path"
 
 
 @pytest.mark.parametrize("script", sorted(_DEMO_OUTPUTS))
