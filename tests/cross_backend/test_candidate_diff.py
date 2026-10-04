@@ -26,6 +26,7 @@ import pytest
 
 from shwfs_ao.core.hashing import stable_hash
 from shwfs_ao.validation.numerical_identity import (
+    dm_source_failure,
     numerical_input_failure,
     numerical_input_record,
     numerical_input_values,
@@ -382,13 +383,24 @@ class TestWitnessReview:
         comparison = _witness(diff, "static_opd_m")["comparison"]
         assert comparison["max_delta_over_allowed"] > 1.0e2
         assert comparison["passes_contract"] is False
-        # The verdict is the evaluator's, not a re-derivation of it.
-        assert comparison["contract_failure"] == numerical_input_failure(
-            "static_opd_m",
-            document["numerical_inputs"]["static_opd_m"],
-            load_cross_backend_baseline()["numerical_inputs"]["static_opd_m"],
+        # The verdict is the evaluator's, not a re-derivation of it; only the
+        # failing sample's index is written as plain integers, as numpy 1
+        # writes it, rather than as numpy 2's ``np.int64(...)``.
+        expected = load_cross_backend_baseline()["numerical_inputs"]["static_opd_m"]
+        values = numerical_input_values(expected)
+        sample = tuple(
+            int(i)
+            for i in np.unravel_index(
+                int(np.nanargmax(np.abs(values))), values.shape
+            )
         )
-        assert comparison["contract_failure"].startswith("sample ")
+        evaluator = numerical_input_failure(
+            "static_opd_m", document["numerical_inputs"]["static_opd_m"], expected
+        )
+        assert evaluator is not None
+        assert comparison["contract_failure"] == (
+            f"sample {sample}: {evaluator.partition('): ')[2]}"
+        )
 
         rendered = _reviewable_markdown(diff)
         assert any(
@@ -456,9 +468,15 @@ class TestWitnessReview:
         diff = script._build_diff(document, script._canonical_bytes(document))
         witness = _witness(diff, "native_dm")
         assert witness["changed_fields"] == ["backend_source_payload"]
-        # The samples did not move, and the evaluator's check does not read
-        # the payload, so the contract still passes.
+        # The diff's verdict is numerical_input_failure's, which compares only
+        # configuration_hash and the samples, and neither moved.  The payload
+        # is still checked: the full evaluator runs dm_source_failure on a DM
+        # witness before that comparison, and it rejects this record, whose
+        # payload no longer hashes to the backend_config_hash it was bound to.
         assert witness["comparison"]["passes_contract"] is True
+        assert dm_source_failure("native_dm", record) == (
+            "DM backend_config_hash does not match backend_source_payload"
+        )
         assert witness["new"]["backend_source_payload"] == {
             "characters": len(old_payload) + 1,
             "sha256": hashlib.sha256(
@@ -1580,3 +1598,44 @@ class TestAcceptanceFreshness:
                 reason="earlier diff format",
                 review_reference="AO-REF-018-TEST",
             )
+
+    @pytest.mark.skipif(
+        np.lib.NumpyVersion(np.__version__).major < 2,
+        reason="numpy 1 has only the plain scalar repr",
+    )
+    @pytest.mark.parametrize(
+        ("generation_repr", "acceptance_repr"),
+        (("1.25", False), (False, "1.25")),
+        ids=("numpy-1-repr-then-numpy-2", "numpy-2-repr-then-numpy-1"),
+    )
+    def test_a_failing_witness_sample_reads_alike_under_either_numpy(
+        self,
+        packaged_tree,
+        tmp_path,
+        generation_repr,
+        acceptance_repr,
+    ):
+        # pyproject admits numpy 1 and 2, and nothing makes generation and
+        # acceptance share one, so the evaluator failure a drifted witness
+        # records must not carry numpy 2's ``np.int64(...)`` index repr.  Its
+        # "1.25" legacy print mode stands in for numpy 1 on one side.
+        document = _scaled_largest_sample("static_opd_m", 1.0 + 1.0e-9)
+        candidate_dir = tmp_path / "candidate"
+        with np.printoptions(legacy=generation_repr):
+            diff = _write_candidate(candidate_dir, document)
+        failure = _witness(diff, "static_opd_m")["comparison"]["contract_failure"]
+        assert failure.startswith("sample (") and "np." not in failure
+        with np.printoptions(legacy=acceptance_repr):
+            script._accept_reviewed_candidate(
+                candidate_dir,
+                reason="Contract-test acceptance of a drifted witness.",
+                review_reference="AO-REF-018-TEST",
+            )
+        accepted = json.loads(
+            (packaged_tree / "cross_backend_baseline.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert accepted["numerical_inputs"]["static_opd_m"] == (
+            document["numerical_inputs"]["static_opd_m"]
+        )
