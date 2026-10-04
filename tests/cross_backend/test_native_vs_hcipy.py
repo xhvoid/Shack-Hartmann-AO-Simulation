@@ -83,10 +83,11 @@ def test_shared_inputs_reproduce_the_baseline_with_only_roundoff(
     baseline,
 ):
     # Pointwise optical comparisons feed both backends the same stored
-    # fixtures; matching content hashes are the recorded evidence.
-    # Raw hashes prove which bytes the two backends shared within this run.
-    # Full-array witnesses, exact semantic identity and strict fixed roundoff
-    # tolerances establish reproduction across libm/FFT implementations.
+    # fixtures.  Raw hashes prove which bytes the two backends shared within
+    # this run and must bind the recorded witnesses; reproduction of the
+    # baseline is judged by comparing those full-array witnesses sample by
+    # sample at fixed roundoff tolerances, with exact semantic identity, so
+    # libm/FFT low bits may differ.  Every other identity hash stays exact.
     from shwfs_ao.validation.regression import _numerical_input_basis_failures
     assert _numerical_input_basis_failures(report, baseline) == []
     for name in report["component_hashes"]:
