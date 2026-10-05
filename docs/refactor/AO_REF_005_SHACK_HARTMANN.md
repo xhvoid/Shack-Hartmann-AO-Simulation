@@ -87,6 +87,11 @@ and detector frames without changing the reconstruction-vector schema.
 fixed detector response, or the explicitly replayed legacy calibration
 response. Runtime randomness is supplied by the caller as `RandomStreams`; the
 sensor does not create a hidden provider or reuse calibration generators.
+Each lenslet draws beneath
+`scoped("shack_hartmann.measurement", key=(noise_stream_identity, subaperture_id))`.
+The noise-stream identity binds only declared sensor inputs, never the
+realized reference centroids or drawn detector maps that the calibration hash
+records, so one seed selects the same noise streams on every host.
 
 ## Detector-free geometric path
 
