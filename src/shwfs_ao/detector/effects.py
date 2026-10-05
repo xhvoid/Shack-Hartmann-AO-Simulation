@@ -20,6 +20,34 @@ class DetectorEffectsError(ValueError):
     """Raised when detector-effect inputs are inconsistent."""
 
 
+# Relative to the declared per-pixel budget, expected counts below this floor
+# are FFT/libm roundoff rather than light.
+_POISSON_ROUNDOFF_FLOOR = 64.0 * float(np.finfo(float).eps)
+
+
+def _host_independent_poisson(
+    rng: np.random.Generator,
+    expected_e: np.ndarray,
+    *,
+    budget_e: float,
+) -> np.ndarray:
+    """Draw Poisson counts whose variate consumption is host-independent.
+
+    NumPy's sampler returns 0 for ``lam == 0`` without consuming a variate but
+    consumes at least one for any ``lam > 0``.  Whether an unlit pixel's
+    expectation is exactly zero or about 1e-33 depends on host FFT roundoff,
+    so a single such pixel would shift every later draw from the stream.
+    Expectations below ``_POISSON_ROUNDOFF_FLOOR * budget_e`` (the declared
+    source budget plus per-pixel background, so the floor itself is
+    host-independent) are therefore sampled as exactly zero; the probability
+    of a count there is below that floor.
+    """
+
+    floor_e = _POISSON_ROUNDOFF_FLOOR * budget_e
+    lam = np.where(expected_e < floor_e, 0.0, expected_e)
+    return rng.poisson(lam).astype(float)
+
+
 def apply_detector_effects(
     normalized_intensity: np.ndarray,
     config: DetectorConfig,
@@ -29,6 +57,7 @@ def apply_detector_effects(
     include_noise: bool = True,
     clip_negative: bool = True,
     legacy_seed: int | None = None,
+    portable_poisson: bool = False,
 ) -> DetectorFrame:
     """Apply detector response and noise in the normative physical order.
 
@@ -42,10 +71,18 @@ def apply_detector_effects(
     Callers that need order-independent keyed frame replay pass a
     ``random_streams.scoped("frame", key=(...))`` view; recorded stream IDs are
     taken from that scoped provider.
+
+    Shot noise drawn from ``random_streams`` treats expectations below a
+    roundoff floor of the declared budget as exactly zero, so the number of
+    variates consumed does not depend on host FFT roundoff.  An explicit
+    ``legacy_seed`` keeps its historical draws unless ``portable_poisson`` is
+    set, as canonical sensors do when the seed itself comes from a keyed
+    stream.
     """
 
     intensity = _normalized_image(normalized_intensity)
     _validate_boolean(include_noise, label="include_noise")
+    _validate_boolean(portable_poisson, label="portable_poisson")
     _validate_boolean(clip_negative, label="clip_negative")
     seed = _validate_legacy_seed(legacy_seed)
     _validate_realization(config, realization, random_streams, intensity.shape)
@@ -90,7 +127,11 @@ def apply_detector_effects(
         ) * prnu_response
         if include_noise:
             shot_rng = random_streams.generator("detector.shot_noise")
-            image_e = shot_rng.poisson(expected_pre_poisson_e).astype(float)
+            image_e = _host_independent_poisson(
+                shot_rng,
+                expected_pre_poisson_e,
+                budget_e=float(photons) * float(config.qe) + background_per_pixel_e,
+            )
             stream_ids["detector.shot_noise"] = random_streams.stream_id(
                 "detector.shot_noise"
             )
@@ -135,7 +176,16 @@ def apply_detector_effects(
         ) * prnu_response
         if include_noise:
             assert legacy_rng is not None and legacy_stream_id is not None
-            image_e = legacy_rng.poisson(expected_pre_poisson_e).astype(float)
+            if seed is None or portable_poisson:
+                image_e = _host_independent_poisson(
+                    legacy_rng,
+                    expected_pre_poisson_e,
+                    budget_e=float(photons) * float(config.qe)
+                    + background_per_pixel_e,
+                )
+            else:
+                # Explicit legacy seeds keep their historical draws exactly.
+                image_e = legacy_rng.poisson(expected_pre_poisson_e).astype(float)
             stream_ids["detector.shot_noise"] = legacy_stream_id
             if float(config.read_noise_e) > 0.0:
                 image_e = image_e + legacy_rng.normal(
