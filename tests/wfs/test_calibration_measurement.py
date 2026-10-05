@@ -780,8 +780,9 @@ def test_photon_allocation_is_an_explicit_hashed_choice(
     unit_sum = build(photon_allocation="unit_sum")
 
     assert default.photon_allocation == "throughput_scaled"
-    # The frozen default must hash byte-identically: this hash keys the
-    # runtime RNG scope derivation used by seeded regression baselines.
+    # The frozen default must hash byte-identically: this hash is recorded
+    # calibration provenance.  Runtime noise is keyed separately by the
+    # declared noise-stream identity, which always names the allocation.
     assert explicit.config_hash == default.config_hash
     assert unit_sum.photon_allocation == "unit_sum"
     assert unit_sum.config_hash != default.config_hash
