@@ -68,12 +68,13 @@ class PhysicalIntegrationConfig:
     Args:
         n_steps: Loop frames.  The default of 24 is the length the packaged
             ``physical_*`` baseline is generated at, chosen for cost: the
-            existing science-metric path evaluates PSF metrics once per frame,
-            per band, per wavelength sample — 5784 evaluations and 23136 array
-            sorts per scenario at this length — so a run costs about 75 s per
-            scenario regardless of which disturbance drives it.  At 1 kHz with
-            r0 = 0.126 m and 10 m/s wind the coherence time is about 6 ms, so
-            24 frames covers four coherence times and ``summarize_scenario``
+            existing science-metric path evaluates closed-loop PSF metrics once
+            per averaged frame, per band, per wavelength sample, plus the open
+            loop at each H-band sample — 3588 evaluations per scenario at this
+            length — so a run costs about 50 s per scenario regardless of
+            which disturbance drives it.  At 1 kHz with r0 = 0.126 m and
+            10 m/s wind the coherence time is about 6 ms, so 24 frames
+            covers four coherence times and ``summarize_scenario``
             averages the last twelve.  Raise it to 60 or more for a temporal
             study; the oversized screen supports roughly 200 frames at this
             wind before the travel budget is exhausted.
