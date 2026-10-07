@@ -11,6 +11,7 @@ throwaway tree, so no packaged resource is ever touched.
 
 from __future__ import annotations
 
+import csv
 import importlib.util
 import json
 import os
@@ -159,6 +160,29 @@ def _rewrite_reference(candidate_dir: Path, mutate) -> None:
     )
 
 
+def _rewrite_table(path: Path, mutate) -> None:
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        header = list(reader.fieldnames or ())
+        rows = list(reader)
+    mutate(rows)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=header, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _inflate_reference_closed_rms(rows: list[dict[str, str]]) -> None:
+    for row in rows:
+        if row["scenario_name"] == "all_effects":
+            row["closed_rms_nm"] = "1000000000.0"
+
+
+def _fail_every_check(rows: list[dict[str, str]]) -> None:
+    for row in rows:
+        row["passed"] = "False"
+
+
 class TestCandidateContract:
     def test_a_packaged_shaped_candidate_passes(self, packaged_tree, tmp_path):
         candidate_dir = tmp_path / "candidate"
@@ -237,6 +261,51 @@ class TestCandidateContract:
         ):
             script._validate_candidate(candidate_dir)
 
+    def test_a_reference_metric_disagreeing_with_its_scenario_row_is_refused(
+        self,
+        packaged_tree,
+        tmp_path,
+    ):
+        candidate_dir = tmp_path / "candidate"
+        _write_candidate(candidate_dir)
+        _rewrite_table(
+            candidate_dir / "fast_error_budget.csv",
+            _inflate_reference_closed_rms,
+        )
+        with pytest.raises(SystemExit, match="closed_rms_nm=.* disagrees"):
+            script._validate_candidate(candidate_dir)
+
+    def test_a_passing_check_count_mismatch_is_refused(
+        self,
+        packaged_tree,
+        tmp_path,
+    ):
+        candidate_dir = tmp_path / "candidate"
+        _write_candidate(candidate_dir)
+        _rewrite_table(candidate_dir / "fast_validation.csv", _fail_every_check)
+        with pytest.raises(SystemExit, match="has 0 passing checks"):
+            script._validate_candidate(candidate_dir)
+
+    def test_contradictory_rows_of_one_check_are_refused(
+        self,
+        packaged_tree,
+        tmp_path,
+    ):
+        candidate_dir = tmp_path / "candidate"
+        _write_candidate(candidate_dir)
+
+        def contradict_one_scan_sample(rows: list[dict[str, str]]) -> None:
+            names = [row["check_name"] for row in rows]
+            scan = next(name for name in names if names.count(name) > 1)
+            rows[names.index(scan)]["passed"] = "False"
+
+        _rewrite_table(
+            candidate_dir / "fast_validation.csv",
+            contradict_one_scan_sample,
+        )
+        with pytest.raises(SystemExit, match="contradictory passed values"):
+            script._validate_candidate(candidate_dir)
+
 
 class TestAcceptanceEvidence:
     def test_acceptance_persists_reason_review_reference_and_hashes(
@@ -300,3 +369,28 @@ class TestAcceptanceEvidence:
                 review_reference="PR-4242",
             )
         assert not (packaged_tree / script.ACCEPTANCE_RECORD_NAME).exists()
+
+    def test_an_internally_inconsistent_candidate_is_never_copied(
+        self,
+        packaged_tree,
+        tmp_path,
+    ):
+        candidate_dir = tmp_path / "candidate"
+        _write_candidate(candidate_dir)
+        _rewrite_table(
+            candidate_dir / "fast_error_budget.csv",
+            _inflate_reference_closed_rms,
+        )
+        _rewrite_table(candidate_dir / "fast_validation.csv", _fail_every_check)
+        # The reviewed diff matches the tampered bytes, so only the JSON/CSV
+        # reconciliation stands between this candidate and the package.
+        _write_reviewed_diff(candidate_dir)
+        before = {path.name: path.read_bytes() for path in packaged_tree.iterdir()}
+        with pytest.raises(SystemExit, match="disagrees"):
+            script._accept_reviewed_candidate(
+                candidate_dir,
+                reason="inconsistent",
+                review_reference="PR-4242",
+            )
+        after = {path.name: path.read_bytes() for path in packaged_tree.iterdir()}
+        assert after == before
