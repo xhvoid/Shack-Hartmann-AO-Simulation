@@ -309,6 +309,34 @@ class TestStatelessness:
             backend.opd_from_commands(np.zeros(backend.n_actuators))
         )
 
+    def test_caller_edits_to_the_construction_basis_cannot_change_synthesis(self):
+        x_m, y_m, pupil = _sampled_pupil()
+        centers = np.array([[-0.5, 0.0], [0.5, 0.0], [0.0, 0.5]])
+        basis = build_hcipy_gaussian_influence_basis(
+            x_m,
+            y_m,
+            centers,
+            1.0,
+            pupil_mask=pupil,
+        )
+        backend = HcipyDmBackend(basis, x_m, y_m)
+        config_hash = backend.config_hash
+        influences = backend.influence_functions()
+
+        basis.transformation_matrix[...] *= 2.0
+
+        # Commands never synthesized before, so no HCIPy surface cache hit
+        # can hide which matrix the mirror evaluates.
+        commands = np.array([60.0e-9, -90.0e-9, 30.0e-9])
+        assert backend.config_hash == config_hash
+        assert np.array_equal(backend.influence_functions(), influences)
+        np.testing.assert_allclose(
+            backend.opd_from_commands(commands),
+            np.tensordot(commands, influences, axes=1),
+            rtol=1.0e-12,
+            atol=1.0e-21,
+        )
+
     def test_wrapper_synthesis_is_repeatable_through_the_policy_layer(self):
         model = _hcipy_model()
         commands = _command_vector(
