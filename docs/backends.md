@@ -384,7 +384,7 @@ calibration, diagnostic, science, and experiment-result record is listed here.
 | `detector_sampling`, `detector_config`, `centroid_config` | typed records | exact sampling and algorithm/electron assumptions |
 | `detector_realization_hash`, `config_hash` | stable strings | persistent detector state and full calibration identity |
 | `provenance` | `Provenance` | source classification and references |
-| `photon_allocation` | `"throughput_scaled"` or `"unit_sum"` | explicit photon-budget interpretation shared by reference and runtime frames; the frozen throughput-scaled default hashes identically, while `"unit_sum"` changes the calibration hash |
+| `photon_allocation` | `"throughput_scaled"` or `"unit_sum"` | explicit photon-budget interpretation shared by reference and runtime frames; the frozen throughput-scaled default hashes identically, while `"unit_sum"` changes the calibration hash. Window clipping is judged on optical capture under either choice |
 | `shack_hartmann_noise_stream_identity(...)`, `DetectorShackHartmannSensor.noise_stream_identity` | stable string | declared sensor identity keying runtime noise streams; unlike `config_hash` it binds no reference centroids or drawn detector maps, so one seed selects the same streams on every host |
 | `GeometricShackHartmannCalibration.geometry` | `ShackHartmannGeometry` | exact geometric-sensor layout |
 | `reference_slopes_rad` | `(n_subapertures, 2)` rad wavefront slope | finite local-slope references |

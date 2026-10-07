@@ -841,3 +841,54 @@ def test_unit_sum_allocation_gives_every_subaperture_the_full_budget(
         np.full(throughput.shape, budget_e),
         rtol=1.0e-9,
     )
+
+
+def test_window_clipping_stays_optical_under_unit_sum_allocation(
+    geometry: ShackHartmannGeometry,
+    native_backend: NativeShackHartmannOptics,
+) -> None:
+    detector = DetectorConfig(
+        photons_per_subap_frame=200.0,
+        prnu_mode="persistent",
+    )
+    # A ten-pixel tilt walks every spot out of the 14-pixel window.
+    tilted_opd_m = (
+        10.0 * native_backend.sampling.pixel_scale_rad[0] * geometry.x_m
+    )
+    capture = np.asarray(
+        native_backend.spot_intensities(tilted_opd_m).relative_throughput,
+        dtype=float,
+    )
+    assert capture.max() < 0.1
+
+    def telemetry(photon_allocation: str):
+        sensor = DetectorShackHartmannSensor.calibrate(
+            geometry,
+            native_backend,
+            detector,
+            wfs_wavelength_m=WAVELENGTH_M,
+            random_streams=NamedRandomStreams(13),
+            validity_config=_validity(max_window_clipping_fraction=0.15),
+            photon_allocation=photon_allocation,
+        )
+        return sensor.measure(
+            tilted_opd_m,
+            random_streams=NamedRandomStreams(13),
+            include_noise=False,
+        ).detector_telemetry
+
+    scaled = telemetry("throughput_scaled")
+    unit_sum = telemetry("unit_sum")
+
+    # The allocation changes only the photon budget, never the optical
+    # capture the clipping criterion judges.
+    for result in (scaled, unit_sum):
+        np.testing.assert_allclose(
+            result.clipping_fraction,
+            1.0 - capture,
+            rtol=0.0,
+            atol=1.0e-12,
+        )
+        assert not np.any(result.valid_by_clipping)
+        assert not np.any(result.valid_subapertures)
+    assert np.all(unit_sum.fluxes_e > scaled.fluxes_e)

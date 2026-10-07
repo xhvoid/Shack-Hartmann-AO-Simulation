@@ -414,8 +414,13 @@ class DetectorShackHartmannSensor:
         for index, (subaperture_id, normalized_spot) in enumerate(
             zip(spots.subaperture_ids, spots.unit_sum_spots)
         ):
+            # Window clipping is optical capture under either allocation; the
+            # allocation decides only the source budget the detector receives.
+            captured_spot = normalized_spot * float(
+                spots.relative_throughput[index]
+            )
             transmitted_spot = (
-                normalized_spot * float(spots.relative_throughput[index])
+                captured_spot
                 if self._calibration.photon_allocation == "throughput_scaled"
                 else np.asarray(normalized_spot, dtype=float)
             )
@@ -484,9 +489,10 @@ class DetectorShackHartmannSensor:
                     self._calibration.centroid_config,
                 )
                 quality = centroid_quality(
-                    transmitted_spot,
+                    captured_spot,
                     normalized_spot,
                     self._calibration.detector_config,
+                    source_spot_norm=transmitted_spot,
                 )
                 decision = evaluate_centroid_validity(
                     estimate,
