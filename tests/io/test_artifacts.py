@@ -358,6 +358,46 @@ def test_v3_writer_appends_columns_and_hashes_sidecars_and_manifest(tmp_path) ->
     assert "fast_reference_metrics.json" in member_names
 
 
+def test_v3_reference_json_must_sit_beside_its_manifest(tmp_path) -> None:
+    output_dir = tmp_path / "out"
+    elsewhere = tmp_path / "elsewhere" / "fast_reference_metrics.json"
+    with pytest.raises(ArtifactError, match="reference_metrics_path"):
+        ArtifactConfig(
+            output_dir=output_dir,
+            reference_metrics_path=elsewhere,
+            prefix="fast",
+            write_figures=False,
+            schema_version=3,
+            **_v3_kwargs(),
+        )
+    # Schema 2 writes no manifest and keeps its historical separate path, and
+    # a v3 write without the reference JSON has no such member to locate.
+    ArtifactConfig(output_dir=output_dir, reference_metrics_path=elsewhere)
+    ArtifactConfig(
+        output_dir=output_dir,
+        reference_metrics_path=elsewhere,
+        write_reference_metrics=False,
+        schema_version=3,
+        **_v3_kwargs(),
+    )
+
+    config = ArtifactConfig(
+        output_dir=output_dir,
+        reference_metrics_path=output_dir / "reviewed_reference.json",
+        prefix="fast",
+        write_figures=False,
+        schema_version=3,
+        **_v3_kwargs(),
+    )
+    write_integration_artifacts(_result(), config)
+    manifest = json.loads(
+        (output_dir / "fast_artifact_manifest.json").read_text(encoding="utf-8")
+    )
+    member_names = [record["filename"] for record in manifest["members"]]
+    assert "reviewed_reference.json" in member_names
+    assert all((output_dir / name).is_file() for name in member_names)
+
+
 def test_csv_readers_reject_heuristic_schema_guessing(tmp_path) -> None:
     path = tmp_path / "scenario.csv"
     path.write_text("scenario_name,unexpected\nall_effects,value\n", encoding="utf-8")
