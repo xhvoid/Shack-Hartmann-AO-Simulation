@@ -26,7 +26,12 @@ from shwfs_ao.backends.hcipy.atmosphere import (
 from shwfs_ao.core.geometry import build_pupil_geometry
 from shwfs_ao.core.protocols import AtmosphereModel
 from shwfs_ao.core.random import NamedRandomStreams
-from shwfs_ao.core.wavefront import masked_mean, masked_rms, opd_to_phase
+from shwfs_ao.core.wavefront import (
+    masked_mean,
+    masked_rms,
+    opd_to_phase,
+    remove_piston,
+)
 
 
 pytestmark = pytest.mark.hcipy
@@ -34,6 +39,7 @@ pytestmark = pytest.mark.hcipy
 
 WAVELENGTH_M = 500.0e-9
 _KIND_PARAMS = pytest.mark.parametrize("kind", ("infinite", "finite"))
+_RECTANGULAR_SHAPES = ((24, 40), (40, 24), (17, 29))
 
 
 def _geometry(pupil_pixels: int = 32, diameter_m: float = 1.0):
@@ -79,6 +85,25 @@ def _square_model(config: HcipyAtmosphereConfig, pupil_pixels: int):
         config,
         geometry,
         pupil_mask=np.ones(geometry.pupil_shape, dtype=bool),
+    )
+
+
+def _rectangular_geometry(shape: tuple[int, int]):
+    return build_pupil_geometry(telescope_diameter_m=1.0, pupil_shape=shape)
+
+
+def _rectangular_model(
+    shape: tuple[int, int],
+    *,
+    wind_m_per_s: tuple[float, float],
+    full_pupil: bool = True,
+) -> HcipyVonKarmanAtmosphere:
+    """Finite-layer model on a non-square grid (all-true pupil by default)."""
+
+    return HcipyVonKarmanAtmosphere(
+        _config(kind="finite", wind_m_per_s=wind_m_per_s),
+        _rectangular_geometry(shape),
+        pupil_mask=np.ones(shape, dtype=bool) if full_pupil else None,
     )
 
 
@@ -257,8 +282,9 @@ class TestTemporalEvolution:
 
         With wind ``(wx, wy)`` the frame at time t must match the t=0 frame
         translated by ``+wind·t`` — the same convention as the native
-        backend — for both HCIPy layer kinds despite their different raw
-        velocity semantics.
+        backend — for both HCIPy layer kinds, although infinite layers move
+        through a negated HCIPy velocity and finite layers through the
+        adapter's own spectral translation.
         """
 
         pixels = 64
@@ -290,6 +316,97 @@ class TestTemporalEvolution:
         )
         assert forward > 0.99
         assert forward > reverse + 0.05
+
+
+class TestRectangularFiniteFrozenFlow:
+    """Finite layers translate rigidly on non-square pupil grids.
+
+    HCIPy 0.7's own finite-layer shift ravels its ``(nx, ny)`` phase ramp onto
+    ``(ny, nx)``-ordered coefficients, which is a translation only on square
+    grids; these grids have ``nx != ny`` and therefore also ``dx != dy``.
+    """
+
+    @pytest.mark.parametrize("shape", _RECTANGULAR_SHAPES)
+    @pytest.mark.parametrize(
+        "shift_px",
+        ((3, 0), (-3, 0), (0, 3), (0, -3), (2, -3)),
+    )
+    def test_integer_pixel_travel_is_a_rigid_translation(self, shape, shift_px):
+        """Independent oracle: sample identity, no frequency coordinates."""
+
+        dx_px, dy_px = shift_px
+        spacing_x_m, spacing_y_m = _rectangular_geometry(shape).pixel_spacing_xy_m
+        model = _rectangular_model(
+            shape,
+            wind_m_per_s=(dx_px * spacing_x_m, dy_px * spacing_y_m),
+        )
+
+        first = model.opd_at(0.0)
+        second = model.opd_at(1.0)
+        forward, scale = _overlap_residual(first, second, dx=dx_px, dy=dy_px)
+        reverse, _ = _overlap_residual(first, second, dx=-dx_px, dy=-dy_px)
+        assert forward <= 1.0e-9 * scale
+        assert reverse > 0.1 * scale
+
+    @pytest.mark.parametrize("shape", _RECTANGULAR_SHAPES)
+    @pytest.mark.parametrize(
+        "travel_px_per_s",
+        ((0.25, 0.0), (0.0, 0.25), (0.25, -0.25)),
+    )
+    def test_subpixel_travel_composes_with_whole_pixel_translation(
+        self,
+        shape,
+        travel_px_per_s,
+    ):
+        """A 0.25 px frame moved by 12 s more is that frame rolled 3 px."""
+
+        fx, fy = travel_px_per_s
+        spacing_x_m, spacing_y_m = _rectangular_geometry(shape).pixel_spacing_xy_m
+        model = _rectangular_model(
+            shape,
+            wind_m_per_s=(fx * spacing_x_m, fy * spacing_y_m),
+        )
+
+        subpixel = model.opd_at(1.0)
+        later = model.opd_at(13.0)
+        residual, scale = _overlap_residual(
+            subpixel,
+            later,
+            dx=int(round(12 * fx)),
+            dy=int(round(12 * fy)),
+        )
+        assert residual <= 1.0e-9 * scale
+
+    @pytest.mark.parametrize("shape", _RECTANGULAR_SHAPES)
+    @pytest.mark.parametrize("wind", ((1.0, 0.0), (0.0, 1.0), (0.6, -0.8)))
+    @pytest.mark.parametrize("travel_px", (0.25, 4.0))
+    def test_matches_the_true_frequency_coordinate_phase_ramp(
+        self,
+        shape,
+        wind,
+        travel_px,
+    ):
+        """Spectral oracle: ramp each coefficient at its own ``(kx, ky)``."""
+
+        geometry = _rectangular_geometry(shape)
+        mask = geometry.pupil_mask
+        model = _rectangular_model(shape, wind_m_per_s=wind, full_pupil=False)
+        time_s = travel_px * min(geometry.pixel_spacing_xy_m)
+
+        noise = model._layers[0].noise.copy()
+        for coefficients in (noise.C_1, noise.C_2):
+            coefficients *= np.exp(
+                -1j
+                * (coefficients.grid.x * wind[0] + coefficients.grid.y * wind[1])
+                * time_s
+            )
+        # The achromatic screen is λ·φ, so OPD = screen / 2π.
+        expected = remove_piston(
+            np.asarray(noise()).reshape(shape) / (2.0 * np.pi),
+            mask,
+        )
+        delta = masked_rms(model.opd_at(time_s) - expected, mask)
+        assert delta <= 1.0e-9 * masked_rms(expected, mask)
 
 
 class TestPhysicalScaling:
@@ -515,6 +632,29 @@ class TestMetadata:
             != baseline
         )
 
+    def test_finite_layer_translation_identity_is_recorded(self):
+        """Only atmospheres with a finite layer carry the translation ID."""
+
+        translation_id = "true-frequency-coordinate-phase-ramp-v1"
+        infinite = _model()
+        finite = _model(_config(kind="finite"))
+
+        # Infinite-only identity is unchanged by the finite-layer translation.
+        assert infinite.config_hash == (
+            "9c80463c1b2c8c85c3279f07eeef07f6320ee22a43d79c10532d212c326a3d25"
+        )
+        assert finite.config_hash != infinite.config_hash
+        assert infinite.metadata["schema_version"] == 2
+        assert infinite.metadata["finite_layer_translation"] is None
+        assert finite.metadata["finite_layer_translation"] == translation_id
+
+        (infinite_layer,) = infinite.metadata["layers"]
+        (finite_layer,) = finite.metadata["layers"]
+        assert infinite_layer["frozen_flow_translation"] == "hcipy_layer_velocity"
+        assert infinite_layer["hcipy_velocity_m_per_s"] == (-5.0, 2.0)
+        assert finite_layer["frozen_flow_translation"] == translation_id
+        assert finite_layer["hcipy_velocity_m_per_s"] == (0.0, 0.0)
+
 
 class TestValidation:
     def test_layer_configuration_rejects_invalid_physics(self):
@@ -732,6 +872,30 @@ def _shifted_correlation(
     a = a - np.mean(a)
     b = b - np.mean(b)
     return float(np.sum(a * b) / np.sqrt(np.sum(a**2) * np.sum(b**2)))
+
+
+def _overlap_residual(
+    first: np.ndarray,
+    second: np.ndarray,
+    *,
+    dx: int,
+    dy: int,
+) -> tuple[float, float]:
+    """Std of ``second[r, c] - first[r - dy, c - dx]`` and of the source.
+
+    Only the overlap is compared, so no sample wraps; the standard deviation
+    absorbs the piston difference between the two piston-removed frames.
+    """
+
+    rows, columns = first.shape
+    row_start, row_stop = max(dy, 0), rows + min(dy, 0)
+    column_start, column_stop = max(dx, 0), columns + min(dx, 0)
+    moved = second[row_start:row_stop, column_start:column_stop]
+    source = first[
+        row_start - dy : row_stop - dy,
+        column_start - dx : column_stop - dx,
+    ]
+    return float(np.std(moved - source)), float(np.std(source))
 
 
 def _plain_json(value):

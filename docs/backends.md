@@ -103,7 +103,8 @@ the spectrum calibration from subsequent amplitude rescaling.
 
 - Native frozen flow preserves the historical nearest-integer periodic shift.
   `native_frozen_flow_v2` and the HCIPy atmosphere both move sub-pixel.
-  HCIPy atmosphere supports finite/infinite layers. The
+  HCIPy atmosphere supports finite/infinite layers, both translating rigidly
+  on square and rectangular pupils. The
   adapter sums pupil-plane phase/OPD; layer altitude is metadata and there is
   no scintillation, anisoplanatic tomography, or laser-guide-star propagation.
 - The legacy native spectrum is exactly periodic and may wrap indefinitely.

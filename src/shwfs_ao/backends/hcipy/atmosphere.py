@@ -1,7 +1,7 @@
 """HCIPy von Kármán atmospheric layers behind the canonical ``AtmosphereModel``.
 
-The adapter owns every repository-facing convention; HCIPy provides only the
-spectral screen synthesis and frozen-flow translation:
+The adapter owns every repository-facing convention; HCIPy provides the
+spectral screen synthesis and the infinite-layer frozen-flow translation:
 
 - ``opd_at(time_s)`` returns piston-removed optical path difference in metres
   on the configured pupil, NaN outside it, at absolute non-decreasing time.
@@ -14,11 +14,15 @@ spectral screen synthesis and frozen-flow translation:
   the returned OPD does not change when only this wavelength changes.
 - ``wind_m_per_s`` means the same thing as in the native backend: the frozen
   phase pattern is advected *with* the wind, translating by ``+wind · t``
-  metres in repository ``(x, y)`` coordinates.  HCIPy 0.7 primitives do not
-  share one convention — ``InfiniteAtmosphericLayer`` moves the pattern along
-  ``-velocity`` while ``FiniteAtmosphericLayer``'s spectral shift applies its
-  velocity components to swapped field axes — so the adapter normalizes the
-  velocity passed to each kind and the wind-direction tests pin the result.
+  metres in repository ``(x, y)`` coordinates.  ``InfiniteAtmosphericLayer``
+  moves the pattern along ``-velocity``, so the adapter negates the wind it
+  passes.  ``FiniteAtmosphericLayer``'s spectral shift in HCIPy 0.7 ravels
+  its phase ramp in ``(nx, ny)`` order onto ``(ny, nx)``-ordered
+  coefficients, which is a translation only on square grids; the adapter
+  therefore builds finite layers at rest and translates their spectral
+  coefficients itself, at each coefficient's own flattened ``(kx, ky)``, so
+  the flow is a rigid sub-pixel translation on any rectangular grid.  The
+  wind-direction tests pin both kinds.
 - ``reset(realization_index)`` rebuilds all HCIPy layer state from generators
   derived from the immutable root seed plus the realization index, so
   replaying the same time vector is exact within one HCIPy environment.
@@ -51,7 +55,7 @@ from .conversion import (
 
 
 _BACKEND_NAME = "hcipy"
-_METADATA_SCHEMA_VERSION = 1
+_METADATA_SCHEMA_VERSION = 2
 _KOLMOGOROV_EXPONENT = 5.0 / 3.0
 
 WIND_CONVENTION = "pattern_advects_with_positive_wind"
@@ -62,7 +66,14 @@ in repository ``(x, y)`` coordinates.
 """
 
 _WIND_NORMALIZATION_ID = "hcipy-0.7-layer-velocity-normalization-v1"
-"""Identifier of the per-kind velocity mapping that enforces WIND_CONVENTION."""
+"""Identifier of the per-kind HCIPy velocity mapping (infinite layers move)."""
+
+_FINITE_LAYER_TRANSLATION_ID = "true-frequency-coordinate-phase-ramp-v1"
+"""Identifier of the adapter-owned finite-layer frozen-flow translation.
+
+Part of the config hash only when a finite layer is configured, so
+infinite-only atmospheres keep their identity.
+"""
 
 _PHASE_CONVERSION_ID = "single-query-at-conversion-wavelength-v1"
 """Identifier of the phase→OPD construction (one query, one conversion)."""
@@ -103,6 +114,7 @@ class HcipyAtmosphereLayerConfig:
     propagation (no scintillation in this adapter) it does not change the
     returned OPD.  ``stencil_length`` and ``use_interpolation`` apply to the
     ``infinite`` kind only, ``oversampling`` to the ``finite`` kind only.
+    Both kinds translate rigidly on square and rectangular pupil grids.
     """
 
     r0_m: float
@@ -298,20 +310,23 @@ class HcipyVonKarmanAtmosphere:
         )
         self._pupil_geometry_hash = pupil_geometry.geometry_hash
         self._grid_shape = tuple(int(value) for value in pupil_geometry.pupil_shape)
+        hash_payload: dict[str, Any] = {
+            "config": asdict(config),
+            "pupil_geometry_hash": self._pupil_geometry_hash,
+            "pupil_mask_hash": self._pupil_mask_hash,
+            "wind_normalization": _WIND_NORMALIZATION_ID,
+            "phase_conversion": _PHASE_CONVERSION_ID,
+            "random_derivation_scheme_id": self._streams.derivation_scheme_id,
+            "random_scope_stream_id": self._streams.stream_id(
+                "atmosphere",
+                key=("realization", 0),
+            ),
+        }
+        if _has_finite_layer(config):
+            hash_payload["finite_layer_translation"] = _FINITE_LAYER_TRANSLATION_ID
         self._config_hash = component_config_hash(
             "hcipy.von_karman_atmosphere",
-            {
-                "config": asdict(config),
-                "pupil_geometry_hash": self._pupil_geometry_hash,
-                "pupil_mask_hash": self._pupil_mask_hash,
-                "wind_normalization": _WIND_NORMALIZATION_ID,
-                "phase_conversion": _PHASE_CONVERSION_ID,
-                "random_derivation_scheme_id": self._streams.derivation_scheme_id,
-                "random_scope_stream_id": self._streams.stream_id(
-                    "atmosphere",
-                    key=("realization", 0),
-                ),
-            },
+            hash_payload,
         )
 
         # Resolving the optional dependency is the last construction step, so
@@ -415,7 +430,18 @@ class HcipyVonKarmanAtmosphere:
             self._grid_shape[0] * self._grid_shape[1],
             dtype=float,
         )
-        for layer in self._layers:
+        for layer_config, layer in zip(self._config.layers, self._layers):
+            if layer_config.kind == "finite":
+                wind_x, wind_y = layer_config.wind_m_per_s
+                screen = _translated_finite_screen(
+                    layer,
+                    (wind_x * time_value, wind_y * time_value),
+                )
+                total_phase_rad += np.asarray(
+                    screen / conversion_wavelength_m,
+                    dtype=float,
+                )
+                continue
             layer.evolve_until(time_value)
             total_phase_rad += np.asarray(
                 layer.phase_for(conversion_wavelength_m),
@@ -467,6 +493,11 @@ class HcipyVonKarmanAtmosphere:
                         if layer.kind == "infinite"
                         else "periodic_spectral_subpixel_shift"
                     ),
+                    "frozen_flow_translation": (
+                        _FINITE_LAYER_TRANSLATION_ID
+                        if layer.kind == "finite"
+                        else "hcipy_layer_velocity"
+                    ),
                     "random_stream_id": self._layer_stream_ids[layer_index],
                 }
             )
@@ -501,6 +532,9 @@ class HcipyVonKarmanAtmosphere:
                 "wind_convention": WIND_CONVENTION,
                 "wind_normalization": _WIND_NORMALIZATION_ID,
                 "phase_conversion": _PHASE_CONVERSION_ID,
+                "finite_layer_translation": (
+                    _FINITE_LAYER_TRANSLATION_ID if _has_finite_layer(config) else None
+                ),
                 "scintillation": False,
             }
         )
@@ -554,17 +588,58 @@ def _hcipy_velocity(
 
     Enforces ``WIND_CONVENTION`` on hcipy 0.7 primitives, whose raw behavior
     was measured, not assumed: ``InfiniteAtmosphericLayer`` translates the
-    pattern along ``-velocity``, and ``FiniteAtmosphericLayer``'s spectral
-    shift builds its phase ramp in separated-coordinate order, which lands
-    ``velocity[0]`` on the slow (y) field axis and ``velocity[1]`` on the
-    fast (x) axis.  The wind-direction tests fail loudly if a future pinned
-    HCIPy changes either behavior.
+    pattern along ``-velocity``.  ``FiniteAtmosphericLayer``'s spectral shift
+    builds its phase ramp as an ``(nx, ny)`` outer sum and ravels it onto
+    ``(ny, nx)``-ordered coefficients; on a square grid that only swaps the
+    velocity axes, but on a rectangular grid no velocity yields a
+    translation.  Finite layers are therefore built at rest and translated
+    by :func:`_translated_finite_screen`.  The wind-direction tests fail
+    loudly if a future pinned HCIPy changes either behavior.
     """
 
     wind_x, wind_y = layer_config.wind_m_per_s
     if layer_config.kind == "infinite":
         return (-wind_x, -wind_y)
-    return (wind_y, wind_x)
+    return (0.0, 0.0)
+
+
+def _has_finite_layer(config: HcipyAtmosphereConfig) -> bool:
+    return any(layer.kind == "finite" for layer in config.layers)
+
+
+def _translated_finite_screen(
+    layer: Any,
+    displacement_xy_m: tuple[float, float],
+) -> Any:
+    """Return a finite layer's achromatic screen translated by ``+displacement``.
+
+    Each spectral coefficient of the layer's (unshifted) multiscale noise is
+    multiplied by ``exp(-i (kx·sx + ky·sy))`` at its own flattened frequency
+    coordinate (``grid.x``/``grid.y`` share the coefficients' x-fastest
+    order), which is a rigid sub-pixel translation on any rectangular grid.
+    On square grids the result is bit-identical to HCIPy's axis-swapped
+    shift, which applies the same ramp in a different summation order.
+    """
+
+    try:
+        noise = layer.noise
+        parts = (
+            (noise.C_1, noise.factory.fourier_1),
+            (noise.C_2, noise.factory.fourier_2),
+        )
+    except AttributeError as exc:  # pragma: no cover - HCIPy layout guard
+        raise HcipyAtmosphereError(
+            "unsupported HCIPy finite-layer spectral noise layout; the adapter "
+            "requires hcipy 0.7 SpectralNoiseMultiscale coefficients."
+        ) from exc
+    shift_x_m, shift_y_m = displacement_xy_m
+    screen = None
+    for coefficients, fourier in parts:
+        grid = coefficients.grid
+        ramp = np.exp(-1j * (shift_x_m * grid.x + shift_y_m * grid.y))
+        part = fourier.backward(coefficients * ramp).real
+        screen = part if screen is None else screen + part
+    return screen
 
 
 def _optional_outer_scale(value: float | None) -> float | None:
