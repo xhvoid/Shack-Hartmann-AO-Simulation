@@ -77,6 +77,11 @@ A Maréchal comparison to this peak requires consistent tilt removal.
 Canonical FWHM uses the area-weighted mean radius of each annulus rather than
 its inner edge, with interpolation at half maximum and explicit sampling
 convergence tests. Encircled-energy radii retain finite-grid quantization.
+Canonical encircled energy merges each equal-radius ring into one knot that
+counts the inner rings and half of that ring as enclosed at its radius, then
+interpolates between ring radii, so it does not depend on the order of tied
+pixels and is invariant under 90-degree rotations and mirrors of the image
+about its centre pixel.
 
 `band_average_scalar_metrics` normalizes the supplied weights and averages
 already-computed monochromatic scalar fields. It does not accept PSF arrays and
