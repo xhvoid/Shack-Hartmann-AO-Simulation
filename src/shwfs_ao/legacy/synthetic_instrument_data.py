@@ -509,12 +509,15 @@ def centroid_quality(
         ``total_snr`` follows the CCD equation ``S / sqrt(S + npix*(B + RN^2))``;
         the centroid-uncertainty proxy is the intensity-weighted spot width
         divided by the total SNR, the standard photon-limited centroiding scale.
+        This frozen proxy understates window-wide read and background noise;
+        the canonical ``shwfs_ao.detector.centroid_quality`` propagates it.
     """
 
     quality = _canonical_centroid_quality(
         cropped_spot_norm,
         full_spot_norm,
         detector,
+        uncertainty_model="legacy_spot_width",
     )
     return {
         "total_flux_e": quality.total_flux_e,

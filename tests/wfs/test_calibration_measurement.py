@@ -619,6 +619,61 @@ def test_noiseless_finite_photon_measurement_still_applies_quality_validity(
     assert not np.any(measured.vector.valid_rows)
 
 
+def test_telemetry_sigma_propagates_read_noise_from_every_window_pixel(
+    geometry: ShackHartmannGeometry,
+    native_backend: NativeShackHartmannOptics,
+) -> None:
+    streams = NamedRandomStreams(509)
+    detector = DetectorConfig(
+        photons_per_subap_frame=600.0,
+        read_noise_e=3.0,
+        background_e_per_pixel_frame=1.5,
+        prnu_mode="persistent",
+    )
+    sensor = DetectorShackHartmannSensor.calibrate(
+        geometry,
+        native_backend,
+        detector,
+        wfs_wavelength_m=WAVELENGTH_M,
+        random_streams=streams,
+        validity_config=_validity(),
+    )
+    telemetry = sensor.measure(
+        np.zeros(geometry.pupil_shape),
+        random_streams=streams,
+        include_noise=False,
+    ).detector_telemetry
+    assert telemetry is not None
+
+    # Independent first-order center-of-gravity propagation per axis.
+    expected = []
+    for spot, capture in zip(
+        telemetry.optical_spots.unit_sum_spots,
+        telemetry.optical_spots.relative_throughput,
+    ):
+        signal_e = 600.0 * float(capture) * np.asarray(spot, dtype=float)
+        variance_e2 = signal_e + 1.5 + 3.0**2
+        y_px, x_px = np.indices(signal_e.shape, dtype=float)
+        flux_e = float(np.sum(signal_e))
+        x_c = float(np.sum(signal_e * x_px)) / flux_e
+        y_c = float(np.sum(signal_e * y_px)) / flux_e
+        expected.append(
+            np.sqrt(
+                max(
+                    float(np.sum(variance_e2 * (x_px - x_c) ** 2)),
+                    float(np.sum(variance_e2 * (y_px - y_c) ** 2)),
+                )
+            )
+            / flux_e
+        )
+    np.testing.assert_allclose(
+        telemetry.centroid_sigma_px,
+        expected,
+        rtol=1.0e-12,
+        atol=0.0,
+    )
+
+
 def test_native_detector_measurement_has_positive_x_and_y_sign(
     geometry: ShackHartmannGeometry,
 ) -> None:
