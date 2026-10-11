@@ -118,6 +118,17 @@ IDs, backend names, component hashes, frame rate, root seed, named stream IDs,
 the actual atmosphere realization stream when exposed, and the
 noise/realization selection.
 
+A reconstructor may fail closed on a frame (return `None`); the controller then
+queues no new increment for that frame, while increments already in the
+latency queue are still released and the leak continues. The metadata records
+how many frames reconstructed as `reconstruction_usable_frames` and
+`reconstruction_usable_fraction`, and `LoopHistory` rejects a summary that
+disagrees with `reconstruction_usable`. A run in which no frame was usable
+never changed the DM command, so its residual histories are open-loop:
+`run_closed_loop` still returns it, but emits
+`shwfs_ao.control.ControlLoopWarning` naming the observed valid-measurement
+range and, when the reconstructor exposes it, its `min_valid_fraction`.
+
 Runtime WFS operating points may deliberately vary photon or read-noise
 configuration while reusing one response calibration. The loop therefore
 requires exact row IDs and measurement units and records both runtime-WFS and
