@@ -16,7 +16,7 @@ from ..wfs.shack_hartmann.geometric import (
 )
 from ..wfs.shack_hartmann.geometry import (
     ShackHartmannGeometry as _ShackHartmannGeometry,
-    partition_pupil_geometry as _partition_pupil_geometry,
+    _legacy_partition_pupil_geometry,
 )
 from ._interaction_adapters import (
     calibrate_legacy_modal_columns as _calibrate_legacy_modal_columns,
@@ -159,7 +159,7 @@ def _legacy_shack_hartmann_geometry(
         x_m=x_m,
         y_m=y_m,
     )
-    return _partition_pupil_geometry(
+    return _legacy_partition_pupil_geometry(
         sampled_pupil,
         n_lenslets_across=n_lenslets,
         min_fill_fraction=min_fill,

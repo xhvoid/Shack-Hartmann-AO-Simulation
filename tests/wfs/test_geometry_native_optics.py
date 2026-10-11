@@ -166,6 +166,73 @@ def test_geometry_filters_obstruction_spiders_and_lenslet_fill() -> None:
     assert len(obstructed.subaperture_ids) <= len(clear.subaperture_ids)
 
 
+def _exact_cell_index(samples: int, count: int) -> np.ndarray:
+    # Sample j sits at diameter fraction j / (samples - 1); cell k spans
+    # [k / count, (k + 1) / count) and the final cell also owns fraction one.
+    return np.minimum(np.arange(samples) * count // (samples - 1), count - 1)
+
+
+@pytest.mark.parametrize(
+    ("pupil_pixels", "count"),
+    [(3, 1), (9, 1), (9, 3), (15, 3), (65, 5)],
+)
+def test_lenslet_cells_tile_every_sample_of_odd_pupil_grids(
+    pupil_pixels: int,
+    count: int,
+) -> None:
+    geometry = build_shack_hartmann_geometry(
+        telescope_diameter_m=1.0,
+        pupil_shape=(pupil_pixels, pupil_pixels),
+        n_lenslets_across=count,
+        min_fill_fraction=0.0,
+    )
+    cell_index = _exact_cell_index(pupil_pixels, count)
+    coverage = np.zeros(geometry.pupil_shape, dtype=int)
+    for identifier, mask in zip(geometry.subaperture_ids, geometry.subaperture_masks):
+        row, column = lenslet_indices_from_id(identifier)
+        cell = (cell_index[:, None] == row) & (cell_index[None, :] == column)
+        np.testing.assert_array_equal(mask, cell & geometry.pupil_mask)
+        coverage += mask
+    # Odd grids sample the +D/2 rim on the final column and row; every
+    # illuminated sample belongs to exactly one lenslet.
+    np.testing.assert_array_equal(coverage, geometry.pupil_mask.astype(int))
+
+
+def test_final_lenslet_row_and_column_use_full_cells_for_fill_fraction() -> None:
+    # Each 16x16 corner cell of a 64x64 pupil holds 72 illuminated samples,
+    # 72 / 256 < 0.3.  The pupil is mirror and transpose symmetric, so the
+    # retained cells and their masks must be too.
+    count = 4
+    geometry = build_shack_hartmann_geometry(
+        telescope_diameter_m=1.0,
+        pupil_shape=(64, 64),
+        n_lenslets_across=count,
+        min_fill_fraction=0.3,
+    )
+    masks = {
+        lenslet_indices_from_id(identifier): mask
+        for identifier, mask in zip(
+            geometry.subaperture_ids,
+            geometry.subaperture_masks,
+        )
+    }
+    retained = set(masks)
+    assert {(count - 1 - row, column) for row, column in retained} == retained
+    assert {(row, count - 1 - column) for row, column in retained} == retained
+    assert {(column, row) for row, column in retained} == retained
+    for (row, column), mask in masks.items():
+        np.testing.assert_array_equal(
+            masks[(count - 1 - row, column)],
+            np.flipud(mask),
+        )
+        np.testing.assert_array_equal(
+            masks[(row, count - 1 - column)],
+            np.fliplr(mask),
+        )
+        np.testing.assert_array_equal(masks[(column, row)], mask.T)
+    assert len(masks) == count * count - 4
+
+
 def test_pupil_geometry_rejects_nonuniform_cartesian_sampling() -> None:
     x_axis = np.asarray([-0.5, -0.2, 0.1, 0.5])
     y_axis = np.linspace(-0.5, 0.5, 4)
