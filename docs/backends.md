@@ -371,6 +371,7 @@ calibration, diagnostic, science, and experiment-result record is listed here.
 | `method`, `include_noise`, `repeat_count`, `matrix_standard_error` | forward/central method and repeated/noisy calibration uncertainty |
 | `sensor_config_hash`, `geometry_hash`, `detector_hash`, `dm_hash`, `calibration_hash` | component and complete calibration identity |
 | `provenance` | source classification and references |
+| `sensor_response_hash` | calibrated WFS optical response (optics backend, WFS wavelength, padding/window sampling, centroid estimator and threshold), excluding photometry and noise; `None` when the sensor declared no `response_hash` or the record predates it, and then never accepted by SCAO `source="supplied"`/`"resource"` |
 
 ### SH-WFS calibration records
 

@@ -121,8 +121,11 @@ noise/realization selection.
 Runtime WFS operating points may deliberately vary photon or read-noise
 configuration while reusing one response calibration. The loop therefore
 requires exact row IDs and measurement units and records both runtime-WFS and
-calibration identities; the AO-REF-011 system factory owns construction of a
-fully coherent component bundle. Actuator-space matrices are already bound to
+calibration identities. When both the runtime WFS and the interaction matrix
+declare a sensor response identity they must be equal, so a change of WFS
+wavelength, sampling, or centroid estimator cannot reuse a stale calibration;
+the AO-REF-011 system factory owns construction of a fully coherent component
+bundle. Actuator-space matrices are already bound to
 the exact DM hash, and modal projectors carry their target DM hash explicitly.
 
 ## Replay-safe sweeps

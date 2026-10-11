@@ -8,6 +8,7 @@ import time
 import numpy as np
 import pytest
 
+from shwfs_ao.calibration import DmActuatorProbeBasis, calibrate_interaction_matrix
 from shwfs_ao.core.provenance import Provenance
 from shwfs_ao.experiments import scao
 from shwfs_ao.io.configs import (
@@ -1075,6 +1076,195 @@ def test_component_identity_mismatch_fails_during_construction_preflight() -> No
             incompatible,
             interaction_matrix=built.interaction_matrix,
         )
+
+
+def _with_calibration_source(
+    config: SystemConfig,
+    source: str,
+) -> SystemConfig:
+    return replace(
+        config,
+        calibration=replace(
+            config.calibration,
+            source=source,  # type: ignore[arg-type]
+            resource_name=(
+                "synthetic_presets/test_interaction_matrix.json"
+                if source == "resource"
+                else None
+            ),
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    ("change", "response_ratio"),
+    (
+        pytest.param(
+            {"wfs_wavelength_m": 1.4e-6},
+            0.5,
+            id="wfs-wavelength-700-to-1400-nm",
+        ),
+        pytest.param({"pad_factor": 4}, None, id="pad-factor-2-to-4"),
+        pytest.param({"detector_window_px": 6}, None, id="detector-window-8-to-6"),
+        pytest.param(
+            {
+                "centroid_estimator": "thresholded_center_of_gravity",
+                "threshold_fraction": 0.2,
+            },
+            None,
+            id="centroid-threshold-0-to-0.2",
+        ),
+    ),
+)
+def test_a_stale_matrix_is_rejected_after_the_wfs_optical_response_changes(
+    change: dict[str, object],
+    response_ratio: float | None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Geometry and rows survive these changes; the WFS response does not."""
+
+    base_config = _tiny_system_config("detector_level")
+    base = scao.build_scao_system(base_config)
+    wavelength = change.get("wfs_wavelength_m", base_config.wfs_wavelength_m)
+    wfs_change = {key: value for key, value in change.items() if key != "wfs_wavelength_m"}
+    changed = replace(
+        base_config,
+        wfs_wavelength_m=wavelength,
+        wfs=replace(base_config.wfs, **wfs_change),  # type: ignore[arg-type]
+    )
+    fresh = scao.build_scao_system(changed)
+    assert fresh.wfs.row_ids == base.wfs.row_ids
+    assert fresh.interaction_matrix.geometry_hash == (
+        base.interaction_matrix.geometry_hash
+    )
+    assert fresh.interaction_matrix.sensor_response_hash == fresh.wfs.response_hash
+    assert fresh.wfs.response_hash != base.wfs.response_hash
+    rows = base.interaction_matrix.row_valid & fresh.interaction_matrix.row_valid
+    old_response = base.interaction_matrix.matrix[rows]
+    new_response = fresh.interaction_matrix.matrix[rows]
+    if response_ratio is not None:
+        # Spot shifts are counted in pixels of lambda / (padded FFT width), so
+        # the same OPD moves a spot half as many pixels at twice the WFS
+        # wavelength.
+        np.testing.assert_allclose(
+            new_response,
+            response_ratio * old_response,
+            rtol=1.0e-3,
+            atol=1.0e-3 * float(np.max(np.abs(old_response))),
+        )
+    assert np.linalg.norm(new_response - old_response) > (
+        0.05 * np.linalg.norm(old_response)
+    )
+
+    with pytest.raises(
+        scao.ScaoConstructionError,
+        match="sensor_response_hash must match the constructed WFS response",
+    ):
+        scao.build_scao_system(
+            _with_calibration_source(changed, "supplied"),
+            interaction_matrix=base.interaction_matrix,
+        )
+    monkeypatch.setattr(
+        scao,
+        "_json_resource",
+        lambda name: base.interaction_matrix.to_record(),
+    )
+    with pytest.raises(
+        scao.ScaoConstructionError,
+        match="sensor_response_hash must match the constructed WFS response",
+    ):
+        scao.build_scao_system(_with_calibration_source(changed, "resource"))
+
+
+@pytest.mark.parametrize(
+    "detector_change",
+    (
+        pytest.param({"photons_per_subap_frame": 5.0e5}, id="photon-budget"),
+        pytest.param({"read_noise_e": 3.0}, id="read-noise"),
+    ),
+)
+def test_operating_point_scans_reuse_one_supplied_matrix(
+    detector_change: dict[str, object],
+) -> None:
+    """Photon and read-noise changes alter the WFS identity, not its response."""
+
+    base_config = _tiny_system_config("detector_level")
+    base = scao.build_scao_system(base_config)
+    changed = replace(
+        base_config,
+        detector=replace(base_config.detector, **detector_change),  # type: ignore[arg-type]
+    )
+    fresh = scao.build_scao_system(changed)
+    # Invariance oracle: an independent calibration at the new operating
+    # point reproduces the noiseless response, so the identity must too.
+    assert fresh.wfs.config_hash != base.wfs.config_hash
+    np.testing.assert_allclose(
+        fresh.interaction_matrix.matrix,
+        base.interaction_matrix.matrix,
+        rtol=1.0e-12,
+        atol=0.0,
+    )
+    assert fresh.wfs.response_hash == base.wfs.response_hash
+    assert fresh.interaction_matrix.sensor_response_hash == (
+        base.interaction_matrix.sensor_response_hash
+    )
+
+    supplied = scao.build_scao_system(
+        _with_calibration_source(changed, "supplied"),
+        interaction_matrix=base.interaction_matrix,
+    )
+    assert supplied.interaction_matrix is base.interaction_matrix
+    scao.run_closed_loop(
+        _with_calibration_source(changed, "supplied"),
+        system=supplied,
+    )
+
+
+class _ResponseUndeclaredSensor:
+    """A WFS seen as a structural sensor that declares no response identity."""
+
+    def __init__(self, wfs: object) -> None:
+        self._wfs = wfs
+
+    def __getattr__(self, name: str) -> object:
+        if name == "response_hash":
+            raise AttributeError(name)
+        return getattr(self._wfs, name)
+
+
+def test_a_matrix_without_a_response_identity_is_never_trusted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An unbound matrix cannot be verified, so supplied and resource reject it."""
+
+    config = _tiny_system_config("detector_level")
+    built = scao.build_scao_system(config)
+    assert built.interaction_matrix.sensor_response_hash == built.wfs.response_hash
+    unbound = calibrate_interaction_matrix(
+        DmActuatorProbeBasis(built.dm),  # type: ignore[arg-type]
+        _ResponseUndeclaredSensor(built.wfs),  # type: ignore[arg-type]
+        config.calibration.amplitude_m,
+        random_streams=built.random_streams.scoped("scao-interaction-calibration"),
+    )
+    assert unbound.sensor_response_hash is None
+    np.testing.assert_array_equal(unbound.matrix, built.interaction_matrix.matrix)
+
+    with pytest.raises(
+        scao.ScaoConstructionError,
+        match="requires an interaction matrix that records sensor_response_hash",
+    ):
+        scao.build_scao_system(
+            _with_calibration_source(config, "supplied"),
+            interaction_matrix=unbound,
+        )
+    legacy_record = unbound.to_record()
+    del legacy_record["sensor_response_hash"]
+    monkeypatch.setattr(scao, "_json_resource", lambda name: legacy_record)
+    with pytest.raises(
+        scao.ScaoConstructionError,
+        match="requires an interaction matrix that records sensor_response_hash",
+    ):
+        scao.build_scao_system(_with_calibration_source(config, "resource"))
 
 
 class _ProbeFactory:

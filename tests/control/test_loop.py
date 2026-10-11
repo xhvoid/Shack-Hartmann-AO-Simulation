@@ -586,6 +586,44 @@ def test_root_seed_mismatch_fails_before_any_component_side_effect(
     assert events == []
 
 
+class _ResponseBoundCalibrationSensor(_CalibrationSensor):
+    response_hash = "test-calibration-response-v1"
+
+
+def test_runtime_wfs_must_share_the_calibrated_optical_response(
+    interaction_matrix: InteractionMatrix,
+) -> None:
+    """Operating points may vary between calibration and runtime; optics may not."""
+
+    bound = calibrate_interaction_matrix(
+        _ScalarDmProbeBasis(),
+        _ResponseBoundCalibrationSensor(),
+        1.0e-9,
+        random_streams=NamedRandomStreams(3),
+    )
+    assert bound.sensor_response_hash == "test-calibration-response-v1"
+    np.testing.assert_array_equal(bound.matrix, interaction_matrix.matrix)
+    config = _config()
+
+    stale = _components(bound, config)
+    stale[2].response_hash = "test-other-response-v1"
+    with pytest.raises(ControlLoopError, match="response_hash"):
+        _run(config, bound, stale)
+    assert stale[0] == []
+
+    # The runtime config hash already differs from the calibration sensor's,
+    # as for any photon or read-noise operating point; a matching response
+    # runs, and so does an unbound matrix that cannot be compared.
+    matching = _components(bound, config)
+    matching[2].response_hash = bound.sensor_response_hash
+    assert matching[2].config_hash != bound.sensor_config_hash
+    _run(config, bound, matching)
+    unbound = _components(interaction_matrix, config)
+    unbound[2].response_hash = "test-other-response-v1"
+    assert interaction_matrix.sensor_response_hash is None
+    _run(config, interaction_matrix, unbound)
+
+
 def test_stochastic_atmosphere_root_seed_must_match_before_side_effects(
     interaction_matrix: InteractionMatrix,
 ) -> None:
