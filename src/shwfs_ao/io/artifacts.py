@@ -1217,9 +1217,13 @@ def _validate_integration_result(result: object) -> None:
 
 
 def _integration_runtime_record(result: IntegrationArtifactResult) -> dict[str, Any]:
+    # ``mode`` is the numerical instrument scale, not the workflow preset: the
+    # physical workflow runs the fast instrument under ``physical_2m``.  Label
+    # the runtime record with the same preset as the reference JSON and fall
+    # back to ``mode`` only when the reference mapping does not carry one.
     return {
         "workflow": str(result.reference_metrics.get("workflow", "integration")),
-        "preset": str(result.mode),
+        "preset": str(result.reference_metrics.get("preset", result.mode)),
         "runtime_seconds": float(result.runtime_s),
         "runtime_band": str(result.reference_metrics.get("runtime_band", "informational")),
         "source_class": str(result.source_class),
