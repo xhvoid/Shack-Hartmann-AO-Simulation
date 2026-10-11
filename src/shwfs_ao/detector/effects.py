@@ -290,9 +290,42 @@ def apply_legacy_detector_effects(
     )
 
 
+def _noiseless_source_scale_and_pedestal(
+    config: DetectorConfig,
+) -> tuple[float, float]:
+    """Return the noiseless frame's source scale and per-pixel pedestal.
+
+    The source scale is the photon budget times QE, or one on the photonless
+    branch, which adds the dark-plus-background pedestal only in persistent
+    mode.
+    """
+
+    pedestal_e = float(config.dark_e_per_s) * float(config.exposure_s) + float(
+        config.background_e_per_pixel_frame
+    )
+    photons = config.photons_per_subap_frame
+    if photons is None:
+        return 1.0, pedestal_e if config.prnu_mode == "persistent" else 0.0
+    return float(photons) * float(config.qe), pedestal_e
+
+
+def _noiseless_frame_scales_with_source(config: DetectorConfig) -> bool:
+    """Whether rescaling the source only rescales the noiseless frame.
+
+    PRNU, bad pixels, and negative clipping commute with the scale, a pedestal
+    or a full well does not.  Where this holds, a per-subaperture source
+    budget, such as a Shack-Hartmann photon allocation, cannot move a centroid.
+    """
+
+    _, pedestal_e = _noiseless_source_scale_and_pedestal(config)
+    return pedestal_e == 0.0 and config.full_well_e is None
+
+
 def _noiseless_response_identity(
     config: DetectorConfig,
     realization: DetectorRealization,
+    *,
+    legacy_prnu_seeds: tuple[int | None, ...] | None = None,
 ) -> dict[str, object]:
     """Return what fixes the noiseless detector frame up to a positive scale.
 
@@ -303,29 +336,28 @@ def _noiseless_response_identity(
     a positive rescaling of the frame (the relative threshold, minimum
     subtraction, and negative clipping all do), so only ``B / s``, ``FW / s``,
     the PRNU response, and the bad-pixel mask shape the OPD-to-centroid
-    response.  Read noise never enters it, and the photon budget enters only
-    through those ratios: it is free exactly when the detector has neither a
-    pedestal nor a full well.
+    response.  The photon budget enters only through those ratios, and read
+    noise not at all, except in ``per_frame_legacy`` mode: there PRNU is drawn
+    from the caller's legacy seed even without noise, so the per-subaperture
+    ``legacy_prnu_seeds`` that noiseless measurements reuse fix the patterns.
+    Calibration derives those seeds from the whole detector configuration, so
+    in that mode any detector change, read noise included, moves them.
     """
 
-    photons = config.photons_per_subap_frame
-    persistent = config.prnu_mode == "persistent"
-    pedestal_e = float(config.dark_e_per_s) * float(config.exposure_s) + float(
-        config.background_e_per_pixel_frame
-    )
-    if photons is None:
-        # The photonless branch adds the pedestal only in persistent mode.
-        source_scale = 1.0
-        if not persistent:
-            pedestal_e = 0.0
-    else:
-        source_scale = float(photons) * float(config.qe)
+    source_scale, pedestal_e = _noiseless_source_scale_and_pedestal(config)
     prnu: object
-    if persistent:
+    if config.prnu_mode == "persistent":
         prnu = np.asarray(realization.prnu_response, dtype=float)
-    elif photons is not None and float(config.prnu_rms) > 0.0:
-        # Redrawn for every frame, including noiseless calibration frames.
-        prnu = {"per_frame_legacy_prnu_rms": float(config.prnu_rms)}
+    elif config.photons_per_subap_frame is not None and float(config.prnu_rms) > 0.0:
+        if legacy_prnu_seeds is None:
+            raise DetectorEffectsError(
+                "legacy_prnu_seeds are required to identify per_frame_legacy "
+                "PRNU drawn without noise."
+            )
+        prnu = {
+            "per_frame_legacy_prnu_rms": float(config.prnu_rms),
+            "legacy_prnu_seeds": tuple(legacy_prnu_seeds),
+        }
     else:
         prnu = None
     full_well_e = None if config.full_well_e is None else float(config.full_well_e)

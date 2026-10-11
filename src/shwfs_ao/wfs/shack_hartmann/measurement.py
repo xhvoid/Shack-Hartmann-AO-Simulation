@@ -19,6 +19,7 @@ from ...core.types import (
 from ...detector.centroid import CentroidConfig, estimate_centroid
 from ...detector.config import DetectorConfig
 from ...detector.effects import (
+    _noiseless_frame_scales_with_source,
     _noiseless_response_identity,
     apply_detector_effects,
     apply_legacy_detector_effects,
@@ -148,12 +149,15 @@ class DetectorShackHartmannSensor:
         # OPD-to-centroid transfer: the optics (backend, WFS wavelength,
         # padding and detector-window sampling), the noiseless detector frame
         # up to its overall scale (pedestal and full well relative to the
-        # source, PRNU response, bad pixels), and the centroid estimator with
-        # its threshold.  Read noise and validity settings are absent, and the
-        # photon budget enters only through those ratios, so read-noise scans,
-        # and photon scans on a detector without pedestal or full well, may
-        # reuse one interaction-matrix calibration while any change of the
-        # noiseless response cannot.
+        # source, PRNU response or legacy PRNU seeds, bad pixels, and the
+        # photon allocation where a pedestal or full well makes it matter),
+        # and the centroid estimator with its threshold.  Read noise and
+        # validity settings are absent, and the photon budget enters only
+        # through those ratios, so read-noise scans, and photon scans on a
+        # detector without pedestal or full well, may reuse one
+        # interaction-matrix calibration while any change of the noiseless
+        # response cannot.  Legacy per-frame PRNU seeds derive from the whole
+        # detector configuration, so that mode allows no such reuse.
         self._response_hash = component_config_hash(
             "detector_shack_hartmann_response",
             {
@@ -167,6 +171,16 @@ class DetectorShackHartmannSensor:
                 "detector_response": _noiseless_response_identity(
                     calibration.detector_config,
                     detector_realization,
+                    legacy_prnu_seeds=seeds,
+                ),
+                # The allocation sets each lenslet's source budget, which a
+                # pedestal or a full well turns into a change of frame shape.
+                "photon_allocation": (
+                    None
+                    if _noiseless_frame_scales_with_source(
+                        calibration.detector_config
+                    )
+                    else calibration.photon_allocation
                 ),
                 "centroid_config": calibration.centroid_config,
                 "measurement_unit": calibration.measurement_unit,
@@ -271,6 +285,9 @@ class DetectorShackHartmannSensor:
         the absolute source scale, which leave the noiseless response
         unchanged; detector pedestal and full well enter relative to the
         source, so a photon change that alters the response changes it.
+        Under ``per_frame_legacy`` PRNU the calibration seeds that fix the
+        noiseless PRNU patterns derive from the whole detector configuration,
+        so there every detector change alters it.
         """
 
         return self._response_hash

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import fields, replace
 import time
 
 import numpy as np
@@ -1377,6 +1377,176 @@ def test_changes_that_only_rescale_the_noiseless_frame_reuse_one_matrix(
         interaction_matrix=reference.interaction_matrix,
     )
     assert supplied.interaction_matrix is reference.interaction_matrix
+
+
+def _with_detector(**change: object):
+    return lambda config: replace(
+        config,
+        detector=replace(config.detector, **change),  # type: ignore[arg-type]
+    )
+
+
+def _with_wfs(**change: object):
+    return lambda config: replace(
+        config,
+        wfs=replace(config.wfs, **change),  # type: ignore[arg-type]
+    )
+
+
+def _toggled_detector(field: str, values: tuple[object, object]):
+    def toggle(config: SystemConfig) -> SystemConfig:
+        current = getattr(config.detector, field)
+        return _with_detector(**{field: values[1] if current == values[0] else values[0]})(
+            config
+        )
+
+    return toggle
+
+
+def _toggled_wfs(field: str, values: tuple[object, object]):
+    def toggle(config: SystemConfig) -> SystemConfig:
+        current = getattr(config.wfs, field)
+        return _with_wfs(**{field: values[1] if current == values[0] else values[0]})(
+            config
+        )
+
+    return toggle
+
+
+# One alternative per detector and WFS setting, plus the WFS wavelength and
+# root seed.  A new field must be added here or to the exclusions below, so a
+# new input to the noiseless response cannot silently escape the identity.
+_RESPONSE_INPUT_PERTURBATIONS = {
+    "detector.photons_per_subap_frame": _with_detector(photons_per_subap_frame=5.0e5),
+    "detector.read_noise_e": _with_detector(read_noise_e=3.0),
+    "detector.dark_e_per_s": _with_detector(dark_e_per_s=1.0e6),
+    "detector.background_e_per_pixel_frame": _with_detector(
+        background_e_per_pixel_frame=2.0e4
+    ),
+    "detector.full_well_e": _with_detector(full_well_e=4.0e4),
+    "detector.qe": _with_detector(qe=0.5),
+    "detector.prnu_rms": _with_detector(prnu_rms=0.1),
+    "detector.exposure_s": _with_detector(exposure_s=2.0e-3),
+    "detector.prnu_mode": _toggled_detector(
+        "prnu_mode",
+        ("persistent", "per_frame_legacy"),
+    ),
+    "detector.bad_pixel_fraction": _with_detector(bad_pixel_fraction=0.05),
+    "wfs.min_fill_fraction": _with_wfs(min_fill_fraction=0.6),
+    "wfs.pad_factor": _with_wfs(pad_factor=3),
+    "wfs.detector_window_px": _with_wfs(detector_window_px=6),
+    "wfs.centroid_estimator": _with_wfs(
+        centroid_estimator="thresholded_center_of_gravity",
+        threshold_fraction=0.2,
+    ),
+    "wfs.threshold_fraction": _with_wfs(
+        centroid_estimator="thresholded_center_of_gravity",
+        threshold_fraction=0.35,
+    ),
+    "wfs.subtract_minimum": _with_wfs(subtract_minimum=True),
+    "wfs.min_flux_e": _with_wfs(min_flux_e=0.0),
+    "wfs.min_peak_snr": _with_wfs(min_peak_snr=0.0),
+    "wfs.max_centroid_sigma_px": _with_wfs(max_centroid_sigma_px=10.0),
+    "wfs.max_window_clipping_fraction": _with_wfs(max_window_clipping_fraction=1.0),
+    "wfs.central_obstruction_ratio": _with_wfs(central_obstruction_ratio=0.2),
+    "wfs.spider_width_m": _with_wfs(spider_width_m=0.02),
+    "wfs.photon_allocation": _toggled_wfs(
+        "photon_allocation",
+        ("throughput_scaled", "unit_sum"),
+    ),
+    "wfs_wavelength_m": lambda config: replace(config, wfs_wavelength_m=1.4e-6),
+    "random.root_seed": lambda config: replace(
+        config,
+        random=replace(config.random, root_seed=config.random.root_seed + 1),
+    ),
+}
+# ``enabled`` selects the geometric sensor, which carries its own identity.
+_RESPONSE_INPUT_EXCLUSIONS = {"detector.enabled"}
+
+
+def test_every_detector_and_wfs_setting_has_a_response_identity_perturbation() -> None:
+    tiny = _tiny_system_config("detector_level")
+    settings = {f"detector.{item.name}" for item in fields(tiny.detector)} | {
+        f"wfs.{item.name}" for item in fields(tiny.wfs)
+    }
+    assert settings - set(_RESPONSE_INPUT_PERTURBATIONS) == _RESPONSE_INPUT_EXCLUSIONS
+
+
+@pytest.mark.parametrize(
+    "base_change",
+    (
+        pytest.param(
+            {
+                "background_e_per_pixel_frame": _PEDESTAL_E,
+                "full_well_e": 2.0e4,
+                "prnu_rms": 0.05,
+                "prnu_mode": "persistent",
+                "bad_pixel_fraction": 0.02,
+            },
+            id="pedestal-full-well-persistent-maps",
+        ),
+        pytest.param(
+            {
+                "background_e_per_pixel_frame": _PEDESTAL_E,
+                "full_well_e": 2.0e4,
+                "prnu_rms": 0.05,
+                "prnu_mode": "per_frame_legacy",
+                "bad_pixel_fraction": 0.02,
+            },
+            id="pedestal-full-well-legacy-prnu",
+        ),
+        pytest.param(
+            {"prnu_rms": 0.05, "prnu_mode": "per_frame_legacy"},
+            id="legacy-prnu-only",
+        ),
+        pytest.param(
+            {"prnu_rms": 0.05, "prnu_mode": "persistent", "bad_pixel_fraction": 0.02},
+            id="frame-scales-with-source",
+        ),
+    ),
+)
+def test_an_unchanged_response_identity_means_an_unchanged_response(
+    base_change: dict[str, object],
+) -> None:
+    """Sweep every setting: a matrix the identity accepts must still be right.
+
+    Each perturbed sensor is recalibrated; wherever its ``response_hash``
+    equals the base sensor's, the recalibrated response must equal the base
+    one on their common valid rows, so a supplied base matrix would be
+    correct.  A changed hash with an unchanged response is merely strict.
+    Before photon allocation and legacy PRNU seeds were bound, nine settings
+    across these bases kept the hash while moving the response by up to tens
+    of percent.  Non-power-of-two rescalings perturb roundoff by ~1e-13 of
+    the response; real changes are at least ~1e-2.
+    """
+
+    tiny = _tiny_system_config("detector_level")
+    base_config = replace(
+        tiny,
+        detector=replace(tiny.detector, **base_change),  # type: ignore[arg-type]
+    )
+    base = scao.build_scao_system(base_config)
+    accepted_but_moved = []
+    for name, perturb in _RESPONSE_INPUT_PERTURBATIONS.items():
+        changed = scao.build_scao_system(perturb(base_config))
+        if changed.wfs.response_hash != base.wfs.response_hash:
+            continue
+        old, new = base.interaction_matrix, changed.interaction_matrix
+        assert new.row_ids == old.row_ids and new.coordinate_ids == old.coordinate_ids
+        rows = old.row_valid & new.row_valid
+        moved = float(
+            np.linalg.norm(new.matrix[rows] - old.matrix[rows])
+            / np.linalg.norm(old.matrix[rows])
+        )
+        if moved > 1.0e-9:
+            accepted_but_moved.append(f"{name}: {moved:.3g}")
+    assert accepted_but_moved == []
+    # Read noise stays free unless legacy PRNU seeds derive from it.
+    read_noise = scao.build_scao_system(
+        _RESPONSE_INPUT_PERTURBATIONS["detector.read_noise_e"](base_config)
+    )
+    legacy = base_config.detector.prnu_mode == "per_frame_legacy"
+    assert (read_noise.wfs.response_hash == base.wfs.response_hash) is not legacy
 
 
 class _ResponseUndeclaredSensor:

@@ -131,7 +131,9 @@ range and, when the reconstructor exposes it, its `min_valid_fraction`.
 
 Runtime WFS operating points may deliberately vary read noise, or the photon
 budget of a detector without pedestal or full well, while reusing one response
-calibration: neither changes the noiseless response. The loop therefore
+calibration: neither changes the noiseless response. `per_frame_legacy` PRNU
+is the exception, because its noiseless patterns come from seeds derived
+from the whole detector configuration. The loop therefore
 requires exact row IDs and measurement units and records both runtime-WFS and
 calibration identities. When both the runtime WFS and the interaction matrix
 declare a sensor response identity they must be equal, so a change of WFS

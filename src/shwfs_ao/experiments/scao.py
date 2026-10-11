@@ -965,9 +965,9 @@ def _validate_matrix_response(
         raise ScaoConstructionError(
             "interaction-matrix sensor_response_hash must match the "
             "constructed WFS response (optics backend, WFS wavelength, "
-            "padding and window sampling, detector pedestal and full well "
-            "relative to the source, PRNU and bad-pixel maps, centroid "
-            "estimator and threshold) before the first frame."
+            "padding and window sampling, the noiseless detector frame up to "
+            "its scale, centroid estimator and threshold) before the first "
+            "frame."
         )
 
 

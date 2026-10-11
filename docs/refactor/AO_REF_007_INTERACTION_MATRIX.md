@@ -77,9 +77,14 @@ scale, and centroid estimator and threshold. Without noise the frame is
 `min((s I + B) PRNU, FW)` with bad pixels zeroed, where `s` is photon budget
 times QE and `B` the dark-plus-background pedestal; centroiding ignores a
 positive rescaling, so the identity binds `B / s`, `FW / s`, the PRNU
-response, and the bad-pixel mask. Read noise and validity settings are
-outside it, and the photon budget changes it only when the detector has a
-pedestal or a full well. A sensor that declares none, and a record written before the field
+response, and the bad-pixel mask, and, where a pedestal or full well makes
+each lenslet's source budget matter, the photon allocation. Read noise and
+validity settings are outside it, and the photon budget changes it only when
+the detector has a pedestal or a full well. `per_frame_legacy` PRNU is drawn
+from per-lenslet calibration seeds even in noiseless frames, so those seeds
+are bound instead of a map; calibration derives them from the whole detector
+configuration, so in that mode any detector change, read noise included,
+changes the identity. A sensor that declares none, and a record written before the field
 existed, yields `sensor_response_hash=None` with the unchanged historical
 content hash.
 
