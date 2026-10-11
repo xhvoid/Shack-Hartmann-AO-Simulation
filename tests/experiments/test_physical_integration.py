@@ -19,8 +19,10 @@ import csv
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
+from shwfs_ao.experiments.integration import AOIntegrationError
 from shwfs_ao.experiments.physical_integration import (
     PHYSICAL_PRESET,
     PHYSICAL_WORKFLOW,
@@ -123,6 +125,56 @@ def test_acceptance_record_documents_why_the_baseline_moved() -> None:
     assert record["accepted_files"]
     for entry in record["accepted_files"]:
         assert len(entry["sha256"]) == 64
+
+
+# --------------------------------------------------------------------------
+# Configuration validation: no experiment rerun, safe for the fast lane
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("field", "rejected", "accepted"),
+    (
+        ("n_steps", 24.9, np.int64(24)),
+        ("n_steps", 24.0, np.int64(24)),
+        ("n_steps", "24", np.int64(24)),
+        ("latency_frames", -0.9, np.int64(0)),
+        ("latency_frames", 2.9, np.int64(2)),
+        ("latency_frames", np.float64(2.0), np.int64(2)),
+        ("latency_frames", True, np.int64(1)),
+        ("latency_frames", "3", np.int64(3)),
+    ),
+)
+def test_frame_counts_are_rejected_unless_genuine_integers(
+    field: str, rejected: object, accepted: np.integer
+) -> None:
+    # int() before the range check used to run 24.9 steps as 24 and -0.9
+    # latency frames as 0, the former under exactly the default config_hash.
+    with pytest.raises(AOIntegrationError, match=f"{field} must be an integer"):
+        PhysicalIntegrationConfig(**{field: rejected})
+
+    # A NumPy integer is a genuine integer: it stays accepted and hashes as
+    # the equal Python int, so the strict check moves no recorded identity.
+    assert (
+        PhysicalIntegrationConfig(**{field: accepted}).config_hash
+        == PhysicalIntegrationConfig(**{field: int(accepted)}).config_hash
+    )
+
+
+@pytest.mark.parametrize(
+    "field",
+    (
+        "r0_m",
+        "outer_scale_m",
+        "r0_reference_wavelength_m",
+        "frame_rate_hz",
+        "turbulence_speed_m_s",
+    ),
+)
+def test_physical_quantities_must_be_finite(field: str) -> None:
+    # "> 0" alone admits +inf, which then reached config_hash unchallenged.
+    with pytest.raises(AOIntegrationError, match=f"{field} must be finite"):
+        PhysicalIntegrationConfig(**{field: float("inf")})
 
 
 # --------------------------------------------------------------------------
