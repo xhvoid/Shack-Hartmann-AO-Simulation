@@ -166,9 +166,11 @@ recalibration fallback.  Geometry, WFS row IDs, DM identity, reconstruction
 coordinates, projector layout, controller settings, and random-root identity
 are checked before the first frame.  A supplied or resource matrix must also
 record a `sensor_response_hash` equal to the constructed WFS `response_hash`
-(optics backend, WFS wavelength, padding and window sampling, centroid
-estimator and threshold); photon and read-noise settings are outside that
-identity, and a matrix that records none is rejected rather than trusted.  An unavailable optional backend such as
+(optics backend, WFS wavelength, padding and window sampling, detector
+pedestal and full well relative to the source, PRNU and bad-pixel maps,
+centroid estimator and threshold).  Read noise is outside that identity, as
+is the photon budget of a detector without pedestal or full well.  A matrix
+that records none is rejected rather than trusted.  An unavailable optional backend such as
 `hcipy` also raises a construction error; it never substitutes the native
 backend.
 

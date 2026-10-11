@@ -11,8 +11,10 @@ import pytest
 
 from shwfs_ao.core.random import NamedRandomStreams
 from shwfs_ao.detector.config import DetectorConfig
+from shwfs_ao.core.hashing import component_config_hash
 from shwfs_ao.detector.effects import (
     DetectorEffectsError,
+    _noiseless_response_identity,
     apply_detector_effects,
     apply_legacy_detector_effects,
 )
@@ -734,3 +736,90 @@ def test_explicit_legacy_seed_keeps_historical_poisson_draws():
         )
         expected = np.random.default_rng(9).poisson(400.0 * image)
         np.testing.assert_array_equal(frame.image_e, expected)
+
+
+def _noiseless_frame_and_identity(
+    intensity: np.ndarray,
+    config: DetectorConfig,
+) -> tuple[np.ndarray, str]:
+    streams, realization = _detector_state(config, intensity.shape)
+    frame = apply_detector_effects(
+        intensity,
+        config,
+        realization,
+        random_streams=streams,
+        include_noise=False,
+    ).image_e
+    identity = component_config_hash(
+        "test_noiseless_response_identity",
+        _noiseless_response_identity(config, realization),
+    )
+    return frame, identity
+
+
+def test_noiseless_response_identity_is_the_frame_up_to_a_positive_scale():
+    """Equal identities mean noiseless frames that differ only by a scale.
+
+    Centroids ignore that scale, so the identity may drop read noise and the
+    absolute source level, but not the pedestal, the full well, or the pixel
+    maps relative to the source.
+    """
+
+    intensity = np.random.default_rng(31).random((6, 7))
+    intensity /= np.sum(intensity)
+    reference = DetectorConfig(
+        photons_per_subap_frame=1.0e4,
+        background_e_per_pixel_frame=40.0,
+        full_well_e=300.0,
+        prnu_rms=0.05,
+        prnu_mode="persistent",
+        bad_pixel_fraction=0.1,
+    )
+    frame, identity = _noiseless_frame_and_identity(intensity, reference)
+    assert np.any(frame == 300.0) and np.any(frame == 0.0)
+
+    # Source, pedestal, and full well scaled together by 1/4, plus read noise.
+    rescaled = replace(
+        reference,
+        photons_per_subap_frame=5.0e3,
+        qe=0.5,
+        background_e_per_pixel_frame=10.0,
+        full_well_e=75.0,
+        read_noise_e=4.0,
+    )
+    rescaled_frame, rescaled_identity = _noiseless_frame_and_identity(
+        intensity,
+        rescaled,
+    )
+    np.testing.assert_allclose(rescaled_frame, 0.25 * frame, rtol=1.0e-12, atol=0.0)
+    assert rescaled_identity == identity
+
+    # Fewer photons over the same pedestal reshape the frame.
+    dimmer = replace(reference, photons_per_subap_frame=2.5e3)
+    dimmer_frame, dimmer_identity = _noiseless_frame_and_identity(intensity, dimmer)
+    lit = frame > 0.0
+    ratio = dimmer_frame[lit] / frame[lit]
+    assert np.ptp(ratio) > 0.1
+    assert dimmer_identity != identity
+
+    # Each persistent map and the full well alone change the identity.
+    for changed in (
+        replace(reference, prnu_rms=0.06),
+        replace(reference, bad_pixel_fraction=0.2),
+        replace(reference, full_well_e=None),
+    ):
+        assert _noiseless_frame_and_identity(intensity, changed)[1] != identity
+
+    # The legacy photonless branch adds no pedestal, so none is bound.
+    photonless = DetectorConfig(prnu_mode="per_frame_legacy")
+    with_background = replace(photonless, background_e_per_pixel_frame=5.0)
+    photonless_frame, photonless_identity = _noiseless_frame_and_identity(
+        intensity,
+        photonless,
+    )
+    background_frame, background_identity = _noiseless_frame_and_identity(
+        intensity,
+        with_background,
+    )
+    np.testing.assert_array_equal(background_frame, photonless_frame)
+    assert background_identity == photonless_identity

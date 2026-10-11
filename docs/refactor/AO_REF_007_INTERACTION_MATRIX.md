@@ -72,9 +72,14 @@ revalidate the same layout, diagnostics, units, and content hash.
 When the sensor declares a `response_hash`, the matrix also records it as
 `sensor_response_hash` and binds it into the content hash. For a detector-level
 sensor it identifies the optics backend, WFS wavelength, padding and
-detector-window sampling, and centroid estimator and threshold, but not
-photometry, noise, or validity settings, which leave the noiseless response
-unchanged. A sensor that declares none, and a record written before the field
+detector-window sampling, the noiseless detector frame up to its overall
+scale, and centroid estimator and threshold. Without noise the frame is
+`min((s I + B) PRNU, FW)` with bad pixels zeroed, where `s` is photon budget
+times QE and `B` the dark-plus-background pedestal; centroiding ignores a
+positive rescaling, so the identity binds `B / s`, `FW / s`, the PRNU
+response, and the bad-pixel mask. Read noise and validity settings are
+outside it, and the photon budget changes it only when the detector has a
+pedestal or a full well. A sensor that declares none, and a record written before the field
 existed, yields `sensor_response_hash=None` with the unchanged historical
 content hash.
 

@@ -432,10 +432,12 @@ class DmActuatorProbeBasis:
 class InteractionMatrix:
     """Full-layout, unit-explicit calibrated wavefront-sensor response.
 
-    ``sensor_response_hash`` identifies the sensor optical response the matrix
-    was calibrated against (for detector-level sensors: optics backend, WFS
-    wavelength, padding and detector-window sampling, and centroid estimator),
-    excluding photometric and noise operating points.  It is ``None`` for a
+    ``sensor_response_hash`` identifies the noiseless sensor response the
+    matrix was calibrated against (for detector-level sensors: optics backend,
+    WFS wavelength, padding and detector-window sampling, detector pedestal
+    and full well relative to the source, PRNU and bad-pixel maps, and
+    centroid estimator), excluding read noise and the absolute source scale.
+    It is ``None`` for a
     matrix whose sensor declared no ``response_hash`` and for records written
     before the field existed; such a matrix keeps its historical content hash
     but cannot be verified against a different sensor's response.
