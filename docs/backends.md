@@ -499,8 +499,11 @@ much. The rectified read noise acts as a pedestal: in a 14-pixel window it
 lowers the mean response to spot motion to 0.99 at 8000 photons and 1 e- read
 noise, and to 0.80 at 1500 photons and 3 e-, while a spot off the window centre
 is pulled toward it. `wfs.clip_negative_pixels=False` keeps negative pixels,
-which leaves the center of gravity unbiased (response 1.00) and makes this
-value describe its scatter directly; every published profile clips. Thresholding is not modelled: noise switches pixels near the threshold
+which removes that bias (response 1.00): the center of gravity is then
+approximately unbiased, keeping only the second-order bias of a ratio of noisy
+sums, a few hundredths of a pixel for a faint off-centre spot near the
+uncertainty gate, and this first-order value describes its scatter. Every
+published profile clips. Thresholding is not modelled: noise switches pixels near the threshold
 in and out, so a spot with a secondary peak near the threshold level can
 scatter many times the reported value while every frame still passes the
 uncertainty gate. PRNU, saturation, and bad pixels are not modelled either.

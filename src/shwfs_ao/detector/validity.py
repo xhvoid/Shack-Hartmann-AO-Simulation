@@ -221,10 +221,11 @@ def centroid_quality(
     clipping lowers the raw scatter of faint spots while biasing them toward
     the window centre; a Shack-Hartmann sensor built with
     ``clip_negative_pixels=False`` keeps negative pixels, and its plain center
-    of gravity then scatters as stated.  Thresholding is not modelled at all:
-    noise switches pixels near the threshold in and out, so a spot with
-    structure near the threshold level, such as a secondary peak, can scatter
-    many times the reported value and still pass ``max_centroid_sigma_px``.
+    of gravity then scatters as stated to first order.  Thresholding is not
+    modelled at all: noise switches pixels near the threshold in and out, so
+    a spot with structure near the threshold level, such as a secondary peak,
+    can scatter many times the reported value and still pass
+    ``max_centroid_sigma_px``.
     PRNU, saturation, and bad pixels are not modelled either.
     For pure photon noise it is the larger per-axis spot RMS width over
     ``sqrt(flux)``: equal to the legacy proxy for a round spot and up to
