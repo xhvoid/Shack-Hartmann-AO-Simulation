@@ -684,6 +684,40 @@ def test_runtime_wfs_must_share_the_calibrated_optical_response(
     _run(config, interaction_matrix, unbound)
 
 
+class _NoiseBoundCalibrationSensor(_CalibrationSensor):
+    response_hash = "test-calibration-response-v1"
+    noisy_response_hash = "test-calibration-noisy-response-v1"
+
+
+def test_runtime_wfs_must_share_the_noise_settings_of_a_noisy_calibration(
+    interaction_matrix: InteractionMatrix,
+) -> None:
+    """A matrix averaged over noisy frames carries its noise settings."""
+
+    noisy = calibrate_interaction_matrix(
+        _ScalarDmProbeBasis(),
+        _NoiseBoundCalibrationSensor(),
+        1.0e-9,
+        random_streams=NamedRandomStreams(3),
+        include_noise=True,
+        repeats=2,
+    )
+    assert noisy.sensor_noisy_response_hash == "test-calibration-noisy-response-v1"
+    config = _config()
+
+    stale = _components(noisy, config)
+    stale[2].response_hash = noisy.sensor_response_hash
+    stale[2].noisy_response_hash = "test-other-noisy-response-v1"
+    with pytest.raises(ControlLoopError, match="noisy_response_hash"):
+        _run(config, noisy, stale)
+    assert stale[0] == []
+
+    matching = _components(noisy, config)
+    matching[2].response_hash = noisy.sensor_response_hash
+    matching[2].noisy_response_hash = noisy.sensor_noisy_response_hash
+    _run(config, noisy, matching)
+
+
 def test_stochastic_atmosphere_root_seed_must_match_before_side_effects(
     interaction_matrix: InteractionMatrix,
 ) -> None:

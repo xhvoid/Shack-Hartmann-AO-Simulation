@@ -555,6 +555,7 @@ def test_result_field_identity_hash_serialization_and_immutability() -> None:
         "calibration_hash",
         "provenance",
         "sensor_response_hash",
+        "sensor_noisy_response_hash",
     )
     assert interaction_matrix_hash(result) == result.calibration_hash
 
@@ -655,3 +656,57 @@ def test_a_declared_sensor_response_identity_is_bound_and_serialized() -> None:
     loaded = InteractionMatrix.from_record(legacy)
     assert loaded.sensor_response_hash is None
     assert loaded.calibration_hash == unbound.calibration_hash
+
+
+def test_only_a_noisy_calibration_binds_the_sensor_noisy_response_identity() -> None:
+    """An average over noisy frames depends on the noise settings.
+
+    A noiseless calibration measures the noiseless response alone, so it
+    records no noisy identity even when the sensor declares one, and a
+    record cannot claim one for it.  A noisy calibration records and binds
+    the sensor's ``noisy_response_hash``.
+    """
+
+    basis = _orthogonal_modal_basis()
+    weights = np.stack((basis.modes[0], 0.5 * basis.modes[1]), axis=0)
+
+    def sensor(noise_standard_deviation: float) -> _LinearSensor:
+        declared = _LinearSensor(
+            weights,
+            noise_standard_deviation=noise_standard_deviation,
+        )
+        declared.response_hash = "linear-response-v1"  # type: ignore[attr-defined]
+        declared.noisy_response_hash = "linear-noisy-response-v1"  # type: ignore[attr-defined]
+        return declared
+
+    noiseless = calibrate_interaction_matrix(
+        basis,
+        sensor(0.0),
+        5.0e-9,
+        random_streams=NamedRandomStreams(808),
+    )
+    assert noiseless.sensor_response_hash == "linear-response-v1"
+    assert noiseless.sensor_noisy_response_hash is None
+
+    noisy = calibrate_interaction_matrix(
+        basis,
+        sensor(2.0e-8),
+        13.0e-9,
+        random_streams=NamedRandomStreams(928),
+        include_noise=True,
+        repeats=3,
+    )
+    assert noisy.sensor_noisy_response_hash == "linear-noisy-response-v1"
+    assert interaction_matrix_hash(noisy) == noisy.calibration_hash
+    restored = InteractionMatrix.from_record(noisy.to_record())
+    assert restored.sensor_noisy_response_hash == noisy.sensor_noisy_response_hash
+    assert restored.calibration_hash == noisy.calibration_hash
+
+    tampered = noisy.to_record()
+    tampered["sensor_noisy_response_hash"] = "another-noisy-response"
+    with pytest.raises(InteractionMatrixError, match="calibration_hash"):
+        InteractionMatrix.from_record(tampered)
+    claimed = noiseless.to_record()
+    claimed["sensor_noisy_response_hash"] = "linear-noisy-response-v1"
+    with pytest.raises(InteractionMatrixError, match="include_noise=True"):
+        InteractionMatrix.from_record(claimed)

@@ -372,6 +372,7 @@ calibration, diagnostic, science, and experiment-result record is listed here.
 | `method`, `include_noise`, `repeat_count`, `matrix_standard_error` | forward/central method and repeated/noisy calibration uncertainty |
 | `sensor_config_hash`, `geometry_hash`, `detector_hash`, `dm_hash`, `calibration_hash` | component and complete calibration identity |
 | `provenance` | source classification and references |
+| `sensor_noisy_response_hash` | recorded only with `include_noise=True`: the WFS noisy response identity, which adds the absolute noise settings, photon allocation, and negative-pixel clipping that move an average of noisy centroids; reuse of a noise-calibrated matrix requires it to match |
 | `sensor_response_hash` | calibrated noiseless WFS response (optics backend, WFS wavelength, padding/window sampling, detector pedestal and full well relative to the source, PRNU and bad-pixel maps or legacy PRNU seeds, photon allocation where a pedestal or full well makes it matter, centroid estimator and threshold), excluding read noise and the absolute source scale except under legacy per-frame PRNU; `None` when the sensor declared no `response_hash` or the record predates it, and then never accepted by SCAO `source="supplied"`/`"resource"` |
 
 ### SH-WFS calibration records
