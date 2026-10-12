@@ -466,6 +466,43 @@ def test_integration_runtime_record_labels_the_reference_preset(tmp_path) -> Non
     assert bare["preset"] == "fast"
 
 
+def test_default_prefix_names_files_after_the_reference_preset(tmp_path) -> None:
+    # A physical-workflow result keeps mode="fast"; without an explicit prefix
+    # its files took the fast names and could overwrite a fast run's outputs.
+    physical = _result()
+    physical.reference_metrics = {
+        **physical.reference_metrics,
+        "workflow": "physical_integration",
+        "preset": "physical_2m",
+    }
+    written = write_integration_artifacts(
+        physical,
+        ArtifactConfig(
+            output_dir=tmp_path / "physical",
+            write_figures=False,
+            write_runtime=True,
+            runtime_formats=("json",),
+        ),
+    )
+    assert sorted(path.name for path in written) == [
+        "physical_2m_error_budget.csv",
+        "physical_2m_reference_metrics.json",
+        "physical_2m_runtime.json",
+        "physical_2m_validation.csv",
+    ]
+
+    # A fast result, whose preset is its mode, keeps the historical names.
+    fast_written = write_integration_artifacts(
+        _result(),
+        ArtifactConfig(output_dir=tmp_path / "fast", write_figures=False),
+    )
+    assert sorted(path.name for path in fast_written) == [
+        "fast_error_budget.csv",
+        "fast_reference_metrics.json",
+        "fast_validation.csv",
+    ]
+
+
 def test_v2_reader_uses_packaged_compatibility_name() -> None:
     payload = read_v2("data/reference_metrics/fast_reference_metrics.json")
     assert payload["schema_version"] == 2
