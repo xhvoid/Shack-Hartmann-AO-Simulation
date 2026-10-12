@@ -182,6 +182,7 @@ def test_calibration_has_exact_rows_hash_inputs_and_immutable_reference(
         "config_hash",
         "provenance",
         "photon_allocation",
+        "clip_negative_pixels",
     )
     assert calibration.subaperture_ids == geometry.subaperture_ids
     assert calibration.row_ids == geometry.row_ids
@@ -847,6 +848,79 @@ def test_photon_allocation_is_an_explicit_hashed_choice(
         match="photon_allocation",
     ):
         build(photon_allocation="per_lenslet")
+
+
+def test_keeping_negative_pixels_removes_the_read_noise_centroid_bias(
+    geometry: ShackHartmannGeometry,
+    native_backend: NativeShackHartmannOptics,
+) -> None:
+    """Clipping turns zero-mean read noise into a pedestal; keeping it does not.
+
+    For a read-noise-limited spot moved by about one pixel, the mean noisy
+    center of gravity falls well short of the noiseless shift when negative
+    pixels are clipped, because the rectified noise pulls every centroid
+    toward its window centre.  With them kept the noisy mean matches it.
+    """
+
+    detector = DetectorConfig(
+        photons_per_subap_frame=1500.0,
+        read_noise_e=3.0,
+        prnu_mode="persistent",
+    )
+
+    def build(clip_negative_pixels: bool) -> DetectorShackHartmannSensor:
+        return DetectorShackHartmannSensor.calibrate(
+            geometry,
+            native_backend,
+            detector,
+            wfs_wavelength_m=WAVELENGTH_M,
+            random_streams=NamedRandomStreams(41),
+            validity_config=_validity(),
+            clip_negative_pixels=clip_negative_pixels,
+        )
+
+    clipped, kept = build(True), build(False)
+    # Only noisy measurements change: the noiseless reference and response
+    # and the runtime noise streams are shared, while the choice is recorded.
+    np.testing.assert_array_equal(
+        kept.calibration.reference_centroids_px,
+        clipped.calibration.reference_centroids_px,
+    )
+    assert kept.noise_stream_identity == clipped.noise_stream_identity
+    assert kept.response_hash == clipped.response_hash
+    assert kept.calibration.config_hash != clipped.calibration.config_hash
+    assert clipped.calibration.config_hash == (
+        DetectorShackHartmannSensor.calibrate(
+            geometry,
+            native_backend,
+            detector,
+            wfs_wavelength_m=WAVELENGTH_M,
+            random_streams=NamedRandomStreams(41),
+            validity_config=_validity(),
+        ).calibration.config_hash
+    )
+
+    # One pixel of spot motion: lambda / (pad * lenslet pitch) per radian.
+    tilt_opd_m = WAVELENGTH_M / (4 * 0.25) * geometry.x_m
+
+    def mean_x_shift_px(sensor: DetectorShackHartmannSensor, frames: int) -> float:
+        # The calibration root, so both sensors draw the same noise.
+        streams = NamedRandomStreams(41)
+        values = [
+            sensor.measure(
+                tilt_opd_m,
+                random_streams=streams,
+                include_noise=frames > 1,
+            ).vector.values[0::2]
+            for _ in range(frames)
+        ]
+        return float(np.nanmean(values))
+
+    noiseless = mean_x_shift_px(kept, 1)
+    assert noiseless == pytest.approx(mean_x_shift_px(clipped, 1), rel=1.0e-12)
+    assert noiseless == pytest.approx(1.0, rel=0.1)
+    assert mean_x_shift_px(kept, 300) == pytest.approx(noiseless, rel=0.03)
+    assert mean_x_shift_px(clipped, 300) < 0.9 * noiseless
 
 
 def test_unit_sum_allocation_gives_every_subaperture_the_full_budget(

@@ -204,8 +204,14 @@ class DetectorShackHartmannSensor:
         photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
             "throughput_scaled"
         ),
+        clip_negative_pixels: bool = True,
     ) -> DetectorShackHartmannSensor:
-        """Calibrate zero phase and return a sensor owning that realization."""
+        """Calibrate zero phase and return a sensor owning that realization.
+
+        ``clip_negative_pixels`` selects whether measured frames clip negative
+        pixels to zero before centroiding; see
+        :class:`~shwfs_ao.wfs.shack_hartmann.calibration.ShackHartmannCalibration`.
+        """
 
         if not isinstance(geometry, ShackHartmannGeometry):
             raise ShackHartmannMeasurementError(
@@ -257,6 +263,7 @@ class DetectorShackHartmannSensor:
                 provenance=provenance,
                 zero_phase_spots=zero_spots,
                 photon_allocation=photon_allocation,
+                clip_negative_pixels=clip_negative_pixels,
             )
             seeds = legacy_calibration_seeds(
                 calibration,
@@ -539,6 +546,7 @@ class DetectorShackHartmannSensor:
                         self._detector_realization,
                         random_streams=frame_streams,
                         include_noise=noisy,
+                        clip_negative=self._calibration.clip_negative_pixels,
                         legacy_seed=legacy_seed,
                         portable_poisson=stream_seeded,
                     )

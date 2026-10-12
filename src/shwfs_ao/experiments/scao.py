@@ -123,6 +123,7 @@ class ScaoBackendComponentFactory(Protocol):
         photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
             "throughput_scaled"
         ),
+        clip_negative_pixels: bool = True,
     ) -> WavefrontSensor:
         ...
 
@@ -484,6 +485,7 @@ def build_scao_system(
         validity_config=_validity_config(config),
         random_streams=streams,
         photon_allocation=config.wfs.photon_allocation,
+        clip_negative_pixels=config.wfs.clip_negative_pixels,
     )
     science_propagator = factory.build_science_propagator(
         geometry=geometry,
