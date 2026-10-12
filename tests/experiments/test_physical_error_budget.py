@@ -323,6 +323,30 @@ def test_physical_scenario_matrix_rejects_non_integer_frame_counts(
         physical_error_budget_scenarios(**{field: value})
 
 
+@pytest.mark.parametrize("value", (24.9, 24.0, "24", True))
+def test_default_scenario_matrix_rejects_non_integer_frame_counts(value: object) -> None:
+    from shwfs_ao.experiments.error_budget import default_error_budget_scenarios
+    from shwfs_ao.legacy import ao_error_budget
+
+    # The builder normalized with int() before ScenarioConfig's strict check
+    # could see the value, so 24.9 frames silently became 24-frame rows.  The
+    # frozen legacy facade re-exports the same builder.
+    for builder in (
+        default_error_budget_scenarios,
+        ao_error_budget.default_error_budget_scenarios,
+    ):
+        with pytest.raises(AOErrorBudgetError, match="n_steps must be an integer"):
+            builder(n_steps=value)
+
+
+def test_default_scenario_matrix_accepts_numpy_integer_frame_counts() -> None:
+    from shwfs_ao.experiments.error_budget import default_error_budget_scenarios
+
+    assert default_error_budget_scenarios(n_steps=np.int64(12)) == (
+        default_error_budget_scenarios(n_steps=12)
+    )
+
+
 def test_default_matrix_still_uses_the_proxy_so_baselines_hold() -> None:
     from shwfs_ao.experiments.error_budget import default_error_budget_scenarios
 
