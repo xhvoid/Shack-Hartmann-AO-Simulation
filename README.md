@@ -300,7 +300,10 @@ translates exactly, sub-pixel, with no travel limit, at one inverse FFT per
 frame for all ten layers. The discrete spectrum's expected pupil variance is
 within **0.5%** of the von Kármán integral. Over 256 independent screens, the
 measured phase structure function matches theory within **2.5%** from 2 px
-to 1 m.
+to 1 m. The HCIPy backend builds the same layers as `hcipy_layered`; its
+independently generated screens reproduce the native structure function
+within **3.1%** at 2–16 px. They also match the temporal decorrelation from the
+per-layer winds within **1.5%** at 10–30 ms.
 
 ![ESO ten-layer Cn² profile, a summed phase screen, the structure function against von Kármán theory, and the closed-loop residual under single-layer and ESO turbulence](figures/eso_elt_turbulence/eso_elt_turbulence_demo.png)
 

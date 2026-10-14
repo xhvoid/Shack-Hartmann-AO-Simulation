@@ -144,6 +144,17 @@ either atmosphere and reports `backend_names["atmosphere"]` of `"native"` or
 requires the HCIPy DM/WFS/science components and remains with
 AO-REF-015..017; cross-backend statistical comparison is AO-REF-018.
 
+Profile schema 4 later added `atmosphere_model = "hcipy_layered"`: the
+registered HCIPy factory turns each `atmosphere.layers` entry into one
+infinite layer with `r0_m = r0 · cn2_fraction^(-3/5)` and the entry's wind
+and altitude, so `total_r0_m` equals the profile's r0.  Fractions that do not
+sum to one, a non-zero block-level wind, layers under the single-layer
+`hcipy` model and `native_layered` on this backend are all refused.
+`tests/backends/hcipy/test_hcipy_layered_atmosphere.py` compares its ensemble
+statistics with the native `native_layered` model on the ESO ten-layer
+profile; the measured agreement is recorded in
+[the ESO turbulence notes](../eso_elt_turbulence_model.md#cross-check-against-hcipy).
+
 `tests/backends/hcipy/test_optional_import.py` extends the AO-REF-013
 guards: the atmosphere module and its lazy re-exports import without HCIPy,
 constructing a model without the dependency raises the documented

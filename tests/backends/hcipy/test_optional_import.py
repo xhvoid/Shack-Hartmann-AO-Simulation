@@ -54,6 +54,7 @@ _HCIPY_MARKED_TEST_FILES = (
     Path(__file__).with_name("test_hcipy_shwfs.py"),
     Path(__file__).with_name("test_hcipy_propagation.py"),
     Path(__file__).with_name("test_hcipy_factory.py"),
+    Path(__file__).with_name("test_hcipy_layered_atmosphere.py"),
 )
 
 

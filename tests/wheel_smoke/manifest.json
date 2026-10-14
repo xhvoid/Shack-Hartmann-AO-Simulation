@@ -267,6 +267,13 @@
       ]
     },
     {
+      "source": "tests/backends/hcipy/test_hcipy_layered_atmosphere.py",
+      "kind": "test",
+      "requires": [
+        "hcipy"
+      ]
+    },
+    {
       "source": "tests/backends/hcipy/test_hcipy_propagation.py",
       "kind": "test",
       "requires": [
