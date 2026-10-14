@@ -79,6 +79,7 @@ non-editable wheel without a repository root or `.git` directory.
 | SVO 2MASS J/H/Ks curves | `direct_public_data` | wavelength/transmission samples for scalar science-band summaries |
 | Pan-STARRS and 2MASS rows | `direct_public_data` | photometric anchors for an engineering WFS photon estimate |
 | literature atmosphere profile | `synthetic_literature_inspired` | ordered layer weights/winds for synthetic atmosphere studies |
+| ESO E-ELT DRM ten-layer turbulence profile | `literature_derived`, transcribed with URL/access metadata | r0, L0 and published layer Cn²/wind table for `native_layered` atmospheres; wind directions are a stated repository choice |
 | detector/DM/system presets | normally `synthetic_assumed` or `synthetic_literature_inspired` | explicit simulation configuration, not hardware calibration |
 | reference metrics and schemas | `package_reference` | regression governance and serialization contracts |
 

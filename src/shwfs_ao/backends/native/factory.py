@@ -7,9 +7,9 @@ chooses observing defaults from the backend name.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 
@@ -40,6 +40,11 @@ from .atmosphere import (
     FrozenFlowAtmosphere,
     FrozenFlowAtmosphereConfig,
     StaticOpdAtmosphere,
+)
+from .layered_atmosphere import (
+    FrozenFlowLayer,
+    LayeredFrozenFlowAtmosphere,
+    LayeredFrozenFlowAtmosphereConfig,
 )
 from .propagation import NativeSciencePropagator
 from .shwfs import NativeShackHartmannOptics
@@ -102,7 +107,15 @@ class NativeScaoComponentFactory:
         target_rms_rad: float | None,
         normalize_rms: bool,
         static_opd_rms_m: float,
+        layers: Sequence[Any] = (),
     ) -> AtmosphereModel:
+        # Each layer exposes altitude_m, cn2_fraction and wind_m_per_s (the
+        # profile's AtmosphereLayerConfig); this layer never imports io.
+        if bool(layers) != (model == "native_layered"):
+            raise NativeScaoFactoryError(
+                "atmosphere layers are accepted by, and required for, exactly "
+                "the 'native_layered' model."
+            )
         builders: dict[str, Callable[[], AtmosphereModel]] = {
             "static": lambda: StaticOpdAtmosphere(
                 _static_opd(
@@ -167,14 +180,27 @@ class NativeScaoComponentFactory:
                 pupil_mask=geometry.pupil_mask,
                 random_streams=random_streams.scoped("native-atmosphere"),
             ),
+            # Several independent von Karman layers, each with its own Cn2
+            # fraction and wind, summed on axis.  Absolutely normalized by r0
+            # and L0 and free of any travel budget: see layered_atmosphere.
+            "native_layered": lambda: _layered_atmosphere(
+                geometry=geometry,
+                random_streams=random_streams,
+                r0_m=r0_m,
+                outer_scale_m=outer_scale_m,
+                phase_reference_wavelength_m=phase_reference_wavelength_m,
+                target_rms_rad=target_rms_rad,
+                normalize_rms=normalize_rms,
+                layers=layers,
+            ),
         }
         try:
             builder = builders[model]
         except KeyError as exc:
             raise NativeScaoFactoryError(
                 f"native atmosphere model {model!r} is not registered; "
-                "expected 'static', 'native_frozen_flow', or "
-                "'native_frozen_flow_v2'."
+                "expected 'static', 'native_frozen_flow', "
+                "'native_frozen_flow_v2', or 'native_layered'."
             ) from exc
         return builder()
 
@@ -281,3 +307,42 @@ def _static_opd(
     if current_rms <= 0.0:
         raise NativeScaoFactoryError("static OPD template has zero pupil RMS.")
     return remove_piston(opd * (target_rms_m / current_rms), pupil)
+
+
+def _layered_atmosphere(
+    *,
+    geometry: ShackHartmannGeometry,
+    random_streams: RandomStreams,
+    r0_m: float,
+    outer_scale_m: float | None,
+    phase_reference_wavelength_m: float,
+    target_rms_rad: float | None,
+    normalize_rms: bool,
+    layers: Sequence[Any],
+) -> LayeredFrozenFlowAtmosphere:
+    if normalize_rms or target_rms_rad is not None:
+        raise NativeScaoFactoryError(
+            "the native_layered atmosphere is absolutely normalized; it takes "
+            "neither normalize_rms nor a target RMS."
+        )
+    return LayeredFrozenFlowAtmosphere(
+        LayeredFrozenFlowAtmosphereConfig(
+            grid_size=geometry.pupil_shape[0],
+            delta_m=geometry.pupil_geometry.pixel_spacing_xy_m[0],
+            pupil_diameter_m=geometry.telescope_diameter_m,
+            r0_m=r0_m,
+            layers=tuple(
+                FrozenFlowLayer(
+                    cn2_fraction=layer.cn2_fraction,
+                    wind_m_per_s=tuple(layer.wind_m_per_s),
+                    altitude_m=layer.altitude_m,
+                )
+                for layer in layers
+            ),
+            outer_scale_m=outer_scale_m,
+            phase_reference_wavelength_m=phase_reference_wavelength_m,
+            root_seed=random_streams.root_seed,
+        ),
+        pupil_mask=geometry.pupil_mask,
+        random_streams=random_streams.scoped("native-atmosphere"),
+    )

@@ -40,8 +40,12 @@ PROFILE_SCHEMA_NAME = "shwfs_ao.system_profile"
 # turns zero-mean read noise into a positive pedestal under a center of
 # gravity; a v3 record states whether its sensor does.  v1 and v2 records
 # predate the field and keep the clipping their profiles were published with.
-PROFILE_SCHEMA_VERSION = 3
-SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2, 3)
+# Schema v4 adds atmosphere.layers, the per-layer Cn2 fractions and winds of a
+# multi-layer atmosphere (atmosphere_model="native_layered").  A single-layer
+# block states an empty list; v1-v3 records predate the field and can only
+# describe single-layer atmospheres.
+PROFILE_SCHEMA_VERSION = 4
+SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2, 3, 4)
 # The WFS photon allocation the schema-v1 profiles were reviewed and published
 # under.  A v1 record omits the field entirely, so this is the only allocation a
 # configuration claiming record schema 1 can legitimately hold.  It must stay
@@ -72,6 +76,7 @@ _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
     ("high_order_10m_hcipy", 1): "synthetic_presets/high_order_10m_hcipy.v1.json",
     ("high_order_10m_hcipy", 2): "synthetic_presets/high_order_10m_hcipy.v2.json",
     ("high_order_10m_hcipy", 3): "synthetic_presets/high_order_10m_hcipy.v3.json",
+    ("eso_turbulence_2m_detector", 1): "synthetic_presets/eso_turbulence_2m_detector.v1.json",
 }
 
 BackendName = Literal["native", "hcipy"]
@@ -80,8 +85,11 @@ AtmosphereModelName = Literal[
     "static",
     "native_frozen_flow",
     "native_frozen_flow_v2",
+    "native_layered",
     "hcipy",
 ]
+# Same tolerance the public-data loader applies to normalized Cn2 weights.
+_LAYER_FRACTION_ABS_TOL = 1.0e-9
 
 
 class SystemConfigError(ValueError):
@@ -120,13 +128,77 @@ class ProfileProvenance:
 
 
 @dataclass(frozen=True, slots=True)
-class AtmosphereConfig:
+class AtmosphereLayerConfig:
+    """One frozen-flow layer of a multi-layer (``native_layered``) atmosphere.
+
+    ``cn2_fraction`` is this layer's share of the integrated turbulence
+    strength, so the layer's own Fried parameter is
+    ``r0_m * cn2_fraction**(-3/5)``.  ``wind_m_per_s`` is the layer's
+    translation velocity on the pupil grid.  ``altitude_m`` is the height above
+    the telescope; it is recorded for provenance and has no effect on an
+    on-axis, geometric-optics propagation.
+    """
+
+    altitude_m: float
+    cn2_fraction: float
+    wind_m_per_s: tuple[float, float]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "altitude_m", _nonnegative(self.altitude_m, "altitude_m")
+        )
+        object.__setattr__(
+            self, "cn2_fraction", _positive(self.cn2_fraction, "cn2_fraction")
+        )
+        object.__setattr__(
+            self, "wind_m_per_s", _pair(self.wind_m_per_s, "wind_m_per_s")
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class _AtmosphereConfigSchemaV3:
+    """The exact :class:`AtmosphereConfig` shape single-layer blocks hash as.
+
+    Schema v4 added ``layers``, which moves the declared field list the nested
+    atmosphere hash walks (see :class:`_WfsConfigSchemaV1` for the mechanism).
+    A single-layer block states ``layers=()`` and describes exactly what it
+    described before the field existed, so it keeps hashing as these six
+    fields under the published schema id, whichever record schema it belongs
+    to.  That keeps ``component_config_hashes["atmosphere"]`` and
+    :attr:`SystemConfig.observing_conditions_hash` of every published profile
+    at their published values, and lets a v4 single-layer profile share
+    observing conditions with the v1-v3 profiles it matches.
+    """
+
+    __hash_schema_id__ = "shwfs_ao.io.configs.AtmosphereConfig"
+
     r0_m: float
     r0_reference_wavelength_m: float
     outer_scale_m: float | None
     wind_m_per_s: tuple[float, float]
     target_rms_opd_m: float | None
     normalize_rms: bool
+
+
+@dataclass(frozen=True, slots=True)
+class AtmosphereConfig:
+    """Serialized atmosphere block of a SCAO profile.
+
+    ``r0_m`` is the integrated Fried parameter at
+    ``r0_reference_wavelength_m``.  A non-empty ``layers`` tuple describes a
+    multi-layer atmosphere: the layers split that integrated strength by their
+    normalized ``cn2_fraction`` and carry their own winds, so the block-level
+    ``wind_m_per_s`` must then be zero.  A layered atmosphere is absolutely
+    normalized by r0 and the outer scale; it has no RMS rescaling.
+    """
+
+    r0_m: float
+    r0_reference_wavelength_m: float
+    outer_scale_m: float | None
+    wind_m_per_s: tuple[float, float]
+    target_rms_opd_m: float | None
+    normalize_rms: bool
+    layers: tuple[AtmosphereLayerConfig, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "r0_m", _positive(self.r0_m, "r0_m"))
@@ -154,10 +226,50 @@ class AtmosphereConfig:
             _optional_positive(self.target_rms_opd_m, "target_rms_opd_m"),
         )
         object.__setattr__(self, "normalize_rms", _boolean(self.normalize_rms, "normalize_rms"))
+        layers = _tuple_value(self.layers, "layers")
+        for index, layer in enumerate(layers):
+            if not isinstance(layer, AtmosphereLayerConfig):
+                raise SystemConfigError(
+                    f"layers[{index}] must be an AtmosphereLayerConfig."
+                )
+        if layers:
+            total = math.fsum(layer.cn2_fraction for layer in layers)
+            if not math.isclose(
+                total, 1.0, rel_tol=0.0, abs_tol=_LAYER_FRACTION_ABS_TOL
+            ):
+                raise SystemConfigError(
+                    f"layers cn2_fraction values must sum to 1; got {total!r}."
+                )
+            if self.wind_m_per_s != (0.0, 0.0):
+                raise SystemConfigError(
+                    "a layered atmosphere carries its winds per layer; "
+                    "wind_m_per_s must be [0, 0]."
+                )
+            if self.normalize_rms or self.target_rms_opd_m is not None:
+                raise SystemConfigError(
+                    "a layered atmosphere is absolutely normalized by r0 and "
+                    "the outer scale; normalize_rms must be false and "
+                    "target_rms_opd_m null."
+                )
+        object.__setattr__(self, "layers", layers)
 
     @property
     def config_hash(self) -> str:
-        return component_config_hash("scao.atmosphere_config", self)
+        return component_config_hash("scao.atmosphere_config", self._hash_view())
+
+    def _hash_view(self) -> object:
+        """Return the value this block is hashed as (see the v3 stand-in)."""
+
+        if self.layers:
+            return self
+        return _AtmosphereConfigSchemaV3(
+            r0_m=self.r0_m,
+            r0_reference_wavelength_m=self.r0_reference_wavelength_m,
+            outer_scale_m=self.outer_scale_m,
+            wind_m_per_s=self.wind_m_per_s,
+            target_rms_opd_m=self.target_rms_opd_m,
+            normalize_rms=self.normalize_rms,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -719,6 +831,7 @@ class SystemConfig:
             "static",
             "native_frozen_flow",
             "native_frozen_flow_v2",
+            "native_layered",
             "hcipy",
         }:
             raise SystemConfigError("unsupported atmosphere_model.")
@@ -746,6 +859,11 @@ class SystemConfig:
         for value, value_type, label in expected:
             if not isinstance(value, value_type):
                 raise SystemConfigError(f"{label} has the wrong configuration type.")
+        if (self.atmosphere_model == "native_layered") != bool(self.atmosphere.layers):
+            raise SystemConfigError(
+                "atmosphere_model='native_layered' requires atmosphere.layers, "
+                "and no other atmosphere model accepts them."
+            )
         if self.wfs_model == "detector_level":
             if not self.detector.enabled or self.wfs.pad_factor is None or self.wfs.detector_window_px is None:
                 raise SystemConfigError("detector_level requires enabled detector and explicit pad/window sampling.")
@@ -803,6 +921,15 @@ class SystemConfig:
                 f"Record this configuration under schema {PROFILE_SCHEMA_VERSION} "
                 "instead."
             )
+        # Schemas v1-v3 have no atmosphere.layers field: a record under one of
+        # them can describe only a single-layer atmosphere.
+        if record_version < 4 and self.atmosphere.layers:
+            raise SystemConfigError(
+                f"record_schema_version={record_version} cannot express "
+                "atmosphere.layers: that schema has no such field, so the "
+                "layers would be lost. Record this configuration under schema "
+                f"{PROFILE_SCHEMA_VERSION} instead."
+            )
         object.__setattr__(self, "record_schema_version", record_version)
 
     @property
@@ -818,7 +945,9 @@ class SystemConfig:
                 "wfs_wavelength_m": self.wfs_wavelength_m,
                 "science_wavelengths_m": self.science_wavelengths_m,
                 "atmosphere_model": self.atmosphere_model,
-                "atmosphere": self.atmosphere,
+                # Single-layer blocks hash as their pre-v4 shape, so a
+                # published profile's observing conditions keep their identity.
+                "atmosphere": self.atmosphere._hash_view(),
                 "detector": self.detector,
             },
         )
@@ -902,9 +1031,11 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
     and must omit it, taking the ``throughput_scaled`` allocation the v1
     profiles were reviewed and published under.  Schema v3 likewise requires
     ``wfs.clip_negative_pixels``, which v1 and v2 records omit, taking the
-    clipping they were published with.  Each version's field set is exact in
-    both directions, so an older record can neither carry a later field nor be
-    silently upgraded, and a newer record can never omit one.
+    clipping they were published with.  Schema v4 requires
+    ``atmosphere.layers`` (an empty list for a single-layer atmosphere), which
+    v1-v3 records omit.  Each version's field set is exact in both directions,
+    so an older record can neither carry a later field nor be silently
+    upgraded, and a newer record can never omit one.
     """
 
     root = _mapping(record, "profile record")
@@ -950,7 +1081,7 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
         actuators_across=cast(int, values["actuators_across"]),
         wfs_wavelength_m=cast(float, values["wfs_wavelength_m"]),
         science_wavelengths_m=_tuple_value(values["science_wavelengths_m"], "science_wavelengths_m"),
-        atmosphere=_construct(AtmosphereConfig, values["atmosphere"], _ATMOSPHERE_FIELDS, "atmosphere", tuple_fields={"wind_m_per_s"}),
+        atmosphere=_atmosphere_config(values["atmosphere"], schema_version),
         detector=_construct(DetectorSystemConfig, values["detector"], _DETECTOR_FIELDS, "detector"),
         wfs=_construct(
             WfsConfig,
@@ -1004,6 +1135,13 @@ def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
         del wfs_fields["clip_negative_pixels"]
     if config.record_schema_version < 2:
         del wfs_fields["photon_allocation"]
+    atmosphere_fields = _dataclass_mapping(config.atmosphere)
+    if config.record_schema_version < 4:
+        del atmosphere_fields["layers"]
+    else:
+        atmosphere_fields["layers"] = [
+            _dataclass_mapping(layer) for layer in config.atmosphere.layers
+        ]
     return {
         "schema_name": PROFILE_SCHEMA_NAME,
         "schema_version": config.record_schema_version,
@@ -1021,7 +1159,7 @@ def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
             "actuators_across": config.actuators_across,
             "wfs_wavelength_m": config.wfs_wavelength_m,
             "science_wavelengths_m": list(config.science_wavelengths_m),
-            "atmosphere": _dataclass_mapping(config.atmosphere),
+            "atmosphere": atmosphere_fields,
             "detector": _dataclass_mapping(config.detector),
             "wfs": wfs_fields,
             "dm": _dataclass_mapping(config.dm),
@@ -1036,7 +1174,10 @@ def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
 
 
 _SYSTEM_FIELDS = {"backend", "wfs_model", "atmosphere_model", "telescope_diameter_m", "pupil_pixels", "lenslets_across", "actuators_across", "wfs_wavelength_m", "science_wavelengths_m", "atmosphere", "detector", "wfs", "dm", "calibration", "reconstructor", "command_projector", "controller", "science", "random"}
-_ATMOSPHERE_FIELDS = {"r0_m", "r0_reference_wavelength_m", "outer_scale_m", "wind_m_per_s", "target_rms_opd_m", "normalize_rms"}
+_ATMOSPHERE_FIELDS = {"r0_m", "r0_reference_wavelength_m", "outer_scale_m", "wind_m_per_s", "target_rms_opd_m", "normalize_rms", "layers"}
+# Schemas v1-v3 predate atmosphere.layers and describe single-layer atmospheres.
+_ATMOSPHERE_FIELDS_V3 = _ATMOSPHERE_FIELDS - {"layers"}
+_ATMOSPHERE_LAYER_FIELDS = {"altitude_m", "cn2_fraction", "wind_m_per_s"}
 _DETECTOR_FIELDS = {"enabled", "photons_per_subap_frame", "read_noise_e", "dark_e_per_s", "background_e_per_pixel_frame", "full_well_e", "qe", "prnu_rms", "exposure_s", "prnu_mode", "bad_pixel_fraction"}
 _WFS_FIELDS = {"min_fill_fraction", "pad_factor", "detector_window_px", "centroid_estimator", "threshold_fraction", "subtract_minimum", "min_flux_e", "min_peak_snr", "max_centroid_sigma_px", "max_window_clipping_fraction", "central_obstruction_ratio", "spider_width_m", "photon_allocation", "clip_negative_pixels"}
 # Schema v3 requires clip_negative_pixels for the same reason: whether negative
@@ -1055,6 +1196,38 @@ _PROJECTOR_FIELDS = {"kind", "mapping_resource"}
 _CONTROLLER_FIELDS = {"n_steps", "gain", "leak", "latency_frames", "frame_rate_hz", "include_noise"}
 _SCIENCE_FIELDS = {"psf_pad_factor"}
 _RANDOM_FIELDS = {"root_seed", "derivation_scheme_id"}
+
+
+def _atmosphere_config(value: object, schema_version: int) -> AtmosphereConfig:
+    if schema_version < 4:
+        return _construct(
+            AtmosphereConfig,
+            value,
+            _ATMOSPHERE_FIELDS_V3,
+            "atmosphere",
+            tuple_fields={"wind_m_per_s"},
+        )
+    mapping = dict(_mapping(value, "atmosphere"))
+    _keys(mapping, _ATMOSPHERE_FIELDS, "atmosphere")
+    mapping["layers"] = tuple(
+        _construct(
+            AtmosphereLayerConfig,
+            layer,
+            _ATMOSPHERE_LAYER_FIELDS,
+            f"atmosphere.layers[{index}]",
+            tuple_fields={"wind_m_per_s"},
+        )
+        for index, layer in enumerate(
+            _tuple_value(mapping["layers"], "atmosphere.layers")
+        )
+    )
+    return _construct(
+        AtmosphereConfig,
+        mapping,
+        _ATMOSPHERE_FIELDS,
+        "atmosphere",
+        tuple_fields={"wind_m_per_s"},
+    )
 
 
 def _construct(
@@ -1236,6 +1409,7 @@ __all__ = (
     "SUPPORTED_PROFILE_SCHEMA_VERSIONS",
     "SystemConfigError",
     "ProfileProvenance",
+    "AtmosphereLayerConfig",
     "AtmosphereConfig",
     "DetectorSystemConfig",
     "WfsConfig",

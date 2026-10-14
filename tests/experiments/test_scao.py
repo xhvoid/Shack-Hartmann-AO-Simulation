@@ -1575,7 +1575,7 @@ def test_the_negative_pixel_policy_reaches_the_sensor_without_moving_its_respons
     """
 
     tiny = _tiny_system_config("detector_level")
-    assert tiny.record_schema_version == 3 and tiny.wfs.clip_negative_pixels
+    assert tiny.record_schema_version >= 3 and tiny.wfs.clip_negative_pixels
     kept_config = replace(tiny, wfs=replace(tiny.wfs, clip_negative_pixels=False))
     clipped = scao.build_scao_system(tiny)
     kept = scao.build_scao_system(kept_config)

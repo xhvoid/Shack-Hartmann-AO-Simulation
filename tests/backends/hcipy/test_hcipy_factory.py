@@ -18,6 +18,7 @@ hcipy = pytest.importorskip("hcipy")
 from shwfs_ao.backends.hcipy.factory import (
     HCIPY_SCAO_COMPONENT_FACTORY,
     HcipyScaoComponentFactory,
+    HcipyScaoFactoryError,
 )
 from shwfs_ao.core.provenance import Provenance
 from shwfs_ao.experiments import scao
@@ -34,6 +35,7 @@ from shwfs_ao.io.configs import (
     ScienceConfig,
     SystemConfig,
     WfsConfig,
+    load_system_profile,
 )
 
 
@@ -227,3 +229,13 @@ def test_stronger_seeing_changes_measurements_but_not_identities() -> None:
         perturbed.post_update_residual_opd_rms_m,
     )
     assert baseline.config_hash != perturbed.config_hash
+
+
+def test_layered_profiles_are_refused_rather_than_flattened() -> None:
+    """HCIPy builds one layer; it must not silently drop an ESO-style profile."""
+
+    config = replace(
+        load_system_profile("eso_turbulence_2m_detector", 1), backend="hcipy"
+    )
+    with pytest.raises(HcipyScaoFactoryError, match="native_layered"):
+        scao.build_scao_system(config)

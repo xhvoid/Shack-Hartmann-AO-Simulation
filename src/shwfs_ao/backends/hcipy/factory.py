@@ -20,9 +20,9 @@ lenslet model actually measures on.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 from ...core.protocols import (
     AtmosphereModel,
@@ -96,13 +96,15 @@ class HcipyScaoComponentFactory:
         target_rms_rad: float | None,
         normalize_rms: bool,
         static_opd_rms_m: float,
+        layers: Sequence[Any] = (),
     ) -> AtmosphereModel:
-        if model != "hcipy":
+        if model != "hcipy" or layers:
             raise HcipyScaoFactoryError(
                 f"HCIPy atmosphere model {model!r} is not registered; this "
                 "backend builds only 'hcipy' (single-layer von Karman "
-                "frozen flow).  The 'static' and 'native_frozen_flow' "
-                "models build through backend='native'."
+                "frozen flow).  The 'static', 'native_frozen_flow' and "
+                "layered 'native_layered' models build through "
+                "backend='native'."
             )
         if normalize_rms or target_rms_rad is not None:
             raise HcipyScaoFactoryError(

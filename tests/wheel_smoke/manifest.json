@@ -19,6 +19,11 @@
       "requires": []
     },
     {
+      "source": "tests/backends/native/test_layered_atmosphere.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
       "source": "tests/calibration/test_interaction_calibration.py",
       "kind": "test",
       "requires": []
@@ -124,12 +129,22 @@
       "requires": []
     },
     {
+      "source": "tests/experiments/test_scao_layered_atmosphere.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
       "source": "tests/io/test_artifacts.py",
       "kind": "test",
       "requires": []
     },
     {
       "source": "tests/io/test_configs.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/io/test_turbulence_profiles.py",
       "kind": "test",
       "requires": []
     },

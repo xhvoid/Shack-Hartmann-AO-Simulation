@@ -41,6 +41,17 @@ completion, propagated with MASTSEL. They are not unmodified TIPTOP predictions.
 See the [method and convergence notes](../docs/notebook12_tiptop_portfolio_notes.md)
 and [recorded numerical checks](../notebooks/studies/tiptop_validation.json).
 
+## ESO E-ELT turbulence demo
+
+[`eso_elt_turbulence/eso_elt_turbulence_demo.png`](eso_elt_turbulence/eso_elt_turbulence_demo.png)
+(README Figure 10) is written, with the CSV tables behind each panel, by
+[`examples/run_eso_elt_turbulence_demo.py`](../examples/run_eso_elt_turbulence_demo.py)
+rather than extracted from a notebook. It shows ESO's ten-layer E-ELT DRM
+turbulence profile, one summed 2 m screen, the structure function of 256
+seeded screens against von Kármán theory, and 8 seeded closed-loop runs each of
+`eso_turbulence_2m_detector@1` and `portfolio_2m_detector@4`. See the
+[model notes](../docs/eso_elt_turbulence_model.md).
+
 ## Historical and regression figures
 
 Other root-level figures document earlier exploratory/archived notebooks,
