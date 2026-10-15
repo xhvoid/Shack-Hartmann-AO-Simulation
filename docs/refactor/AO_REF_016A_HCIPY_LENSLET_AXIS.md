@@ -1,12 +1,15 @@
 # AO-REF-016A — HCIPy lenslet axes on their detector windows
 
-Date: 2026-10-15. Working tree on `public-clean-main` (base `2e96d86`),
-uncommitted. The fix is opt-in. No published profile, pinned hash, governed
-baseline or cache moves. `high_order_10m_hcipy@4` is a draft and is **not
-published**. The closed-loop confirmation at the published scale is
-**NOT_RUN_RESOURCE_POLICY** (§6).
+Date: 2026-10-15. Committed on `public-clean-main`: the fix in `9352f6c`,
+its tests reworked on measured margins in `394d175`, and the lower-memory
+HCIPy build in `da189f3`. The fix is opt-in. No published profile, pinned
+hash, governed baseline or cache moves. `high_order_10m_hcipy@4` is a draft
+and is **not published**. The paired closed-loop confirmation at the
+published scale has **not run**: the published @3 loop cannot hold lock
+(§6). A 192-pixel closed-loop analogue confirms the fix.
 
-Evidence: `eso_scao_evidence/published_profile_window_bias.md` §1 and §6.
+Evidence: `eso_scao_evidence/published_profile_window_bias.md` §1 and §6, and
+`eso_scao_evidence/hcipy_lenslet_axis_closed_loop_192px.md`.
 
 ## 1. The defect
 
@@ -81,20 +84,36 @@ and exposes the real vertices as `lenslet_vertices_xy_m`.
 
 ## 4. Analogue test
 
-`tests/backends/hcipy/test_hcipy_lenslet_axis.py` is a WFS-only analogue of
-`@3`:
+`tests/backends/hcipy/test_hcipy_lenslet_axis.py` checks the HCIPy sensor
+alone, built through the registered factory, with no atmosphere model, DM or
+loop:
 
-- 80 px, 10 lenslets at the published 0.2083 m pitch, so cells are 7.9 px and
-  δ runs ±0.45 px
-- pad 4, 8-px windows, 750 nm, built through the registered factory
-- no atmosphere model, DM or loop
+- A WFS-only analogue of `@3`: 80 px, 10 lenslets at the published 0.2083 m
+  pitch (cells 7.9 px, δ ±0.45 px), pad 4, 8-px windows, 750 nm. It checks
+  the flat-reference centroids of the interior lenslets and the even part of
+  a deterministic 100 nm block-centred defocus. HCIPy propagates all
+  lenslets together, so a boundary window receives spot spill from one side
+  only, whatever the convention. In a 10-lenslet pupil that boundary is most
+  of the pupil, so a random screen cannot separate the conventions at this
+  size.
+- The published 48-lenslet, 384-px geometry with the same defocus and two
+  tilt-removed residual screens. It needs about 0.7 GiB, so it is marked
+  `slow` and `elt_scale`.
 
 Each check is parametrized over both conventions. The published one is a
 strict `xfail(raises=AssertionError)`, so the check demonstrably detects the
 defect, and @1–3 stay as published.
 
-Results: **not run yet.** Memory pressure was at warn when this was
-committed, so the supervisor refused every test job.
+Measured on 2026-10-15 (4-vCPU Linux cloud VM, hcipy 0.7.0, NumPy 2.5.0).
+Each threshold is the geometric mean of the two conventions' values, so both
+sides keep the same margin (`394d175`):
+
+| Check (interior lenslets) | Block-centred | Published | Margin |
+| --- | --- | --- | --- |
+| Flat-reference column spread (limit 0.02 px) | 0.0096 px | 0.52 px | 2.1× under, 26× over |
+| Analogue, 100 nm defocus, even focus gradient | 0.0078 px/m | 0.0514 px/m | 2.6× each side |
+| Published geometry, 100 nm defocus | 0.00024 px/m | 0.0081 px/m | 5.8× each side |
+| Published geometry, residual screens 0 and 1 | ≤ 0.00053 px/m | ≥ 0.0185 px/m | about 6× each side |
 
 ## 5. Draft `high_order_10m_hcipy@4`
 
@@ -123,18 +142,39 @@ To publish the draft, after the confirmation in §6:
 
 ## 6. Verification status
 
-**NOT RUN YET: the analogue test, the factory and configuration tests, and
-mypy.** They were written but not executed: memory pressure stayed at warn,
-so the supervisor refused every job. Ruff passes.
+**Tests: run.** On the 4-vCPU Linux cloud VM at `da189f3`, the full suite
+gave 2147 passed, 27 skipped and 2 xfailed. The one failure was the
+editable-install test, which needs a build backend that VM's environment
+lacked. Ruff was clean. mypy reported one Linux-only error, an unused
+`type: ignore` in `runtime/resource_guard.py`, since fixed.
+On the macOS development desktop after that fix (2026-10-15, on top of
+`7a9c3c3`), `-m "not slow and not elt_scale"` gave 2211 passed, 18 skipped
+and 4 xfailed in eight batches, with the hcipy-marked tests in a batch of
+their own. The 4 xfails are the two unstable @3 profiles in the stability
+test and the published convention's two strict xfails here. mypy is clean
+with `--platform darwin` and `--platform linux`.
 
-**NOT_RUN_RESOURCE_POLICY: closed-loop confirmation at the published scale.**
+**Not run: paired closed-loop confirmation at the published scale.**
 
-- **Why it cannot run here.**
-  - The dense HCIPy DM stack is 2401 × 384² × 8 B ≈ 2.8 GB, plus a copy.
-  - The per-lenslet masks are ≈ 270 MB, plus a validation copy.
-  - The audited raw peak is ≈ 6.5 GiB, or ≈ 13 GiB required with the 2×
-    margin. That is above the 2 GiB ceiling of the desktop-safe budget on any
-    host.
+- **The published loop cannot hold lock**
+  (`eso_scao_evidence/hcipy_lenslet_axis_closed_loop_192px.md`). Gain 0.65
+  with two frames of latency is above the integrator's 0.618 stability
+  limit, and the 8-px window (2 λ/d at pad 4) clips broadened spots until
+  validity gating freezes the DM. `tests/control/test_profile_stability.py`
+  keeps @3 as a strict expected failure. A pair that differs only in
+  `wfs.lenslet_axis` therefore needs a stable loop first.
+- **192-px analogue, pad 2, gain 0.30**, two realizations: the block-centred
+  axis holds Z4 −1.1 ± 3.6 and +0.1 ± 4.7 nm, the published axis −53.3 ± 3.3
+  and −51.2 ± 4.7 nm. The paired difference is +51.9 ± 3.9 nm, with the
+  predicted sign. The held focus depends on the residual and the TSVD
+  cutoff, so that note proposes dropping the −8 to −30 nm band from the
+  acceptance criteria below.
+- **Memory.**
+  - The dense HCIPy DM stack is 2401 × 384² × 8 B ≈ 2.8 GB.
+  - Since `da189f3` the full-scale @3 build peaks at 5.70 GiB (it was killed
+    above 13.3 GiB before), on a 16 GB host.
+  - Either figure is above the 2 GiB ceiling of the desktop-safe budget on
+    any host.
   - The dense DM is also one ≈ 2.8 GB buffer, far above the policy's 64 MiB
     ceiling for a single scratch buffer.
   - It needs a suitable host and an explicitly authorized, revised budget.
