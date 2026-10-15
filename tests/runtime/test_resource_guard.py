@@ -261,9 +261,39 @@ def _wait_until_dead(pid: int, *, seconds: float = 5.0) -> bool:
         except PermissionError:
             pass  # macOS answers EPERM for a zombie; the state decides
         if _process_state(pid).startswith("Z"):
+            # It has exited.  The waitpid above may have run just before it
+            # did, so reap it now if it is ours rather than leave a zombie.
+            try:
+                os.waitpid(pid, os.WNOHANG)
+            except ChildProcessError:
+                pass  # another process's zombie
             return True
         time.sleep(0.05)
     return False
+
+
+def test_waiting_reaps_a_child_that_exits_between_the_two_checks(monkeypatch):
+    child = subprocess.Popen([sys.executable, "-c", "pass"])
+    deadline = time.monotonic() + 10.0
+    while not _process_state(child.pid).startswith("Z"):
+        assert time.monotonic() < deadline, "the child never became a zombie"
+        time.sleep(0.05)
+    real_waitpid = os.waitpid
+    raced: list[int] = []
+
+    def waitpid_that_ran_just_before_the_exit(pid: int, options: int):
+        if pid == child.pid and not raced:
+            raced.append(pid)
+            return 0, 0  # "still running": the first check lost the race
+        return real_waitpid(pid, options)
+
+    monkeypatch.setattr(os, "waitpid", waitpid_that_ran_just_before_the_exit)
+    assert _wait_until_dead(child.pid)
+    monkeypatch.undo()
+    assert raced == [child.pid]
+    with pytest.raises(ChildProcessError):
+        os.waitpid(child.pid, os.WNOHANG)  # already reaped, not left a zombie
+    child.wait()
 
 
 @pytest.fixture
