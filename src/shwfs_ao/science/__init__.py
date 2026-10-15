@@ -12,6 +12,16 @@ from .propagation import (
     SciencePropagationError,
     monochromatic_psf,
 )
+from .long_exposure import (
+    LongExposureConfig,
+    LongExposureError,
+    LongExposureImage,
+    LongExposureMetrics,
+    LongExposureResult,
+    LongExposureSelection,
+    StreamingLongExposure,
+    radial_profile_from_discrete_flux,
+)
 from .metrics import (
     PsfScalarMetrics,
     ScienceMetricsError,
@@ -51,4 +61,12 @@ __all__ = (
     "lambda_over_d_rad",
     "radians_to_lambda_over_d",
     "radians_to_arcsec",
+    "LongExposureError",
+    "LongExposureConfig",
+    "LongExposureSelection",
+    "LongExposureMetrics",
+    "LongExposureImage",
+    "LongExposureResult",
+    "StreamingLongExposure",
+    "radial_profile_from_discrete_flux",
 )

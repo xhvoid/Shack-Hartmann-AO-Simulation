@@ -12,7 +12,7 @@ import sys
 from shwfs_ao.backends import native
 from shwfs_ao.backends.native import propagation as native_propagation
 import shwfs_ao.science as science
-from shwfs_ao.science import bandpass, metrics, propagation
+from shwfs_ao.science import bandpass, long_exposure, metrics, propagation
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -45,6 +45,16 @@ EXPECTED_METRIC_EXPORTS = (
     "lambda_over_d_rad",
     "radians_to_lambda_over_d",
     "radians_to_arcsec",
+)
+EXPECTED_LONG_EXPOSURE_EXPORTS = (
+    "LongExposureError",
+    "LongExposureConfig",
+    "LongExposureSelection",
+    "LongExposureMetrics",
+    "LongExposureImage",
+    "LongExposureResult",
+    "StreamingLongExposure",
+    "radial_profile_from_discrete_flux",
 )
 
 
@@ -82,11 +92,14 @@ def test_science_package_has_exact_explicit_aggregate_surface() -> None:
         *EXPECTED_BANDPASS_EXPORTS,
         *EXPECTED_PROPAGATION_EXPORTS,
         *EXPECTED_METRIC_EXPORTS,
+        *EXPECTED_LONG_EXPOSURE_EXPORTS,
     )
+    assert set(EXPECTED_LONG_EXPOSURE_EXPORTS) <= set(long_exposure.__all__)
     for module, names in (
         (bandpass, EXPECTED_BANDPASS_EXPORTS),
         (propagation, EXPECTED_PROPAGATION_EXPORTS),
         (metrics, EXPECTED_METRIC_EXPORTS),
+        (long_exposure, EXPECTED_LONG_EXPOSURE_EXPORTS),
     ):
         assert all(getattr(science, name) is getattr(module, name) for name in names)
 
@@ -97,6 +110,7 @@ def test_science_modules_do_not_depend_on_detector_controller_or_legacy() -> Non
         SCIENCE_ROOT / "bandpass.py",
         SCIENCE_ROOT / "propagation.py",
         SCIENCE_ROOT / "metrics.py",
+        SCIENCE_ROOT / "long_exposure.py",
     ):
         tree = _tree(path)
         imports = []

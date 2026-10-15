@@ -8,6 +8,7 @@ import numpy as np
 
 from ...core.hashing import detector_plane_sampling_hash
 from ...core.types import DetectorPlaneSampling, SpotIntensityResult
+from .compact_geometry import CompactShackHartmannGeometry
 from .geometry import ShackHartmannGeometry
 
 
@@ -49,7 +50,7 @@ def make_detector_plane_sampling(
 
 def validate_spot_intensity_result(
     result: SpotIntensityResult,
-    geometry: ShackHartmannGeometry | Sequence[str],
+    geometry: ShackHartmannGeometry | CompactShackHartmannGeometry | Sequence[str],
     *,
     sampling: DetectorPlaneSampling | None = None,
 ) -> SpotIntensityResult:
@@ -102,7 +103,7 @@ def validate_spot_intensity_result(
 
 def validate_optics_backend_result(
     result: SpotIntensityResult,
-    geometry: ShackHartmannGeometry | Sequence[str],
+    geometry: ShackHartmannGeometry | CompactShackHartmannGeometry | Sequence[str],
     *,
     sampling: DetectorPlaneSampling | None = None,
 ) -> SpotIntensityResult:
@@ -112,9 +113,9 @@ def validate_optics_backend_result(
 
 
 def _expected_ids(
-    geometry: ShackHartmannGeometry | Sequence[str],
+    geometry: ShackHartmannGeometry | CompactShackHartmannGeometry | Sequence[str],
 ) -> tuple[str, ...]:
-    if isinstance(geometry, ShackHartmannGeometry):
+    if isinstance(geometry, (ShackHartmannGeometry, CompactShackHartmannGeometry)):
         return geometry.subaperture_ids
     if isinstance(geometry, (str, bytes)):
         raise ShackHartmannOpticsError(

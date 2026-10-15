@@ -504,7 +504,8 @@ def test_owned_examples_import_only_canonical_surfaces():
     # examples demonstrate the canonical architecture, so none of them may
     # consume the frozen legacy layer or the deprecated root shims.
     example_paths = sorted((ROOT / "examples").glob("*.py"))
-    assert len(example_paths) == 11
+    # 12 since the ESO-derived SCAO benchmark runner joined the examples.
+    assert len(example_paths) == 12
     offenders: list[tuple[str, str]] = []
     for path in example_paths:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
