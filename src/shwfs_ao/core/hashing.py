@@ -21,6 +21,20 @@ import numpy as np
 HASH_SCHEMA_ID = "shwfs_ao.canonical_sha256.v1"
 """Identifier for the canonical payload and digest algorithm."""
 
+# Canonical bytes are digested in blocks of leading-axis slices, so hashing a
+# large array never holds a full canonical copy plus its ``bytes`` alongside
+# the input.  The block size changes only memory, never the digest.
+_HASH_BLOCK_BYTES = 16 * 1024**2
+
+# Array kind -> (descriptor dtype name, canonical little-endian dtype).
+_CANONICAL_DTYPES: dict[str, tuple[str, np.dtype[Any]]] = {
+    "b": ("bool", np.dtype(np.uint8)),
+    "i": ("int64", np.dtype("<i8")),
+    "u": ("uint64", np.dtype("<u8")),
+    "f": ("float64", np.dtype("<f8")),
+    "c": ("complex128", np.dtype("<c16")),
+}
+
 
 class HashingError(ValueError):
     """Raised when a value cannot be represented by the hash schema."""
@@ -32,25 +46,146 @@ def stable_array_descriptor(values: Any) -> dict[str, Any]:
     The descriptor is the frozen historical representation used by the
     compatibility layer.  Numeric values use explicit little-endian storage;
     floating NaNs and signed zero are normalized before hashing.
+
+    The digest covers the C-order canonical bytes of the whole array.  They
+    are produced and hashed one block of leading-axis slices at a time; the
+    concatenated blocks are byte-for-byte the historical single buffer.
     """
 
     array = np.asarray(values)
     kind = array.dtype.kind
+    if kind not in _CANONICAL_DTYPES:
+        raise TypeError(f"Unsupported array dtype for stable hashing: {array.dtype}.")
+    dtype_name, canonical_dtype = _CANONICAL_DTYPES[kind]
+
+    if array.ndim == 0 or array.size == 0:
+        whole = _canonical_block(array, kind)
+        shape = whole.shape
+        blocks: Any = (whole,)
+    else:
+        shape = array.shape
+        row_bytes = canonical_dtype.itemsize * (array.size // array.shape[0])
+        rows = max(1, _HASH_BLOCK_BYTES // max(1, row_bytes))
+        blocks = (
+            _canonical_block(array[start:start + rows], kind)
+            for start in range(0, array.shape[0], rows)
+        )
+
+    header = json.dumps(
+        {"dtype": dtype_name, "shape": [int(v) for v in shape]},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    hasher = hashlib.sha256(header + b"\0")
+    for block in blocks:
+        hasher.update(block.tobytes(order="C"))
+    return {
+        "shape": [int(v) for v in shape],
+        "dtype": dtype_name,
+        "sha256": hasher.hexdigest(),
+    }
+
+
+class ArrayDescriptor:
+    """A precomputed :func:`stable_array_descriptor` that hashes like its array.
+
+    :func:`canonicalize_for_hash` turns it into exactly the ``{"$array": ...}``
+    node of the array it describes, so a hash payload can carry a large
+    array's digest without holding the array.
+    """
+
+    __slots__ = ("_shape", "_dtype", "_sha256")
+
+    def __init__(self, *, shape: Sequence[int], dtype: str, sha256: str) -> None:
+        names = {name for name, _ in _CANONICAL_DTYPES.values()}
+        if dtype not in names:
+            raise HashingError(f"Unsupported descriptor dtype {dtype!r}.")
+        if len(sha256) != 64 or any(c not in "0123456789abcdef" for c in sha256):
+            raise HashingError("sha256 must be a lowercase 64-digit hex digest.")
+        self._shape = tuple(int(v) for v in shape)
+        self._dtype = dtype
+        self._sha256 = sha256
+
+    def as_mapping(self) -> dict[str, Any]:
+        """The same mapping :func:`stable_array_descriptor` returns."""
+
+        return {"shape": list(self._shape), "dtype": self._dtype, "sha256": self._sha256}
+
+
+class StackedArrayDigest:
+    """``stable_array_descriptor(np.stack(items))`` built one item at a time.
+
+    It digests the stacked array's header and canonical C-order bytes item by
+    item, so only one item is ever held.  Exactly ``count`` items must be
+    added, all with the first item's shape and dtype (stacking would not have
+    promoted anything).
+    """
+
+    def __init__(self, count: int) -> None:
+        if isinstance(count, bool) or int(count) != count or int(count) < 1:
+            raise HashingError("count must be a positive integer.")
+        self._count = int(count)
+        self._added = 0
+        self._hasher: Any = None
+        self._item_shape: tuple[int, ...] = ()
+        self._item_dtype: np.dtype | None = None
+        self._kind = ""
+        self._dtype_name = ""
+
+    def add(self, item: Any) -> None:
+        array = np.asarray(item)
+        if self._added >= self._count:
+            raise HashingError(f"more than the declared {self._count} items were added.")
+        if self._hasher is None:
+            kind = array.dtype.kind
+            if kind not in _CANONICAL_DTYPES:
+                raise TypeError(
+                    f"Unsupported array dtype for stable hashing: {array.dtype}."
+                )
+            self._kind = kind
+            self._dtype_name = _CANONICAL_DTYPES[kind][0]
+            self._item_shape = tuple(int(v) for v in array.shape)
+            self._item_dtype = array.dtype
+            header = json.dumps(
+                {
+                    "dtype": self._dtype_name,
+                    "shape": [self._count, *self._item_shape],
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+            self._hasher = hashlib.sha256(header + b"\0")
+        elif array.shape != self._item_shape or array.dtype != self._item_dtype:
+            raise HashingError("stacked items must all share one shape and dtype.")
+        self._hasher.update(_canonical_block(array, self._kind).tobytes(order="C"))
+        self._added += 1
+
+    def descriptor(self) -> ArrayDescriptor:
+        if self._added != self._count:
+            raise HashingError(
+                f"{self._added} of the declared {self._count} items were added."
+            )
+        return ArrayDescriptor(
+            shape=(self._count, *self._item_shape),
+            dtype=self._dtype_name,
+            sha256=self._hasher.hexdigest(),
+        )
+
+
+def _canonical_block(array: np.ndarray, kind: str) -> np.ndarray:
+    """Canonical contiguous values of ``array``: the historical conversion."""
+
     if kind == "b":
         canonical = array.astype(np.uint8, copy=True)
-        dtype_name = "bool"
     elif kind == "i":
         canonical = array.astype(np.dtype("<i8"), copy=True)
-        dtype_name = "int64"
     elif kind == "u":
         canonical = array.astype(np.dtype("<u8"), copy=True)
-        dtype_name = "uint64"
     elif kind == "f":
         canonical = array.astype(np.dtype("<f8"), copy=True)
         canonical[canonical == 0.0] = 0.0
         canonical[np.isnan(canonical)] = np.nan
-        dtype_name = "float64"
-    elif kind == "c":
+    else:
         canonical = array.astype(np.dtype("<c16"), copy=True)
         real = canonical.real
         imag = canonical.imag
@@ -58,22 +193,7 @@ def stable_array_descriptor(values: Any) -> dict[str, Any]:
         imag[imag == 0.0] = 0.0
         real[np.isnan(real)] = np.nan
         imag[np.isnan(imag)] = np.nan
-        dtype_name = "complex128"
-    else:
-        raise TypeError(f"Unsupported array dtype for stable hashing: {array.dtype}.")
-
-    canonical = np.ascontiguousarray(canonical)
-    header = json.dumps(
-        {"dtype": dtype_name, "shape": [int(v) for v in canonical.shape]},
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-    digest = hashlib.sha256(header + b"\0" + canonical.tobytes(order="C")).hexdigest()
-    return {
-        "shape": [int(v) for v in canonical.shape],
-        "dtype": dtype_name,
-        "sha256": digest,
-    }
+    return np.ascontiguousarray(canonical)
 
 
 def canonicalize_for_hash(value: Any) -> Any:
@@ -107,6 +227,8 @@ def canonicalize_for_hash(value: Any) -> Any:
         }
     if isinstance(value, np.ndarray):
         return {"$array": stable_array_descriptor(value)}
+    if isinstance(value, ArrayDescriptor):
+        return {"$array": value.as_mapping()}
     if is_dataclass(value) and not isinstance(value, type):
         value_type = type(value)
         explicit_schema = getattr(value_type, "__hash_schema_id__", None)

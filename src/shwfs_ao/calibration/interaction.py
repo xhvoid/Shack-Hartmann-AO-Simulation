@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+import hashlib
 import math
 from numbers import Integral, Real
 from typing import Any, Literal, Protocol, cast, runtime_checkable
@@ -18,6 +19,8 @@ import numpy as np
 
 from ..backends.native.modes import normalize_mode_to_unit_pupil_rms
 from ..core.hashing import (
+    ArrayDescriptor,
+    StackedArrayDigest,
     calibration_rows_hash,
     command_coordinates_hash,
     component_config_hash,
@@ -25,7 +28,11 @@ from ..core.hashing import (
 )
 from ..core.protocols import RandomStreams, WavefrontSensor
 from ..core.provenance import Provenance
-from ..core.types import MeasurementUnit, WfsMeasurement
+from ..core.types import (
+    MeasurementUnit,
+    WfsMeasurement,
+    is_immutable_buffer_array,
+)
 from ..dm.model import DeformableMirror
 from .diagnostics import (
     InteractionDiagnosticsError,
@@ -303,7 +310,14 @@ class DmActuatorProbeBasis:
 
         full_index = {identifier: index for index, identifier in enumerate(dm.actuator_ids)}
         indices = np.asarray([full_index[identifier] for identifier in selected], dtype=int)
-        influences = np.asarray(dm.influence_functions, dtype=float)[indices]
+        all_influences = np.asarray(dm.influence_functions, dtype=float)
+        # Selecting every actuator in order is the identity; skipping the
+        # fancy-index copy keeps the dense stack shared (same values).
+        influences = (
+            all_influences
+            if np.array_equal(indices, np.arange(all_influences.shape[0]))
+            else all_influences[indices]
+        )
         if influences.ndim != 3 or not np.all(np.isfinite(influences)):
             raise InteractionMatrixError(
                 "selected DM influence functions must be finite 2-D maps."
@@ -918,10 +932,14 @@ def calibrate_interaction_matrix(
     sensor_config_hash, row_ids = _validated_sensor_contract(sensor)
     root_seed, derivation_scheme = _validated_random_streams(random_streams)
 
-    # Every bound and spatial perturbation is materialized before the first
-    # sensor call.  Bad amplitudes or basis maps therefore fail atomically.
-    positive_maps: list[np.ndarray] = []
-    negative_maps: list[np.ndarray] = []
+    # Every bound and spatial perturbation is computed and validated before
+    # the first sensor call, so bad amplitudes or basis maps still fail
+    # atomically.  Only a fingerprint of each map is kept: at the published
+    # HCIPy scale the full +/- set is as large as two dense influence stacks.
+    # Each map is recomputed just before it is measured and must match.
+    positive_fingerprints: list[bytes] = []
+    negative_fingerprints: list[bytes] = []
+    positive_stack = StackedArrayDigest(len(basis_contract.coordinate_ids))
     probe_shape: tuple[int, int] | None = None
     for index, coordinate_id in enumerate(basis_contract.coordinate_ids):
         positive = _probe_map(
@@ -936,7 +954,8 @@ def calibrate_interaction_matrix(
             raise InteractionMatrixError(
                 "all probe-basis OPD maps must have the same shape."
             )
-        positive_maps.append(positive)
+        positive_stack.add(positive)
+        positive_fingerprints.append(_probe_map_fingerprint(positive))
         if resolved_method == "central":
             negative = _probe_map(
                 probe_basis,
@@ -948,14 +967,14 @@ def calibrate_interaction_matrix(
                 raise InteractionMatrixError(
                     "positive and negative probe maps must have matching shapes."
                 )
-            negative_maps.append(negative)
+            negative_fingerprints.append(_probe_map_fingerprint(negative))
     if probe_shape is None:  # pragma: no cover - nonempty basis validated above
         raise InteractionMatrixError("probe_basis must contain at least one coordinate.")
 
     probe_hash = _probe_basis_hash(
         probe_basis,
         basis_contract,
-        positive_maps,
+        positive_stack.descriptor(),
         amplitude,
     )
     geometry_hash = _sensor_geometry_hash(
@@ -1046,7 +1065,13 @@ def calibrate_interaction_matrix(
             stream_references.append(_scope_stream_reference(plus_streams))
             plus = _measure(
                 sensor,
-                positive_maps[column_index],
+                _reproduced_probe_map(
+                    probe_basis,
+                    column_index,
+                    amplitude,
+                    coordinate_id=coordinate_id,
+                    fingerprint=positive_fingerprints[column_index],
+                ),
                 random_streams=plus_streams,
                 include_noise=noisy,
                 row_ids=row_ids,
@@ -1076,7 +1101,13 @@ def calibrate_interaction_matrix(
                 stream_references.append(_scope_stream_reference(minus_streams))
                 minus = _measure(
                     sensor,
-                    negative_maps[column_index],
+                    _reproduced_probe_map(
+                        probe_basis,
+                        column_index,
+                        -amplitude,
+                        coordinate_id=coordinate_id,
+                        fingerprint=negative_fingerprints[column_index],
+                    ),
                     random_streams=minus_streams,
                     include_noise=noisy,
                     row_ids=row_ids,
@@ -1350,6 +1381,40 @@ def _probe_map(
     return result
 
 
+def _probe_map_fingerprint(value: np.ndarray) -> bytes:
+    """SHA-256 of a validated probe map's dtype, shape and C-order bytes."""
+
+    contiguous = np.ascontiguousarray(value)
+    digest = hashlib.sha256(
+        repr((contiguous.dtype.str, contiguous.shape)).encode("ascii")
+    )
+    digest.update(contiguous.tobytes(order="C"))
+    return digest.digest()
+
+
+def _reproduced_probe_map(
+    probe_basis: ProbeBasis,
+    index: int,
+    amplitude_m: float,
+    *,
+    coordinate_id: str,
+    fingerprint: bytes,
+) -> np.ndarray:
+    """Recompute a probe map validated earlier and require the same map.
+
+    Calibration keeps only fingerprints of the maps it validated up front, so
+    a probe basis must return the same OPD every time it is asked.
+    """
+
+    value = _probe_map(probe_basis, index, amplitude_m, coordinate_id=coordinate_id)
+    if _probe_map_fingerprint(value) != fingerprint:
+        raise InteractionMatrixError(
+            f"probe {coordinate_id!r} returned a different OPD than when it was "
+            "validated; probe-basis maps must be deterministic."
+        )
+    return value
+
+
 def _validated_sensor_contract(sensor: object) -> tuple[str, tuple[str, ...]]:
     if not callable(getattr(sensor, "measure", None)):
         raise InteractionMatrixError("sensor must implement measure().")
@@ -1470,9 +1535,11 @@ def _measure(
 def _probe_basis_hash(
     probe_basis: ProbeBasis,
     contract: _BasisContract,
-    positive_maps: list[np.ndarray],
+    positive_maps: ArrayDescriptor,
     amplitude_m: float,
 ) -> str:
+    # ``positive_maps`` describes ``np.stack(positive maps)`` without the
+    # stack, so the hash is the same as hashing the stacked maps directly.
     declared = getattr(probe_basis, "config_hash", None)
     declared_hash = (
         _nonempty_string(declared, label="probe_basis.config_hash")
@@ -1487,7 +1554,7 @@ def _probe_basis_hash(
             "coordinate_kind": contract.coordinate_kind,
             "coordinate_unit": contract.coordinate_unit,
             "max_abs_amplitude_m": contract.max_abs_amplitude_m,
-            "positive_probe_maps_at_amplitude": np.stack(positive_maps, axis=0),
+            "positive_probe_maps_at_amplitude": positive_maps,
             "amplitude_m": amplitude_m,
         },
     )
@@ -1907,6 +1974,9 @@ def _immutable_int_array(value: object, *, label: str, ndim: int) -> np.ndarray:
 
 
 def _immutable_array(value: object, *, dtype: Any) -> np.ndarray:
+    if is_immutable_buffer_array(value, dtype=dtype):
+        # Already immutable: sharing it avoids a second dense influence cube.
+        return value
     contiguous = np.ascontiguousarray(np.array(value, dtype=dtype, copy=True))
     immutable = np.frombuffer(contiguous.tobytes(order="C"), dtype=contiguous.dtype)
     return immutable.reshape(contiguous.shape)

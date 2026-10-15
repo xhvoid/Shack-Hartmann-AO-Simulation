@@ -39,6 +39,7 @@ from typing import Any, Mapping
 import numpy as np
 
 from ...core.hashing import component_config_hash
+from ...core.types import is_immutable_buffer_array
 from ...dm.config import DMConfig, actuator_ids_from_grid_indices
 from ...dm.model import DeformableMirror
 from . import hcipy_version, require_hcipy
@@ -113,7 +114,13 @@ class HcipyDmBackend:
         influence_function_basis: Any,
         x_m: np.ndarray,
         y_m: np.ndarray,
+        *,
+        _owned_basis: bool = False,
     ) -> None:
+        # ``_owned_basis`` is for :func:`build_hcipy_deformable_mirror` only:
+        # its freshly built basis is never exposed, so the mirror adopts that
+        # dense matrix instead of keeping a defensive copy.  Values, hashes and
+        # synthesis are identical either way; only the peak memory differs.
         x, y = _validated_coordinates(x_m, y_m)
         hcipy = require_hcipy()
         if not isinstance(influence_function_basis, hcipy.ModeBasis):
@@ -134,10 +141,12 @@ class HcipyDmBackend:
         rows, columns = (int(x.shape[0]), int(x.shape[1]))
 
         matrix = _dense_transformation_matrix(
-            influence_function_basis.transformation_matrix
+            influence_function_basis.transformation_matrix,
+            copy=not _owned_basis,
         )
-        stack = _dense_influence_stack(matrix, rows=rows, columns=columns)
-        self._influence_stack = _readonly_copy(stack, dtype=float)
+        self._influence_stack = _immutable_influence_stack(
+            matrix, rows=rows, columns=columns
+        )
         self._x_axis_m = _readonly_copy(x[0, :], dtype=float)
         self._y_axis_m = _readonly_copy(y[:, 0], dtype=float)
         self._output_shape = (rows, columns)
@@ -167,7 +176,7 @@ class HcipyDmBackend:
                 "backend_name": _BACKEND_NAME,
                 "config_hash": self._config_hash,
                 "hcipy_version": self._hcipy_version,
-                "n_actuators": int(stack.shape[0]),
+                "n_actuators": int(self._influence_stack.shape[0]),
                 "output_shape": self._output_shape,
                 "command_unit": _COMMAND_UNIT,
                 "output_unit": "m_opd",
@@ -294,7 +303,9 @@ def build_hcipy_gaussian_influence_basis(
         coupling * pitch_m,
         cutoff=None,
     )
-    matrix = _dense_transformation_matrix(basis.transformation_matrix)
+    # ``basis`` is local and freshly built, so normalize its dense matrix in
+    # place rather than holding a second full copy (same arithmetic).
+    matrix = _dense_transformation_matrix(basis.transformation_matrix, copy=False)
     if matrix.shape != (x.size, centers.shape[0]):
         raise HcipyDmError(
             f"HCIPy produced a transformation matrix of shape "
@@ -360,7 +371,7 @@ def build_hcipy_deformable_mirror(
     )
     return DeformableMirror(
         resolved_config,
-        HcipyDmBackend(basis, x, y),
+        HcipyDmBackend(basis, x, y, _owned_basis=True),
         actuator_ids=actuator_ids_from_grid_indices(grid_indices_rc),
         actuator_centers_m=centers,
         actuator_pitch_m=pitch_m,
@@ -404,11 +415,19 @@ def _require_matching_grids(basis_grid: Any, grid: Any, *, hcipy: Any) -> None:
             )
 
 
-def _dense_transformation_matrix(raw: Any) -> np.ndarray:
+def _dense_transformation_matrix(raw: Any, *, copy: bool = True) -> np.ndarray:
+    """Dense float transformation matrix of an HCIPy basis, validated.
+
+    ``copy=False`` is only for a basis the caller owns outright; it reuses a
+    dense float64 matrix in its own memory layout instead of duplicating it.
+    """
+
     if hasattr(raw, "toarray"):
         matrix = np.asarray(raw.toarray(), dtype=float)
-    else:
+    elif copy:
         matrix = np.array(raw, dtype=float, copy=True, subok=False)
+    else:
+        matrix = np.asarray(raw, dtype=float)
     if matrix.ndim != 2 or matrix.shape[0] < 1 or matrix.shape[1] < 1:
         raise HcipyDmError(
             "influence_function_basis must contain at least one mode on a "
@@ -421,20 +440,26 @@ def _dense_transformation_matrix(raw: Any) -> np.ndarray:
     return matrix
 
 
-def _dense_influence_stack(
+def _immutable_influence_stack(
     matrix: np.ndarray,
     *,
     rows: int,
     columns: int,
 ) -> np.ndarray:
+    """Immutable ``(n_actuators, rows, columns)`` stack of ``matrix``'s modes.
+
+    ``matrix.T.tobytes(order="C")`` writes the stack's C-order bytes straight
+    into one ``bytes`` buffer, the same bytes as copying a contiguous
+    transposed stack first, without that intermediate full copy.
+    """
+
     if matrix.shape[0] != rows * columns:
         raise HcipyDmError(
             f"influence_function_basis has {matrix.shape[0]} samples per "
             f"mode; the coordinate grid has {rows * columns}."
         )
-    return np.ascontiguousarray(
-        matrix.T.reshape(matrix.shape[1], rows, columns)
-    )
+    stack = np.frombuffer(matrix.T.tobytes(order="C"), dtype=np.float64)
+    return stack.reshape(matrix.shape[1], rows, columns)
 
 
 def _validated_commands(values: object, *, n_actuators: int) -> np.ndarray:
@@ -543,6 +568,9 @@ def _boolean(field_name: str, value: object) -> bool:
 
 
 def _readonly_copy(values: np.ndarray, *, dtype: Any) -> np.ndarray:
+    if is_immutable_buffer_array(values, dtype=dtype):
+        # Already immutable: sharing it avoids a second dense influence cube.
+        return values
     contiguous = np.ascontiguousarray(np.array(values, dtype=dtype, copy=True))
     result = np.frombuffer(contiguous.tobytes(order="C"), dtype=contiguous.dtype)
     return result.reshape(contiguous.shape)

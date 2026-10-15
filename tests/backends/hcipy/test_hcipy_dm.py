@@ -830,3 +830,135 @@ def _plain_json(value):
     raise AssertionError(
         f"metadata contains a non-JSON-serializable value of type {type(value)!r}"
     )
+
+
+class TestBuildMemory:
+    """The canonical build adopts its private basis and shares immutable stacks.
+
+    At the published 2401-actuator, 384-pixel scale one dense influence stack
+    is 2.8 GB, so every redundant full copy matters.  These checks pin that the
+    lean build is bit-identical to the defensive-copy path and stays near two
+    dense stacks at peak.
+    """
+
+    def test_owned_basis_build_is_bit_identical_to_the_defensive_copy_path(self):
+        from shwfs_ao.backends.native.dm import square_grid_actuator_layout
+        from shwfs_ao.dm.config import actuator_ids_from_grid_indices
+
+        config = _config(n_actuators_across=7)
+        x_m, y_m, pupil = _sampled_pupil()
+        owned = build_hcipy_deformable_mirror(x_m, y_m, pupil, config)
+
+        centers, pitch_m, grid_indices = square_grid_actuator_layout(
+            config.telescope_diameter_m,
+            config.n_actuators_across,
+            include_edge_actuators=config.include_edge_actuators,
+            actuator_margin_fraction=config.actuator_margin_fraction,
+        )
+        basis = build_hcipy_gaussian_influence_basis(
+            x_m,
+            y_m,
+            centers,
+            pitch_m,
+            coupling_width_pitch=config.coupling_width_pitch,
+            normalize_peak=True,
+            pupil_mask=pupil,
+        )
+        historical_matrix = np.array(basis.transformation_matrix, dtype=float, copy=True)
+        copied_backend = HcipyDmBackend(basis, x_m, y_m)
+        copied = DeformableMirror(
+            config,
+            copied_backend,
+            actuator_ids=actuator_ids_from_grid_indices(grid_indices),
+            actuator_centers_m=centers,
+            actuator_pitch_m=pitch_m,
+            x_m=x_m,
+            y_m=y_m,
+            pupil_mask=pupil,
+        )
+
+        # The stack the historical code built: a contiguous transposed copy.
+        rows, columns = x_m.shape
+        historical_stack = np.ascontiguousarray(
+            historical_matrix.T.reshape(historical_matrix.shape[1], rows, columns)
+        )
+        assert owned.influence_functions.tobytes() == historical_stack.tobytes()
+        assert copied.influence_functions.tobytes() == historical_stack.tobytes()
+        assert owned.backend_config_hash == copied.backend_config_hash
+        assert owned.config_hash == copied.config_hash
+
+        owned_backend = owned._backend
+        rng = np.random.default_rng(20261015)
+        for _ in range(3):
+            commands = rng.normal(scale=50.0e-9, size=owned.n_actuators)
+            assert (
+                owned_backend.opd_from_commands(commands).tobytes()
+                == copied_backend.opd_from_commands(commands).tobytes()
+            )
+
+    def test_wrapper_and_backend_share_one_immutable_stack(self):
+        model = _hcipy_model()
+        backend = model._backend
+        assert np.shares_memory(model.influence_functions, backend.influence_functions())
+        assert model.influence_functions is model.influence_functions
+        with pytest.raises(ValueError):
+            model.influence_functions.setflags(write=True)
+
+    def test_build_adds_less_than_one_dense_stack_to_hcipys_own_peak(self, monkeypatch):
+        """The build's peak stays within one stack of HCIPy's unavoidable peak.
+
+        ``hcipy.make_gaussian_pokes`` alone holds its list of pokes and their
+        stacked matrix: 2.8 dense stacks at this size, which the whole build
+        now matches (measured 2026-10-15, macOS).  Before the lean build the
+        repository added three to five more on top of that: defensive copies of
+        the basis, a contiguous transposed stack, a second immutable copy, and
+        full canonical copies inside every hash.  Comparing against HCIPy's
+        own peak, after a warm-up build so lazy imports are not counted, keeps
+        the bound about this repository's copies and not fixed overheads.  The
+        hash block is shrunk so it stays as small relative to the stack as the
+        16 MiB default is at the published scale.
+        """
+
+        import tracemalloc
+
+        from shwfs_ao.backends.hcipy.conversion import hcipy_grid_from_coordinates
+        from shwfs_ao.backends.native.dm import square_grid_actuator_layout
+        from shwfs_ao.core import hashing as hashing_module
+
+        monkeypatch.setattr(hashing_module, "_HASH_BLOCK_BYTES", 64 * 1024)
+        config = _config(n_actuators_across=17)
+        x_m, y_m, pupil = _sampled_pupil(pixels=96)
+        build_hcipy_deformable_mirror(x_m, y_m, pupil, config)  # warm-up
+
+        centers, pitch_m, _ = square_grid_actuator_layout(
+            config.telescope_diameter_m,
+            config.n_actuators_across,
+            include_edge_actuators=config.include_edge_actuators,
+            actuator_margin_fraction=config.actuator_margin_fraction,
+        )
+        grid = hcipy_grid_from_coordinates(x_m, y_m)
+        positions = hcipy.CartesianGrid(
+            hcipy.UnstructuredCoords((centers[:, 0].copy(), centers[:, 1].copy()))
+        )
+        tracemalloc.start()
+        try:
+            pokes = hcipy.make_gaussian_pokes(
+                grid, positions, config.coupling_width_pitch * pitch_m, cutoff=None
+            )
+            _, hcipy_peak_bytes = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        del pokes
+
+        tracemalloc.start()
+        try:
+            model = build_hcipy_deformable_mirror(x_m, y_m, pupil, config)
+            _, build_peak_bytes = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        stack_bytes = model.influence_functions.nbytes
+        extra = (build_peak_bytes - hcipy_peak_bytes) / stack_bytes
+        assert extra < 0.75, (
+            f"build peak {build_peak_bytes / stack_bytes:.2f} stacks, HCIPy's own "
+            f"{hcipy_peak_bytes / stack_bytes:.2f}: {extra:.2f} stacks added"
+        )
