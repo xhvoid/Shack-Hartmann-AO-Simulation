@@ -602,17 +602,23 @@ def process_group_rss_bytes(pgid: int) -> int | None:
     if psutil is not None:
         total = 0
         found = False
-        for process in psutil.process_iter(["pid"]):
-            try:
-                if os.getpgid(process.pid) != pgid:
+        try:
+            for process in psutil.process_iter(["pid"]):
+                try:
+                    if os.getpgid(process.pid) != pgid:
+                        continue
+                    total += int(process.memory_info().rss)
+                    found = True
+                except (ProcessLookupError, PermissionError, OSError):
                     continue
-                total += int(process.memory_info().rss)
-                found = True
-            except (ProcessLookupError, PermissionError, OSError):
-                continue
-            except Exception:  # psutil.NoSuchProcess / AccessDenied
-                continue
-        return total if found else 0
+                except Exception:  # psutil.NoSuchProcess / AccessDenied
+                    continue
+        except Exception:
+            # Listing processes can itself be refused (e.g. PermissionError
+            # in a sandbox); fall back to ps rather than measure nothing.
+            pass
+        else:
+            return total if found else 0
     text = _run_text(["ps", "-A", "-o", "pgid=,rss="])
     if text is None:
         return None
@@ -719,6 +725,11 @@ def run_supervised(
     the group with SIGTERM, then SIGKILL after ``cleanup_grace_s`` (at most
     2 s).  Only the child's own process group is ever signalled.  Output is
     written to ``log_path`` so partial logs survive an interruption.
+
+    The job ends when the whole group has exited, not just the child:
+    workers it leaves behind stay under the same limits.  If a probe raises,
+    the group is stopped and the result is INTERRUPTED with the error as
+    its reason, so no process is left running unmonitored.
     """
 
     command = tuple(str(item) for item in argv)
@@ -760,6 +771,7 @@ def run_supervised(
             start_new_session=True,
         )
         try:
+            child_exited_at: float | None = None
             while True:
                 returncode = process.poll()
                 rss = probe_rss(process.pid)
@@ -770,9 +782,19 @@ def run_supervised(
                 if not levels or levels[-1] != pressure.level:
                     levels.append(pressure.level)
                 if returncode is not None:
-                    status = "COMPLETED" if returncode == 0 else "FAILED"
-                    reason = f"child exited with status {returncode}"
-                    break
+                    # The job is the whole process group: workers the child
+                    # left behind stay under the same limits until they exit.
+                    if child_exited_at is None:
+                        child_exited_at = time.monotonic()
+                    if not _group_alive(process.pid):
+                        status = "COMPLETED" if returncode == 0 else "FAILED"
+                        reason = f"child exited with status {returncode}"
+                        lingered = time.monotonic() - child_exited_at
+                        if lingered > poll_interval_s:
+                            reason += (
+                                f"; its process group outlived it by {lingered:.1f} s"
+                            )
+                        break
                 elapsed = time.monotonic() - started
                 if rss is not None and rss > budget_bytes:
                     status = "RESOURCE_LIMITED"
@@ -790,12 +812,25 @@ def run_supervised(
                 if elapsed > timeout_s:
                     status = "INTERRUPTED"
                     reason = f"wall-clock limit {timeout_s:g} s exceeded"
+                    if child_exited_at is not None:
+                        reason += (
+                            f" by processes the child (status {returncode}) left "
+                            "running in its group"
+                        )
                     _terminate_group(process, cleanup_grace_s=cleanup_grace_s)
                     break
                 time.sleep(poll_interval_s)
         except KeyboardInterrupt:
             status = "INTERRUPTED"
             reason = "supervisor interrupted"
+            _terminate_group(process, cleanup_grace_s=cleanup_grace_s)
+        except Exception as exc:
+            # A failed probe must never leave an unmonitored group running.
+            status = "INTERRUPTED"
+            reason = (
+                f"supervisor error ({type(exc).__name__}: {exc}); "
+                "the process group was stopped"
+            )
             _terminate_group(process, cleanup_grace_s=cleanup_grace_s)
         returncode = process.returncode
     finally:
