@@ -294,6 +294,34 @@ def _measurement(matrix, values, valid=None):
     )
 
 
+def test_the_public_csr_is_a_copy_that_cannot_change_the_response():
+    dense = np.array([[1.0, 0.0], [0.0, 4.0], [2.0, 1.0]])
+    matrix = _matrix_from_dense(dense)
+    reconstructor = SparseLsmrReconstructor(
+        matrix, damping_relative=1e-3, atol=1e-12, btol=1e-12,
+        max_iterations=1000, min_valid_fraction=0.5,
+    )
+    x = np.array([1.0, 1.0])
+    b = np.array([1.0, 4.0, 3.0])
+    forward, adjoint = matrix.forward(x), matrix.adjoint(b)
+    solution = reconstructor.reconstruct(_measurement(matrix, b)).delta_coordinates_opd_m
+    identity = matrix.calibration_hash
+
+    public = matrix.csr()
+    public.data = public.data * 2.0  # replace the values
+    public.indices = public.indices[::-1].copy()  # and scramble the layout
+
+    np.testing.assert_array_equal(matrix.forward(x), forward)
+    np.testing.assert_array_equal(matrix.adjoint(b), adjoint)
+    np.testing.assert_array_equal(matrix.to_dense(), dense)
+    again = reconstructor.reconstruct(_measurement(matrix, b)).delta_coordinates_opd_m
+    np.testing.assert_array_equal(again, solution)
+    assert matrix.calibration_hash == identity
+    reloaded = SparseInteractionMatrix.from_record(matrix.to_record())
+    np.testing.assert_array_equal(reloaded.forward(x), forward)
+    assert matrix.csr() is not matrix.csr()
+
+
 def _tikhonov(dense, b, damp):
     u, s, vt = np.linalg.svd(dense, full_matrices=False)
     return vt.T @ ((s / (s * s + damp * damp)) * (u.T @ b))
