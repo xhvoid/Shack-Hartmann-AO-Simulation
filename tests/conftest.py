@@ -1,7 +1,9 @@
 """Repository-wide pytest policy for resource-gated tests.
 
 Tests marked ``elt_scale`` build or calibrate systems at or near the full
-84x84 / 85x85 ESO-derived SCAO scale, or run medium-scale benchmark tiers.
+84x84 / 85x85 ESO-derived SCAO scale, run medium-scale benchmark tiers, or
+build a sensor at a published profile's full scale beyond the desktop-safe
+default (the 384-pixel HCIPy lenslet-axis check).
 They never run by default: a broad ``pytest`` invocation, a ``-m elt_scale``
 marker expression, or a ``-m "not slow"`` selection all skip them unless the
 caller also passes the explicit ``--enable-elt-scale`` option.  The option is
