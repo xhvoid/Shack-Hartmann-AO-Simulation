@@ -135,11 +135,24 @@ so the supervisor refused every job. Ruff passes.
   - The audited raw peak is ≈ 6.5 GiB, or ≈ 13 GiB required with the 2×
     margin. That is above the 2 GiB ceiling of the desktop-safe budget on any
     host.
+  - The dense DM is also one ≈ 2.8 GB buffer, far above the policy's 64 MiB
+    ceiling for a single scratch buffer.
   - It needs a suitable host and an explicitly authorized, revised budget.
-- **Command on that host** (one guarded job; the plan prints first):
+    `shwfs_ao.runtime.resource_guard` cannot provide that: its budget is
+    `min(2 GiB, 12.5 % physical, 25 % available)` on every host and can only
+    be lowered. It would refuse this job anywhere. The run needs a
+    host-specific supervisor and a budget the user authorizes for that host.
+- **Plan first** (prints the configuration and estimate, and builds nothing):
 
   ```bash
-  .venv/bin/python -m shwfs_ao.runtime.resource_guard --label hcipy-axis-published --estimate-mib 6600 --timeout-s 7200 --threads 2 --log out/hcipy-axis-published.log --record out/hcipy-axis-published.guard.json -- .venv/bin/python docs/refactor/drafts/hcipy_lenslet_axis_closed_loop.py --scale published --realizations 4 --run --enable-large-host --out out/hcipy-axis-published.json
+  .venv/bin/python docs/refactor/drafts/hcipy_lenslet_axis_closed_loop.py --scale published --realizations 4 --out out/hcipy-axis-published.json
+  ```
+
+- **The job itself**, under that host's authorized supervisor, 2 threads,
+  about a 2 h wall limit:
+
+  ```bash
+  .venv/bin/python docs/refactor/drafts/hcipy_lenslet_axis_closed_loop.py --scale published --realizations 4 --run --enable-large-host --out out/hcipy-axis-published.json
   ```
 
 - **Acceptance before publishing @4.**
