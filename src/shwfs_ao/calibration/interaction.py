@@ -1975,8 +1975,10 @@ def _immutable_int_array(value: object, *, label: str, ndim: int) -> np.ndarray:
 
 def _immutable_array(value: object, *, dtype: Any) -> np.ndarray:
     if is_immutable_buffer_array(value, dtype=dtype):
-        # Already immutable: sharing it avoids a second dense influence cube.
-        return value
+        # Already immutable: sharing its buffer avoids a second dense influence
+        # cube.  A fresh view keeps shape and dtype metadata private to the
+        # caller, so reshaping the returned array cannot reshape ours.
+        return value.view()
     contiguous = np.ascontiguousarray(np.array(value, dtype=dtype, copy=True))
     immutable = np.frombuffer(contiguous.tobytes(order="C"), dtype=contiguous.dtype)
     return immutable.reshape(contiguous.shape)
