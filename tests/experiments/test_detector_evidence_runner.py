@@ -138,3 +138,33 @@ def test_one_shot_records_are_replaced_only_on_request(isolated_runner: Path) ->
     runner.OPTIONS.overwrite = True
     runner._write("one_shot.json", {"value": 2})
     assert json.loads((isolated_runner / "one_shot.json").read_text()) == {"value": 2}
+
+
+
+def test_resuming_another_arm_requires_the_same_series_protocol(isolated_runner: Path) -> None:
+    # Re-review S2: runs of other arms are kept only under the same code,
+    # frames, burn-in and execution settings.
+    other_arm = [("other arm", CONFIG, 21)]
+    runner._gated_series("arms.json", "arm A", PLAN[:1], n_steps=32, burn_in=0, execution=None, runner=Recorder())
+    start_fresh_invocation()
+    runner.OPTIONS.resume = True
+    for keywords in ({"n_steps": 64, "burn_in": 0}, {"n_steps": 32, "burn_in": 20}):
+        start_fresh_invocation()
+        refused = Recorder()
+        with pytest.raises(runner.EvidenceRecordExists, match="another protocol"):
+            runner._gated_series("arms.json", "arm B", other_arm, execution=None, runner=refused, **keywords)
+        assert refused.calls == []
+    start_fresh_invocation()
+    runner.code_identity = lambda: {"git_head": "revision-B", "source_changes_sha256": "test"}
+    refused = Recorder()
+    with pytest.raises(runner.EvidenceRecordExists, match="another protocol"):
+        runner._gated_series("arms.json", "arm B", other_arm, n_steps=32, burn_in=0, execution=None, runner=refused)
+    assert refused.calls == []
+    # The same series protocol appends the new arm.
+    start_fresh_invocation()
+    runner.code_identity = lambda: {"git_head": "test", "source_changes_sha256": "test"}
+    appended = Recorder()
+    runner._gated_series("arms.json", "arm B", other_arm, n_steps=32, burn_in=0, execution=None, runner=appended)
+    assert appended.calls == [21]
+    labels = [run["label"] for run in json.loads((isolated_runner / "arms.json").read_text())["runs"]]
+    assert labels == ["label", "other arm"]

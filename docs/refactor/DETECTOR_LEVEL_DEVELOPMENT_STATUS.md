@@ -2624,3 +2624,38 @@ The limiting magnitude is still between 11 and 12.
 - R2 and R3 therefore change no 12 m conclusion.
 - The 42 m E5 result (173.2 nm, K Strehl 0.753) still comes from the
   reviewed code. Its rerun was not enabled.
+
+## Re-review fixes (2026-10-16)
+
+The re-review of `573f875`, in
+`outputs/detector_rereview_2026-10-16_573f875/review.md`, closed R1, R2, R4
+and R5, the R3 mean correction, and the isolated-noise gap. It reported
+three P2 findings, S1–S3, which left R3's uncertainty, R6 and R7 partly
+open. Each is fixed below, and the re-reviewer's reproductions were rerun on
+the fixed code (S3 with a copy that expects the new rejection; the
+re-review's files were not edited).
+
+| Finding | Fix | Evidence |
+| --- | --- | --- |
+| S1: internal-source calibration uncertainty used the operating sky master's protocol | The noise model takes the master protocol from the products actually used. A sky product exists only if `sky_raw` does, and the frame counts come from `products.frame_counts`. `without_sky_master` records zero sky frames, so an internal source's error is the one-frame dark mean shared with the flat, cross-covariance included. | On the re-review fixture (7×7 CCD, 5000 e⁻ source, n_dark = 1, n_sky = 16), the prediction is 0.02256 px against 0.02200 and 0.02246 px measured over 400 regenerated masters: ratios 0.975 and 0.996, where they were 3.90 and 3.98. Tests: `test_internal_source_calibration_uses_the_bias_and_dark_protocol` and the slow `test_internal_source_calibration_ensemble_matches_the_model` (400 realizations, 15 % band). |
+| S2: resuming another comparison arm skipped the protocol check for retained runs | On `--resume`, every retained run, including other arms' runs, must share the series protocol: version, frames, burn-in, execution options and code. Runs of the incoming plan must still match their own configuration hash. | The re-review's mixed-arm reproduction now refuses arm B. Test: `test_resuming_another_arm_requires_the_same_series_protocol`, which also covers the accepted append. Protocol hashes are unchanged for equal settings, because their JSON is key-sorted. |
+| S3: CMOS non-linearity was checked with the median read noise only | `CameraConfig.require_monotonic_nonlinearity(max_read_noise_e)`. `CameraMaps.create` repeats the check with the realized map's largest per-pixel read noise and raises `CameraMapsError`. | The re-review's configuration (median 3 e⁻, lognormal σ 1.5, turnover at −25 e⁻) is rejected, because one pixel reaches 251 e⁻. Test: `test_cmos_nonlinearity_is_checked_against_the_realized_read_noise_map`. |
+
+**Effect on the recorded evidence: none.** No change reaches a closed-loop
+result, so no evidence was rerun.
+- S1 changes only the calibration-ensemble sigma. That is telemetry, which
+  no validity gate reads, and its nominal linearization.
+- S2 is runner tooling.
+- S3 applies only to non-linear CMOS cameras, and every packaged preset is
+  linear.
+
+
+**Verification (re-review fixes).**
+- Regression `-m "not hcipy and not slow and not elt_scale"`, seven
+  batches: **2147 passed, 18 skipped, 2 xfailed, 0 failed** (527 / 628 /
+  502 / 124 / 244 / 120 / 2; longest batch 256 s; peak 618 MiB).
+- Slow tests over the detector-level test files: 16 passed.
+- ruff and mypy (130 files) clean; `generate_detector_level_profiles.py
+  --check` passes.
+- After the documentation edits, the docs and refactor-contract tests pass
+  (21).

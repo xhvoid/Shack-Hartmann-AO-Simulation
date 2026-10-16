@@ -168,6 +168,12 @@ the whole output range, widened by six read-noise sigmas on each side. For a
 multiplying EMCCD the range ends at the register capacity, because a Gamma
 register can carry a single input electron far above `G` (review R7).
 
+A CMOS read-noise map makes some pixels noisier than the median, so
+`CameraMaps.create` repeats the check with the realized map's largest
+per-pixel read noise and raises `CameraMapsError` if it fails (re-review
+S3). Whether a non-linear CMOS configuration is accepted therefore depends on
+its realized map. Every packaged preset is linear.
+
 ## Calibration products (DET-06)
 
 Each product is the mean of its frames, minus the products already defined:
@@ -202,6 +208,9 @@ declares a bright internal calibration source. With a source declared:
   dark masters only (`processing.without_sky_master`); before the
   2026-10-16 review, R3, they also subtracted the operating sky master,
   which left a negative pedestal of one sky level per pixel;
+- its calibration-ensemble uncertainty follows the same products: a
+  one-frame dark master shared with the flat, not the operating sky master's
+  frame count (re-review S1);
 - `response_hash` binds the source and that subtraction, and
   `noisy_response_hash` binds the operating budget.
 
@@ -243,7 +252,9 @@ low (review R2). Version 2 matches the measurement to 3e-14 and Monte Carlo
 to within 2.3 %.
 
 The calibration-ensemble variance is linearized about the nominal
-(expected) background instead. It adds:
+(expected) background instead, and its master protocol comes from the
+products actually used: with a sky product the background error is the sky
+master's, otherwise it is the dark mean shared with the flat. It adds:
 - the background-master error;
 - the flat error (normalization is common-mode and moves no centroid);
 - the shared-dark cross-covariance.
