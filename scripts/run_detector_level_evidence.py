@@ -14,6 +14,12 @@ Every record stores the command, versions, configuration hashes and seeds.
 ``e2-12m``, ``e3``, ``e4``, ``e6``, ``det08`` (12 m) and ``e5`` (42 m) are the
 gated runs of prompt section 2.5.  They were enabled by the user on
 2026-10-16; anyone rerunning them must obtain the same enablement.
+
+``e3-recovery --arm NAME`` reruns E3 on ``det_emccd_12m_medium_derived@2`` at
+m_AB 10, 11 and 12 over root seeds 21-25 with one closed-loop recovery policy
+(``controller.recovery``) set in code, or with none (``off``).  Every arm
+appends to one record.  The protocol is predeclared in
+DETECTOR_LEVEL_DEVELOPMENT_STATUS.md ("Closed-loop recovery policy").
 """
 
 from __future__ import annotations
@@ -277,7 +283,16 @@ def cost(arguments: argparse.Namespace) -> None:
     _write("det10_feature_costs.json", record)
 
 
-def _gated_series(name: str, command: str, plan: list[tuple[str, Any, int]], *, n_steps: int, burn_in: int, execution: Any) -> None:
+def _gated_series(
+    name: str,
+    command: str,
+    plan: list[tuple[str, Any, int]],
+    *,
+    n_steps: int,
+    burn_in: int,
+    execution: Any,
+    enabled_by_user: str = "2026-10-16: every gated run enabled, one at a time",
+) -> None:
     """Run ``(label, config, root_seed)`` entries one at a time, saving after each."""
 
     from shwfs_ao.experiments.detector_level import science_run, summarize_runs
@@ -286,7 +301,7 @@ def _gated_series(name: str, command: str, plan: list[tuple[str, Any, int]], *, 
 
     path = EVIDENCE_DIR / name
     record = _header(command)
-    record["enabled_by_user"] = "2026-10-16: every gated run enabled, one at a time"
+    record["enabled_by_user"] = enabled_by_user
     record["n_steps"] = n_steps
     record["burn_in_frames"] = burn_in
     record["runs"] = []
@@ -404,6 +419,53 @@ def e6(arguments: argparse.Namespace, *, version: int = 1) -> None:
     _gated_series(name, f"e6 (profile @{version})", plan, n_steps=400, burn_in=100, execution=_summary_execution())
 
 
+# Closed-loop recovery arms (controller.recovery), fixed by the predeclared
+# protocol from development runs on root seeds 11 and 12, never on 21-25.
+RECOVERY_ARMS: dict[str, dict[str, Any] | None] = {
+    "off": None,
+    "reset": {"rejected_frames_before_decay": 2, "decay_per_rejected_frame": 1.0},
+    "guarded_fallback": {"fallback_min_valid_fraction": 0.1, "fallback_min_actuator_coverage": 0.5},
+    "gain_schedule": {"fallback_min_valid_fraction": 0.1, "gain_full_valid_fraction": 0.9},
+}
+
+
+def e3_recovery(arguments: argparse.Namespace) -> None:
+    from dataclasses import replace
+
+    from shwfs_ao.experiments.detector_level import with_magnitude
+    from shwfs_ao.io.configs import RecoveryPolicyConfig
+
+    arm = arguments.arm
+    fields = RECOVERY_ARMS[arm]
+    base = _medium(2)
+    if fields is not None:
+        policy = RecoveryPolicyConfig(
+            **{
+                "rejected_frames_before_decay": None,
+                "decay_per_rejected_frame": None,
+                "fallback_min_valid_fraction": None,
+                "fallback_min_actuator_coverage": None,
+                "gain_full_valid_fraction": None,
+                **fields,
+            }
+        )
+        base = replace(base, controller=replace(base.controller, recovery=policy))
+    plan = [
+        (f"{arm} m{magnitude:g}", with_magnitude(base, magnitude), seed)
+        for magnitude in (10.0, 11.0, 12.0)
+        for seed in (21, 22, 23, 24, 25)
+    ]
+    _gated_series(
+        "det_recovery_e3_12m_v2.json",
+        f"e3-recovery --arm {arm} (profile @2)",
+        plan,
+        n_steps=400,
+        burn_in=100,
+        execution=_summary_execution(),
+        enabled_by_user="2026-10-16: the user's go-ahead for the recovery-policy task, which names these runs",
+    )
+
+
 def det08(arguments: argparse.Namespace) -> None:
     from shwfs_ao.experiments.detector_level import with_physics
 
@@ -444,6 +506,8 @@ def main() -> int:
     for name in commands:
         if name != "gain-scan":
             sub.add_parser(name)
+    commands["e3-recovery"] = e3_recovery
+    sub.add_parser("e3-recovery").add_argument("--arm", required=True, choices=sorted(RECOVERY_ARMS))
     arguments = parser.parse_args()
     commands[arguments.command](arguments)
     return 0

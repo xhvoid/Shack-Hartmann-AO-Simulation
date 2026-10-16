@@ -462,7 +462,7 @@ def science_run(
     usable = np.asarray(history.reconstruction_usable, dtype=bool)[window]
     peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     peak_bytes = int(peak if sys.platform == "darwin" else peak * 1024)
-    return {
+    result: dict[str, Any] = {
         "config_hash": run_config.config_hash,
         "root_seed": int(run_config.random.root_seed),
         "n_steps": int(run_config.controller.n_steps),
@@ -488,6 +488,11 @@ def science_run(
             for image in science.images
         ],
     }
+    # Only a run with a controller.recovery policy reports what it did.
+    recovery = history.metadata.get("recovery")
+    if recovery is not None:
+        result["recovery"] = dict(recovery)
+    return result
 
 
 def summarize_runs(runs: Sequence[dict[str, Any]]) -> dict[str, float]:

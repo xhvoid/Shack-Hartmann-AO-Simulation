@@ -1385,3 +1385,299 @@ once with leak 0 and once with leak 0.02).
 | DET-08 | small, about an extra half-frame of delay | −3.4 and −4.5 nm (sign opposite, from start-of-exposure sampling), within the scatter: default stays 1 |
 | Medium overhead | under 5 % | +0.9 / +1.0 %: **met** |
 | E5 | lock, valid ≥ 0.98, residual somewhat above 173 nm | 173.2 nm, valid 0.999 (min 0.994), K Strehl 0.753 against 0.78: **met**; residual equal, Strehl 0.03 lower |
+
+## Closed-loop recovery policy (follow-up, 2026-10-16)
+
+This is the first optional follow-up under "Next actions": a control policy
+that does not latch up when the valid fraction drops. Prompt §2.3 excluded
+it from DET-00…10.
+- Base: `a31099b`, with the work in this section uncommitted on top.
+- Execution: runs are serial with 2 threads, and the resource guard stays
+  suspended.
+- Enablement: the user's go-ahead for this task on 2026-10-16 names the E3
+  reruns below.
+
+### Reproduction
+
+`e3_v2_m11_dynamics_diagnostic.py` (@2, seed 21, m_AB = 11, 400 frames)
+reproduces its recorded `.txt` byte for byte:
+- leak 0: 1685.5 nm over frames 100–399;
+- leak 0.02: 1090.7 nm;
+- cost: 134 s and 438 MiB for both runs.
+
+The mechanism is as recorded. The loop closes to about 210–225 nm by frames
+20–40. An excursion then drives the valid fraction below
+`min_valid_fraction = 0.5`, and the frozen DM never brings the spots back
+into the validity domain.
+
+### Implementation (opt-in; existing identities unchanged)
+
+**Configuration.** `controller.recovery` (`RecoveryPolicyConfig`) is
+expressible in schema 7 only. It has five knobs, each `null` (off) or set,
+and at least one must be set.
+- `rejected_frames_before_decay` and `decay_per_rejected_frame` (set
+  together): after that many consecutive frames with no usable increment,
+  every further such frame multiplies the requested DM command by
+  `1 − decay`. A decay of `1` resets the DM to flat.
+- `fallback_min_valid_fraction`: a frame the reconstructor rejects is
+  reconstructed from its usable rows alone, if their fraction is at least
+  this. It must lie below `reconstructor.min_valid_fraction` and needs
+  `sparse_lsmr_tikhonov`.
+- `fallback_min_actuator_coverage`: the fallback's rank guard. LSMR solves
+  only for actuators whose usable rows keep at least this fraction of their
+  calibrated response energy, and the other actuators hold.
+- `gain_full_valid_fraction`: gain schedule. Every used increment is scaled
+  by `min(1, valid_fraction / value)`.
+
+**Identity.**
+- A `controller` block without `recovery` hashes through the stand-in
+  `_ControllerConfigWithoutRecovery`: the same fields, order and schema id
+  as before the block existed.
+- A record omits the key when it is null, so `SystemConfig.config_hash` does
+  not move.
+- Checked against `a31099b`: `config_hash`, `component_config_hashes` and
+  the controller hash of all 33 packaged profiles are identical.
+- A 30-frame @2 run at m_AB = 11, seed 21, has the same config hash, loop
+  hash and residuals as on `a31099b`.
+
+**Runtime.**
+- `shwfs_ao.control.recovery.ClosedLoopRecoveryPolicy` is a loop supervisor,
+  passed explicitly as `run_closed_loop(..., recovery=...)`. With `None` the
+  loop is unchanged.
+- When present, its hash joins the run's component hashes under
+  `"recovery"`. The history metadata then records how many frames used the
+  fallback and how many decayed.
+- The decay acts on the requested command after the controller update. The
+  controller then synchronizes to the command the DM applied, which is its
+  existing state policy, so its integrator follows the decay.
+- The sparse fallback is `SparseLsmrReconstructor.reconstruct_subset`. It
+  leaves the reconstructor's identity and `reconstruct()` unchanged.
+
+### Development runs (before the protocol; root seeds 11 and 12 only)
+
+The arms were tuned on seeds 11 and 12 only. No evaluation seed (21–25)
+had been run with a policy on when the protocol below was written.
+
+Setup: @2 at m_AB = 11, 400 frames. The table gives the mean post-update
+residual over frames 100–399 (nm), with the valid fraction in brackets.
+
+| Arm | Seed 11 | Seed 12 |
+| --- | --- | --- |
+| off (freeze on rejection) | 1629 (0.34) | 1761 (0.00) |
+| reset after 2 rejected frames (decay 1) | **332 (0.88)** | **296 (0.89)** |
+| reset after 4 | 369 (0.87) | 328 (0.88) |
+| reset after 20 | 551 (0.62) | 478 (0.66) |
+| decay 0.1 per frame after 4 | 1378 (0.37) | 1122 (0.56) |
+| fallback ≥ 0.1, no guard | 2210 (0.01) | 1947 (0.00) |
+| fallback ≥ 0.1, coverage guard 0.5 | 1913 (0.03) | 1764 (0.00) |
+| gain schedule (full at 0.9), fallback ≥ 0.1 | 1519 (0.06) | 1769 (0.00) |
+| gain schedule (full at 0.9) alone | 1799 (0.25) | 1693 (0.00) |
+| reset after 4 + gain schedule | 332 (0.87) | 322 (0.86) |
+
+**Reading.**
+- **Reset to flat.** Only this arm recovers. From a flat DM the open-loop
+  spots are inside the validity domain (95 % valid at frame 0), and the loop
+  re-closes to about 200 nm within about 20 frames.
+- **Cycling.** Excursions recur, so the loop cycles: 5–8 resets in 400
+  frames.
+- **Slow decay.** A gradual decay does not recover. Partly decayed shapes
+  give frames with 50–70 % of rows valid; these are accepted, they reset the
+  rejection count, and they keep driving the excursion.
+- **Fallback.** Reconstructing from a small row subset, with or without the
+  guard, drives the DM further from lock. The fallback rarely engages
+  (1–14 frames) because the latched valid fraction is mostly below 0.1.
+- **Gain schedule.** Scaling partial frames down neither prevents the
+  excursion nor recovers from it.
+
+### Predeclared protocol (written 2026-10-16 before any evaluation run)
+
+**Runs.**
+- Matrix: four arms × m_AB ∈ {10, 11, 12} × root seeds 21–25, on
+  `det_emccd_12m_medium_derived@2`. The policy is set in code; no profile is
+  created or changed.
+- Settings: 400 frames, burn-in 100, metrics over frames 100–399, summary
+  telemetry, long-exposure science at 2.2 µm.
+- Command:
+  `scripts/run_detector_level_evidence.py e3-recovery --arm <arm>`, one
+  batch of 15 runs (about 17 min) per arm, run in the order off, reset,
+  guarded_fallback, gain_schedule.
+- Record:
+  [`det_recovery_e3_12m_v2.json`](detector_level_evidence/det_recovery_e3_12m_v2.json).
+
+**Arms.** These are fixed from the development runs and do not change
+after this point.
+
+| Arm | `controller.recovery` |
+| --- | --- |
+| `off` | none (the published @2) |
+| `reset` (candidate 1) | `rejected_frames_before_decay = 2`, `decay_per_rejected_frame = 1.0` |
+| `guarded_fallback` (candidate 2) | `fallback_min_valid_fraction = 0.1`, `fallback_min_actuator_coverage = 0.5` |
+| `gain_schedule` (candidate 3) | `fallback_min_valid_fraction = 0.1`, `gain_full_valid_fraction = 0.9` |
+
+**Endpoints.**
+- Primary: the paired-by-seed change in mean post-update residual against
+  `off` at m_AB = 11.
+- Secondary: valid fraction, K-band peak Strehl, lost lock (final residual
+  above open loop), the counts of decayed and fallback frames, and
+  neutrality at m_AB = 10 and 12.
+
+**Identity check.** Every `off` run must equal the recorded E3 @2 run of
+the same magnitude and seed exactly: residuals, valid fractions, lost-lock
+flag, science metrics and config hash. That is the evidence that
+policy-off results are unchanged.
+
+**Expectations.**
+- **m_AB = 10.** No frame is rejected (the recorded minimum valid fraction
+  over frames 100–399 is 0.93), so `reset` and `guarded_fallback` never act
+  and are bit-identical to `off`. `gain_schedule` acts only on frames with
+  valid < 0.9: within ±3 nm of `off`, paired.
+- **m_AB = 12.** No lenslet is valid, so the DM stays flat in every arm and
+  every arm equals `off` (residual = open loop). A policy must not degrade
+  this safe outcome.
+- **m_AB = 11, `reset`.**
+  - The loop recovers in 5 of 5 seeds: a paired residual reduction in every
+    seed, with a mean of 250–500 nm (development: 332 and 296 nm).
+  - Valid fraction 0.85–0.9, K-band peak Strehl 0.2–0.5 (`off`: ≤ 0.005),
+    lost lock in 0–1 of 5 (a final frame can fall inside a reset cycle).
+  - The predeclared limit definition (valid < 0.9, or Strehl below half the
+    m = 8 value) is expected still to place m = 11 beyond the limit. The
+    limit stays between 10 and 11, but the failure mode changes from loss
+    of lock to a degraded, bounded lock.
+- **m_AB = 11, `guarded_fallback` and `gain_schedule`.** No recovery, as in
+  development: within ±25 % of `off` and lost lock in most seeds.
+
+**Decision rule.**
+- A policy is recommended only if all three hold:
+  1. m = 11 improves in all five seeds;
+  2. m = 10 is bit-identical to `off`;
+  3. m = 12 is bit-identical to `off`.
+- A recommendation is for a future opt-in profile version only. No
+  published profile or baseline changes without the user's authorization.
+- Departures are reported, not tuned away.
+
+### Evaluation results (2026-10-16)
+
+**Run.** `… e3-recovery --arm off|reset|guarded_fallback|gain_schedule`,
+writing
+[`det_recovery_e3_12m_v2.json`](detector_level_evidence/det_recovery_e3_12m_v2.json).
+- 60 runs, none refused.
+- The record was appended by four invocations, 08:26–10:29 CEST. Its
+  header names the last one; each run carries its own label and seed.
+- The arms took 1045, 4192, 1054 and 1045 s wall; peak RSS was
+  404–440 MiB.
+- The `reset` batch's wall time and some of its per-frame times are
+  inflated because the host slept on battery: the batch used 1211 s of CPU.
+  Read them as host load, not cost. The policy adds no per-frame work beyond
+  an occasional fallback solve.
+
+**Identity check: met.** All 15 `off` runs equal the recorded E3 @2 runs
+(`det09_e3_magnitude_scan_12m_v2.json`) exactly: every residual and valid
+fraction, the lost-lock flag, every science metric and the config hash.
+
+Residual means are over frames 100–399, ± the seed standard deviation.
+Paired Δ is against `off`, ± its standard error.
+
+| m_AB | Arm | Residual | Paired Δ | Valid | K peak Strehl | Lost lock | Policy activity |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 10 | off | 189.3 ± 6.2 nm | — | 0.998 | 0.718 ± 0.013 | 0/5 | — |
+| 10 | reset, guarded_fallback, gain_schedule | 189.3 ± 6.2 nm | **0, bit-identical in 5/5 each** | 0.998 | 0.718 | 0/5 | none |
+| 11 | off | 1897 ± 191 nm | — | 0.130 | 0.002 ± 0.002 | 5/5 | — |
+| 11 | **reset** | **376.5 ± 88.3 nm** | **−1521 ± 92 nm**; every seed −1324 to −1804 | 0.877 | **0.508 ± 0.084** | **0/5** | 4–12 resets per run |
+| 11 | guarded_fallback | 1867 ± 205 nm | −30 ± 21 nm (−46, +1, +1, −105, 0) | 0.135 | 0.008 | 5/5 | fallback frames 353, 1, 1, 369, 0 |
+| 11 | gain_schedule | 1927 ± 189 nm | +30 ± 76 nm (+177, +28, −226, +193, −23) | 0.011 | 0.001 | 5/5 | fallback frames 5, 14, 0, 2, 0 |
+| 12 | off | 1315.7 ± 110.8 nm (= open loop) | — | 0.000 | 0.019 | 0/5 | — |
+| 12 | all three policies | 1315.7 nm | **0, bit-identical in 5/5 each** | 0.000 | 0.019 | 0/5 | `reset` decays a flat DM on 398 frames: no effect |
+
+**`reset` at m_AB = 11, per seed (21–25).**
+
+| Quantity | Seed 21 | Seed 22 | Seed 23 | Seed 24 | Seed 25 |
+| --- | --- | --- | --- | --- | --- |
+| Residual, nm | 361.8 | 421.8 | 261.2 | 496.4 | 341.1 |
+| Residual with `off`, nm | 1685.5 | 2091.4 | 2065.1 | 1929.6 | 1713.6 |
+| Resets | 7 | 9 | 4 | 12 | 6 |
+| K peak Strehl | 0.513 | 0.467 | 0.622 | 0.396 | 0.540 |
+
+- Every run ends locked, with final-frame residuals of 191–252 nm.
+- Valid fraction 0.83–0.93; reconstruction used on 88–97 % of frames.
+- K-band FWHM 0.94–0.96 λ/D.
+
+### Predeclared expectations against outcomes (recovery policy)
+
+| Expectation (written before the runs) | Outcome |
+| --- | --- |
+| `off` equals the recorded E3 @2 runs exactly | 15/15 identical: **met** |
+| m = 10: `reset`, `guarded_fallback` bit-identical to `off`; `gain_schedule` within ±3 nm | all three bit-identical in 5/5 (no m = 10 frame had valid < 0.9): **met** |
+| m = 12: every arm equals `off` | 15/15 bit-identical: **met** |
+| m = 11 `reset`: improves all 5 seeds, mean 250–500 nm | every seed improves by 1324–1804 nm; mean 376.5 nm: **met** |
+| m = 11 `reset`: valid 0.85–0.9, K Strehl 0.2–0.5, lost lock 0–1/5 | valid 0.877 (seeds 0.83–0.93), lost lock 0/5: **met**; K Strehl 0.508 ± 0.084 with three seeds above 0.5: **above the predicted range** |
+| m = 11 `guarded_fallback`, `gain_schedule`: no recovery, within ±25 % of `off`, lost lock in most seeds | −30 and +30 nm mean (≤ 11 % per seed), lost lock 5/5 each: **met** |
+| Limit by the predeclared definition stays between 10 and 11 | `reset` at m = 11 has valid 0.877 < 0.9, while its Strehl 0.508 is above half the m = 8 value (0.36): **met**, failing on the valid fraction only |
+
+### Interpretation and recommendation
+
+**What the reset changes.**
+- The m_AB = 11 collapse in E3 @2 was a control-policy failure, not a
+  sensing limit: the loop closes from a flat DM at this flux.
+- Resetting the commands to flat after two consecutive rejected frames
+  turns the collapse (1.9 µm, worse than open loop) into a bounded,
+  degraded lock: 377 nm, with a K-band Strehl of 0.51 against 0.72 at
+  m = 10.
+- It changes nothing at m = 10 or m = 12: those runs are bit-identical to
+  `off`, because the policy never acts there or acts on a flat DM.
+
+**What remains.**
+- The loop is not steadily locked. Excursions recur (4–12 resets per 400
+  frames) and the loop re-closes to about 200–250 nm between them.
+- The trigger, a noise-driven growth while the reconstructor still accepts
+  frames with 50–70 % of rows valid, is not addressed by any recovery
+  policy. Development showed this: a gradual decay never clears the
+  excursion.
+- Removing the trigger, for example with stronger regularization or a
+  different acceptance rule at faint flux, is a separate follow-up.
+
+**Why the other two candidates fail.**
+- Reconstructing from the valid subset, with or without the rank guard,
+  settles into a partially valid fixed point. The seen actuators keep being
+  corrected while the unseen ones hold the bad shape. In seeds 21 and 24
+  the fallback ran on 353 and 369 frames, yet the residual stayed at
+  1.6–1.8 µm with about 30 % of rows valid.
+- In the other seeds the latched valid fraction is below the 0.1 floor, so
+  the fallback almost never engages.
+- Scaling increments by the valid fraction slows correction without
+  removing the bad shape.
+
+**Recommendation.** Under the predeclared decision rule, `reset` qualifies:
+m = 11 improves in 5/5 seeds, and m = 10 and m = 12 are bit-identical. The
+other two do not.
+- `reset` is recommended as an opt-in recovery policy for a future profile
+  version, for example `det_emccd_12m_medium_derived@3` with
+  `controller.recovery = {rejected_frames_before_decay: 2,
+  decay_per_rejected_frame: 1.0}`.
+- That version is not created here. A new profile, its identity pin and any
+  baseline need the user's authorization.
+- `det_emccd_12m_medium_derived@2` and every other published profile are
+  unchanged. The summary's "Still out of bounds" item on the m = 11 latch-up
+  therefore remains true of the published profiles.
+
+### Verification (recovery-policy change)
+
+| Check | Result |
+| --- | --- |
+| Identity of the 33 packaged profiles (`config_hash`, `component_config_hashes`, controller hash) | identical to `a31099b` |
+| `off` closed loops | 15/15 E3 @2 runs reproduced exactly; diagnostic `.txt` reproduced byte for byte |
+| New tests | `tests/control/test_recovery.py`, `tests/io/test_recovery_policy_config.py`, three loop tests in `tests/control/test_loop.py`, one subset-solver test in `tests/calibration/test_sparse_calibration.py`; the two new files are in the wheel smoke manifest |
+| Public-surface pins | extended additively: `control/recovery.py` in the wheel module lists, `RecoveryPolicyError` and `ClosedLoopRecoveryPolicy` in the control exports, `RecoveryPolicyConfig` in the config exports, `ScaoSystem.recovery_policy` in `docs/backends.md` |
+| Regression `-m "not hcipy and not slow and not elt_scale"`, one process, 2 threads | **2120 passed, 18 skipped, 2 xfailed, 0 failed** (421 s, peak 771 MiB). In the first pass, before the pins and docs were extended, 3 tests failed: the wheel module list, the `ScaoSystem` field documentation, and the known-flaky `test_supervised_child_sees_thread_limits_before_importing_numpy`. That last test passed 3 of 3 times in isolation; its failure output was truncated, so the signature was not confirmed. |
+| `ruff check src tests scripts examples build_support` | clean |
+| `mypy` | no issues in 130 source files (the new module adds one) |
+| `scripts/generate_detector_level_profiles.py --check` | exit 0; no profile, ledger or manifest changed |
+
+**Not run here.** HCIPy-marked and `elt_scale` tests, the README smoke
+lane, and slow tests. The change touches no HCIPy or 42 m code path.
+
+**Next actions (recovery policy).**
+1. Commit only with the user's authorization, as Xu Han only.
+2. With authorization: publish `det_emccd_12m_medium_derived@3` with the
+   `reset` policy, pin its identity, and rerun E3/E4 at m = 10–12 on it.
+3. Follow-up: address the excursion trigger at faint flux (regularization,
+   or an acceptance rule above 0.5), now that recovery is handled.
