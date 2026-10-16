@@ -1,4 +1,4 @@
-"""Extended first-order centroid-noise model ``detector_covariance_v1`` (DET-07).
+"""Extended first-order centroid-noise model ``detector_covariance_v2`` (DET-07).
 
 The existing ``first_order`` and ``legacy_spot_width`` models of
 :func:`~shwfs_ao.detector.validity.centroid_quality` keep their equations.
@@ -21,7 +21,9 @@ Notation, per lenslet block (input-referred electrons unless stated):
   gain map is applied as known per-pixel conversion gain);
 * ``Z = (Xt - bt) / f``: processed values with subtracted background ``bt``
   and flat ``f``; ``Y = P Z``: bad-pixel policy (zero weight or 4-neighbour
-  mean);
+  mean).  ``bt`` is the realized additive master the processing actually
+  subtracts (its pedestal removed, converted to input electrons), so the
+  conditional mean, Jacobian, flux and SNR are those of the measurements;
 * the centroid ``c = sum_W x_k Y_k / sum_W Y_k`` over the centroid window
   ``W``, with Jacobian ``j_k = (x_k - c) / T`` on ``W`` and ``T = sum_W E[Y]``.
 
@@ -31,7 +33,8 @@ conditional on fixed calibration products is
     Var_t(c) = sum_k w_k**2 (sigma_k**2 + q_k**2 / 12)
              + G**2 F**2 sum_l mu_l (K^T w)_l**2 .
 
-The calibration-ensemble variance over regenerated products adds the
+The calibration-ensemble variance over regenerated products is linearized
+about the nominal (expected) background instead.  It adds the
 background-master error (a sky or dark frame's covariance over its frame
 count) and the flat error (flat frames minus the shared dark mean; the
 normalization constant is common-mode and moves no centroid), with the
@@ -46,8 +49,14 @@ The model is first order.  It flags (``supported = False``) and reports
 :data:`~shwfs_ao.detector.validity.UNDEFINED_CENTROID_SIGMA_PX` outside its
 declared domain: a thresholded or minimum-subtracted estimator, negative
 clipping, expected saturation (pixel, register or digital), a declared
-non-linearity, coarse quantization (read noise below half an ADC step), or a
-total-flux signal-to-noise ratio below :data:`MIN_DENOMINATOR_SNR`.
+non-linearity, coarse quantization (read noise below half an ADC step), an
+ADC code within :data:`ADC_HEADROOM_SIGMA` noise sigmas of either ADC limit
+(bias and offset map included), or a total-flux signal-to-noise ratio below
+:data:`MIN_DENOMINATOR_SNR`.
+
+Version 2 (2026-10-16 review, R2 and R4) replaces version 1, which formed the
+conditional mean from the ideal background and checked only the upper ADC
+limit without offsets.
 """
 
 from __future__ import annotations
@@ -68,6 +77,7 @@ __all__ = (
     "MIN_DENOMINATOR_SNR",
     "MIN_READ_NOISE_ADU_FOR_WHITE_QUANTIZATION",
     "SATURATION_MARGIN",
+    "ADC_HEADROOM_SIGMA",
     "ExtendedCentroidQuality",
     "NoiseTerms",
     "noise_terms",
@@ -76,7 +86,7 @@ __all__ = (
 )
 
 
-UNCERTAINTY_MODEL_ID = "detector_covariance_v1"
+UNCERTAINTY_MODEL_ID = "detector_covariance_v2"
 # The center-of-gravity ratio is linearized about T.  Monte Carlo (E1, read-
 # noise-limited CCD window) measures the first-order sigma low by roughly
 # 4 / SNR_T**2: 12 % at SNR_T = 5.6, 7 % at 7.4, 3.5 % at 11.8.  Below this
@@ -88,6 +98,11 @@ MIN_DENOMINATOR_SNR = 7.0
 MIN_READ_NOISE_ADU_FOR_WHITE_QUANTIZATION = 0.5
 # Expected signal above this fraction of a capacity is treated as saturating.
 SATURATION_MARGIN = 0.9
+# The linear model needs every block pixel's expected ADC code at least this
+# many temporal noise sigmas inside both ADC limits; otherwise clipping at
+# code 0 or at the top code makes the response non-linear.  At 5 sigma a
+# Gaussian tail clips with probability below 3e-7 per pixel read.
+ADC_HEADROOM_SIGMA = 5.0
 
 
 @dataclass(frozen=True)
@@ -103,7 +118,7 @@ class NoiseTerms:
 
 @dataclass(frozen=True)
 class ExtendedCentroidQuality:
-    """Batch diagnostics of the ``detector_covariance_v1`` model."""
+    """Batch diagnostics of the ``detector_covariance_v2`` model."""
 
     total_flux_e: np.ndarray
     background_e: np.ndarray
@@ -245,10 +260,10 @@ def detector_covariance_quality(
 
     mu = source + background + cic
     expected_xt = coupled(mu) / gain_left
+    offsets = maps.get("offset_adu")
+    offset = 0.0 if offsets is None else np.asarray(offsets, dtype=float)
     # Expected background removed by processing, input-e equivalent.
     if processing.mode == "raw_readout":
-        offsets = maps.get("offset_adu")
-        offset = 0.0 if offsets is None else np.asarray(offsets, dtype=float)
         if camera.adc_bits is not None:
             pedestal_xt = (float(camera.bias_adu) + offset) * float(
                 camera.conversion_gain_e_per_adu
@@ -258,45 +273,72 @@ def detector_covariance_quality(
                 camera.conversion_gain_e_per_adu
             ) / gain_left / float(camera.em_gain)
         subtracted = -pedestal_xt
+        nominal_subtracted = subtracted
         flat_values = np.ones(source.shape)
     else:
+        assert products is not None
         sky_subtracted = processing.mode == "oracle" or processing.n_sky_frames > 0
         bg_mu = dark_e_map + cic + (sky[:, None, None] * optical_response if sky_subtracted else 0.0)
-        subtracted = coupled(bg_mu) / gain_left
+        nominal_subtracted = coupled(bg_mu) / gain_left
+        # Conditional on the fixed products: the processing subtracts the
+        # realized master, which still carries the bias and offset pedestal
+        # that the expected signal ``expected_xt`` leaves out.
+        pedestal_raw = float(camera.bias_adu) + offset
+        if camera.adc_bits is None:
+            pedestal_raw = pedestal_raw * float(camera.conversion_gain_e_per_adu)
+        subtracted = (
+            np.asarray(products.background_raw[select], dtype=float) - pedestal_raw
+        ) * np.asarray(products.conversion_input_e_per_raw[select], dtype=float)
         flat_values = np.asarray(flat, dtype=float)
-    expected_z = (expected_xt - subtracted) / flat_values
-    expected_y = expected_z.copy()
-    if bad is not None and np.any(bad):
-        if processing.bad_pixel_policy == "zero_weight":
-            expected_y[bad] = 0.0
-        else:
-            from .processing import _interpolate_mean4
-
-            expected_y = _interpolate_mean4(expected_z, bad)
 
     rows_slice, cols_slice = window
     window_mask = np.zeros(source.shape[1:], dtype=bool)
     window_mask[rows_slice, cols_slice] = True
-    window_y = expected_y[:, window_mask].reshape(n, -1)
-    total = np.sum(window_y, axis=1)
     rows_idx, cols_idx = np.nonzero(window_mask)
     x_coord = (cols_idx - cols_slice.start).astype(float)
     y_coord = (rows_idx - rows_slice.start).astype(float)
-    safe_total = np.where(total > 0.0, total, 1.0)
-    cx = window_y @ x_coord / safe_total
-    cy = window_y @ y_coord / safe_total
+
+    def processed_expectation(removed: np.ndarray | float) -> tuple[np.ndarray, np.ndarray]:
+        z = (expected_xt - removed) / flat_values
+        y = z.copy()
+        if bad is not None and np.any(bad):
+            if processing.bad_pixel_policy == "zero_weight":
+                y[bad] = 0.0
+            else:
+                from .processing import _interpolate_mean4
+
+                y = _interpolate_mean4(z, bad)
+        return z, y
+
+    def window_levers(
+        y: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Window total, safe total, and the x, y and total sensitivity maps."""
+
+        window_y = y[:, window_mask].reshape(n, -1)
+        window_total = np.sum(window_y, axis=1)
+        safe = np.where(window_total > 0.0, window_total, 1.0)
+        cx = window_y @ x_coord / safe
+        cy = window_y @ y_coord / safe
+
+        def sensitivity(lever: np.ndarray) -> np.ndarray:
+            j = np.zeros(source.shape)
+            j[:, window_mask] = lever / safe[:, None]
+            u = _back_project(j, bad, processing.bad_pixel_policy)
+            return u / flat_values
+
+        return (
+            window_total,
+            safe,
+            sensitivity(x_coord[None, :] - cx[:, None]),
+            sensitivity(y_coord[None, :] - cy[:, None]),
+            sensitivity(np.ones((n, x_coord.size)) * safe[:, None]),
+        )
+
+    _, expected_y = processed_expectation(subtracted)
+    total, safe_total, jx, jy, jt = window_levers(expected_y)
 
     terms = noise_terms(camera, maps, mu, gain_left_in_data=gain_left)
-
-    def sensitivity(lever: np.ndarray) -> np.ndarray:
-        j = np.zeros(source.shape)
-        j[:, window_mask] = lever / safe_total[:, None]
-        u = _back_project(j, bad, processing.bad_pixel_policy)
-        return u / flat_values
-
-    jx = sensitivity(x_coord[None, :] - cx[:, None])
-    jy = sensitivity(y_coord[None, :] - cy[:, None])
-    jt = sensitivity(np.ones((n, x_coord.size)) * safe_total[:, None])
     var_x = quadratic_form(terms, jx, jx)
     var_y = quadratic_form(terms, jy, jy)
     cov_xy = quadratic_form(terms, jx, jy)
@@ -306,6 +348,9 @@ def detector_covariance_quality(
     cal_x = np.zeros(n)
     cal_y = np.zeros(n)
     if processing.mode == "estimated":
+        # Nominal linearization over regenerated products.
+        nominal_z, nominal_y = processed_expectation(nominal_subtracted)
+        _, _, nominal_jx, nominal_jy, _ = window_levers(nominal_y)
         sky_frames = processing.n_sky_frames > 0
         dark_mu = dark_e_map + cic
         dark_terms = noise_terms(camera, maps, dark_mu, gain_left_in_data=gain_left)
@@ -329,10 +374,10 @@ def detector_covariance_quality(
         )
         flat_raw = coupled(level * optical_response) / gain_left
         safe_flat_raw = np.where(flat_raw > 0.0, flat_raw, 1.0)
-        for lever, target in ((jx, cal_x), (jy, cal_y)):
+        for lever, target in ((nominal_jx, cal_x), (nominal_jy, cal_y)):
             # dc = -v . d(bt) + a . d(F_raw) with v = u / f (``lever``) and
             # dZ_k/dF_raw_k = -Z_k / F_raw_k, so a = -u Z / F_raw = -v f Z / F_raw.
-            a = -lever * flat_values * expected_z / safe_flat_raw
+            a = -lever * flat_values * nominal_z / safe_flat_raw
             variance = quadratic_form(bg_terms, lever, lever) / n_bg
             variance += quadratic_form(flat_terms, a, a) / processing.n_flat_frames
             variance += quadratic_form(dark_terms, a, a) / processing.n_dark_frames
@@ -378,8 +423,23 @@ def detector_covariance_quality(
     if camera.adc_bits is not None:
         assert camera.adc_max_code is not None
         top = float(camera.adc_max_code)
-        analog = np.max(camera.em_gain * mu / (float(camera.conversion_gain_e_per_adu) * relative), axis=(1, 2)) + float(camera.bias_adu)
-        saturating |= analog > SATURATION_MARGIN * top
+        adu_per_output_e = 1.0 / (float(camera.conversion_gain_e_per_adu) * relative)
+        analog = (
+            camera.em_gain * coupled(mu) * adu_per_output_e + float(camera.bias_adu) + offset
+        )
+        saturating |= np.max(analog, axis=(1, 2)) > SATURATION_MARGIN * top
+        # Temporal noise of each code: register shot noise plus read noise.
+        read_e = float(camera.read_noise_e) * (
+            1.0
+            if maps.get("read_noise_multiplier") is None
+            else np.asarray(maps["read_noise_multiplier"], dtype=float)
+        )
+        code_sigma = np.sqrt(
+            camera.em_gain**2 * camera.excess_noise_factor_squared * coupled(mu) + read_e**2
+        ) * adu_per_output_e
+        headroom = ADC_HEADROOM_SIGMA * code_sigma
+        saturating |= np.any(analog + headroom > top, axis=(1, 2))
+        saturating |= np.any(analog - headroom < 0.0, axis=(1, 2))
     supported &= ~saturating
     supported &= total > 0.0
     supported &= total_snr >= MIN_DENOMINATOR_SNR

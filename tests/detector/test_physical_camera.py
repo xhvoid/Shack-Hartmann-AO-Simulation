@@ -256,6 +256,47 @@ def test_nonlinearity_must_be_monotonic_and_is_applied_in_output_electrons() -> 
     assert np.allclose(frame.raw, 1000.0 - 1.0e-6 * 1000.0**2)
 
 
+
+def test_emccd_nonlinearity_is_checked_over_the_register_capacity() -> None:
+    # One input electron can leave a Gamma(1, G) register far above G, so
+    # full_well * G bounds only the conditional mean (review R7).  Here the
+    # response turns over at 250 e- while full_well * G is 100 e-.
+    with pytest.raises(CameraConfigError, match="strictly increasing"):
+        emccd(full_well_e=1.0, em_gain=100.0, register_full_well_e=1.0e4, nonlinearity_coefficients=(-0.002,))
+    multiplying = emccd(full_well_e=1.0, em_gain=100.0, register_full_well_e=1.0e4)
+    assert multiplying.max_output_signal_e == 1.0e4
+    unity = emccd(full_well_e=50.0, em_gain=1.0, register_full_well_e=1.0e4)
+    assert unity.max_output_signal_e == 50.0
+    # Accepted: monotonic up to the register capacity plus read-noise excursions.
+    emccd(full_well_e=1.0, em_gain=100.0, register_full_well_e=1.0e4, read_noise_e=50.0, nonlinearity_coefficients=(-1.0e-5,))
+
+
+def test_nonlinearity_is_checked_over_negative_read_noise_excursions() -> None:
+    # y + c y**2 has slope 1 + 2 c y, which a positive c turns over at
+    # y = -1 / (2 c) = -25 e-: inside 6 sigma of 10 e- read noise, outside 6
+    # sigma of 3 e- read noise.
+    with pytest.raises(CameraConfigError, match="strictly increasing"):
+        camera(full_well_e=1.0e3, read_noise_e=10.0, nonlinearity_coefficients=(0.02,))
+    camera(full_well_e=1.0e3, read_noise_e=3.0, nonlinearity_coefficients=(0.02,))
+
+
+def test_the_adc_dither_is_part_of_the_deterministic_response_identity() -> None:
+    # With the ADC on, the reference quantizer depends on read noise, so its
+    # identity must too (review R1); with the ADC off it does not.
+    quiet = camera(adc_bits=12, bias_adu=100.0)
+    noisy = replace(quiet, read_noise_e=1.0)
+    source = np.full((1, 1, 1), 0.25)
+    references = [run_chain(cam, source, include_noise=False)[0].raw[0, 0, 0] for cam in (quiet, noisy)]
+    assert references[0] == 100.0 and references[1] == pytest.approx(100.25, abs=1e-6)
+    assert quiet.deterministic_response_config != noisy.deterministic_response_config
+    analog = camera(bias_adu=100.0)
+    analog_noisy = replace(analog, read_noise_e=1.0)
+    assert analog.deterministic_response_config == analog_noisy.deterministic_response_config
+    assert run_chain(analog, source, include_noise=False)[0].raw[0, 0, 0] == run_chain(
+        analog_noisy, source, include_noise=False
+    )[0].raw[0, 0, 0]
+
+
 # -- electronic coupling ------------------------------------------------------------
 
 

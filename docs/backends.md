@@ -344,7 +344,7 @@ below are authoritative.
 | `optical_spots` | `SpotIntensityResult` or `None` | optional noiseless backend spots |
 | `telemetry_level` | `"full"` or `"summary"` | `summary` keeps only the per-lenslet scalars (no frames, no spots); an execution setting outside every identity |
 | `centroid_calibration_sigma_px` | vector, px, or `None` | physical path: calibration-ensemble centroid sigma from master-frame errors (a persistent per-run bias, not frame noise) |
-| `uncertainty_supported` | bool vector or `None` | physical path: whether `detector_covariance_v1` supports the regime; unsupported lenslets report an undefined sigma |
+| `uncertainty_supported` | bool vector or `None` | physical path: whether `detector_covariance_v2` supports the regime; unsupported lenslets report an undefined sigma |
 | `masked_pixel_fraction` | vector in `[0, 1]` or `None` | physical path: masked (bad) fraction of each centroid window; on this path `fluxes_e` is the model-expected processed window flux that the flux gate uses |
 | `saturated_pixel_count` | vector or `None` | physical path: saturated pixels per block (pixel, register or digital) |
 
