@@ -1,0 +1,813 @@
+{
+  "command": "e4 (profile @2)",
+  "argv": [
+    "scripts/run_detector_level_evidence.py",
+    "e4-v2"
+  ],
+  "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+  "numpy": "2.5.0",
+  "scipy": "1.18.0",
+  "machine": "arm64",
+  "started_unix_s": 1792110334.794716,
+  "enabled_by_user": "2026-10-16: every gated run enabled, one at a time",
+  "n_steps": 400,
+  "burn_in_frames": 100,
+  "runs": [
+    {
+      "config_hash": "9bbebaff2dd91b742c42a9b10da77d143f450eb5b1277777e1139e79be4078ec",
+      "root_seed": 31,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 4.033742499537766,
+      "loop_s": 52.781726291403174,
+      "per_frame_s": 0.13195431572850794,
+      "process_peak_rss_bytes": 416071680,
+      "post_update_rms_m": 2.0209935599575772e-07,
+      "open_loop_rms_m": 1.3860044982253552e-06,
+      "final_post_update_rms_m": 1.8498413687252922e-07,
+      "valid_measurement_fraction": 0.9979647435897436,
+      "min_valid_measurement_fraction": 0.9759615384615384,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.6943842952561605,
+          "on_axis_strehl": 0.6943842952561605,
+          "fwhm_lambda_over_d": 0.9408565292898373
+        }
+      ],
+      "label": "synthetic_ccd@1 m8"
+    },
+    {
+      "config_hash": "938ab8c2b7641bf8e7915dedc295fbeb8428c015451baf60fe3f8e2e714468a1",
+      "root_seed": 32,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.896097082644701,
+      "loop_s": 52.688086667098105,
+      "per_frame_s": 0.13172021666774525,
+      "process_peak_rss_bytes": 419217408,
+      "post_update_rms_m": 1.9147243292621797e-07,
+      "open_loop_rms_m": 1.3731421994812393e-06,
+      "final_post_update_rms_m": 1.8098542846929995e-07,
+      "valid_measurement_fraction": 0.998966346153846,
+      "min_valid_measurement_fraction": 0.9807692307692307,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7191341281942072,
+          "on_axis_strehl": 0.7191341281942072,
+          "fwhm_lambda_over_d": 0.9368901281662008
+        }
+      ],
+      "label": "synthetic_ccd@1 m8"
+    },
+    {
+      "config_hash": "b01ae4d7e77d94999f6e30397cf9c36c0e4aa617bfc85a0cb9599fb7aad0967e",
+      "root_seed": 33,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.8845171658322215,
+      "loop_s": 52.53149866685271,
+      "per_frame_s": 0.1313287466671318,
+      "process_peak_rss_bytes": 427802624,
+      "post_update_rms_m": 1.919618179528499e-07,
+      "open_loop_rms_m": 1.7015792819521938e-06,
+      "final_post_update_rms_m": 2.415152563891112e-07,
+      "valid_measurement_fraction": 0.999463141025641,
+      "min_valid_measurement_fraction": 0.9855769230769231,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7149877422750518,
+          "on_axis_strehl": 0.7149877422750518,
+          "fwhm_lambda_over_d": 0.9405100485847625
+        }
+      ],
+      "label": "synthetic_ccd@1 m8"
+    },
+    {
+      "config_hash": "f6c9894466a82b5905571c0cd769645a2eadcac6577ecdd490b987e193837807",
+      "root_seed": 31,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.8526207907125354,
+      "loop_s": 49.441128958016634,
+      "per_frame_s": 0.12360282239504158,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.3860044982253552e-06,
+      "open_loop_rms_m": 1.3860044982253552e-06,
+      "final_post_update_rms_m": 1.375343774244178e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.01821702816889595,
+          "on_axis_strehl": 0.006775759582385534,
+          "fwhm_lambda_over_d": 2.1848701737237333
+        }
+      ],
+      "label": "synthetic_ccd@1 m10"
+    },
+    {
+      "config_hash": "01f070d9a76313d7db741557de536316ef62be78b1f3fb2b7085b924384854b2",
+      "root_seed": 32,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.820418791845441,
+      "loop_s": 49.28047254122794,
+      "per_frame_s": 0.12320118135306984,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.3731421994812393e-06,
+      "open_loop_rms_m": 1.3731421994812393e-06,
+      "final_post_update_rms_m": 1.4578391216780803e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.04218774247133354,
+          "on_axis_strehl": 0.0050188853840979,
+          "fwhm_lambda_over_d": 1.1866531664342432
+        }
+      ],
+      "label": "synthetic_ccd@1 m10"
+    },
+    {
+      "config_hash": "62a1b66bcc0e5f7560ed64682c1c9eff38cc2bf2b5af6ffaa522c77c9527b67c",
+      "root_seed": 33,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.835463333874941,
+      "loop_s": 49.220064332708716,
+      "per_frame_s": 0.1230501608317718,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.7015792819521938e-06,
+      "open_loop_rms_m": 1.7015792819521938e-06,
+      "final_post_update_rms_m": 1.5178281896416156e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.01563256193546209,
+          "on_axis_strehl": 0.006847967855586776,
+          "fwhm_lambda_over_d": 1.2840950791935373
+        }
+      ],
+      "label": "synthetic_ccd@1 m10"
+    },
+    {
+      "config_hash": "fdd38d598408d050f7af6d0064d7b556f56170a8d2d176c722945c136ef0a8cd",
+      "root_seed": 31,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.820432875305414,
+      "loop_s": 48.70375587511808,
+      "per_frame_s": 0.12175938968779519,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.3860044982253552e-06,
+      "open_loop_rms_m": 1.3860044982253552e-06,
+      "final_post_update_rms_m": 1.375343774244178e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.01821702816889595,
+          "on_axis_strehl": 0.006775759582385534,
+          "fwhm_lambda_over_d": 2.1848701737237333
+        }
+      ],
+      "label": "synthetic_ccd@1 m12"
+    },
+    {
+      "config_hash": "8802293dc2efa2ec891ac6d64a579945b201650ca57e96316419dd3a0c3bb459",
+      "root_seed": 32,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.8846530420705676,
+      "loop_s": 48.695319540798664,
+      "per_frame_s": 0.12173829885199666,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.3731421994812393e-06,
+      "open_loop_rms_m": 1.3731421994812393e-06,
+      "final_post_update_rms_m": 1.4578391216780803e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.04218774247133354,
+          "on_axis_strehl": 0.0050188853840979,
+          "fwhm_lambda_over_d": 1.1866531664342432
+        }
+      ],
+      "label": "synthetic_ccd@1 m12"
+    },
+    {
+      "config_hash": "f9c75909d4437858eff88eb8b14afcdd566d765ef3cbf46fd5ac2807bb78e2fe",
+      "root_seed": 33,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.824419249780476,
+      "loop_s": 48.7376318750903,
+      "per_frame_s": 0.12184407968772576,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.7015792819521938e-06,
+      "open_loop_rms_m": 1.7015792819521938e-06,
+      "final_post_update_rms_m": 1.5178281896416156e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.01563256193546209,
+          "on_axis_strehl": 0.006847967855586776,
+          "fwhm_lambda_over_d": 1.2840950791935373
+        }
+      ],
+      "label": "synthetic_ccd@1 m12"
+    },
+    {
+      "config_hash": "b8bb4bfda4a3bce9740c4f460697e9aad30ae8a11693cd3ffa1c3ff0b733ba23",
+      "root_seed": 31,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.528003375045955,
+      "loop_s": 54.65805008355528,
+      "per_frame_s": 0.1366451252088882,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.865246740568618e-07,
+      "open_loop_rms_m": 1.3860044982253552e-06,
+      "final_post_update_rms_m": 1.6898239577122064e-07,
+      "valid_measurement_fraction": 0.99786858974359,
+      "min_valid_measurement_fraction": 0.9927884615384616,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7244533129273093,
+          "on_axis_strehl": 0.7244533129273093,
+          "fwhm_lambda_over_d": 0.9325501290551024
+        }
+      ],
+      "label": "synthetic_emccd@1 m8"
+    },
+    {
+      "config_hash": "0c10c59a140f05bf3fd61fdbc148d5c2e8a6e16b7cb77a9aa8f282e30a3920b4",
+      "root_seed": 32,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.538958791643381,
+      "loop_s": 54.43749575037509,
+      "per_frame_s": 0.13609373937593772,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.8126654455396703e-07,
+      "open_loop_rms_m": 1.3731421994812393e-06,
+      "final_post_update_rms_m": 1.7162117108744274e-07,
+      "valid_measurement_fraction": 0.9990384615384615,
+      "min_valid_measurement_fraction": 0.9831730769230769,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7395755042130662,
+          "on_axis_strehl": 0.7395755042130662,
+          "fwhm_lambda_over_d": 0.9320638180445776
+        }
+      ],
+      "label": "synthetic_emccd@1 m8"
+    },
+    {
+      "config_hash": "6f781bbbe5f39352a1166029babdb06fd1fe600aa5fea0cd75d368af1b5df2c5",
+      "root_seed": 33,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.5877294996753335,
+      "loop_s": 54.461654959246516,
+      "per_frame_s": 0.1361541373981163,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.8265517995894586e-07,
+      "open_loop_rms_m": 1.7015792819521938e-06,
+      "final_post_update_rms_m": 2.4837887647774575e-07,
+      "valid_measurement_fraction": 0.9996714743589742,
+      "min_valid_measurement_fraction": 0.9855769230769231,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7334270488862548,
+          "on_axis_strehl": 0.7334270488862548,
+          "fwhm_lambda_over_d": 0.9373812580955013
+        }
+      ],
+      "label": "synthetic_emccd@1 m8"
+    },
+    {
+      "config_hash": "64f486864ca40f22dd7de7fc2ebe824ebbab4c2998f311b7f667a33dc42fa623",
+      "root_seed": 31,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.545069167390466,
+      "loop_s": 53.42633108329028,
+      "per_frame_s": 0.1335658277082257,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.87616740355341e-07,
+      "open_loop_rms_m": 1.3860044982253552e-06,
+      "final_post_update_rms_m": 1.7308185440726028e-07,
+      "valid_measurement_fraction": 0.9993269230769231,
+      "min_valid_measurement_fraction": 0.9927884615384616,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7201918418821069,
+          "on_axis_strehl": 0.7201918418821069,
+          "fwhm_lambda_over_d": 0.9339635201124022
+        }
+      ],
+      "label": "synthetic_emccd@1 m10"
+    },
+    {
+      "config_hash": "43d488dabf420cc9039b4982dc4da166c67bf1dcd2581499a3cc0745fcc94786",
+      "root_seed": 32,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.5660560838878155,
+      "loop_s": 53.55745795741677,
+      "per_frame_s": 0.13389364489354194,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.8497485066530477e-07,
+      "open_loop_rms_m": 1.3731421994812393e-06,
+      "final_post_update_rms_m": 1.8121451573043422e-07,
+      "valid_measurement_fraction": 0.9980849358974361,
+      "min_valid_measurement_fraction": 0.9855769230769231,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7327941912235794,
+          "on_axis_strehl": 0.7327941912235794,
+          "fwhm_lambda_over_d": 0.9329139334612335
+        }
+      ],
+      "label": "synthetic_emccd@1 m10"
+    },
+    {
+      "config_hash": "f2158deb474dcf678ca92cac2d27f5662b9a09d8a6a16207d0663cc645fcf7b9",
+      "root_seed": 33,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.548051250167191,
+      "loop_s": 53.34577904175967,
+      "per_frame_s": 0.13336444760439917,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.8643910561486937e-07,
+      "open_loop_rms_m": 1.7015792819521938e-06,
+      "final_post_update_rms_m": 2.6498652789431607e-07,
+      "valid_measurement_fraction": 0.9995592948717948,
+      "min_valid_measurement_fraction": 0.9711538461538461,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7253896202385542,
+          "on_axis_strehl": 0.7253896202385542,
+          "fwhm_lambda_over_d": 0.9383684958235233
+        }
+      ],
+      "label": "synthetic_emccd@1 m10"
+    },
+    {
+      "config_hash": "637a17ab31fff7eb40ce2cf15c1a238f5c84990ed964d2cb4ee06a7531eea75a",
+      "root_seed": 31,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.52725241612643,
+      "loop_s": 51.0175296664238,
+      "per_frame_s": 0.1275438241660595,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.3860044982253552e-06,
+      "open_loop_rms_m": 1.3860044982253552e-06,
+      "final_post_update_rms_m": 1.375343774244178e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.01821702816889595,
+          "on_axis_strehl": 0.006775759582385534,
+          "fwhm_lambda_over_d": 2.1848701737237333
+        }
+      ],
+      "label": "synthetic_emccd@1 m12"
+    },
+    {
+      "config_hash": "1dd8c75652209e81e382980f895d6625949170a6b2efd613f41f28f44668b0bb",
+      "root_seed": 32,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.555460665374994,
+      "loop_s": 51.010442458093166,
+      "per_frame_s": 0.1275261061452329,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.3731421994812393e-06,
+      "open_loop_rms_m": 1.3731421994812393e-06,
+      "final_post_update_rms_m": 1.4578391216780803e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.04218774247133354,
+          "on_axis_strehl": 0.0050188853840979,
+          "fwhm_lambda_over_d": 1.1866531664342432
+        }
+      ],
+      "label": "synthetic_emccd@1 m12"
+    },
+    {
+      "config_hash": "69add5aafbe84f8c175ad5e62de8b8aa73522c6da8dc23c590d26840d95264f5",
+      "root_seed": 33,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.5316279996186495,
+      "loop_s": 51.062015167437494,
+      "per_frame_s": 0.12765503791859373,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.7015792819521938e-06,
+      "open_loop_rms_m": 1.7015792819521938e-06,
+      "final_post_update_rms_m": 1.5178281896416156e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.01563256193546209,
+          "on_axis_strehl": 0.006847967855586776,
+          "fwhm_lambda_over_d": 1.2840950791935373
+        }
+      ],
+      "label": "synthetic_emccd@1 m12"
+    },
+    {
+      "config_hash": "9a1d24efda63b9b06276909ebfc06bbc304b77ec8bbf1304c752f2e28205acf2",
+      "root_seed": 31,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.9089788338169456,
+      "loop_s": 52.12757362425327,
+      "per_frame_s": 0.1303189340606332,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.9076687022334288e-07,
+      "open_loop_rms_m": 1.3860044982253552e-06,
+      "final_post_update_rms_m": 1.741125012758833e-07,
+      "valid_measurement_fraction": 0.9991426282051282,
+      "min_valid_measurement_fraction": 0.9879807692307693,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7150902510207036,
+          "on_axis_strehl": 0.7150902510207036,
+          "fwhm_lambda_over_d": 0.9359247193034245
+        }
+      ],
+      "label": "synthetic_cmos@1 m8"
+    },
+    {
+      "config_hash": "5d7ec02ec82c036dea97fb0f293ffc258428c6b5e9120feb4cb8eb41e2b80dc3",
+      "root_seed": 32,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 4.018474749289453,
+      "loop_s": 52.368980624713004,
+      "per_frame_s": 0.1309224515617825,
+      "process_peak_rss_bytes": 434176000,
+      "post_update_rms_m": 1.8767503336370354e-07,
+      "open_loop_rms_m": 1.3731421994812393e-06,
+      "final_post_update_rms_m": 1.7553224638420894e-07,
+      "valid_measurement_fraction": 0.997996794871795,
+      "min_valid_measurement_fraction": 0.9855769230769231,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7280481086014012,
+          "on_axis_strehl": 0.7280481086014012,
+          "fwhm_lambda_over_d": 0.9354956946178039
+        }
+      ],
+      "label": "synthetic_cmos@1 m8"
+    },
+    {
+      "config_hash": "daeec1184005c31d907c8c0cb2e0abaaaba584ec70588e272c134e5ebb4fcac7",
+      "root_seed": 33,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.9596809996291995,
+      "loop_s": 52.574469207786024,
+      "per_frame_s": 0.13143617301946506,
+      "process_peak_rss_bytes": 435912704,
+      "post_update_rms_m": 1.8706325331725913e-07,
+      "open_loop_rms_m": 1.7015792819521938e-06,
+      "final_post_update_rms_m": 2.561182957613487e-07,
+      "valid_measurement_fraction": 0.9996153846153846,
+      "min_valid_measurement_fraction": 0.9759615384615384,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7236954255453732,
+          "on_axis_strehl": 0.7236954255453732,
+          "fwhm_lambda_over_d": 0.9383712242718923
+        }
+      ],
+      "label": "synthetic_cmos@1 m8"
+    },
+    {
+      "config_hash": "668d5e7d222a8dcaf61b47d4c008893280cee1d32e5821b10ef58196ddf5d0a9",
+      "root_seed": 31,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.973424750380218,
+      "loop_s": 49.729509375058115,
+      "per_frame_s": 0.12432377343764528,
+      "process_peak_rss_bytes": 435912704,
+      "post_update_rms_m": 2.277522909329581e-06,
+      "open_loop_rms_m": 1.3860044982253552e-06,
+      "final_post_update_rms_m": 2.0883914359939865e-06,
+      "valid_measurement_fraction": 0.004871794871794871,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.00036339451025795385,
+          "on_axis_strehl": 0.00022617736320624832,
+          "fwhm_lambda_over_d": 2.125468080226126
+        }
+      ],
+      "label": "synthetic_cmos@1 m10"
+    },
+    {
+      "config_hash": "14f0ed2e663fe3cc9bf31b6d7fa85d21b903686f1e9f01a2858bb078e8f846b1",
+      "root_seed": 32,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.9839099161326885,
+      "loop_s": 49.832982749678195,
+      "per_frame_s": 0.12458245687419549,
+      "process_peak_rss_bytes": 435912704,
+      "post_update_rms_m": 2.7519333642273832e-06,
+      "open_loop_rms_m": 1.3731421994812393e-06,
+      "final_post_update_rms_m": 2.9052133243728103e-06,
+      "valid_measurement_fraction": 0.08655448717948717,
+      "min_valid_measurement_fraction": 0.055288461538461536,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.0026148320455153333,
+          "on_axis_strehl": 0.0015568128354601029,
+          "fwhm_lambda_over_d": 1.5618677191435486
+        }
+      ],
+      "label": "synthetic_cmos@1 m10"
+    },
+    {
+      "config_hash": "b9eeb49e2a1a399156fa624abcf4a76b646c9ef2d78bfa5e3beb1eef8a105c70",
+      "root_seed": 33,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.962248208001256,
+      "loop_s": 49.581815207377076,
+      "per_frame_s": 0.1239545380184427,
+      "process_peak_rss_bytes": 435912704,
+      "post_update_rms_m": 2.9212339384844734e-06,
+      "open_loop_rms_m": 1.7015792819521938e-06,
+      "final_post_update_rms_m": 2.868134695177919e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.0004156545722760984,
+          "on_axis_strehl": 0.00028067123028781846,
+          "fwhm_lambda_over_d": 3.5519809598967194
+        }
+      ],
+      "label": "synthetic_cmos@1 m10"
+    },
+    {
+      "config_hash": "1d54041708c3a3c033c2b402cf5a2245c1bb6e121232f75523b7c0d022343d37",
+      "root_seed": 31,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.981906999833882,
+      "loop_s": 48.69444695767015,
+      "per_frame_s": 0.12173611739417538,
+      "process_peak_rss_bytes": 435912704,
+      "post_update_rms_m": 1.3860044982253552e-06,
+      "open_loop_rms_m": 1.3860044982253552e-06,
+      "final_post_update_rms_m": 1.375343774244178e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.01821702816889595,
+          "on_axis_strehl": 0.006775759582385534,
+          "fwhm_lambda_over_d": 2.1848701737237333
+        }
+      ],
+      "label": "synthetic_cmos@1 m12"
+    },
+    {
+      "config_hash": "6407460625881b2567ab51f3a0bb50180570af8c6e9eb195cdde774814c7bdb9",
+      "root_seed": 32,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.9367450000718236,
+      "loop_s": 48.52912958338857,
+      "per_frame_s": 0.12132282395847142,
+      "process_peak_rss_bytes": 435912704,
+      "post_update_rms_m": 1.3731421994812393e-06,
+      "open_loop_rms_m": 1.3731421994812393e-06,
+      "final_post_update_rms_m": 1.4578391216780803e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.04218774247133354,
+          "on_axis_strehl": 0.0050188853840979,
+          "fwhm_lambda_over_d": 1.1866531664342432
+        }
+      ],
+      "label": "synthetic_cmos@1 m12"
+    },
+    {
+      "config_hash": "f5ae70ca04d265ea27a2e2e5d35a246302f7a39c3602f038c25c09e25c31ad4e",
+      "root_seed": 33,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.9277124581858516,
+      "loop_s": 48.51938408333808,
+      "per_frame_s": 0.1212984602083452,
+      "process_peak_rss_bytes": 435912704,
+      "post_update_rms_m": 1.7015792819521938e-06,
+      "open_loop_rms_m": 1.7015792819521938e-06,
+      "final_post_update_rms_m": 1.5178281896416156e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.01563256193546209,
+          "on_axis_strehl": 0.006847967855586776,
+          "fwhm_lambda_over_d": 1.2840950791935373
+        }
+      ],
+      "label": "synthetic_cmos@1 m12"
+    }
+  ],
+  "summary": {
+    "synthetic_ccd@1 m8": {
+      "runs": 3,
+      "post_update_rms_mean_m": 1.951778689582752e-07,
+      "post_update_rms_seed_std_m": 5.999175904539046e-09,
+      "valid_fraction_mean": 0.998798076923077,
+      "valid_fraction_seed_std": 0.0007632395557711324,
+      "peak_strehl_mean": 0.7095020552418064,
+      "peak_strehl_seed_std": 0.013255494305582935,
+      "lost_lock_runs": 0
+    },
+    "synthetic_ccd@1 m10": {
+      "runs": 3,
+      "post_update_rms_mean_m": 1.486908659886263e-06,
+      "post_update_rms_seed_std_m": 1.8602141453573583e-07,
+      "valid_fraction_mean": 0.0,
+      "valid_fraction_seed_std": 0.0,
+      "peak_strehl_mean": 0.025345777525230526,
+      "peak_strehl_seed_std": 0.014642701385409115,
+      "lost_lock_runs": 0
+    },
+    "synthetic_ccd@1 m12": {
+      "runs": 3,
+      "post_update_rms_mean_m": 1.486908659886263e-06,
+      "post_update_rms_seed_std_m": 1.8602141453573583e-07,
+      "valid_fraction_mean": 0.0,
+      "valid_fraction_seed_std": 0.0,
+      "peak_strehl_mean": 0.025345777525230526,
+      "peak_strehl_seed_std": 0.014642701385409115,
+      "lost_lock_runs": 0
+    },
+    "synthetic_emccd@1 m8": {
+      "runs": 3,
+      "post_update_rms_mean_m": 1.8348213285659159e-07,
+      "post_update_rms_seed_std_m": 2.7248614255584715e-09,
+      "valid_fraction_mean": 0.9988595085470086,
+      "valid_fraction_seed_std": 0.0009146673515326057,
+      "peak_strehl_mean": 0.7324852886755434,
+      "peak_strehl_seed_std": 0.00760495572252821,
+      "lost_lock_runs": 0
+    },
+    "synthetic_emccd@1 m10": {
+      "runs": 3,
+      "post_update_rms_mean_m": 1.863435655451717e-07,
+      "post_update_rms_seed_std_m": 1.3235336082881748e-09,
+      "valid_fraction_mean": 0.9989903846153846,
+      "valid_fraction_seed_std": 0.0007927024652346138,
+      "peak_strehl_mean": 0.7261252177814135,
+      "peak_strehl_seed_std": 0.006333295353915133,
+      "lost_lock_runs": 0
+    },
+    "synthetic_emccd@1 m12": {
+      "runs": 3,
+      "post_update_rms_mean_m": 1.486908659886263e-06,
+      "post_update_rms_seed_std_m": 1.8602141453573583e-07,
+      "valid_fraction_mean": 0.0,
+      "valid_fraction_seed_std": 0.0,
+      "peak_strehl_mean": 0.025345777525230526,
+      "peak_strehl_seed_std": 0.014642701385409115,
+      "lost_lock_runs": 0
+    },
+    "synthetic_cmos@1 m8": {
+      "runs": 3,
+      "post_update_rms_mean_m": 1.8850171896810184e-07,
+      "post_update_rms_seed_std_m": 1.9853844371171246e-09,
+      "valid_fraction_mean": 0.9989182692307693,
+      "valid_fraction_seed_std": 0.0008322925576651821,
+      "peak_strehl_mean": 0.7222779283891594,
+      "peak_strehl_seed_std": 0.006594201385408009,
+      "lost_lock_runs": 0
+    },
+    "synthetic_cmos@1 m10": {
+      "runs": 3,
+      "post_update_rms_mean_m": 2.6502300706804792e-06,
+      "post_update_rms_seed_std_m": 3.3368943975293616e-07,
+      "valid_fraction_mean": 0.03047542735042735,
+      "valid_fraction_seed_std": 0.04862694016490926,
+      "peak_strehl_mean": 0.0011312937093497953,
+      "peak_strehl_seed_std": 0.001285047576813849,
+      "lost_lock_runs": 3
+    },
+    "synthetic_cmos@1 m12": {
+      "runs": 3,
+      "post_update_rms_mean_m": 1.486908659886263e-06,
+      "post_update_rms_seed_std_m": 1.8602141453573583e-07,
+      "valid_fraction_mean": 0.0,
+      "valid_fraction_seed_std": 0.0,
+      "peak_strehl_mean": 0.025345777525230526,
+      "peak_strehl_seed_std": 0.014642701385409115,
+      "lost_lock_runs": 0
+    }
+  },
+  "refused": [],
+  "wall_s": 1521.935548067093
+}

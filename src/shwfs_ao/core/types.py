@@ -120,6 +120,20 @@ class DetectorFrame:
     bad_pixel_mask: np.ndarray
     negative_clipped_mask: np.ndarray
     random_stream_ids: Mapping[str, str]
+    # Physical camera path only (``shwfs_ao.detector.physical_camera.v1``);
+    # every compatibility frame leaves these at None.  There ``image_e`` is the
+    # processed, input-referred electron image the centroid sees, and
+    # ``raw_image`` the raw readout in ``raw_unit`` ("adu", or
+    # "output_e_equivalent" with the ADC disabled).  Pixel full well, EM
+    # register capacity and digital clipping are flagged separately; the
+    # legacy ``saturated_mask`` is their union.
+    raw_image: np.ndarray | None = None
+    raw_unit: str | None = None
+    pixel_saturated_mask: np.ndarray | None = None
+    register_saturated_mask: np.ndarray | None = None
+    digital_saturated_mask: np.ndarray | None = None
+    response_model: str | None = None
+    calibration_products_hash: str | None = None
 
     def __post_init__(self) -> None:
         image_e = _float_array(self.image_e, label="image_e", ndim=2)
@@ -164,7 +178,35 @@ class DetectorFrame:
             self.random_stream_ids,
             label="random_stream_ids",
         )
+        raw_image = self.raw_image
+        if raw_image is not None:
+            raw_image = _float_array(raw_image, label="raw_image", ndim=2)
+            _require_shape(raw_image, shape, label="raw_image")
+            _require_all_finite(raw_image, label="raw_image")
+            if self.raw_unit not in ("adu", "output_e_equivalent"):
+                raise ValueError(
+                    "raw_unit must be 'adu' or 'output_e_equivalent' with raw_image."
+                )
+        elif self.raw_unit is not None:
+            raise ValueError("raw_unit requires raw_image.")
+        physical_masks = {}
+        for label in (
+            "pixel_saturated_mask",
+            "register_saturated_mask",
+            "digital_saturated_mask",
+        ):
+            value = getattr(self, label)
+            physical_masks[label] = (
+                None if value is None else _matching_bool_array(value, shape, label=label)
+            )
+        for label in ("response_model", "calibration_products_hash"):
+            value = getattr(self, label)
+            if value is not None:
+                _nonempty_string(value, label=label)
 
+        object.__setattr__(self, "raw_image", raw_image)
+        for label, value in physical_masks.items():
+            object.__setattr__(self, label, value)
         object.__setattr__(self, "image_e", image_e)
         object.__setattr__(self, "expected_source_e", expected_source_e)
         object.__setattr__(self, "expected_background_e", expected_background_e)
@@ -193,6 +235,19 @@ class DetectorTelemetry:
     clipping_fraction: np.ndarray
     detector_frames: tuple[DetectorFrame, ...] | None = None
     optical_spots: SpotIntensityResult | None = None
+    # ``"full"`` keeps per-lenslet frames and optical spots when the sensor
+    # supplies them; ``"summary"`` keeps only the per-lenslet scalars above,
+    # so a frame's telemetry is O(lenslet count).  The level is an execution
+    # setting and moves no physical identity.
+    telemetry_level: str = "full"
+    # Physical camera path diagnostics (None on the compatibility path):
+    # calibration-ensemble centroid sigma from master-frame errors, whether
+    # the first-order uncertainty model supports the regime, the masked
+    # (bad) fraction of each centroid window, and saturated pixel counts.
+    centroid_calibration_sigma_px: np.ndarray | None = None
+    uncertainty_supported: np.ndarray | None = None
+    masked_pixel_fraction: np.ndarray | None = None
+    saturated_pixel_count: np.ndarray | None = None
 
     def __post_init__(self) -> None:
         subaperture_ids = _validated_ids(
@@ -200,6 +255,32 @@ class DetectorTelemetry:
             label="subaperture_ids",
         )
         count = len(subaperture_ids)
+        if self.telemetry_level not in ("full", "summary"):
+            raise ValueError("telemetry_level must be 'full' or 'summary'.")
+        if self.telemetry_level == "summary" and (
+            self.detector_frames is not None or self.optical_spots is not None
+        ):
+            raise ValueError(
+                "summary telemetry must not retain detector frames or optical spots."
+            )
+        for label in (
+            "centroid_calibration_sigma_px",
+            "masked_pixel_fraction",
+            "saturated_pixel_count",
+        ):
+            value = getattr(self, label)
+            if value is not None:
+                array = _length_float_array(value, count, label=label)
+                _require_nonnegative_finite_entries(array, label=label)
+                object.__setattr__(self, label, array)
+        if self.uncertainty_supported is not None:
+            object.__setattr__(
+                self,
+                "uncertainty_supported",
+                _length_bool_array(
+                    self.uncertainty_supported, count, label="uncertainty_supported"
+                ),
+            )
         centroids_xy_px = _float_array(
             self.centroids_xy_px,
             label="centroids_xy_px",

@@ -224,6 +224,14 @@ def test_all_ten_result_classes_are_frozen_dataclasses_with_exact_field_order() 
             "bad_pixel_mask",
             "negative_clipped_mask",
             "random_stream_ids",
+            # Trailing, optional, physical-camera-path fields (DET-01).
+            "raw_image",
+            "raw_unit",
+            "pixel_saturated_mask",
+            "register_saturated_mask",
+            "digital_saturated_mask",
+            "response_model",
+            "calibration_products_hash",
         ),
         DetectorTelemetry: (
             "subaperture_ids",
@@ -241,6 +249,12 @@ def test_all_ten_result_classes_are_frozen_dataclasses_with_exact_field_order() 
             "clipping_fraction",
             "detector_frames",
             "optical_spots",
+            # Trailing, optional telemetry level and physical diagnostics.
+            "telemetry_level",
+            "centroid_calibration_sigma_px",
+            "uncertainty_supported",
+            "masked_pixel_fraction",
+            "saturated_pixel_count",
         ),
         WfsMeasurement: (
             "vector",

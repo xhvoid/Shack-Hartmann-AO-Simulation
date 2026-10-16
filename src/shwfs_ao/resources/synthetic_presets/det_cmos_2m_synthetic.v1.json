@@ -1,0 +1,174 @@
+{
+  "schema_name": "shwfs_ao.system_profile",
+  "schema_version": 7,
+  "profile_name": "det_cmos_2m_synthetic",
+  "profile_version": 1,
+  "baseline_rationale": "Detector-level noise-on profile (milestone A) derived from fast_2m_detector@4: physical camera synthetic_cmos@1 (shwfs_ao.detector.physical_camera.v1), declared detector-pixel layout, photometric budget, estimated calibration products and RTC pixel processing, centroid window 23 px (odd, symmetric about the optical-axis pixel), controller gain 0.2 from the predeclared DET-09 scan, detector noise on.  Every other value is the base profile's.",
+  "provenance": {
+    "schema_name": "shwfs_ao.provenance",
+    "schema_version": 2,
+    "source_class": "synthetic_assumed",
+    "note": "Synthetic detector-level SCAO profile.  Camera presets are synthetic engineering values without a datasheet; derived ESO tiers keep their ledgered geometry and atmosphere.  Not measured observatory or camera data.",
+    "source_id": "shwfs_ao.system_profile.det_cmos_2m_synthetic.v1",
+    "url": null,
+    "access_time": null,
+    "fallback_used": false,
+    "references": [
+      "docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_PROMPT.md",
+      "docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md",
+      "docs/detector_model.md",
+      "benchmarks/detector_source_ledger.v1.json",
+      "benchmarks/detector_level.assumptions.v1.json",
+      "base profile fast_2m_detector@4"
+    ]
+  },
+  "config": {
+    "backend": "native",
+    "wfs_model": "detector_level",
+    "atmosphere_model": "native_frozen_flow_v2",
+    "telescope_diameter_m": 2.0,
+    "pupil_pixels": 52,
+    "lenslets_across": 5,
+    "actuators_across": 5,
+    "wfs_wavelength_m": 7e-07,
+    "science_wavelengths_m": [
+      1.25e-06,
+      1.65e-06,
+      2.2e-06
+    ],
+    "atmosphere": {
+      "r0_m": 0.1263371938263465,
+      "r0_reference_wavelength_m": 5e-07,
+      "outer_scale_m": 25.0,
+      "wind_m_per_s": [
+        10.0,
+        0.0
+      ],
+      "target_rms_opd_m": null,
+      "normalize_rms": false,
+      "layers": []
+    },
+    "detector": {
+      "enabled": true,
+      "photons_per_subap_frame": null,
+      "read_noise_e": 0.0,
+      "dark_e_per_s": 0.0,
+      "background_e_per_pixel_frame": 0.0,
+      "full_well_e": null,
+      "qe": 1.0,
+      "prnu_rms": 0.0,
+      "exposure_s": 0.001,
+      "prnu_mode": "persistent",
+      "bad_pixel_fraction": 0.0
+    },
+    "wfs": {
+      "min_fill_fraction": 0.35,
+      "pad_factor": 3,
+      "detector_window_px": 23,
+      "centroid_estimator": "center_of_gravity",
+      "threshold_fraction": 0.0,
+      "subtract_minimum": false,
+      "min_flux_e": 30.0,
+      "min_peak_snr": 3.0,
+      "max_centroid_sigma_px": 0.5,
+      "max_window_clipping_fraction": 0.15,
+      "central_obstruction_ratio": 0.0,
+      "spider_width_m": 0.0,
+      "photon_allocation": "throughput_scaled",
+      "clip_negative_pixels": false,
+      "lenslet_axis": "geometry_cell_center"
+    },
+    "dm": {
+      "influence_model": "gaussian",
+      "coupling_width_pitch": 0.4,
+      "stroke_limit_opd_m": 1e-06,
+      "include_edge_actuators": true,
+      "actuator_margin_fraction": 0.0,
+      "dead_actuator_indices": [],
+      "stuck_actuator_indices": [],
+      "stuck_command_opd_m": 0.0
+    },
+    "calibration": {
+      "source": "build",
+      "method": "central",
+      "probe_kind": "dm_actuator",
+      "amplitude_m": 1e-08,
+      "include_noise": false,
+      "repeats": 1,
+      "resource_name": null
+    },
+    "reconstructor": {
+      "kind": "tsvd",
+      "rcond": 1e-08,
+      "alpha": null,
+      "min_valid_fraction": 0.75,
+      "min_rank": 1,
+      "max_cached_masks": 32
+    },
+    "command_projector": {
+      "kind": "identity",
+      "mapping_resource": null
+    },
+    "controller": {
+      "n_steps": 60,
+      "gain": 0.2,
+      "leak": 0.02,
+      "latency_frames": 2,
+      "frame_rate_hz": 1000.0,
+      "include_noise": true
+    },
+    "science": {
+      "psf_pad_factor": 3
+    },
+    "random": {
+      "root_seed": 1,
+      "derivation_scheme_id": "shwfs_ao.random.sha256-json-pcg64-v1"
+    },
+    "scalable": null,
+    "detector_physics": {
+      "camera": {
+        "preset_name": "synthetic_cmos",
+        "preset_version": 1
+      },
+      "layout": {
+        "scheme": "isolated_lenslet_blocks.v1",
+        "guard_px": 0
+      },
+      "source": {
+        "kind": "ab_flat_fnu",
+        "ab_magnitude": 5.0,
+        "incident_photons_per_full_subap_frame": null,
+        "detected_e_per_full_subap_frame": null,
+        "throughput_excluding_qe": 0.4,
+        "sky_ab_mag_per_arcsec2": 20.5
+      },
+      "bandpass": {
+        "kind": "monochromatic",
+        "band_min_m": 5.5e-07,
+        "band_max_m": 8.5e-07,
+        "n_samples": 1
+      },
+      "sampling": {
+        "kind": "legacy_fft",
+        "pixel_scale_rad": null,
+        "oversampling": 1,
+        "diffusion_sigma_px": 0.0
+      },
+      "processing": {
+        "mode": "estimated",
+        "n_bias_frames": 32,
+        "n_dark_frames": 32,
+        "n_sky_frames": 32,
+        "n_flat_frames": 32,
+        "flat_level_e": 1000.0,
+        "hot_pixel_threshold_e": 3.0,
+        "flat_low_threshold": 0.5,
+        "flat_high_threshold": 1.5,
+        "bad_pixel_policy": "zero_weight",
+        "gain_treatment": "known_per_pixel",
+        "clip_negative": false
+      },
+      "exposure_subsamples": 1
+    }
+  }
+}

@@ -1,0 +1,539 @@
+{
+  "command": "e4 (profile @1)",
+  "argv": [
+    "scripts/run_detector_level_evidence.py",
+    "e4"
+  ],
+  "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+  "numpy": "2.5.0",
+  "scipy": "1.18.0",
+  "machine": "arm64",
+  "started_unix_s": 1792107502.576246,
+  "enabled_by_user": "2026-10-16: every gated run enabled, one at a time",
+  "n_steps": 400,
+  "burn_in_frames": 100,
+  "runs": [
+    {
+      "config_hash": "2763c53019baea40d0d4f1af6ec4e4f01853d97cfbd04e8146996855b860a356",
+      "root_seed": 31,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 4.154898417182267,
+      "loop_s": 52.169719375669956,
+      "per_frame_s": 0.13042429843917488,
+      "process_peak_rss_bytes": 364380160,
+      "post_update_rms_m": 2.0183982143098627e-07,
+      "open_loop_rms_m": 1.3860044982253552e-06,
+      "final_post_update_rms_m": 1.8233849545266894e-07,
+      "valid_measurement_fraction": 0.9985256410256409,
+      "min_valid_measurement_fraction": 0.9807692307692307,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.692925830188084,
+          "on_axis_strehl": 0.692925830188084,
+          "fwhm_lambda_over_d": 0.9405356947754513
+        }
+      ],
+      "label": "synthetic_ccd@1 m8"
+    },
+    {
+      "config_hash": "3d38376e4dd3a6b5e42a4f85fd7cfbac1377e4537fc9b67dd934d299a43d724f",
+      "root_seed": 32,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.866616209037602,
+      "loop_s": 52.329379375092685,
+      "per_frame_s": 0.13082344843773172,
+      "process_peak_rss_bytes": 388694016,
+      "post_update_rms_m": 1.9447686818691786e-07,
+      "open_loop_rms_m": 1.3731421994812393e-06,
+      "final_post_update_rms_m": 1.7855627472775394e-07,
+      "valid_measurement_fraction": 0.997908653846154,
+      "min_valid_measurement_fraction": 0.9759615384615384,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7139230239329852,
+          "on_axis_strehl": 0.7139230239329852,
+          "fwhm_lambda_over_d": 0.9364340349871255
+        }
+      ],
+      "label": "synthetic_ccd@1 m8"
+    },
+    {
+      "config_hash": "2d13c625e26cbaee53d4425d14bcad202584b4ab05797bb32b9efabadb9bb930",
+      "root_seed": 33,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.8432107493281364,
+      "loop_s": 52.18176608346403,
+      "per_frame_s": 0.13045441520866008,
+      "process_peak_rss_bytes": 390414336,
+      "post_update_rms_m": 1.9199990501757201e-07,
+      "open_loop_rms_m": 1.7015792819521938e-06,
+      "final_post_update_rms_m": 2.5059584838743785e-07,
+      "valid_measurement_fraction": 0.999591346153846,
+      "min_valid_measurement_fraction": 0.9855769230769231,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7147023341355715,
+          "on_axis_strehl": 0.7147023341355715,
+          "fwhm_lambda_over_d": 0.9403187203564489
+        }
+      ],
+      "label": "synthetic_ccd@1 m8"
+    },
+    {
+      "status": "refused",
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample.",
+      "root_seed": 31,
+      "label": "synthetic_ccd@1 m10"
+    },
+    {
+      "status": "refused",
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample.",
+      "root_seed": 32,
+      "label": "synthetic_ccd@1 m10"
+    },
+    {
+      "status": "refused",
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample.",
+      "root_seed": 33,
+      "label": "synthetic_ccd@1 m10"
+    },
+    {
+      "status": "refused",
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample.",
+      "root_seed": 31,
+      "label": "synthetic_ccd@1 m12"
+    },
+    {
+      "status": "refused",
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample.",
+      "root_seed": 32,
+      "label": "synthetic_ccd@1 m12"
+    },
+    {
+      "status": "refused",
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample.",
+      "root_seed": 33,
+      "label": "synthetic_ccd@1 m12"
+    },
+    {
+      "config_hash": "a0807d941491e0bac44fe5b6c505fdbcdd8e10697b4ae53c8c7de0755db645fc",
+      "root_seed": 31,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.5541156670078635,
+      "loop_s": 54.54894904233515,
+      "per_frame_s": 0.13637237260583787,
+      "process_peak_rss_bytes": 404963328,
+      "post_update_rms_m": 1.8642770471299037e-07,
+      "open_loop_rms_m": 1.3860044982253552e-06,
+      "final_post_update_rms_m": 1.6890015535419084e-07,
+      "valid_measurement_fraction": 0.9982451923076925,
+      "min_valid_measurement_fraction": 0.9927884615384616,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7243328471817888,
+          "on_axis_strehl": 0.7243328471817888,
+          "fwhm_lambda_over_d": 0.9324788393195323
+        }
+      ],
+      "label": "synthetic_emccd@1 m8"
+    },
+    {
+      "config_hash": "5f8d7905751fedc3b0d1860440bbe65c806b878ae29c82fad71ce6ece7348ba5",
+      "root_seed": 32,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.555267250165343,
+      "loop_s": 54.487162665463984,
+      "per_frame_s": 0.13621790666365996,
+      "process_peak_rss_bytes": 404963328,
+      "post_update_rms_m": 1.8040533561218298e-07,
+      "open_loop_rms_m": 1.3731421994812393e-06,
+      "final_post_update_rms_m": 1.6863219490997537e-07,
+      "valid_measurement_fraction": 0.9995753205128204,
+      "min_valid_measurement_fraction": 0.9903846153846154,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7413678091003221,
+          "on_axis_strehl": 0.7413678091003221,
+          "fwhm_lambda_over_d": 0.9324769976968019
+        }
+      ],
+      "label": "synthetic_emccd@1 m8"
+    },
+    {
+      "config_hash": "4879b30637630a091948898e5dc631b25fc87b654c7ab079e72450cc088f079b",
+      "root_seed": 33,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.561338333413005,
+      "loop_s": 54.43122287560254,
+      "per_frame_s": 0.13607805718900637,
+      "process_peak_rss_bytes": 407207936,
+      "post_update_rms_m": 1.829377883693832e-07,
+      "open_loop_rms_m": 1.7015792819521938e-06,
+      "final_post_update_rms_m": 2.574692047092702e-07,
+      "valid_measurement_fraction": 0.9996474358974361,
+      "min_valid_measurement_fraction": 0.9783653846153846,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.732963998647011,
+          "on_axis_strehl": 0.732963998647011,
+          "fwhm_lambda_over_d": 0.9370035256398732
+        }
+      ],
+      "label": "synthetic_emccd@1 m8"
+    },
+    {
+      "config_hash": "8f0129002cda3858575920adc954c982e773a7d5e04185294d420d297d30ae9d",
+      "root_seed": 31,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.650157582946122,
+      "loop_s": 52.37168858293444,
+      "per_frame_s": 0.1309292214573361,
+      "process_peak_rss_bytes": 434536448,
+      "post_update_rms_m": 1.8752666844253104e-06,
+      "open_loop_rms_m": 1.3860044982253552e-06,
+      "final_post_update_rms_m": 1.6998443829741936e-06,
+      "valid_measurement_fraction": 0.3322275641025641,
+      "min_valid_measurement_fraction": 0.25721153846153844,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.005116167421670451,
+          "on_axis_strehl": 0.005032850384952611,
+          "fwhm_lambda_over_d": 1.6675330907292396
+        }
+      ],
+      "label": "synthetic_emccd@1 m10"
+    },
+    {
+      "config_hash": "4ceb27c922b07f6e30c546c9449d163b35352a4fa1cf217b80eed86d2dcb2225",
+      "root_seed": 32,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.561839208006859,
+      "loop_s": 52.33156766742468,
+      "per_frame_s": 0.1308289191685617,
+      "process_peak_rss_bytes": 434601984,
+      "post_update_rms_m": 1.9687862966555742e-06,
+      "open_loop_rms_m": 1.3731421994812393e-06,
+      "final_post_update_rms_m": 2.129862979961277e-06,
+      "valid_measurement_fraction": 0.33520833333333333,
+      "min_valid_measurement_fraction": 0.2692307692307692,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.006079501769145959,
+          "on_axis_strehl": 0.0059738695633134165,
+          "fwhm_lambda_over_d": 2.198618082914865
+        }
+      ],
+      "label": "synthetic_emccd@1 m10"
+    },
+    {
+      "config_hash": "c8bb824ee2d504ffbc7f3a01ce10d8285eee1d5ee3ae330ab8090c3da305a3e4",
+      "root_seed": 33,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.58012520801276,
+      "loop_s": 52.30717770848423,
+      "per_frame_s": 0.13076794427121058,
+      "process_peak_rss_bytes": 434601984,
+      "post_update_rms_m": 2.957831481006712e-06,
+      "open_loop_rms_m": 1.7015792819521938e-06,
+      "final_post_update_rms_m": 2.920609621259032e-06,
+      "valid_measurement_fraction": 0.34674679487179483,
+      "min_valid_measurement_fraction": 0.30528846153846156,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.006737787731349963,
+          "on_axis_strehl": 0.003180357158959043,
+          "fwhm_lambda_over_d": 2.0758952316689747
+        }
+      ],
+      "label": "synthetic_emccd@1 m10"
+    },
+    {
+      "status": "refused",
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample.",
+      "root_seed": 31,
+      "label": "synthetic_emccd@1 m12"
+    },
+    {
+      "status": "refused",
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample.",
+      "root_seed": 32,
+      "label": "synthetic_emccd@1 m12"
+    },
+    {
+      "status": "refused",
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample.",
+      "root_seed": 33,
+      "label": "synthetic_emccd@1 m12"
+    },
+    {
+      "config_hash": "6253951ad41b68ac13715dff1085c4be2e2bf15832c0159a3346bb23836b7124",
+      "root_seed": 31,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.916565083898604,
+      "loop_s": 51.789559833705425,
+      "per_frame_s": 0.12947389958426356,
+      "process_peak_rss_bytes": 434601984,
+      "post_update_rms_m": 1.922075037984323e-07,
+      "open_loop_rms_m": 1.3860044982253552e-06,
+      "final_post_update_rms_m": 1.7623363187994994e-07,
+      "valid_measurement_fraction": 0.9991746794871795,
+      "min_valid_measurement_fraction": 0.9855769230769231,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7114702240876429,
+          "on_axis_strehl": 0.7114702240876429,
+          "fwhm_lambda_over_d": 0.9362461357744636
+        }
+      ],
+      "label": "synthetic_cmos@1 m8"
+    },
+    {
+      "config_hash": "bbfbd4e113b8e2d652f8eb12e12604f679dd102bf91b3b1a914a30581f77b6ab",
+      "root_seed": 32,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.9095370825380087,
+      "loop_s": 51.90359279233962,
+      "per_frame_s": 0.12975898198084906,
+      "process_peak_rss_bytes": 434601984,
+      "post_update_rms_m": 1.8680237916148498e-07,
+      "open_loop_rms_m": 1.3731421994812393e-06,
+      "final_post_update_rms_m": 1.7020653278075286e-07,
+      "valid_measurement_fraction": 0.9991266025641026,
+      "min_valid_measurement_fraction": 0.9903846153846154,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7283556566408098,
+          "on_axis_strehl": 0.7283556566408098,
+          "fwhm_lambda_over_d": 0.9348053815408681
+        }
+      ],
+      "label": "synthetic_cmos@1 m8"
+    },
+    {
+      "config_hash": "e7dd06b029242c970b170ed7f65acbd2e57b63d32eebe1ef0270431e2e968f7f",
+      "root_seed": 33,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 3.902732958085835,
+      "loop_s": 52.12334116641432,
+      "per_frame_s": 0.1303083529160358,
+      "process_peak_rss_bytes": 434601984,
+      "post_update_rms_m": 1.8752743077609892e-07,
+      "open_loop_rms_m": 1.7015792819521938e-06,
+      "final_post_update_rms_m": 2.467298068882942e-07,
+      "valid_measurement_fraction": 0.9993990384615384,
+      "min_valid_measurement_fraction": 0.9807692307692307,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7227502883511943,
+          "on_axis_strehl": 0.7227502883511943,
+          "fwhm_lambda_over_d": 0.938124363948837
+        }
+      ],
+      "label": "synthetic_cmos@1 m8"
+    },
+    {
+      "status": "refused",
+      "reason": "scalable calibration failed: sparse response contains all-zero columns: ['actuator-r0009-c0000', 'actuator-r0010-c0000', 'actuator-r0015-c0000', 'actuator-r0006-c0001', 'actuator-r0017-c0001', 'actuator-r0018-c0001', 'actuator-r0002-c0005', 'actuator-r0001-c0006', 'actuator-r0002-c0006', 'actuator-r0023-c0006'] ...",
+      "root_seed": 31,
+      "label": "synthetic_cmos@1 m10"
+    },
+    {
+      "status": "refused",
+      "reason": "scalable calibration failed: sparse response contains all-zero columns: ['actuator-r0009-c0000', 'actuator-r0015-c0000', 'actuator-r0006-c0001', 'actuator-r0018-c0001', 'actuator-r0005-c0002', 'actuator-r0001-c0006', 'actuator-r0023-c0006', 'actuator-r0000-c0009', 'actuator-r0012-c0009', 'actuator-r0024-c0009'] ...",
+      "root_seed": 32,
+      "label": "synthetic_cmos@1 m10"
+    },
+    {
+      "status": "refused",
+      "reason": "scalable calibration failed: sparse response contains all-zero columns: ['actuator-r0009-c0000', 'actuator-r0010-c0000', 'actuator-r0015-c0000', 'actuator-r0006-c0001', 'actuator-r0017-c0001', 'actuator-r0018-c0001', 'actuator-r0019-c0002', 'actuator-r0003-c0004', 'actuator-r0001-c0006', 'actuator-r0023-c0006'] ...",
+      "root_seed": 33,
+      "label": "synthetic_cmos@1 m10"
+    },
+    {
+      "status": "refused",
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample.",
+      "root_seed": 31,
+      "label": "synthetic_cmos@1 m12"
+    },
+    {
+      "status": "refused",
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample.",
+      "root_seed": 32,
+      "label": "synthetic_cmos@1 m12"
+    },
+    {
+      "status": "refused",
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample.",
+      "root_seed": 33,
+      "label": "synthetic_cmos@1 m12"
+    }
+  ],
+  "summary": {
+    "synthetic_ccd@1 m8": {
+      "runs": 3,
+      "post_update_rms_mean_m": 1.961055315451587e-07,
+      "post_update_rms_seed_std_m": 5.1181439024906395e-09,
+      "valid_fraction_mean": 0.9986752136752136,
+      "valid_fraction_seed_std": 0.0008512592635129662,
+      "peak_strehl_mean": 0.7071837294188802,
+      "peak_strehl_seed_std": 0.012353849560141949,
+      "lost_lock_runs": 0
+    },
+    "synthetic_emccd@1 m8": {
+      "runs": 3,
+      "post_update_rms_mean_m": 1.832569428981855e-07,
+      "post_update_rms_seed_std_m": 3.0238431021683613e-09,
+      "valid_fraction_mean": 0.999155982905983,
+      "valid_fraction_seed_std": 0.0007895915353050267,
+      "peak_strehl_mean": 0.7328882183097073,
+      "peak_strehl_seed_std": 0.008517733788168719,
+      "lost_lock_runs": 0
+    },
+    "synthetic_emccd@1 m10": {
+      "runs": 3,
+      "post_update_rms_mean_m": 2.2672948206958657e-06,
+      "post_update_rms_seed_std_m": 5.99847596388339e-07,
+      "valid_fraction_mean": 0.3380608974358974,
+      "valid_fraction_seed_std": 0.007668432499668497,
+      "peak_strehl_mean": 0.005977818974055457,
+      "peak_strehl_seed_std": 0.0008155781080340078,
+      "lost_lock_runs": 3
+    },
+    "synthetic_cmos@1 m8": {
+      "runs": 3,
+      "post_update_rms_mean_m": 1.8884577124533874e-07,
+      "post_update_rms_seed_std_m": 2.9338301382084697e-09,
+      "valid_fraction_mean": 0.9992334401709401,
+      "valid_fraction_seed_std": 0.00014541300842749728,
+      "peak_strehl_mean": 0.720858723026549,
+      "peak_strehl_seed_std": 0.00860017282732953,
+      "lost_lock_runs": 0
+    }
+  },
+  "refused": [
+    {
+      "label": "synthetic_ccd@1 m10",
+      "root_seed": 31,
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample."
+    },
+    {
+      "label": "synthetic_ccd@1 m10",
+      "root_seed": 32,
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample."
+    },
+    {
+      "label": "synthetic_ccd@1 m10",
+      "root_seed": 33,
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample."
+    },
+    {
+      "label": "synthetic_ccd@1 m12",
+      "root_seed": 31,
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample."
+    },
+    {
+      "label": "synthetic_ccd@1 m12",
+      "root_seed": 32,
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample."
+    },
+    {
+      "label": "synthetic_ccd@1 m12",
+      "root_seed": 33,
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample."
+    },
+    {
+      "label": "synthetic_emccd@1 m12",
+      "root_seed": 31,
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample."
+    },
+    {
+      "label": "synthetic_emccd@1 m12",
+      "root_seed": 32,
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample."
+    },
+    {
+      "label": "synthetic_emccd@1 m12",
+      "root_seed": 33,
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample."
+    },
+    {
+      "label": "synthetic_cmos@1 m10",
+      "root_seed": 31,
+      "reason": "scalable calibration failed: sparse response contains all-zero columns: ['actuator-r0009-c0000', 'actuator-r0010-c0000', 'actuator-r0015-c0000', 'actuator-r0006-c0001', 'actuator-r0017-c0001', 'actuator-r0018-c0001', 'actuator-r0002-c0005', 'actuator-r0001-c0006', 'actuator-r0002-c0006', 'actuator-r0023-c0006'] ..."
+    },
+    {
+      "label": "synthetic_cmos@1 m10",
+      "root_seed": 32,
+      "reason": "scalable calibration failed: sparse response contains all-zero columns: ['actuator-r0009-c0000', 'actuator-r0015-c0000', 'actuator-r0006-c0001', 'actuator-r0018-c0001', 'actuator-r0005-c0002', 'actuator-r0001-c0006', 'actuator-r0023-c0006', 'actuator-r0000-c0009', 'actuator-r0012-c0009', 'actuator-r0024-c0009'] ..."
+    },
+    {
+      "label": "synthetic_cmos@1 m10",
+      "root_seed": 33,
+      "reason": "scalable calibration failed: sparse response contains all-zero columns: ['actuator-r0009-c0000', 'actuator-r0010-c0000', 'actuator-r0015-c0000', 'actuator-r0006-c0001', 'actuator-r0017-c0001', 'actuator-r0018-c0001', 'actuator-r0019-c0002', 'actuator-r0003-c0004', 'actuator-r0001-c0006', 'actuator-r0023-c0006'] ..."
+    },
+    {
+      "label": "synthetic_cmos@1 m12",
+      "root_seed": 31,
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample."
+    },
+    {
+      "label": "synthetic_cmos@1 m12",
+      "root_seed": 32,
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample."
+    },
+    {
+      "label": "synthetic_cmos@1 m12",
+      "root_seed": 33,
+      "reason": "scalable calibration failed: calibration produced no rows valid across every probe sample."
+    }
+  ],
+  "wall_s": 767.6046950817108
+}

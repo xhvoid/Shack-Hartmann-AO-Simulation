@@ -26,6 +26,18 @@ DEFAULT_RANDOM_DOMAINS: tuple[str, ...] = (
     "ncpa",
 )
 
+# Domains of the physical detector path (DETECTOR_LEVEL_DEVELOPMENT_PROMPT
+# DET-01).  They are registered only on providers that build a physical
+# sensor, never added to DEFAULT_RANDOM_DOMAINS: the closed loop records one
+# stream ID per default domain, so a new default would change every published
+# loop history.  Derivation hashes the domain name, so registering these
+# cannot shift any existing domain's draws.
+DETECTOR_PHYSICS_RANDOM_DOMAINS: tuple[str, ...] = (
+    "detector.cic",
+    "detector.em_gain",
+    "detector.calibration_frames",
+)
+
 _Key = tuple[str | int, ...]
 _ScopeFrame = tuple[str, _Key]
 
@@ -276,9 +288,27 @@ def _encoded_key(key: _Key) -> list[dict[str, str]]:
     ]
 
 
+def with_detector_physics_domains(
+    streams: NamedRandomStreams,
+) -> NamedRandomStreams:
+    """Register the physical-detector domains on ``streams`` if missing.
+
+    Returns the same provider.  Only top-level providers can register; a
+    scoped view shares its parent's registry, so registering on the root
+    makes the domains available to every view derived from it.
+    """
+
+    for domain in DETECTOR_PHYSICS_RANDOM_DOMAINS:
+        if domain not in streams.registered_domains:
+            streams.register_domain(domain)
+    return streams
+
+
 __all__ = (
     "DEFAULT_RANDOM_DOMAINS",
+    "DETECTOR_PHYSICS_RANDOM_DOMAINS",
     "DERIVATION_SCHEME_ID",
+    "with_detector_physics_domains",
     "NamedRandomStreams",
     "RandomStreamError",
 )

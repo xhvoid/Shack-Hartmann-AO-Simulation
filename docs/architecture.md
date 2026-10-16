@@ -109,6 +109,7 @@ flowchart BT
     VALIDATION -.-> CONTROL
     VALIDATION -.-> SCIENCE
     IO --> CORE
+    IO --> DETECTOR
     IO -. "packaged data, not an import" .-> RESOURCES
     CLIENTS --> EXPERIMENTS
     CLIENTS --> VALIDATION

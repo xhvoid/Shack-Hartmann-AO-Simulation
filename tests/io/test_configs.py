@@ -67,6 +67,13 @@ EXPECTED_PROFILES = (
     ("eso_scao_medium_12m_derived", 2),
     ("eso_scao_medium_12m_weak_gate", 2),
     ("eso_drm_42m_scao_derived", 2),
+    ("det_ccd_2m_synthetic", 1),
+    ("det_emccd_2m_synthetic", 1),
+    ("det_cmos_2m_synthetic", 1),
+    ("det_emccd_2m_plane_synthetic", 1),
+    ("det_emccd_12m_medium_derived", 1),
+    ("det_ccd_42m_r3band_derived", 1),
+    ("det_emccd_12m_medium_derived", 2),
 )
 CURRENT_2M_PROFILES = (
     ("fast_2m_detector", 2),
@@ -271,10 +278,12 @@ def test_a_configuration_cannot_claim_a_schema_that_cannot_express_it() -> None:
         replace(v2, wfs=replace(v2.wfs, clip_negative_pixels=False))
     with pytest.raises(SystemConfigError, match="cannot express"):
         replace(v1, wfs=replace(v1.wfs, clip_negative_pixels=False))
+    # Schema 6 can state it for this even-window sensor; schema 7 would also
+    # require a window symmetric about the optical axis.
     kept = replace(
         v2,
         wfs=replace(v2.wfs, clip_negative_pixels=False),
-        record_schema_version=PROFILE_SCHEMA_VERSION,
+        record_schema_version=6,
     )
     assert kept.config_hash != v2.config_hash
 
@@ -370,6 +379,16 @@ def test_every_packaged_profile_identity_is_pinned() -> None:
         ("eso_scao_medium_12m_derived", 2): "659afd9993de3d9beb1d6fdc9e821ca7df7f8bcfb1bb41bf372fa445dce0a3f0",
         ("eso_scao_medium_12m_weak_gate", 2): "946b1d96a4cef1eb751ef570d2cdb32015b92fff687527dd80838ff7d0b99bb9",
         ("eso_drm_42m_scao_derived", 2): "c9c64a75e343cc57775b19b97f572d2c104887e1ad9d424f18141e782926a31d",
+        # Schema-v7 detector-level families: new identities, added without
+        # moving any entry above (scripts/generate_detector_level_profiles.py).
+        ("det_ccd_2m_synthetic", 1): "64ba0229a312ae3d8d59cfec16e1941cdd6b182f78d887f46784725a67850f95",
+        ("det_emccd_2m_synthetic", 1): "f81460c0ebeaa46663786a8b3dc4d3a16dcd9ec87c256aeb2bbcafab275e4309",
+        ("det_cmos_2m_synthetic", 1): "a76a71e92ba55b40e3883d7c855f040dd0dc8cd7b8676924dad8cd03935152ee",
+        ("det_emccd_2m_plane_synthetic", 1): "c6e1dc9338d23e8f543737143234fb959d6c7343cbd348037a82efb3d863eb70",
+        ("det_emccd_12m_medium_derived", 1): "1c7c3231b00b4512837e8024939d52177636dd8f7ffdb4fbaccabd19f1e48723",
+        ("det_ccd_42m_r3band_derived", 1): "1ebaf8f35f977e01e2d65a496cf9d4ea06a5a0bc79362852df97646090db8b4f",
+        # Version 2 of the 12 m profile (calibration source, uncertainty gating).
+        ("det_emccd_12m_medium_derived", 2): "a1a0ee5efcb9b7fe3c8bd82f01f4f4aebf57a1b864a3e0ad403ba9cbc6c2fc0d",
     }
     observed = {
         key: load_system_profile(*key).config_hash for key in available_system_profiles()
@@ -429,6 +448,15 @@ def test_every_packaged_nested_wfs_identity_is_pinned() -> None:
         ("eso_scao_medium_12m_derived", 2): "f52f89c98e2d44bcbe0706a1fc29c2aab4da7b927c5747db746919d484d8809d",
         ("eso_scao_medium_12m_weak_gate", 2): "f52f89c98e2d44bcbe0706a1fc29c2aab4da7b927c5747db746919d484d8809d",
         ("eso_drm_42m_scao_derived", 2): "f52f89c98e2d44bcbe0706a1fc29c2aab4da7b927c5747db746919d484d8809d",
+        # Schema-v7 detector-level families (odd centroid windows, no
+        # clipping of negative pixels; the detector physics is its own block).
+        ("det_ccd_2m_synthetic", 1): "ca6f5fb3f50bd573e81ae46610ff432c8db4f6649166175e37ce48914a0f20a5",
+        ("det_emccd_2m_synthetic", 1): "ca6f5fb3f50bd573e81ae46610ff432c8db4f6649166175e37ce48914a0f20a5",
+        ("det_cmos_2m_synthetic", 1): "ca6f5fb3f50bd573e81ae46610ff432c8db4f6649166175e37ce48914a0f20a5",
+        ("det_emccd_2m_plane_synthetic", 1): "b7a1276266977b16352f2f81d1002f91a71fab8321989bb6b658ffab93a6b770",
+        ("det_emccd_12m_medium_derived", 1): "4deb8116b7d99d52dafcae7ce3343809054b877535e8735bcd5bf66c9c9af548",
+        ("det_ccd_42m_r3band_derived", 1): "4deb8116b7d99d52dafcae7ce3343809054b877535e8735bcd5bf66c9c9af548",
+        ("det_emccd_12m_medium_derived", 2): "3291d15ad27d43c266b8078f54ff45d1fe0bf3e137d797564e42f2d455214e80",
     }
     observed = {
         key: load_system_profile(*key).component_config_hashes["wfs"]
