@@ -428,3 +428,64 @@ def test_internal_source_calibration_ensemble_matches_the_model() -> None:
     ])
     ratio = centroids.std(axis=0, ddof=1) / predicted
     assert np.all(np.abs(ratio - 1.0) < 0.15), ratio
+
+
+# -- Readiness review 2026-10-16: raw readout with a CMOS gain map ------------
+
+RAW_READOUT = PixelProcessingConfig(mode="raw_readout")
+
+
+def raw_readout_fixture(**overrides: object) -> NoiseFixture:
+    """7x7 CMOS window, 5000 e- spot, 15 % gain map, 200 ADU bias plus offsets."""
+
+    cam = camera(
+        model="cmos", read_noise_e=8.0, dark_e_per_s=0.0, prnu_rms=0.0, offset_map_rms_adu=3.0,
+        cmos_gain_map_rms=0.15, adc_bits=None,
+    )
+    if overrides:
+        cam = replace(cam, **overrides)  # type: ignore[arg-type]
+    return NoiseFixture(
+        camera=cam, processing=RAW_READOUT, source_e=gaussian_spot(7, 5000.0, 1.2),
+        window_px=7, sky_e_per_pixel=0.0, seed=1,
+    )
+
+
+@pytest.mark.parametrize(
+    "overrides, scale, atol",
+    [
+        # ADC off: raw is output-e equivalent, the model's scale is raw / G.
+        ({}, 1.0, 1e-9),
+        ({"conversion_gain_e_per_adu": 2.5}, 1.0, 1e-9),
+        # ADC on: raw is in ADU, the model's scale is raw * conversion / G;
+        # the reference ADC is the dithered expectation (8 e- read noise).
+        ({"adc_bits": 16, "conversion_gain_e_per_adu": 0.5}, 0.5, 1e-6),
+    ],
+    ids=["adc_off", "adc_off_gain_2p5", "adc_on"],
+)
+def test_raw_readout_expectation_matches_the_forward_frame_with_a_gain_map(
+    overrides: dict, scale: float, atol: float
+) -> None:
+    # The camera adds the pedestal after the gain-map division; the model
+    # must not divide it by the gain map (readiness review: up to 92.6 e-
+    # apart and a 0.02 px centroid offset before).
+    fix = raw_readout_fixture(**overrides)
+    raw = apply_physical_camera(
+        fix.source_e[None], 0.0, fix.camera, fix.maps().subset(np.arange(1)),
+        exposure_s=fix.exposure_s, include_noise=False, generators=None, poisson_floor_e=0.0,
+    ).raw
+    quality = model_prediction(fix)
+    assert quality.supported[0]
+    np.testing.assert_allclose(quality.expected_processed_e, raw * scale, rtol=0.0, atol=atol * max(scale, 1.0) * 10)
+    np.testing.assert_allclose(
+        centre_of_gravity(quality.expected_processed_e), centre_of_gravity(raw), rtol=0.0, atol=1e-9
+    )
+
+
+def test_raw_readout_temporal_scatter_with_a_gain_map_fast() -> None:
+    # 1000 trials: 2.2 % standard error; SNR_T is high, so the 15 % band of
+    # the fast variants applies.
+    fix = raw_readout_fixture()
+    quality = model_prediction(fix)
+    measured = temporal_trials(fix, 1000)["centroids_px"].std(axis=0, ddof=1)
+    ratio = measured / quality.centroid_sigma_xy_px[0]
+    assert np.all(np.abs(ratio - 1.0) < 0.15), ratio
