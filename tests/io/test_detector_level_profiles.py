@@ -30,6 +30,7 @@ DETECTOR_LEVEL_PROFILES = (
     ("det_emccd_12m_medium_derived", 1),
     ("det_ccd_42m_r3band_derived", 1),
     ("det_emccd_12m_medium_derived", 2),
+    ("det_emccd_12m_medium_derived", 3),
 )
 
 
@@ -140,3 +141,32 @@ def test_a_calibration_source_is_optional_positive_and_hash_neutral_when_absent(
     record["config"]["detector_physics"]["calibration_source_detected_e_per_full_subap_frame"] = -1.0
     with pytest.raises(SystemConfigError, match="positive"):
         system_config_from_mapping(record)
+
+
+def test_version_3_is_version_2_with_damping_and_the_reset_policy() -> None:
+    """@3 changes exactly the reconstructor damping and adds the reset policy."""
+
+    version_2 = load_system_profile("det_emccd_12m_medium_derived", 2)
+    version_3 = load_system_profile("det_emccd_12m_medium_derived", 3)
+    assert version_2.reconstructor.alpha == 0.001
+    assert version_3.reconstructor.alpha == 0.1
+    assert version_2.controller.recovery is None
+    recovery = version_3.controller.recovery
+    assert recovery is not None
+    assert (recovery.rejected_frames_before_decay, recovery.decay_per_rejected_frame) == (2, 1.0)
+    assert recovery.fallback_min_valid_fraction is None
+    assert recovery.fallback_min_actuator_coverage is None
+    assert recovery.gain_full_valid_fraction is None
+    restored = replace(
+        version_3,
+        reconstructor=replace(version_3.reconstructor, alpha=version_2.reconstructor.alpha),
+        controller=replace(version_3.controller, recovery=None),
+        profile=version_2.profile,
+    )
+    assert restored == version_2
+    changed = {
+        key
+        for key, value in version_3.component_config_hashes.items()
+        if version_2.component_config_hashes[key] != value
+    }
+    assert changed == {"profile", "reconstructor", "controller"}

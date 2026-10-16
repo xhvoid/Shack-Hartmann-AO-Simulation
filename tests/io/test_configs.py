@@ -74,6 +74,7 @@ EXPECTED_PROFILES = (
     ("det_emccd_12m_medium_derived", 1),
     ("det_ccd_42m_r3band_derived", 1),
     ("det_emccd_12m_medium_derived", 2),
+    ("det_emccd_12m_medium_derived", 3),
 )
 CURRENT_2M_PROFILES = (
     ("fast_2m_detector", 2),
@@ -389,6 +390,8 @@ def test_every_packaged_profile_identity_is_pinned() -> None:
         ("det_ccd_42m_r3band_derived", 1): "1ebaf8f35f977e01e2d65a496cf9d4ea06a5a0bc79362852df97646090db8b4f",
         # Version 2 of the 12 m profile (calibration source, uncertainty gating).
         ("det_emccd_12m_medium_derived", 2): "a1a0ee5efcb9b7fe3c8bd82f01f4f4aebf57a1b864a3e0ad403ba9cbc6c2fc0d",
+        # Version 3 (Tikhonov damping 0.1 and the reset recovery policy).
+        ("det_emccd_12m_medium_derived", 3): "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
     }
     observed = {
         key: load_system_profile(*key).config_hash for key in available_system_profiles()
@@ -457,6 +460,8 @@ def test_every_packaged_nested_wfs_identity_is_pinned() -> None:
         ("det_emccd_12m_medium_derived", 1): "4deb8116b7d99d52dafcae7ce3343809054b877535e8735bcd5bf66c9c9af548",
         ("det_ccd_42m_r3band_derived", 1): "4deb8116b7d99d52dafcae7ce3343809054b877535e8735bcd5bf66c9c9af548",
         ("det_emccd_12m_medium_derived", 2): "3291d15ad27d43c266b8078f54ff45d1fe0bf3e137d797564e42f2d455214e80",
+        # Version 3 changes the reconstructor and controller, not the WFS.
+        ("det_emccd_12m_medium_derived", 3): "3291d15ad27d43c266b8078f54ff45d1fe0bf3e137d797564e42f2d455214e80",
     }
     observed = {
         key: load_system_profile(*key).component_config_hashes["wfs"]

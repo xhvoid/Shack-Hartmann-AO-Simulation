@@ -18,6 +18,9 @@ Families (new names, never new versions of existing profiles):
     electronic coupling and a three-node R3 band.
 ``det_emccd_12m_medium_derived@1``
     Milestone B on ``eso_scao_medium_12m_derived@2`` (scalable path).
+    Version 2 calibrates with a bright internal source and gates on the
+    ``detector_covariance_v1`` domain; version 3 adds Tikhonov damping 0.1
+    and the reset-to-flat recovery policy.
 ``det_ccd_42m_r3band_derived@1``
     ``eso_drm_42m_scao_derived@2`` with the R3 band (0.6-0.9 um) and 3 e-
     read noise, and R4's 1e5 photoelectrons per frame per subaperture.
@@ -41,6 +44,7 @@ from shwfs_ao.detector.processing import PixelProcessingConfig
 from shwfs_ao.io.configs import (
     DetectorPhysicsConfig,
     ProfileProvenance,
+    RecoveryPolicyConfig,
     SystemConfig,
     load_system_profile,
     system_config_to_mapping,
@@ -271,11 +275,23 @@ def build(name: str) -> SystemConfig:
 CALIBRATION_SOURCE_E = 2.5e3
 VERSION_2 = ("det_emccd_12m_medium_derived",)
 
+# Version 3 of the 12 m profile (post-hoc, recorded reason): at m_AB = 11 @2
+# latched up when the valid fraction fell below 0.5, and with a reset policy
+# alone it still had 4-12 excursions per 400 frames.  Their trigger is the
+# global waffle mode, which the relative damping of 0.001 leaves
+# unregularized.  The predeclared evaluation on root seeds 21-25
+# (docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md, "Excursion trigger at
+# m_AB = 11") selected damping 0.1 with the reset kept as a safety net.
+DAMPING_RELATIVE_V3 = 0.1
+VERSION_3 = ("det_emccd_12m_medium_derived",)
+
 
 def build_version(name: str, version: int) -> SystemConfig:
     config = build(name)
     if version == 1:
         return config
+    if version == 3 and name in VERSION_3:
+        return _version_3(name)
     if version != 2 or name not in VERSION_2:
         raise KeyError((name, version))
     assert config.detector_physics is not None
@@ -312,8 +328,52 @@ def build_version(name: str, version: int) -> SystemConfig:
     )
 
 
+def _version_3(name: str) -> SystemConfig:
+    config = build_version(name, 2)
+    rationale = (
+        f"{name}@2 with two changes made after its post-hoc E3 dynamics "
+        "diagnostics: reconstructor.alpha = 0.1 (was 0.001), because the "
+        "relative damping of 0.001 leaves the global waffle mode, sensed about 40 "
+        "times more weakly than a typical mode, unregularized, and its noise-driven "
+        "wander dropped lenslets and latched the loop up at m_AB = 11; and "
+        "controller.recovery resets the DM to flat after two consecutive rejected "
+        "frames, a safety net that never acts while frames are accepted.  "
+        "Selected by a predeclared evaluation on root seeds 21-25 at m_AB 10-12."
+    )
+    provenance = Provenance(
+        source_class="synthetic_assumed",
+        source_note=config.profile.provenance.source_note,
+        source_id=f"shwfs_ao.system_profile.{name}.v3",
+        references=config.profile.provenance.references,
+    )
+    return replace(
+        config,
+        reconstructor=replace(config.reconstructor, alpha=DAMPING_RELATIVE_V3),
+        controller=replace(
+            config.controller,
+            recovery=RecoveryPolicyConfig(
+                rejected_frames_before_decay=2,
+                decay_per_rejected_frame=1.0,
+                fallback_min_valid_fraction=None,
+                fallback_min_actuator_coverage=None,
+                gain_full_valid_fraction=None,
+            ),
+        ),
+        profile=ProfileProvenance(
+            profile_name=name,
+            profile_version=3,
+            baseline_rationale=rationale,
+            provenance=provenance,
+        ),
+    )
+
+
 def _all_versions() -> list[tuple[str, int]]:
-    return [(name, 1) for name in SPECS] + [(name, 2) for name in VERSION_2]
+    return (
+        [(name, 1) for name in SPECS]
+        + [(name, 2) for name in VERSION_2]
+        + [(name, 3) for name in VERSION_3]
+    )
 
 
 def render(name: str, version: int = 1) -> str:
@@ -491,6 +551,24 @@ def ledger_record() -> dict[str, object]:
         rationale="2500 e- (an m_AB = 8 equivalent at 12 m for the EMCCD) for reference centroids and interaction probes, without sky; @1 calibrated at the operating flux and refused to build from m_AB = 11",
         limitation="the internal source has the operating spectral weights; its sky-free reference differs from the operating sky pedestal only by the sky master (about 1e-4 e- per pixel)",
         tests=["tests/wfs/test_physical_sensor.py::test_a_calibration_source_decouples_calibration_from_the_operating_flux"])
+    v3_only = [pid for pid in ids if pid.endswith("@3")]
+
+    def v3_values(*keys: str) -> dict[str, dict[str, object]]:
+        return {pid: {key: paths[pid][key] for key in keys if key in paths[pid]} for pid in v3_only}
+
+    row("B20", "Reconstructor Tikhonov damping (version 3, post-hoc)", "engineering_assumption",
+        v3_values("reconstructor.alpha"), unit="relative to the RMS column norm",
+        rationale="0.1 (was 0.001): 0.001 leaves the global waffle mode (singular value 0.0265 of the RMS column norm) unregularized, and its noise-driven wander latched the loop up at m_AB = 11; 0.1 damps waffle by 15x and leaves the median mode at 0.99 of its gain; selected on root seeds 11 and 12 (0.03, 0.1, 0.3) and evaluated, predeclared, on root seeds 21-25 (det_excursion_e3_12m_v2.json)",
+        limitation="changed after inspecting E3 on @2; selected at m_AB = 11 on the 12 m geometry only; @2 keeps 0.001 and its results stand",
+        tests=["tests/io/test_detector_level_profiles.py::test_version_3_is_version_2_with_damping_and_the_reset_policy"])
+    row("B21", "Closed-loop recovery policy (version 3)", "engineering_assumption",
+        v3_values(*(f"controller.recovery.{key}" for key in (
+            "rejected_frames_before_decay", "decay_per_rejected_frame", "fallback_min_valid_fraction",
+            "fallback_min_actuator_coverage", "gain_full_valid_fraction"))),
+        unit="frames; fraction of the command removed per frame; null = off",
+        rationale="reset the DM to flat after two consecutive rejected frames (det_recovery_e3_12m_v2.json); with the version-3 damping no frame is rejected at m_AB 10-11 on the evaluation seeds, so it is a safety net that never acts there; the subset fallback and the gain schedule stay off (null): neither recovered the loop in that evaluation",
+        limitation="a reset costs about 20 frames of re-closing when it fires",
+        tests=["tests/control/test_recovery.py", "tests/io/test_recovery_policy_config.py"])
     row("B16", "Noise-on reconstruction validity floor", "engineering_assumption", by_profile("reconstructor.min_valid_fraction"),
         unit="fraction", rationale="0.75 (the 2 m base profiles required 1.0, which freezes the DM on the first noise-invalidated lenslet); the ESO tiers keep 0.5",
         limitation="none", tests=_TESTS["gain"])
@@ -504,8 +582,10 @@ def ledger_record() -> dict[str, object]:
     inherited = {}
     for pid, config in configs.items():
         base_name, base_version = SPECS[pid.split("@")[0]]["base"]  # type: ignore[misc]
-        if pid.endswith("@2"):
-            base_name, base_version = pid.split("@")[0], 1
+        version = int(pid.split("@")[1])
+        if version > 1:
+            # Each later version is derived from the one before it.
+            base_name, base_version = pid.split("@")[0], version - 1
         covered = covered_for(pid)
         inherited[pid] = {
             path: f"derived:{base_name}@{base_version}"
