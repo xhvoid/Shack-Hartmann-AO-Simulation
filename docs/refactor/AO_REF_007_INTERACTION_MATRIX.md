@@ -1,5 +1,12 @@
 # AO-REF-007: canonical interaction-matrix calibration
 
+> **Status of this page (2026-10-18).** This is a ticket record of the refactor
+> that produced the `shwfs_ao` package. Its contract statements (units,
+> identities, protocols, tolerances) still describe the code unless the
+> [technical reference](../technical_reference.md) says otherwise; its status
+> lines, dates and next steps are historical. Open work is in the
+> [roadmap](../roadmap.md).
+
 AO-REF-007 replaces the repository's response/poke finite-difference loops
 with one unit-explicit calibration engine in
 `shwfs_ao.calibration.interaction`. The five installed legacy builders keep

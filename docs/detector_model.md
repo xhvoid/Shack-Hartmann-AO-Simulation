@@ -249,7 +249,7 @@ removes, with its bias and offset pedestal taken out. Version 1 used the
 ideal background there. With a one-frame sky master, version 1 put the
 processed flux at 993 e⁻ instead of 822 e⁻, and the scatter 23 % too
 low (review R2). Version 2 matches the measurement to 3e-14 and Monte Carlo
-to within 2.3 %.
+to within 2.4 %.
 
 The calibration-ensemble variance is linearized about the nominal
 (expected) background instead, and its master protocol comes from the

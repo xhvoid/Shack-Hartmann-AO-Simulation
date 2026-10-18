@@ -1,5 +1,12 @@
 # AO-REF-000 Notebook Inventory
 
+> **Status of this page (2026-10-18).** This is a ticket record of the refactor
+> that produced the `shwfs_ao` package. Its contract statements (units,
+> identities, protocols, tolerances) still describe the code unless the
+> [technical reference](../technical_reference.md) says otherwise; its status
+> lines, dates and next steps are historical. Open work is in the
+> [roadmap](../roadmap.md).
+
 This is the one-for-one disposition manifest for all sixteen current notebooks. Hashes are exact file-byte SHA-256 values including metadata and embedded outputs. Runtime classes are inferred without executing notebooks. No notebook contains network-fetch code; notebook 11 is offline but depends on local captured/package resources.
 
 Five notebook files already differed from HEAD when AO-REF-000 began: both 07 notebooks, 08, 10, and 11. Their current hashes are observations, not an assertion that their outputs are accepted.

@@ -348,6 +348,16 @@
       "requires": []
     },
     {
+      "source": "examples/run_eso_scao_benchmark.py",
+      "kind": "example",
+      "requires": []
+    },
+    {
+      "source": "examples/run_detector_level_demo.py",
+      "kind": "example",
+      "requires": []
+    },
+    {
       "source": "examples/run_native_hcipy_validation.py",
       "kind": "example",
       "requires": [

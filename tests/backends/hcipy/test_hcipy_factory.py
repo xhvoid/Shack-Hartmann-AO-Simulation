@@ -138,6 +138,11 @@ def _tiny_hcipy_system_config() -> SystemConfig:
         ),
         science=ScienceConfig(psf_pad_factor=2),
         random=RandomSeedConfig(root_seed=23),
+        # A schema-6 record: it keeps the historical geometry_cell_center lens
+        # axes that these contracts were written against.  The default record
+        # schema is 7, which requires pixel_block_center for an HCIPy
+        # detector-level record, so leaving this implicit rejects the fixture.
+        record_schema_version=6,
         profile=ProfileProvenance(
             profile_name="tiny_hcipy",
             profile_version=1,

@@ -1,5 +1,12 @@
 # AO-REF-008: mask-aware cached reconstructors
 
+> **Status of this page (2026-10-18).** This is a ticket record of the refactor
+> that produced the `shwfs_ao` package. Its contract statements (units,
+> identities, protocols, tolerances) still describe the code unless the
+> [technical reference](../technical_reference.md) says otherwise; its status
+> lines, dates and next steps are historical. Open work is in the
+> [roadmap](../roadmap.md).
+
 AO-REF-008 separates inverse reconstruction policy from interaction-matrix
 calibration. The calibrated forward operator remains an immutable
 `shwfs_ao.calibration.InteractionMatrix`; least-squares, truncated-SVD, and

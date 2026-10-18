@@ -1,5 +1,12 @@
 # AO-REF-003A Shared Contracts and Native Atmosphere
 
+> **Status of this page (2026-10-18).** This is a ticket record of the refactor
+> that produced the `shwfs_ao` package. Its contract statements (units,
+> identities, protocols, tolerances) still describe the code unless the
+> [technical reference](../technical_reference.md) says otherwise; its status
+> lines, dates and next steps are historical. Open work is in the
+> [roadmap](../roadmap.md).
+
 AO-REF-003A establishes the backend-neutral boundary used by later component
 tickets. The canonical interfaces live in `shwfs_ao.core`; they import NumPy
 but no detector, I/O, experiment, legacy, or optional-backend implementation.

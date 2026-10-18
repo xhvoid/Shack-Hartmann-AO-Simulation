@@ -201,7 +201,7 @@ burn-in; in every run below the image peak is on axis.
 | `ci` | 32 (8) | 1439 → 233 nm | 0.65 | 2.6 s, 130 MiB |
 | `medium` | 200 (50) | 1300 → 175 nm | 0.78 | 47 s, 301 MiB |
 | `medium-gate` | 120 (30) | 449 → 71 nm | 0.96 | 16 s, 299 MiB |
-| `full` | 20 (5) | 1624 → 372 nm | 0.43 | 110 s, 1.44 GiB |
+| `full` | 20 (5) | 1624 → 372 nm | 0.43 | 110 s, 1.41 GiB |
 | `reference` | 2000 (200) | 1683 → 173 nm | 0.78 | 62 min, 1.64 GiB |
 
 The `full` tier is capability evidence: 20 frames do not settle the loop.

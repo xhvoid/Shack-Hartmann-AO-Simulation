@@ -8,7 +8,9 @@ against ``portfolio_2m_detector@4``: the same 2 m detector-level system under
 its single 10 m/s layer.
 
 Writes ``eso_elt_turbulence_demo.png`` plus the CSV tables behind it to
-``figures/eso_elt_turbulence`` (override with ``AO_DEMO_OUTPUT_DIR``).
+``$AO_DEMO_OUTPUT_DIR`` or, when that variable is unset, to the disposable
+``outputs/examples/eso_elt_turbulence``.  To refresh the tracked README figure,
+set ``AO_DEMO_OUTPUT_DIR=figures/eso_elt_turbulence`` explicitly.
 Runtime is about a minute.
 """
 
@@ -165,7 +167,7 @@ def _style(axis) -> None:
 
 def main() -> None:
     output_dir = Path(
-        os.environ.get("AO_DEMO_OUTPUT_DIR", ROOT / "figures" / "eso_elt_turbulence")
+        os.environ.get("AO_DEMO_OUTPUT_DIR", ROOT / "outputs" / "examples" / "eso_elt_turbulence")
     )
     output_dir.mkdir(parents=True, exist_ok=True)
     profile = eso_elt_turbulence_profile()

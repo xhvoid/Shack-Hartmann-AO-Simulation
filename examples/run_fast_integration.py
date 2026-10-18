@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main() -> None:
     output_dir = Path(
-        os.environ.get("AO_DEMO_OUTPUT_DIR", ROOT / "figures" / "detector_level_SCAO")
+        os.environ.get("AO_DEMO_OUTPUT_DIR", ROOT / "outputs" / "examples" / "detector_level_SCAO")
     )
     reference_metrics_path = Path(
         os.environ.get(

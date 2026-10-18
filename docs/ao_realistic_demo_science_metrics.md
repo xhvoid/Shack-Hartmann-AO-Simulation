@@ -2,6 +2,10 @@
 
 # Science metrics notes
 
+> **Historical component note (2026-10-18).** Written during an earlier stage
+> of the repository and kept as implementation history. The current
+> implementation is explained in the [technical reference](technical_reference.md).
+
 The canonical science layer is `shwfs_ao.science`. It separates immutable
 bandpasses, backend-independent monochromatic propagation construction, and
 scalar physical-grid metrics. The centered NumPy FFT implementation lives in

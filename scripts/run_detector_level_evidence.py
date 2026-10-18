@@ -12,8 +12,12 @@ Subcommands
 
 Every record stores the command, versions, configuration hashes and seeds.
 ``e2-12m``, ``e3``, ``e4``, ``e6``, ``det08`` (12 m) and ``e5`` (42 m) are the
-gated runs of prompt section 2.5.  They were enabled by the user on
-2026-10-16; anyone rerunning them must obtain the same enablement.
+gated runs of prompt section 2.5; so are the 12 m recovery, excursion,
+noise-isolation and ``-v2``/``-v3`` commands.  A gated command runs only with
+``--enabled-by-user`` naming the date and wording of the user's go-ahead for
+that run; without it, it refuses before anything runs.  The historical records
+were enabled on 2026-10-16 and keep their notes; a resume that adds runs keeps
+the series' note and records its own under ``resumed_enabled_by_user``.
 
 ``e3-v3`` and ``e4-v3`` rerun E3 and E4 on ``det_emccd_12m_medium_derived@3``
 (Tikhonov damping 0.1 and the reset policy), same seeds and settings as @2.
@@ -36,10 +40,19 @@ isolate the temporal detector-noise variance (review 2026-10-16).
 ``e6-v3`` reruns E6 on ``det_emccd_12m_medium_derived@3`` with a
 photometry-matched monochromatic arm (gated).
 
+Records go to the directory named by ``--output-dir PATH`` (created when
+needed).  Without it they go to the historical evidence directory,
+``docs/refactor/detector_level_evidence``, which is kept as the compatible
+default for maintaining that evidence.  Ordinary and verification runs should
+name their own directory.  Every record header states the directory it was
+written to; no identity depends on it.
+
 Existing records are never replaced silently (review R6).  A command whose
 record exists stops unless one of the global options says what to do:
-``--output NAME`` writes a fresh record under another name, ``--overwrite``
-replaces a one-shot record, and ``--resume`` continues a gated series.  On
+``--output NAME`` writes a fresh record under another file name (a name, not
+a directory), ``--overwrite`` replaces a one-shot record, and ``--resume``
+continues a gated series.  A resume that finds every planned run already
+recorded says so and leaves the record unchanged.  On
 resume every saved run must carry the protocol identity this invocation would
 give it (configuration hash with seed and frame count, burn-in, execution
 options, and the code identity: git HEAD plus a digest of uncommitted source
@@ -70,8 +83,9 @@ REPOSITORY = Path(__file__).resolve().parents[1]
 EVIDENCE_DIR = REPOSITORY / "docs/refactor/detector_level_evidence"
 # Protocol identity version of gated-series runs (review R6).
 SERIES_PROTOCOL_VERSION = 2
-# Global options, set by main(): fresh output name, overwrite, resume.
-OPTIONS = argparse.Namespace(output=None, overwrite=False, resume=False, enabled_by_user=None)
+# Global options, set by main(): fresh output name, overwrite, resume,
+# enablement note and output directory (None selects EVIDENCE_DIR).
+OPTIONS = argparse.Namespace(output=None, overwrite=False, resume=False, enabled_by_user=None, output_dir=None)
 _STARTED: set[Path] = set()
 GAINS = (0.2, 0.3, 0.4, 0.5)
 TWO_METRE_PROFILES = (
@@ -93,6 +107,10 @@ def _header(command: str) -> dict[str, Any]:
         "scipy": scipy.__version__,
         "machine": platform.machine(),
         "started_unix_s": time.time(),
+        # Audit metadata: where this invocation writes.  No protocol,
+        # configuration or code identity depends on it.
+        "output_directory": _output_directory_label(),
+        "output_directory_source": "legacy default" if OPTIONS.output_dir is None else "--output-dir",
     }
 
 
@@ -100,14 +118,38 @@ class EvidenceRecordExists(SystemExit):
     """An evidence record exists and no option says how to treat it."""
 
 
+class EnablementMissing(SystemExit):
+    """A gated run was started without the user's enablement note."""
+
+
+def output_directory() -> Path:
+    """The directory records go to: ``--output-dir``, else the evidence directory."""
+
+    return EVIDENCE_DIR if OPTIONS.output_dir is None else Path(OPTIONS.output_dir)
+
+
+def _output_directory_label() -> str:
+    """The output directory as recorded: relative to the repository when inside it.
+
+    A committed record then carries no local checkout path; a directory the
+    caller chose outside the repository is recorded as its absolute path.
+    """
+
+    directory = output_directory().resolve()
+    try:
+        return directory.relative_to(REPOSITORY).as_posix()
+    except ValueError:
+        return str(directory)
+
+
 def _record_path(name: str) -> Path:
-    return EVIDENCE_DIR / (OPTIONS.output or name)
+    return output_directory() / (OPTIONS.output or name)
 
 
 def _write(name: str, record: dict[str, Any], *, resumed: bool = False) -> Path:
     """Write a record; the first write of an invocation never replaces silently."""
 
-    EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+    output_directory().mkdir(parents=True, exist_ok=True)
     path = _record_path(name)
     if path not in _STARTED:
         if path.exists() and not (OPTIONS.overwrite or resumed):
@@ -403,7 +445,7 @@ def _gated_series(
     n_steps: int,
     burn_in: int,
     execution: Any,
-    enabled_by_user: str = "2026-10-16: every gated run enabled, one at a time",
+    enabled_by_user: str | None = None,
     runner: Any = None,
 ) -> None:
     """Run ``(label, config, root_seed)`` entries one at a time, saving after each.
@@ -423,7 +465,8 @@ def _gated_series(
     path = _record_path(name)
     code = code_identity()
     record = _header(command)
-    record["enabled_by_user"] = OPTIONS.enabled_by_user or enabled_by_user
+    note = OPTIONS.enabled_by_user or enabled_by_user
+    record["enabled_by_user"] = note
     record["n_steps"] = n_steps
     record["burn_in_frames"] = burn_in
     record["series_protocol_version"] = SERIES_PROTOCOL_VERSION
@@ -469,11 +512,25 @@ def _gated_series(
             )
         record["runs"] = list(previous.get("runs", []))
         record["resumed_from_started_unix_s"] = previous.get("started_unix_s")
+        # The series keeps the go-ahead it started under; a resume that runs
+        # more records its own note beside it instead of rewriting that one.
+        record["enabled_by_user"] = previous.get("enabled_by_user")
+        resumed_notes = list(previous.get("resumed_enabled_by_user", []))
         resumed = True
     done = {(entry["label"], entry["root_seed"]) for entry in record["runs"]}
+    pending = [(label, seed) for label, _, seed in plan if (label, seed) not in done]
+    if pending and note is None:
+        raise EnablementMissing(
+            f"{command}: a gated run needs --enabled-by-user (the date and wording of the "
+            "user's go-ahead for this run); nothing ran."
+        )
+    if resumed and pending:
+        record["resumed_enabled_by_user"] = [*resumed_notes, note]
+    ran = 0
     for label, config, seed in plan:
         if (label, seed) in done:
             continue
+        ran += 1
         try:
             result = run(config, root_seed=seed, n_steps=n_steps, burn_in_frames=burn_in, execution=execution)
         except (ScaoConstructionError, InteractionMatrixError) as exc:
@@ -514,6 +571,14 @@ def _gated_series(
                 f"Ne={result['detected_e_full_subap']:.0f} wall={result['wall_s']:.1f}s",
                 flush=True,
             )
+    if resumed and ran == 0:
+        # A resume with nothing left to run must say so: nothing ran, and
+        # the record on disk is unchanged.
+        print(
+            f"{path}: all {len(plan)} planned runs are already recorded under this "
+            "protocol; nothing ran and the record is unchanged.",
+            flush=True,
+        )
 
 
 def _medium(version: int = 1):
@@ -531,22 +596,18 @@ def _summary_execution(**keywords: Any) -> Any:
 def e2_12m(arguments: argparse.Namespace) -> None:
     from shwfs_ao.experiments.detector_level import open_loop_noise_propagation
 
+    if OPTIONS.enabled_by_user is None:
+        raise EnablementMissing(
+            "e2-12m: a gated run needs --enabled-by-user (the date and wording of the "
+            "user's go-ahead for this run); nothing ran."
+        )
     record = _header("e2-12m")
-    record["enabled_by_user"] = OPTIONS.enabled_by_user or "2026-10-16"
+    record["enabled_by_user"] = OPTIONS.enabled_by_user
     result = open_loop_noise_propagation(_medium(), trials=4000, execution=_summary_execution())
     record["results"] = [result]
     record["wall_s"] = time.time() - record["started_unix_s"]
     _write("det09_e2_noise_propagation_12m.json", record)
     print(result["slope_variance_ratio_measured_over_predicted"], result["command_trace_ratio"], flush=True)
-
-
-# Version 3 of the 12 m profile was published, and its E3/E4 rerun enabled,
-# by the user's go-ahead of 2026-10-16.
-V3_ENABLEMENT = "2026-10-16: the user's go-ahead for det_emccd_12m_medium_derived@3, which names its E3/E4 rerun"
-
-
-def _enablement(version: int) -> dict[str, str]:
-    return {"enabled_by_user": V3_ENABLEMENT} if version == 3 else {}
 
 
 def e3(arguments: argparse.Namespace, *, version: int = 1) -> None:
@@ -559,7 +620,7 @@ def e3(arguments: argparse.Namespace, *, version: int = 1) -> None:
         for seed in (21, 22, 23, 24, 25)
     ]
     name = "det09_e3_magnitude_scan_12m.json" if version == 1 else f"det09_e3_magnitude_scan_12m_v{version}.json"
-    _gated_series(name, f"e3 (profile @{version})", plan, n_steps=400, burn_in=100, execution=_summary_execution(), **_enablement(version))
+    _gated_series(name, f"e3 (profile @{version})", plan, n_steps=400, burn_in=100, execution=_summary_execution())
 
 
 def e4(arguments: argparse.Namespace, *, version: int = 1) -> None:
@@ -573,7 +634,7 @@ def e4(arguments: argparse.Namespace, *, version: int = 1) -> None:
             for seed in (31, 32, 33):
                 plan.append((f"{camera}@1 m{magnitude:g}", with_magnitude(cam_config, magnitude), seed))
     name = "det09_e4_camera_comparison_12m.json" if version == 1 else f"det09_e4_camera_comparison_12m_v{version}.json"
-    _gated_series(name, f"e4 (profile @{version})", plan, n_steps=400, burn_in=100, execution=_summary_execution(), **_enablement(version))
+    _gated_series(name, f"e4 (profile @{version})", plan, n_steps=400, burn_in=100, execution=_summary_execution())
 
 
 def e6(arguments: argparse.Namespace, *, version: int = 1) -> None:
@@ -604,12 +665,9 @@ def e6(arguments: argparse.Namespace, *, version: int = 1) -> None:
         variants["monochromatic 700 nm, photometry matched to the baseline"] = with_matched_photometry(mono, base)
     plan = [(label, config, seed) for label, config in variants.items() for seed in (41, 42, 43)]
     name = "det09_e6_effect_sizes_12m.json" if version == 1 else f"det09_e6_effect_sizes_12m_v{version}.json"
-    enablement = (
-        {"enabled_by_user": arguments.enabled_by_user} if version >= 3 else _enablement(version)
-    )
     _gated_series(
         name, f"e6 (profile @{version})", plan, n_steps=400, burn_in=100, execution=_summary_execution(),
-        **enablement,
+        enabled_by_user=getattr(arguments, "enabled_by_user", None),
     )
 
 
@@ -656,7 +714,6 @@ def e3_recovery(arguments: argparse.Namespace) -> None:
         n_steps=400,
         burn_in=100,
         execution=_summary_execution(),
-        enabled_by_user="2026-10-16: the user's go-ahead for the recovery-policy task, which names these runs",
     )
 
 
@@ -713,7 +770,6 @@ def e3_excursion(arguments: argparse.Namespace) -> None:
         n_steps=400,
         burn_in=100,
         execution=_summary_execution(),
-        enabled_by_user="2026-10-16: the user's go-ahead for the excursion-trigger task, which names these runs",
     )
 
 
@@ -790,9 +846,14 @@ def e5(arguments: argparse.Namespace) -> None:
     )
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--output", help="write a fresh record under this file name in the evidence directory")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        help="write records into this directory (default: docs/refactor/detector_level_evidence)",
+    )
+    parser.add_argument("--output", help="write a fresh record under this file name in the output directory")
     parser.add_argument("--overwrite", action="store_true", help="replace an existing one-shot record")
     parser.add_argument("--resume", action="store_true", help="continue a gated series after validating each saved run")
     parser.add_argument("--enabled-by-user", dest="global_enabled_by_user", help="record this enablement note in a gated record (date and wording of the user's go-ahead)")
@@ -820,7 +881,8 @@ def main() -> int:
     sub.add_parser("noise-isolation-12m").add_argument("--enabled-by-user", required=True)
     commands["e6-v3"] = lambda arguments: e6(arguments, version=3)
     sub.add_parser("e6-v3").add_argument("--enabled-by-user", required=True)
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(argv)
+    OPTIONS.output_dir = arguments.output_dir
     OPTIONS.output = arguments.output
     OPTIONS.overwrite = arguments.overwrite
     OPTIONS.resume = arguments.resume
