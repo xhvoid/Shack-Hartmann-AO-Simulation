@@ -55,12 +55,17 @@ continues a gated series.  A resume that finds every planned run already
 recorded says so and leaves the record unchanged.  On
 resume every saved run must carry the protocol identity this invocation would
 give it (configuration hash with seed and frame count, burn-in, execution
-options, and the code identity: git HEAD plus a digest of uncommitted source
-changes); a mismatch stops the command, and a record without identities
-cannot be resumed.  Every retained run, including the runs of other arms,
-must share the record's series protocol (version, frames, burn-in, execution
-options and code), so arms of ``e3-recovery`` and ``e3-excursion`` append to
-one record with ``--resume`` only under the same protocol.
+options, the code identity -- git HEAD plus a digest of uncommitted source
+changes -- and the producing environment: Python, NumPy, SciPy and machine);
+a mismatch stops the command, and a record without identities cannot be
+resumed.  Every retained run, including the runs of other arms, must share
+the record's series protocol (version, frames, burn-in, execution options,
+code and environment), so arms of ``e3-recovery`` and ``e3-excursion`` append
+to one record with ``--resume`` only under the same protocol.  Each run's
+protocol names the environment that produced it (series protocol version 3,
+2026-10-18, GPT pre-refactor audit F-03); version-2 records do not, so they
+cannot be continued, and nothing is attributed to them after the fact.  A
+resume that would add runs also stops when the code identity is unknown.
 """
 
 from __future__ import annotations
@@ -81,8 +86,9 @@ import numpy as np
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 EVIDENCE_DIR = REPOSITORY / "docs/refactor/detector_level_evidence"
-# Protocol identity version of gated-series runs (review R6).
-SERIES_PROTOCOL_VERSION = 2
+# Protocol identity version of gated-series runs (review R6).  Version 3
+# (2026-10-18) adds the producing environment to the shared protocol.
+SERIES_PROTOCOL_VERSION = 3
 # Global options, set by main(): fresh output name, overwrite, resume,
 # enablement note and output directory (None selects EVIDENCE_DIR).
 OPTIONS = argparse.Namespace(output=None, overwrite=False, resume=False, enabled_by_user=None, output_dir=None)
@@ -186,7 +192,22 @@ def code_identity() -> dict[str, Any]:
     return {"git_head": head, "source_changes_sha256": digest.hexdigest()}
 
 
-def _shared_protocol(n_steps: int, burn_in: int, execution: Any, code: dict[str, Any]) -> dict[str, Any]:
+def producer_environment() -> dict[str, str]:
+    """The numerical environment a run is produced in (the header's fields)."""
+
+    import scipy
+
+    return {
+        "python": sys.version,
+        "numpy": np.__version__,
+        "scipy": scipy.__version__,
+        "machine": platform.machine(),
+    }
+
+
+def _shared_protocol(
+    n_steps: int, burn_in: int, execution: Any, code: dict[str, Any], environment: dict[str, str]
+) -> dict[str, Any]:
     """The protocol fields every run of one record must share."""
 
     return {
@@ -195,13 +216,25 @@ def _shared_protocol(n_steps: int, burn_in: int, execution: Any, code: dict[str,
         "burn_in_frames": int(burn_in),
         "execution": repr(execution),
         "code": code,
+        "environment": environment,
     }
 
 
 def run_protocol(
-    label: str, config: Any, seed: int, *, n_steps: int, burn_in: int, execution: Any, code: dict[str, Any]
+    label: str,
+    config: Any,
+    seed: int,
+    *,
+    n_steps: int,
+    burn_in: int,
+    execution: Any,
+    code: dict[str, Any],
+    environment: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """The identity a gated-series run must match to be reused on resume."""
+    """The identity a gated-series run must match to be reused on resume.
+
+    ``environment`` defaults to :func:`producer_environment`.
+    """
 
     from dataclasses import replace
 
@@ -216,7 +249,9 @@ def run_protocol(
         "label": label,
         "root_seed": int(seed),
         "config_hash": run_config.config_hash,
-        **_shared_protocol(n_steps, burn_in, execution, code),
+        **_shared_protocol(
+            n_steps, burn_in, execution, code, producer_environment() if environment is None else environment
+        ),
     }
     encoded = json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
     return {"protocol_hash": hashlib.sha256(encoded).hexdigest(), "protocol": payload}
@@ -464,6 +499,7 @@ def _gated_series(
     run = science_run if runner is None else runner
     path = _record_path(name)
     code = code_identity()
+    environment = producer_environment()
     record = _header(command)
     note = OPTIONS.enabled_by_user or enabled_by_user
     record["enabled_by_user"] = note
@@ -474,7 +510,8 @@ def _gated_series(
     record["runs"] = []
     expected = {
         (label, int(seed)): run_protocol(
-            label, config, seed, n_steps=n_steps, burn_in=burn_in, execution=execution, code=code
+            label, config, seed, n_steps=n_steps, burn_in=burn_in, execution=execution, code=code,
+            environment=environment,
         )
         for label, config, seed in plan
     }
@@ -487,11 +524,12 @@ def _gated_series(
             )
         previous = json.loads(path.read_text())
         # Every retained run, in this plan or not (another comparison arm),
-        # must share the series protocol: version, frames, burn-in, execution
-        # and code (re-review S2).  Runs of this plan must also match their
-        # own configuration.
-        shared = _shared_protocol(n_steps, burn_in, execution, code)
+        # must share the series protocol: version, frames, burn-in, execution,
+        # code (re-review S2) and producing environment (GPT audit F-03).
+        # Runs of this plan must also match their own configuration.
+        shared = _shared_protocol(n_steps, burn_in, execution, code, environment)
         mismatched = []
+        unattributed = []
         for entry in previous.get("runs", []):
             key = (entry.get("label"), entry.get("root_seed"))
             if "protocol_hash" not in entry or "protocol" not in entry:
@@ -499,16 +537,25 @@ def _gated_series(
                     f"{path} predates run protocol identities and cannot be resumed; "
                     "pass --output NAME for a fresh record."
                 )
+            if "environment" not in entry["protocol"]:
+                unattributed.append(key)
+                continue
             saved = {name: entry["protocol"].get(name) for name in shared}
             if saved != shared:
                 mismatched.append(key)
             elif key in expected and entry["protocol_hash"] != expected[key]["protocol_hash"]:
                 mismatched.append(key)
+        if unattributed:
+            raise EvidenceRecordExists(
+                f"{path}: saved runs {unattributed} do not name the environment that "
+                "produced them (series protocol version < 3), so a resume cannot show "
+                "they share this one.  Pass --output NAME for a fresh record."
+            )
         if mismatched:
             raise EvidenceRecordExists(
                 f"{path}: saved runs {mismatched} were made under another protocol "
-                "(configuration, frames, burn-in, execution or code).  Pass --output NAME "
-                "for a fresh record."
+                "(configuration, frames, burn-in, execution, code or producing "
+                "environment).  Pass --output NAME for a fresh record."
             )
         record["runs"] = list(previous.get("runs", []))
         record["resumed_from_started_unix_s"] = previous.get("started_unix_s")
@@ -523,6 +570,12 @@ def _gated_series(
         raise EnablementMissing(
             f"{command}: a gated run needs --enabled-by-user (the date and wording of the "
             "user's go-ahead for this run); nothing ran."
+        )
+    if resumed and pending and code.get("git_head") is None:
+        raise EvidenceRecordExists(
+            f"{path}: the code identity of this invocation is unknown (no git HEAD), so "
+            "runs added now could not be shown to use the code of the saved runs.  Pass "
+            "--output NAME for a fresh record."
         )
     if resumed and pending:
         record["resumed_enabled_by_user"] = [*resumed_notes, note]
