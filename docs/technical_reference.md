@@ -783,7 +783,7 @@ measured data.
 | Isolated detector noise ∝ 1/N_e at 2 m | `det_emccd_2m_synthetic@1`, m_AB 5–8 | `det09_noise_isolation_2m.json` (code identity recorded) | 61–68 | log-log slope within 2 SE of −1 (predeclared) | −0.978 ± 0.014 (weighted log–log fit, unscaled fit SE, χ²/dof 2.46), 1.6 SE: **pass** | prediction | normalized drift of 9 % |
 | Isolated detector noise ∝ 1/N_e at 12 m | `det_emccd_12m_medium_derived@3`, m_AB 8–11 | `det09_noise_isolation_12m_v3.json` | 71–75 | same | −1.028 ± 0.010 (same fit, χ²/dof 2.50), 2.7 SE: **fail**; with the SE scaled by √(χ²/dof) the departure is 1.7 SE, but the predeclared rule fixed no SE convention and the recorded verdict stands | prediction | model predicts −1.097; 6.7 % dip at m_AB 10 unexplained (LIM-18) |
 | 12 m faint-end limit between m_AB 11 and 12 | `@3` | `det09_e3_magnitude_scan_12m_v3*.json` | 21–25 | mean post-update RMS, K-band Strehl | m_AB 11: 195 nm, Strehl 0.71; no lenslet in the domain at m_AB 12 | observation (post-hoc profile, predeclared evaluation) | the limit depends on control settings |
-| 42 m physical camera | `det_ccd_42m_r3band_derived@1`, 2000 frames | an uncommitted pre-review development tree (code identity not recorded; the record was first committed in `a31099b`, four hours after the run); rerun on 2026-10-18 at `2312502` with a clean code identity (S1, `det09_e5_42m_noise_on_current_2312502.json`): every scientific value bit-identical | 1 | mean post-update RMS after burn-in 200; long-exposure Strehl at 2.2 µm | 173.2 nm, 0.753 | observation, single realization | LIM-17; ensemble S2 |
+| 42 m physical camera | `det_ccd_42m_r3band_derived@1`, 2000 frames | an uncommitted pre-review development tree (code identity not recorded; the record was first committed in `a31099b`, four hours after the run); rerun on 2026-10-18 at `2312502` with a clean code identity (S1, `det09_e5_42m_noise_on_current_2312502.json`): every scientific value bit-identical; ten further realizations on the same code (S2, `det09_s2_42m_seed2.json` … `seed11.json`) | 1–11 | mean post-update RMS after burn-in 200; long-exposure Strehl at 2.2 µm | seed 1: 173.2 nm, 0.753; seeds 2–11: 173.6 ± 0.9 nm, 0.751 ± 0.002 (sample SD), none lost lock | observation, eleven-seed ensemble of one configuration | LIM-17 |
 | ESO-derived 42 m benchmark (noiseless) | `eso_drm_42m_scao_derived@2`, 2000 frames | ESO v2 records (calibration reused from the verified cache) | realization 0 | as above | 1683 → 173 nm, Strehl 0.78 | observation, single realization | periodic-band repetition; not an ESO comparison |
 | Layered atmosphere statistics | ESO profile, 2 m / 72 px and 10 m / 384 px | `tests/backends/native/test_layered_atmosphere.py` (runs every regression) | deterministic expectation; 160 and 256 realizations | expected variance against the von Kármán integral; D(r) | within 0.5 % and 1 %; D(r) within 2.5 % for 2 px–1 m | numerical verification | finite band |
 | Native and HCIPy agree on 13 comparison groups | one small deterministic profile | accepted cross-backend baseline v2 | fixed | exact, tight-numerical and physical-tolerance criteria | all gating metrics pass (CLN-05 rerun identical) | cross-implementation | not interchangeability |
@@ -811,7 +811,9 @@ measured data.
   controller settings.
 - Experimental PWFS; physical camera native only (LIM-03); HCIPy agreement is
   scoped to the compared quantities.
-- Finite sampling: spatial convergence open at medium and full scale (LIM-07);
+- Finite sampling: in the ESO tiers peak Strehl is converged in pupil, WFS and
+  science sampling at 12 m and 42 m, but EE50 at the default science sampling
+  is pixel-limited, and the detector profiles' sampling is not covered (LIM-07);
   limited statistical independence of short runs and of long runs with
   periodic-band repetition (LIM-08).
 - Environment: exact replay holds within one frozen environment (LIM-11). The
@@ -852,13 +854,25 @@ measured data.
   finest two 0.25 %), WFS (pad 2 → 3 → 4: 0.00 %) and science sampling
   (identical); EE50 converged in pupil (0.55 %) and WFS sampling but **not in
   science sampling** (32.56 → 31.65 → 30.35 mas, finest two 4.3 %, paired
-  4.27 ± 0.11 %). The 42 m scans were still running at this writing.
+  4.27 ± 0.11 %). On the 42 m `full` tier (2026-10-19, the same protocol,
+  12 → 16 samples): peak Strehl converged in pupil (0.7832 → 0.7832,
+  0.01 % ± 0.04 %), WFS (0.04 %) and science sampling (identical); EE50
+  converged in pupil (0.01 %) and WFS sampling (0.12 %) and within 2 % between
+  science pads 3 and 4 (8.684 → 8.473 → 8.384 mas, 1.05 % ± 0.26 %). The quoted
+  Strehl values of the ESO tiers are therefore converged in sampling, while
+  EE50 at the default science sampling (pad 2) is an upper estimate, 7.3 %
+  (12 m) and 3.6 % (42 m) above the pad-4 value. Every 42 m run: no rejected
+  solve, every frame usable, no DM saturation. Records:
+  [`paired_convergence_medium.json`](refactor/eso_scao_evidence/paired_convergence_medium.json),
+  [`paired_convergence_full.json`](refactor/eso_scao_evidence/paired_convergence_full.json).
+  Not covered: the 12 m detector profiles (their sampling knobs are MFT
+  oversampling and window size) and pupil sampling above 16 at 42 m.
 
 ### 7.6 Historical 42 m results
 
 | Result | Producing code | Status for the current tree |
 | --- | --- | --- |
-| E5 physical camera, `det_ccd_42m_r3band_derived@1`: 173.2 nm, Strehl 0.753, 1.749 s/frame, 1.61 GiB | ran 2026-10-16 02:51–03:50 CEST on an uncommitted development tree whose code identity was not recorded (the record was first committed in `a31099b` at 07:50); before the review fixes (`573f875`, `580e83f`, `62c0092`); its configuration hash equals the current profile's | rerun on current code (S1, `2312502`, 2026-10-18): bit-identical; one realization (S2) |
+| E5 physical camera, `det_ccd_42m_r3band_derived@1`: 173.2 nm, Strehl 0.753, 1.749 s/frame, 1.61 GiB | ran 2026-10-16 02:51–03:50 CEST on an uncommitted development tree whose code identity was not recorded (the record was first committed in `a31099b` at 07:50); before the review fixes (`573f875`, `580e83f`, `62c0092`); its configuration hash equals the current profile's | rerun on current code (S1, `2312502`, 2026-10-18): bit-identical; ten further realizations (S2, 2026-10-19): 173.6 ± 0.9 nm, Strehl 0.751 ± 0.002 |
 | ESO reference v2, `eso_drm_42m_scao_derived@2`: 1683 → 173 nm, Strehl 0.78, 62 min, 1.64 GiB | ESO benchmark development (records in `docs/refactor/eso_scao_evidence`); noiseless; calibration reused from the verified cache | historical; not rerun |
 | ESO full tier v2, 20 frames: 1624 → 372 nm, 110 s, 1.41 GiB | same | capability evidence only; 20 frames do not settle the loop |
 
@@ -1006,6 +1020,8 @@ synthesis about 0.1 ms. Sensor-only times from the `cost` command
 | ESO `reference` tier v2, 2000 frames | 3729 s (62 min), 1.64 GiB; build 2.2 s with verified calibration reuse; 1.85 s/frame | `reference_tier_v2_*`; single realization | MEASURED_HISTORICAL |
 | Physical-camera 42 m E5, `det_ccd_42m_r3band_derived@1` | 3541 s total, 27.4 s build, 1.749 s/frame, 1.61 GiB (1,729,118,208 B `ru_maxrss`) | `det09_e5_42m_noise_on.json`; seed 1, 1008-pixel pupil, R3 band with three nodes, MFT `k = 2`, 15-pixel windows with a one-pixel guard, summary telemetry, regenerated bands, one 2.2 µm science wavelength; pre-review code | MEASURED_HISTORICAL |
 | Physical-camera 42 m S1 rerun, same configuration | 3640 s total, 27.5 s build, 1.797 s/frame, 1.60 GiB (1,718,272,000 B `ru_maxrss`) | `det09_e5_42m_noise_on_current_2312502.json`; revision `2312502`; run on a shared machine (load average about 4.6) | MEASURED_CURRENT |
+| Physical-camera 42 m S2, ten realizations (root seeds 2–11), a fresh process each | 3498–3661 s each, 35 231 s (9.8 h) in all; 1.73–1.81 s/frame; 1.68–1.97 GiB `ru_maxrss` (2.20–2.28 GB peak footprint) | `det09_s2_42m_seed2.json` … `seed11.json`; revision `2312502`; machine shared at times | MEASURED_CURRENT |
+| Paired sampling-convergence study (S3) | 12 m: 21 runs, 24–35 s each, 0.32–0.55 GiB; 42 m: 18 runs, 285–576 s each (113 min in all), 1.57–3.16 GiB, the science pad-4 runs highest | `paired_convergence_medium.json`, `paired_convergence_full.json`; one fresh process per run; revision `2312502` | MEASURED_CURRENT |
 | 12 m E3 on `@3`, review rerun, 30 runs × 400 frames | 2120 s; build median 7.2 s; 0.158 s/frame median; cumulative `ru_maxrss` 0.44 GiB | `det09_e3_magnitude_scan_12m_v3_review.json` | MEASURED_HISTORICAL |
 | 12 m E6 on `@3`, three seeds per arm, means | baseline 0.163 s/frame; point sampling without diffusion 0.123; photometry-matched monochromatic 0.122; oracle products 0.147 | `det09_e6_effect_sizes_12m_v3.json`; each arm's changed settings in the record | MEASURED_HISTORICAL |
 | Paired 12 m noise isolation, 20 runs | 2638 s; peak 1.11 GiB (two built systems plus residual-map samples; the earlier 0.5 GiB estimate was too low) | the peak is in the detector status table, not in `det09_noise_isolation_12m_v3.json` | MEASURED_HISTORICAL |
@@ -1089,9 +1105,9 @@ measured per-frame time at the target scale.
 | --- | --- | --- | --- |
 | One small validation run (2 m, 60 frames) | 1.5–2.5 s, about 120–130 MiB | trivially parallel; memory is negligible | MEASURED_CURRENT |
 | A 12 m study (E3 on `@3`: 30 runs × 400 frames) | about 35 min, peak about 0.45 GiB per process | 2–3 workers fit the memory, but CPU and memory bandwidth contention prevent proportional speed-up (NOT_MEASURED) | MEASURED_HISTORICAL |
-| One 42 m reference realization | about 1 h; 1.6–1.8 GiB peak in a fresh process | — | MEASURED_HISTORICAL |
-| Five / ten serial 42 m realizations (fresh processes) | about 5 h / 10 h at the observed rate; peak stays about 1.7 GiB, not ×5 or ×10 | — | EXTRAPOLATED |
-| Simultaneous 42 m workers | RAM ≈ shared overhead + n × 1.7 GiB + headroom; on a 16 GiB desktop with about 3.4 GiB available under memory pressure (the 2026-10-15 observation), one worker is the safe count | the runner's supervisor refuses runs under warn/critical memory pressure | EXTRAPOLATED |
+| One 42 m reference realization | about 1 h; 1.6–2.0 GiB peak in a fresh process (eleven physical-camera realizations: 1.60–1.97 GiB; the ESO reference tier's 1.64 GiB is historical) | — | MEASURED_CURRENT |
+| Five / ten serial 42 m realizations (fresh processes) | ten took 9.8 h (58–61 min each); every process peaked at 1.68–1.97 GiB, never cumulatively, not ×5 or ×10 | — | MEASURED_CURRENT (S2) |
+| Simultaneous 42 m workers | RAM ≈ shared overhead + n × 2.0 GiB + headroom; on a 16 GiB desktop with about 3.4 GiB available under memory pressure (the 2026-10-15 observation), one worker is the safe count | the runner's supervisor refuses runs under warn/critical memory pressure | EXTRAPOLATED |
 | Longer histories (42 m, 20 000 frames) | about 10 h. History data take 1.94 GiB while the loop runs (commands 1.75 GiB, masks 0.19 GiB) and about 4.6 GiB for a moment at the end of the run (`40·F·A + F·R`), against about 0.46 GiB at 2000 frames. Swapping that transient into the 1.64 GiB 2000-frame peak gives an upper estimate of about 5.8 GiB, above the about 3.4 GiB available under memory pressure on the 16 GiB desktop | measure the peak at this length and set an explicit budget before a desktop run | ANALYTIC_ESTIMATE |
 | Finer pupil sampling (42 m, `N` = 2016) | per-frame FFT terms about 4.4× (`S² log S`); bands and science about 4× in memory (about 2.4 GiB of materialized bands) | likely needs more than a 16 GiB desktop | ANALYTIC_ESTIMATE |
 | Finer detector sampling (MFT `k` 2 → 4 at 42 m) | WFS term grows with `k²` (det10 at 2 m: 10.29 → 13.82 ms per measurement for `k` 2 → 4) | — | EXTRAPOLATED |

@@ -154,7 +154,9 @@ per wavelength, independent of the frame count.
   grid. Strehl is the final image's peak surface brightness over the peak of
   a zero-OPD ideal image from the same propagator. FWHM, EE50/EE80 and the
   radial profile are centred on the final-image peak, and on-axis Strehl is
-  also reported.
+  also reported. At the default science sampling (pad 2) EE50 is
+  pixel-limited: 7.3 % (12 m) and 3.6 % (42 m) above its pad-4 value (see
+  below), so it is an upper estimate. Strehl does not depend on it.
 - The benchmark uses the native propagator, whose grid is the complete FFT
   grid. An HCIPy propagator returns a unit-sum image over a finite focal
   window. With it the same accumulator gives in-window (conditional)
@@ -209,6 +211,31 @@ The `reference` run reused the `full` tier's calibration from the verified
 cache; its residual stays within 172–174 nm from frame 20 to 2000.
 None of these numbers is a comparison with an ESO result; R3 and R4 differ
 in noise, delay, atmosphere and filtering.
+
+## Sampling convergence
+
+`scripts/eso_scao_paired_convergence_study.py` (roadmap S3, run 2026-10-18/19
+on `2312502`) refines one sampling at a time from the tier's baseline, with
+the WFS field of view held at 11.5–11.75 λ/d and paired atmospheric draws
+(every setting's screen is a sub-band of one draw on the finest grid). Three
+realizations of 200 frames per setting, 50-frame burn-in, long exposure at
+2.2 µm; criterion, declared beforehand: the two finest settings agree within
+2 % in Strehl and EE50.
+
+| Tier | Scan | Strehl | EE50 | Verdict |
+| --- | --- | --- | --- | --- |
+| `medium` (12 m) | pupil, 12 → 16 → 20 samples per lenslet | 0.7618 → 0.7603 → 0.7584 (finest two 0.25 %) | 32.56 → 32.72 → 32.89 mas (0.55 %) | converged |
+| `medium` | WFS pad 2 → 3 → 4 | 0.00 % | 0.00 % | converged |
+| `medium` | science pad 2 → 3 → 4 | identical | 32.56 → 31.65 → 30.35 mas (4.3 %) | EE50 not converged |
+| `full` (42 m) | pupil, 12 → 16 samples per lenslet | 0.7832 → 0.7832 (0.01 %) | 8.684 → 8.685 mas (0.01 %) | converged |
+| `full` | WFS pad 2 → 3 → 4 | 0.7832 → 0.7822 → 0.7819 (0.04 %) | +0.12 % | converged |
+| `full` | science pad 2 → 3 → 4 | identical | 8.684 → 8.473 → 8.384 mas (1.05 %) | converged; pad 2 reads 3.6 % high |
+
+Records: [`paired_convergence_medium.json`](refactor/eso_scao_evidence/paired_convergence_medium.json),
+[`paired_convergence_full.json`](refactor/eso_scao_evidence/paired_convergence_full.json).
+The earlier smoke-tier scan in the development record did not pair its
+screens and let the WFS field of view grow with the sampling; this study
+supersedes its sampling conclusion for the two larger tiers.
 
 ## Verification status
 
