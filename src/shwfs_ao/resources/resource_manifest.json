@@ -19,8 +19,16 @@
       "sha256": "33073748f7a919749b6908c851318efefa02b2d8379a4f8bd12647a7bdeb7ffa"
     },
     {
+      "logical_name": "benchmarks/detector_level.assumptions.v2.json",
+      "sha256": "20cf6dd30c02655aa498f722c4c160b439863997a71a8146f9297f2a8524e107"
+    },
+    {
       "logical_name": "benchmarks/detector_source_ledger.v1.json",
       "sha256": "2b8cc13ebca067f9c48af1861680a84de619834019567a33a7d671ec606882fc"
+    },
+    {
+      "logical_name": "benchmarks/detector_source_ledger.v2.json",
+      "sha256": "fa56a8d4e5c05486c2ce1777c6c7507fa45510bf488ebc99b504a63e2eb10960"
     },
     {
       "logical_name": "benchmarks/eso_drm_42m_scao_derived.assumptions.v1.json",
