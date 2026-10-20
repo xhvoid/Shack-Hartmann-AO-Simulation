@@ -29,12 +29,18 @@ Execution (from the repository root; only NumPy is required)::
     python docs/research/s4_noise_law/analysis.py \
         --output docs/research/s4_noise_law/RESULTS.json
 
-Optional ``--with-package`` adds checks that import ``shwfs_ao`` from
-``src`` (configuration-hash agreement of every saved run with the current
-code, the photometric budget and the lenslet illumination distribution).
-They build no simulation system.  ``--skip-synthetic`` omits the synthetic
-examples (about one second of work).  Exit status 0 means the script ran;
-the reproduction verdicts are in the output, never asserted.
+Optional ``--with-package`` adds checks that import ``shwfs_ao``
+(configuration-hash agreement of every saved run with the current code, the
+camera and loop settings of the two profiles and the lenslet illumination
+distribution).  They build no simulation system.  The package must be
+importable: installed, or made visible with ``PYTHONPATH=src`` from the
+repository root (the script never edits ``sys.path``)::
+
+    PYTHONPATH=src python docs/research/s4_noise_law/analysis.py --with-package
+
+``--skip-synthetic`` omits the synthetic examples (about one second of
+work).  Exit status 0 means the script ran; the reproduction verdicts are in
+the output, never asserted.
 """
 
 from __future__ import annotations
@@ -927,7 +933,8 @@ def synthetic_examples(rng_seed: int = 20261020) -> dict[str, Any]:
 
 
 def package_checks(repo: Path, records: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    sys.path.insert(0, str(repo / "src"))
+    # The package is imported as installed or as made visible by the caller
+    # (``PYTHONPATH=src``); the script does not edit the import path.
     try:
         import shwfs_ao  # noqa: F401
         from dataclasses import replace
@@ -1250,7 +1257,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  12 m lenslets: {li['n_lenslets']}, fully illuminated {li['fully_illuminated']}, min fraction {li['fraction_min']:.3f}, "
                       f"mean(1/f) {li['mean_inverse_fraction']:.3f}, mean(1/f^2) {li['mean_inverse_fraction_squared']:.3f}")
         else:
-            print(f"  package not importable: {pc.get('reason')}")
+            print(f"  package not importable (install it or run with PYTHONPATH=src): {pc.get('reason')}")
 
     results["wall_s"] = time.time() - started
     args.output.parent.mkdir(parents=True, exist_ok=True)

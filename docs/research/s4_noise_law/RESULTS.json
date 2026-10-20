@@ -1,8 +1,8 @@
 {
  "title": "S4 noise-law reanalysis of the saved paired noise-isolation records",
- "generated_utc": "2026-10-20T14:29:40Z",
+ "generated_utc": "2026-10-20T14:50:13Z",
  "script": "docs/research/s4_noise_law/analysis.py",
- "script_sha256": "ee35303e3d4239573cbca6881aef7da0253d1bdda7ce455ac1cac5520d214dbe",
+ "script_sha256": "12ae5f6d60ca45e01bf49129e227ec9c3dbfaadbc942fcf16ad48515fd48cb2e",
  "environment": {
   "python": "3.13.16 (main, Oct  1 2026, 15:40:24) [GCC 13.3.0]",
   "numpy": "2.5.3",
@@ -11,11 +11,9 @@
   "cpu_count": 4
  },
  "source_identity": {
-  "head": "10f04e268871a19bfedb47b035f2905b67f23e43",
+  "head": "8081f67be0bc1bcf2ffd81bfc8032ec1022b59df",
   "branch": "claude/eager-franklin-tk0duo",
-  "status_porcelain_excluding_this_directory": [
-   "?? docs/research/"
-  ]
+  "status_porcelain_excluding_this_directory": []
  },
  "inputs": {
   "12m_v3": {
@@ -5042,5 +5040,5 @@
    }
   }
  },
- "wall_s": 7.521455526351929
+ "wall_s": 7.742481470108032
 }
