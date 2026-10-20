@@ -955,3 +955,20 @@ ledger keeps it `FIXED_PENDING_VERIFICATION`.
 | G | AR-014 (P2) | `scripts/eso_scao_paired_convergence_study.py`: run files are named by scale (`full_s12_wfs2_sci2_r0`); every run carries its own protocol (planned setting, scale, frames, burn-in, wavelength, paired grid, band storage, configuration hash, and the producer: a digest of the imported package and of the driver, Git where it tracks that package, and the environment) and its SHA-256; every saved run is checked before anything runs or is written, and a non-finite result is kept and reported as found; one producer per study, runs added only under it with a known code identity; a summary is never rewritten; the summary names `run_producer` apart from `summarized_by` | summary schema v2; version-1 run files and records are refused for reuse, not relabelled; the committed records (produced 2026-10-18, committed 2026-10-19) are unchanged (each was one invocation that launched every one of its runs) |
 | H | AR-016 (P3) | `scripts/run_detector_level_evidence.py`: a resume recomputes every saved run's protocol hash, checks the label, seed, configuration hash, frame count and burn-in a run repeats, duplicate runs, the header's series fields and environment, and the carried-over notes; an unreadable or non-series record is refused too; the test of the real gated commands fails at once instead of starting a 12 m or 42 m run should the enablement guard regress (review CR-04) | series protocol 3 unchanged; the header now takes its environment fields from `producer_environment()` (the same values); every committed record passes the check |
 | I | AR-015 (P3) | `docs/technical_reference.md` SH-2: tested domain and open questions from the S3 records, with the failed 12 m science-sampling EE50 criterion and the finite-scan scope; §7.5 (the S3 records' provenance) and LIM-11 (units G and H); the S3 runs dated 2026-10-18, as their logs show, in §7.5, the ESO notes and roadmap S3 (review CR-05) | documentation only |
+
+## Follow-up repair of OBS-07: the detector runner's code identity (2026-10-20)
+
+Run `2026-10-20-claude-949d931` recorded its reviewer's issue CR-02 as
+observation OBS-07 (P3) instead of repairing it: binding the imported package
+changes the protocol identity of every new run of the governed series runner.
+The user authorized the repair on top of `f801cac` (the committed AR-014–AR-016
+repair). Run `2026-10-20-claude-f801cac` adopts it as AR-017 and holds the
+successor ledger, report, test manifest, acceptance and status in
+`outputs/audit_reconciliation/2026-10-20-claude-f801cac/`; the earlier runs'
+records are unchanged. Until an independent review confirms the repair, that
+ledger keeps it `FIXED_PENDING_VERIFICATION`. The CLN-02 responsibility map
+above describes the code identity used up to series protocol 3.
+
+| Unit | Finding | Change | Behaviour and identity |
+| --- | --- | --- | --- |
+| J | AR-017 (OBS-07, review CR-02; P3) | `scripts/run_detector_level_evidence.py`: `code_identity()` digests the `shwfs_ao` package the process imports (bytecode and hidden files left out) and the runner script, and records the Git HEAD and the diff digest of the package's source directory only where the repository that holds the package tracks it, else null, so the code identity is unknown and a resume adds no runs; a resume refuses a version-3 record, with or without runs to add, before anything runs and leaves it as it was; tests with a throwaway repository: a tracked package, a copy in an ignored directory, a modified copy, fresh interpreters importing each, and resumes across them; the module docstring, LIM-11 and the technical reference's detector-evidence row | series protocol 4: every new run's code identity, and so its protocol hash, differs from version 3; version-3 records are neither continued nor relabelled, and version-2 and older records stay refused as before; no committed record is version 3, and every committed record keeps its hashes, summaries and consistency (tests) |

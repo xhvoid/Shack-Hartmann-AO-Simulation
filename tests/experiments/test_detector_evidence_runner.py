@@ -9,8 +9,11 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import sys
 
 import pytest
@@ -28,8 +31,10 @@ assert _SPEC is not None and _SPEC.loader is not None
 runner = importlib.util.module_from_spec(_SPEC)
 sys.modules[_SPEC.name] = runner
 _SPEC.loader.exec_module(runner)
-# Captured before any fixture redirects it: the legacy default directory.
+# Captured before any fixture redirects them: the legacy default directory and
+# the real code identity.
 LEGACY_EVIDENCE_DIR = runner.EVIDENCE_DIR
+REAL_CODE_IDENTITY = runner.code_identity
 
 CONFIG = load_system_profile("det_emccd_2m_synthetic", 1)
 PLAN = [("label", CONFIG, 21), ("label", CONFIG, 22)]
@@ -383,7 +388,7 @@ def test_each_run_names_the_environment_that_produced_it(isolated_runner: Path) 
     runner.OPTIONS.resume = True
     runner._gated_series("series.json", "test", PLAN, n_steps=400, burn_in=100, execution=None, runner=Recorder())
     record = json.loads((isolated_runner / "series.json").read_text())
-    assert record["series_protocol_version"] == 3
+    assert record["series_protocol_version"] == 4
     assert record["runs"][0] == first  # the retained row is kept as written
     assert [run["protocol"]["environment"] for run in record["runs"]] == [ENVIRONMENT_A] * len(PLAN)
 
@@ -575,3 +580,247 @@ def test_the_saved_evidence_records_agree_with_themselves() -> None:
             assert runner._inconsistencies(record) == [], path.name
             checked += 1
     assert checked > 0
+
+
+# -- OBS-07 (review CR-02, 2026-10-20): the code identity is the imported package's --
+
+
+RUNNER_SCRIPT = ROOT / "scripts/run_detector_level_evidence.py"
+
+
+def _git(repository: Path, *arguments: str) -> str:
+    # A throwaway repository, without the user's global or system configuration.
+    environment = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+    completed = subprocess.run(
+        ["git", "-C", str(repository), "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+         "-c", "commit.gpgsign=false", *arguments],
+        check=True, capture_output=True, text=True, env=environment, timeout=60,
+    )
+    return completed.stdout.strip()
+
+
+def tracked_package(tmp_path: Path) -> tuple[Path, Path]:
+    """A throwaway repository with a committed ``src/shwfs_ao`` package; its ``copy/`` is ignored."""
+
+    repository = tmp_path / "repository"
+    package = repository / "src" / "shwfs_ao"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("VALUE = 1\n")
+    (package / "module.py").write_text("")
+    (repository / ".gitignore").write_text("copy/\n")
+    _git(repository, "init", "-q")
+    _git(repository, "add", "-A")
+    _git(repository, "commit", "-q", "--no-verify", "-m", "fixture")
+    return repository, package
+
+
+def ignored_copy(repository: Path, package: Path, *, modified: bool) -> Path:
+    """A copy of the package in the repository's ignored directory, with another value when ``modified``."""
+
+    copy = repository / "copy" / ("modified" if modified else "same") / "src" / "shwfs_ao"
+    shutil.copytree(package, copy)
+    if modified:
+        (copy / "__init__.py").write_text("VALUE = 2\n")
+    return copy
+
+
+def act_with_package(monkeypatch: pytest.MonkeyPatch, package: Path) -> None:
+    monkeypatch.setattr(runner, "code_identity", lambda: REAL_CODE_IDENTITY(package))
+
+
+def refused_for_every_plan(path: Path, before: bytes, match: str) -> None:
+    """Resumes with an overlapping, a disjoint and an idle plan are refused; nothing runs or changes."""
+
+    for plan in (PLAN, OTHER_ARM, PLAN[:1]):
+        start_fresh_invocation()
+        idle = Recorder()
+        with pytest.raises(runner.EvidenceRecordExists, match=match):
+            runner._gated_series(path.name, "test", plan, n_steps=400, burn_in=100, execution=None, runner=idle)
+        assert idle.calls == []
+        assert path.read_bytes() == before
+
+
+def test_the_code_identity_binds_the_package_it_imports(tmp_path: Path) -> None:
+    # OBS-07 (review CR-02): the identity used to be the Git state of this
+    # script's repository, whatever package the process imported.
+    repository, package = tracked_package(tmp_path)
+    tracked = REAL_CODE_IDENTITY(package)
+    assert tracked == {
+        "package_directory": "src",
+        "package_sha256": runner._package_sha256(package),
+        "script_sha256": hashlib.sha256(RUNNER_SCRIPT.read_bytes()).hexdigest(),
+        "git_head": _git(repository, "rev-parse", "HEAD"),
+        "source_changes_sha256": hashlib.sha256(b"").hexdigest(),
+    }
+    same = REAL_CODE_IDENTITY(ignored_copy(repository, package, modified=False))
+    assert same["package_sha256"] == tracked["package_sha256"]  # the same code
+    assert same["git_head"] is None and same["source_changes_sha256"] is None  # but no repository tracks it there
+    modified = REAL_CODE_IDENTITY(ignored_copy(repository, package, modified=True))
+    assert modified["package_sha256"] != tracked["package_sha256"] and modified["git_head"] is None
+    # An edit of the tracked package changes its digest and its Git diff.
+    (package / "module.py").write_text("CHANGED = True\n")
+    edited = REAL_CODE_IDENTITY(package)
+    assert edited["git_head"] == tracked["git_head"]
+    assert edited["package_sha256"] != tracked["package_sha256"]
+    assert edited["source_changes_sha256"] != tracked["source_changes_sha256"]
+    (package / "module.py").write_text("")
+    assert REAL_CODE_IDENTITY(package) == tracked
+    # An untracked module: the Git diff misses it, the package digest does not.
+    (package / "untracked.py").write_text("")
+    untracked = REAL_CODE_IDENTITY(package)
+    assert untracked["package_sha256"] != tracked["package_sha256"]
+    assert untracked["source_changes_sha256"] == tracked["source_changes_sha256"]
+    # Bytecode and hidden files (Finder metadata) appear without a code change.
+    (package / "__pycache__").mkdir()
+    (package / "__pycache__" / "module.cpython-314.pyc").write_bytes(b"bytecode")
+    (package / ".DS_Store").write_bytes(b"finder")
+    (package / "._module.py").write_bytes(b"appledouble")
+    (package / "sub" / ".hidden").mkdir(parents=True)
+    (package / "sub" / ".hidden" / "note.txt").write_text("hidden")
+    assert REAL_CODE_IDENTITY(package)["package_sha256"] == untracked["package_sha256"]
+    (package / "sub" / "module.py").write_text("")  # a visible file still counts
+    assert REAL_CODE_IDENTITY(package)["package_sha256"] != untracked["package_sha256"]
+
+
+def test_a_fresh_process_takes_the_identity_of_the_package_it_imports(tmp_path: Path) -> None:
+    # The review's demonstration: this runner script, run with another package
+    # first on the import path, used to report this repository's identity.
+    repository, package = tracked_package(tmp_path)
+    copy = ignored_copy(repository, package, modified=True)
+    probe = (
+        "import importlib.util, json, sys\n"
+        "spec = importlib.util.spec_from_file_location('runner_identity_probe', sys.argv[1])\n"
+        "module = importlib.util.module_from_spec(spec)\n"
+        "spec.loader.exec_module(module)\n"
+        "identity = module.code_identity()\n"
+        "import shwfs_ao\n"
+        "print(json.dumps({'imported': shwfs_ao.__file__, 'identity': identity}))\n"
+    )
+    for imported in (package, copy):
+        environment = {**os.environ, "PYTHONPATH": str(imported.parent), "PYTHONDONTWRITEBYTECODE": "1"}
+        completed = subprocess.run(
+            [sys.executable, "-c", probe, str(RUNNER_SCRIPT)],
+            cwd=tmp_path, env=environment, capture_output=True, text=True, check=True, timeout=60,
+        )
+        seen = json.loads(completed.stdout)
+        assert Path(seen["imported"]).resolve().parent == imported.resolve()
+        assert seen["identity"] == REAL_CODE_IDENTITY(imported)
+    assert REAL_CODE_IDENTITY(copy)["package_sha256"] != REAL_CODE_IDENTITY(package)["package_sha256"]
+
+
+def test_a_series_records_the_identity_of_the_imported_package(isolated_runner: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import shwfs_ao
+
+    monkeypatch.setattr(runner, "code_identity", REAL_CODE_IDENTITY)
+    series(Recorder())
+    record = json.loads((isolated_runner / "series.json").read_text())
+    imported = Path(shwfs_ao.__file__).parent
+    assert record["code_identity"] == REAL_CODE_IDENTITY(imported)
+    assert record["code_identity"]["package_sha256"] == runner._package_sha256(imported.resolve())
+    assert all(run["protocol"]["code"] == record["code_identity"] for run in record["runs"])
+    assert {run["protocol"]["series_protocol_version"] for run in record["runs"]} == {record["series_protocol_version"]} == {4}
+
+
+def test_a_resume_cannot_mix_packages_under_one_identity(
+    isolated_runner: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Review CR-02's failure scenario: a series begun with one package is
+    # resumed by a process that imports other code.
+    repository, package = tracked_package(tmp_path)
+    act_with_package(monkeypatch, package)
+    runner._gated_series("series.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=Recorder())
+    path = isolated_runner / "series.json"
+    before = path.read_bytes()
+    assert json.loads(before)["code_identity"] == REAL_CODE_IDENTITY(package)
+    runner.OPTIONS.resume = True
+    for copy in (ignored_copy(repository, package, modified=False), ignored_copy(repository, package, modified=True)):
+        act_with_package(monkeypatch, copy)  # the same code untracked, and a modified copy
+        refused_for_every_plan(path, before, "another protocol")
+    act_with_package(monkeypatch, package)
+    (package / "module.py").write_text("CHANGED = True\n")  # a tracked edit
+    refused_for_every_plan(path, before, "another protocol")
+    (package / "module.py").write_text("")
+    (package / "untracked.py").write_text("")  # the same Git state, other code
+    refused_for_every_plan(path, before, "another protocol")
+    (package / "untracked.py").unlink()
+    start_fresh_invocation()
+    appended = Recorder()
+    runner._gated_series("series.json", "test", PLAN, n_steps=400, burn_in=100, execution=None, runner=appended)
+    assert appended.calls == [22]
+
+
+def test_runs_made_from_an_untracked_copy_are_not_extended(
+    isolated_runner: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository, package = tracked_package(tmp_path)
+    act_with_package(monkeypatch, ignored_copy(repository, package, modified=True))
+    runner._gated_series("series.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=Recorder())
+    path = isolated_runner / "series.json"
+    before = path.read_bytes()
+    assert json.loads(before)["code_identity"]["git_head"] is None  # recorded as unknown
+    runner.OPTIONS.resume = True
+    start_fresh_invocation()
+    idle = Recorder()
+    with pytest.raises(runner.EvidenceRecordExists, match="code identity of this invocation is unknown"):
+        runner._gated_series("series.json", "test", PLAN, n_steps=400, burn_in=100, execution=None, runner=idle)
+    start_fresh_invocation()
+    runner._gated_series("series.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=idle)
+    assert idle.calls == []
+    assert path.read_bytes() == before  # nothing to add: verified, not written
+
+
+def as_version_3(record: dict) -> None:
+    """Rewrite a record as a version-3 runner wrote it: its code identity was the Git state of the runner's repository."""
+
+    code = {"git_head": "test", "source_changes_sha256": "test"}  # the fixture's stand-in code identity
+    record["series_protocol_version"] = 3
+    record["code_identity"] = dict(code)
+    for run in record["runs"]:
+        run["protocol"].update(series_protocol_version=3, code=dict(code))
+        run["protocol_hash"] = runner.protocol_digest(run["protocol"])
+
+
+def test_a_version_3_record_is_neither_continued_nor_relabelled(isolated_runner: Path) -> None:
+    # Series protocol 4 (OBS-07): even when a version-3 record's code identity
+    # equals this invocation's, it names the runner's repository, not the
+    # package its runs imported, so the record is refused, with or without
+    # runs to add.
+    runner._gated_series("series.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=Recorder())
+    path = isolated_runner / "series.json"
+    record = json.loads(path.read_text())
+    as_version_3(record)
+    assert runner._inconsistencies(record) == []  # consistent: refused for its version alone
+    path.write_text(json.dumps(record, indent=2) + "\n")
+    runner.OPTIONS.resume = True
+    refused_for_every_plan(path, path.read_bytes(), "series protocol version 3.*neither continued nor relabelled")
+
+
+def test_the_committed_series_records_are_not_continued(isolated_runner: Path) -> None:
+    # Byte copies of the committed records are resumed; the committed files
+    # are only read.  None is version 4, so none is continued or relabelled,
+    # and each refusal names the reason for its version.
+    refusals = {}
+    for source in sorted(LEGACY_EVIDENCE_DIR.glob("*.json")):
+        original = source.read_bytes()
+        runs = json.loads(original).get("runs")
+        if not isinstance(runs, list) or not runs:
+            continue
+        protocols = [run.get("protocol") for run in runs]
+        if not all(isinstance(protocol, dict) for protocol in protocols):
+            kind, match = "no protocol", "predates run protocol identities"
+        elif not all("environment" in protocol for protocol in protocols):
+            kind, match = "version 2", "do not name the environment"
+        elif all(protocol.get("series_protocol_version") == 3 for protocol in protocols):
+            kind, match = "version 3", "series protocol version 3"
+        else:
+            kind, match = "version 4", "another protocol"  # another producer than the stand-in
+        copy = isolated_runner / "series.json"
+        copy.write_bytes(original)
+        start_fresh_invocation()
+        runner.OPTIONS.resume = True
+        idle = Recorder()
+        with pytest.raises(runner.EvidenceRecordExists, match=match):
+            series(idle)
+        assert idle.calls == [] and copy.read_bytes() == original, source.name
+        refusals[kind] = refusals.get(kind, 0) + 1
+    assert refusals.get("no protocol") and refusals.get("version 2")

@@ -405,6 +405,22 @@ and LIM-07.
   needed. The S3 records (produced
   2026-10-18, committed 2026-10-19 in `949d931`) are version 1; each was
   one invocation that launched every one of its runs.
+- Updated 2026-10-20 (OBS-07, review CR-02): the detector evidence runner's
+  code identity was the Git state of the runner's own repository, not the
+  `shwfs_ao` package the process imported. Run from a worktree without
+  PYTHONPATH, the runner imported the main checkout's package (the shared
+  environment's editable install) and recorded the worktree's identity, and
+  a modified copy of the package got the same identity. Series protocol 4
+  takes the code identity from the imported package, as the S3 driver does:
+  a digest of the package (bytecode and hidden files left out) and of the
+  runner script, with the Git HEAD and diff digest only where the repository
+  that holds the package tracks it. A copy in an ignored or foreign
+  directory therefore has an unknown code identity, under which a resume
+  adds no runs. Version-3 records cannot be continued and are not
+  relabelled; no committed record is version 3 (the committed series
+  records are version 2 or carry no protocol). Bytecode is left out of the
+  digest, so a sourceless `.pyc` placed in the package directory itself,
+  which Python would import, is not bound.
 - **Consequence / next evidence:** Record profile versions, overrides, seed,
   dependency versions and source revision/patch with results. Treat an
   implementation, a test pass and an accepted baseline as distinct evidence.
