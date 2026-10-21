@@ -1,0 +1,266 @@
+{
+  "schema": "shwfs_ao.post_t2_experiment_packet.pilot_requests.v1",
+  "prepared_utc": "2026-10-21",
+  "status": "PREPARED_NOT_EXECUTED: every pilot and stage below waits for protocol review and an approval of its exact request; only the entries under executed_checks ran, as bounded ungoverned checks",
+  "source": {
+    "commit": "55142852d8e01f0c6b2828480c64c5792e7d5302",
+    "tree": "75c4fe7c9d8a90ef5f26fc174187cf8f82bd4ba9",
+    "parent_with_final_t2_repairs": "2e73e18ca2024e05bbc8bf37cc686d87d9e0e9d1",
+    "ci_run": {"id": 39656946715, "workflow": "tests", "conclusion": "success", "completed_utc": "2026-10-21T19:13:23Z"},
+    "t2_acceptance_digest_supplied": "868eccff15c353d31acf46c75ff176676259001421197c3c7b7ba307e21c071b"
+  },
+  "execution_policy": {
+    "numerical_jobs": "one at a time, two native threads per process (OMP/OPENBLAS/MKL/VECLIB_MAXIMUM/NUMEXPR_NUM_THREADS=2), fresh process per run where the driver does so",
+    "guard": "shwfs_ao.runtime.resource_guard: policy budget min(2 GiB, 12.5 % physical, 25 % available), 2x margin on the audited raw peak, 64 MiB scratch ceiling, refusal on warn/critical memory pressure; an authorized budget above the policy only through tools/authorized_supervise.py with a written note",
+    "series_identity": "one producing host, one locked environment, one code identity per series; no resume across hosts, environments or code; historical records are never relabelled",
+    "enablement": "governed commands run only with --enabled-by-user '<YYYY-MM-DD: the user's wording>' supplied by the user for that concrete run; earlier instructions to ignore the guard are not inherited",
+    "cloud_session": "commands capped at 150 min each; stages run as chained background invocations with --timeout-s at most 8400 s and the drivers' resume; records pushed or copied out before the session ends"
+  },
+  "hosts": {
+    "cloud": {
+      "label": "MEASURED_CURRENT (this session)",
+      "platform": "linux x86_64, KVM guest, Intel Xeon 2.80 GHz, 4 CPUs",
+      "physical_bytes": 16874930176,
+      "available_bytes_at_snapshot": 16128307200,
+      "swap": "none",
+      "memory_pressure": "normal (/proc/pressure/memory avg10 0.00)",
+      "policy_budget_bytes": 2109366272,
+      "policy_budget_mib": 2011.6,
+      "admitted_raw_peak_mib_under_policy": 1005.8,
+      "disk_free_gb_at_start": 32,
+      "speed_relative_to_desktop_anchor": "2.7-2.9x slower at ci scale (driver wall 244.0 s vs 89.3 s; summed child wall 232.8 s vs 79.4 s)"
+    },
+    "desktop": {
+      "label": "SUPPLIED / MEASURED_HISTORICAL (technical reference 9.1-9.3)",
+      "platform": "Apple M1 Pro, 8 cores, 16 GiB, macOS; shared, background load 2.6-4.1 during the recorded measurements; refused the T2 self-check preflight three times on warn pressure",
+      "environment": "Python 3.14.3, NumPy 2.5.0: not the py314 lock (roadmap G6)"
+    }
+  },
+  "environment": {
+    "cloud_lock": {
+      "profile": "constraints/hcipy-py311.txt",
+      "sha256": "9334c9353680eac41423179465aeafb4909e165a4a78ac9aeb61d6ab0238ebd0",
+      "create": [
+        "uv venv --seed --python /usr/bin/python3.11 <venv>",
+        "PIP_CONSTRAINT=<checkout>/constraints/hcipy-py311.txt PYTHONPATH= <venv>/bin/python -m pip install -c constraints/hcipy-py311.txt -e \".[test,hcipy]\""
+      ],
+      "verify": [
+        "PYTHONPATH= <venv>/bin/python scripts/verify_environment_lock.py --constraints constraints/hcipy-py311.txt",
+        "PYTHONPATH= <venv>/bin/python -m pip check"
+      ],
+      "verified_in_session": "hcipy-py311.txt: 40 installed distributions all pinned exactly (70 pins cover this and other lanes); pip check clean",
+      "producer_environment": {"python": "3.11.17 (main, Oct  1 2026, 15:41:07) [GCC 13.3.0]", "numpy": "2.4.6", "scipy": "1.17.1", "machine": "x86_64"},
+      "native_libraries_recorded_not_bound": "scipy-openblas64 0.3.31.188.0 (DYNAMIC_ARCH)",
+      "code_identity": {"git_head": "55142852d8e01f0c6b2828480c64c5792e7d5302", "source_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "package_sha256_prefix": "4f4162237e2264d2"}
+    },
+    "other_locks": "py310 and py314 (Linux-x86-64) need interpreters that the cloud host lacks and cannot download under the current network policy (github.com denied); decision D6"
+  },
+  "hashed_inputs": {
+    "label": "SHA-256 of the exact tree's files; the packaged profiles match resource_manifest.json",
+    "constraints/hcipy-py311.txt": "9334c9353680eac41423179465aeafb4909e165a4a78ac9aeb61d6ab0238ebd0",
+    "constraints/py314.txt": "4be7f83af7f7bec854e1d7e21fd288ca176b8dc4c4a9b12e201ecc9ce82fb23b",
+    "constraints/py310.txt": "f250f5cb6c3f548a4109bba42a056a5f49d67d4ddeeb2eae4801c36a5dfd0460",
+    "scripts/detector_level_convergence_study.py": "fc08a7a99986d3429a16bb3929771f7333d19f273f439899dd7d71c6d08306ea",
+    "scripts/run_detector_level_evidence.py": "70d7637a08a0397d7db22a6968ddeb88e61dc17f63771cfe8c7e170961757c4d",
+    "scripts/analyze_noise_isolation_traces.py": "174acf5eb41470cd727a2f569e477bbdab6b2c86e1589584e7c5111df4f8ccf4",
+    "src/shwfs_ao/experiments/convergence_study.py": "8be9d8194cb7fdd1b1e72ac318e5dcd3f6bdd3674ee8eb81918bfc19a97f2612",
+    "src/shwfs_ao/experiments/detector_level.py": "d69524717bce251de685deb8ac8a921ec382a73ec948059c417cf4e2cdd33b93",
+    "src/shwfs_ao/validation/richardson.py": "a218e3e2aadb967e8c6ab4f9d2f9b423b544d86004c2ade8c0970e7f54ac2f0b",
+    "src/shwfs_ao/validation/atmosphere_pairing.py": "ad30c480b502ec3f1d6f637194e3320b6543b7d916bfa38e61f08ba875024fff",
+    "src/shwfs_ao/validation/encircled_energy.py": "fdb4ab91689ceebd7fc319213dea5d2134e08333226367f76365bf39cd6e6985",
+    "src/shwfs_ao/runtime/resource_guard.py": "2a7f76b5d2634480f7862147869df56fe4bba24f5be1603abdd5443444280efe",
+    "synthetic_presets/det_emccd_12m_medium_derived.v3.json": "03b2782958f834b776d2032a948d1b96f642a9946c58e54c3ac4ac4b4293d004",
+    "synthetic_presets/det_ccd_42m_r3band_derived.v1.json": "56d8a6bac412b56c995a359f56458eb4ad5383d6f5fe47b9fa60b58a3a6714ff",
+    "synthetic_presets/det_emccd_2m_synthetic.v1.json": "8ee39a63e9897539ef11b52b2409969a8dccb4a81e94b09598ab27269d9d801b",
+    "benchmarks/detector_camera_presets.v1.json": "6e85ad08244a866a8ea12a92ca5fa4e1b583d7c640476a4f09fc55f460fa658f",
+    "docs/refactor/detector_level_evidence/det09_noise_isolation_12m_v3.json": "3dd8d681bc22883c7eb21e0b697ac3a4d7dd5f94da637fbb9915ffbfc078ebf7",
+    "docs/refactor/detector_level_evidence/det09_noise_isolation_2m.json": "655528b64e087b3f1e29322f4f6ef857b9a45afd5fe9597e173e2ad6c30ee05d",
+    "planned_protocol_digests": "records/plan_medium.json and records/plan_full.json carry the driver's planned-protocol digest and config hash of every run of the exact tree (--plan builds nothing)"
+  },
+  "common_command_environment": {
+    "working_directory": "<checkout at 5514285, clean>",
+    "python": "<venv>/bin/python (the locked environment above)",
+    "env": {"PYTHONPATH": "", "PYTHONDONTWRITEBYTECODE": "1", "MPLBACKEND": "Agg"},
+    "output_root": "outputs/post_t2/<stage>/<series>/ (git-ignored; <series> = <YYYY-MM-DD>-<host>-5514285)"
+  },
+  "executed_checks": [
+    {
+      "id": "CHK-0a",
+      "name": "T2 ci-scale self-check under the guard on the cloud host",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (MEASURED_CURRENT; machinery and timing evidence only, no scientific claim)",
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "t2_ci_selfcheck_cloud", "--estimate-mib", "307", "--timeout-s", "1800", "--threads", "2", "--log", "<out>/ci_selfcheck_supervisor.log", "--record", "<out>/ci_selfcheck_supervisor.json", "--", "<venv>/bin/python", "scripts/detector_level_convergence_study.py", "--scale", "ci", "--output-dir", "<out>/ci_selfcheck"],
+      "result": {"preflight": "accepted, 614 of 2011.6 MiB", "supervisor": "COMPLETED, exit 0, group peak 338944000 B, pressure normal", "driver_wall_s": 244.0, "summed_child_wall_s": 232.8, "per_paired_run_wall_s": "16.8-27.0", "child_ru_maxrss_mib": "177-232", "runs": 11, "pairing": "exact (dilation 0.0 rad) for both readings; open-loop digests shared on every non-pupil axis", "richardson": "NOT_ESTIMATED on every scan (two settings per axis at ci scale, by design)"},
+      "records": "records/cloud_checks/ci_selfcheck/"
+    },
+    {
+      "id": "CHK-0b",
+      "name": "2 m traced replay against the committed untraced record",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (MEASURED_CURRENT; no scientific claim)",
+      "result": {"supervisor": "COMPLETED, exit 0, wall 931.9 s, group peak 122 MiB, pressure normal", "runs": 32, "refused": 0, "replay_vs_committed": "every config hash equal; 0 of 32 bit-identical; largest relative difference 2.5e-9 (variance quantities), 3.0e-13 (residual RMS), 4.1e-16 (model column)", "delta_v_nm2_per_magnitude": "4.27 +/- 0.08, 10.40 +/- 0.32, 25.81 +/- 0.44, 200.67 +/- 105.01 (the committed values)", "kappa_meas_over_kappa_theory_m5_m6_m7": "0.937 +/- 0.058, 0.895 +/- 0.075, 0.862 +/- 0.048 (t, 8 seeds)", "saturation": "both arms clip 1.5-15 % of actuators per frame (stroke 1 um)", "records": "records/cloud_checks/ni2m_traced/, records/cloud_checks/ni2m_analysis/, records/cloud_checks/SUMMARY.md"},
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "noise_isolation_2m_traced_cloud", "--estimate-mib", "250", "--timeout-s", "3600", "--threads", "2", "--log", "<out>/ni2m_supervisor.log", "--record", "<out>/ni2m_supervisor.json", "--", "<venv>/bin/python", "scripts/run_detector_level_evidence.py", "--output-dir", "<out>/ni2m_traced", "noise-isolation-2m-traced"],
+      "analysis": ["<venv>/bin/python", "scripts/analyze_noise_isolation_traces.py", "<out>/ni2m_traced/det09_noise_isolation_2m_traced.json", "--output-dir", "<out>/ni2m_analysis", "--historical", "docs/refactor/detector_level_evidence/det09_noise_isolation_2m.json", "--gate-quiet-labels", "m5,m6,m7"],
+      "predicts": "cross-host agreement level of the paired-noise instrument (roundoff, not bitwise, expected); the 2 m kappa verification of PROTOCOL.md 1.6; the cloud wall time of a 2 m paired run"
+    },
+    {
+      "id": "CHK-0c",
+      "name": "targeted fast tests of the reviewed interfaces",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION: 318 passed, 1 failed (root-user artifact, README.md E-3), 2 skipped, 1 deselected (slow), 59.7 s",
+      "records": "records/cloud_checks/pytest_targeted.log"
+    }
+  ],
+  "pilots": [
+    {
+      "id": "P1a",
+      "stage": "E2",
+      "purpose": "timing pilot of the baseline paired setting at 12 m; predicts the per-paired-run cost and child peak of every 12-sample setting",
+      "governed": true,
+      "host": "cloud (D1)",
+      "launcher": "tools/timing_pilot_fixed_physics.py in a fresh process under the guard CLI (policy budget)",
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "p1a_medium_baseline", "--estimate-mib", "800", "--timeout-s", "1800", "--threads", "2", "--log", "outputs/post_t2/p1/<series>/p1a.log", "--record", "outputs/post_t2/p1/<series>/p1a_supervisor.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_fixed_physics.py", "--scale", "medium", "--key", "medium_baseline_plain_r0", "--scratch-dir", "outputs/post_t2/p1/<series>/scratch", "--output", "outputs/post_t2/p1/<series>/p1a.json", "--enabled-by-user", "<note>"],
+      "estimates": {"wall_s": {"desktop_anchor": 120, "cloud": "330-350", "label": "ANALYTIC_ESTIMATE (driver) / EXTRAPOLATED"}, "raw_peak_mib": {"value": "500-700", "label": "EXTRAPOLATED from S3 12 m runs and the E3 process peaks"}, "disk_mib": {"twin_record": 36, "record": "<1"}},
+      "guard": {"estimate_mib": 800, "margin": 2.0, "required_mib": 1600, "policy_budget_mib": 2011.6, "authorized_budget_mib": null, "timeout_s": 1800, "threads": 2},
+      "acceptance": ["supervisor status COMPLETED and launcher exit 0", "record validates: config_hash equals records/plan_medium.json run medium_baseline_plain_r0, arms twin then noise_on, open-loop digests shared, paired DeltaV available with 150 finite values", "ru_maxrss at most 800 MiB (else the E2 estimates are revised before any stage request)", "wall_s at most 2x the cloud estimate"],
+      "abort": ["supervisor RESOURCE_LIMITED, timeout or pressure stop", "a refused configuration (ScaoConstructionError and kin): report, do not retry"],
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "P1b",
+      "stage": "E2",
+      "purpose": "timing pilot of the most expensive planned setting (midpoint n = 8); bounds the exposure-axis cost",
+      "governed": true,
+      "host": "cloud (D1)",
+      "launcher": "as P1a",
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "p1b_medium_mid_n8", "--estimate-mib", "800", "--timeout-s", "3600", "--threads", "2", "--log", "outputs/post_t2/p1/<series>/p1b.log", "--record", "outputs/post_t2/p1/<series>/p1b_supervisor.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_fixed_physics.py", "--scale", "medium", "--key", "medium_exposure_mid_n8_r0", "--scratch-dir", "outputs/post_t2/p1/<series>/scratch", "--output", "outputs/post_t2/p1/<series>/p1b.json", "--enabled-by-user", "<note>"],
+      "estimates": {"wall_s": {"desktop_anchor": 594, "cloud": "1600-1750", "label": "ANALYTIC_ESTIMATE (driver) / EXTRAPOLATED"}, "raw_peak_mib": {"value": "500-700", "label": "EXTRAPOLATED (sub-samples add time, not proportional memory)"}},
+      "guard": {"estimate_mib": 800, "margin": 2.0, "required_mib": 1600, "policy_budget_mib": 2011.6, "authorized_budget_mib": null, "timeout_s": 3600, "threads": 2},
+      "acceptance": ["as P1a with key medium_exposure_mid_n8_r0; exposure metadata scheme midpoint_uniform_held_dm.v1 with 8 centred offsets"],
+      "abort": ["as P1a"],
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "P1c",
+      "stage": "E2",
+      "purpose": "timing and memory pilot of the largest planned grid (20 samples per lenslet, common band); decides whether E2c fits the policy budget",
+      "governed": true,
+      "host": "cloud (D1)",
+      "launcher": "as P1a",
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "p1c_medium_common_s20", "--estimate-mib", "1000", "--timeout-s", "2700", "--threads", "2", "--log", "outputs/post_t2/p1/<series>/p1c.log", "--record", "outputs/post_t2/p1/<series>/p1c_supervisor.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_fixed_physics.py", "--scale", "medium", "--key", "medium_pupil_common_s20_r0", "--scratch-dir", "outputs/post_t2/p1/<series>/scratch", "--output", "outputs/post_t2/p1/<series>/p1c.json", "--enabled-by-user", "<note>"],
+      "estimates": {"wall_s": {"desktop_anchor": 330, "cloud": "900-960", "label": "ANALYTIC_ESTIMATE (driver) / EXTRAPOLATED"}, "raw_peak_mib": {"value": "800-1000", "label": "EXTRAPOLATED (materialized bands 16 L S^2 at S = 958: 147 MB, plus FFT scratch and the 480-sample science grid)"}},
+      "guard": {"estimate_mib": 1000, "margin": 2.0, "required_mib": 2000, "policy_budget_mib": 2011.6, "authorized_budget_mib": null, "timeout_s": 2700, "threads": 2, "note": "admitted with 12 MiB to spare on this host; a lower available-memory reading would refuse it, in which case run it under tools/authorized_supervise.py with 2500 MiB and a note"},
+      "acceptance": ["as P1a with key medium_pupil_common_s20_r0; atmosphere record pairing_active true, screen_period_rule pupil_diameter, band_limit_screen_size 574, band_draw_reference_screen_size 958", "group peak (child plus the study driver's parent, about 100-150 MiB) at most 1005 MiB raw, else E2c needs an authorized budget (D2)"],
+      "abort": ["as P1a"],
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "P2",
+      "stage": "S4-A1",
+      "purpose": "timing and memory pilot of one traced paired run with residual maps retained (the series' worst case); fixes the audited estimate and the authorized budget of S4-A1",
+      "governed": true,
+      "host": "cloud (D1)",
+      "launcher": "tools/timing_pilot_traced_run.py in a fresh process under tools/authorized_supervise.py",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/authorized_supervise.py", "--label", "p2_s4a1_traced_m8_seed71", "--estimate-mib", "1400", "--authorized-budget-mib", "2800", "--authorization-note", "<note>", "--timeout-s", "1800", "--threads", "2", "--log", "outputs/post_t2/p2/<series>/p2.log", "--record", "outputs/post_t2/p2/<series>/p2_supervisor.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_traced_run.py", "--magnitude", "8", "--root-seed", "71", "--retain-maps", "--output", "outputs/post_t2/p2/<series>/p2.json", "--enabled-by-user", "<note>"],
+      "estimates": {"wall_s": {"desktop_anchor": 132, "cloud": "360-400", "label": "MEASURED_HISTORICAL (2638 s / 20 untraced runs) / EXTRAPOLATED"}, "raw_peak_mib": {"value": "1300-1400", "label": "EXTRAPOLATED (1.11 GiB historical untraced process peak plus trace telemetry, payload copies and the compressed sidecar buffer)"}, "trace_uncompressed_mib": "about 190 with maps, about 45 without"},
+      "guard": {"estimate_mib": 1400, "margin": 2.0, "required_mib": 2800, "policy_budget_mib": 2011.6, "authorized_budget_mib": 2800, "timeout_s": 1800, "threads": 2},
+      "acceptance": ["authorization accepted (pressure normal; available at least 1400 MiB + 1 GiB) and supervisor COMPLETED", "record's noise_variance_m2 and the other six recorded quantities within 1e-3 relative of run m8 seed 71 of det09_noise_isolation_12m_v3.json (cross-host roundoff expected; a larger difference is reported, not tuned)", "ru_maxrss at most 1400 MiB, else the S4-A1 estimate and budget are revised before the stage request", "trace_summary shows no mask disagreement, no rejected reconstruction, no recovery action at m8"],
+      "abort": ["supervisor RESOURCE_LIMITED, timeout or pressure stop", "any refusal of the authorization"],
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "P3",
+      "stage": "E3",
+      "purpose": "refreshed full-scale pilot: one twin-only 42 m baseline run (200 frames); fixes the E3 per-run cost and the authorized budget; optionally repeated for full_detector_k4_r0",
+      "governed": true,
+      "host": "cloud (D1)",
+      "launcher": "tools/timing_pilot_fixed_physics.py in a fresh process under tools/authorized_supervise.py",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/authorized_supervise.py", "--label", "p3_full_baseline_twin", "--estimate-mib", "1800", "--authorized-budget-mib", "4096", "--authorization-note", "<note>", "--timeout-s", "5400", "--threads", "2", "--log", "outputs/post_t2/p3/<series>/p3.log", "--record", "outputs/post_t2/p3/<series>/p3_supervisor.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_fixed_physics.py", "--scale", "full", "--key", "full_baseline_plain_r0", "--scratch-dir", "outputs/post_t2/p3/<series>/scratch", "--output", "outputs/post_t2/p3/<series>/p3.json", "--enabled-by-user", "<note>"],
+      "estimates": {"wall_s": {"desktop_driver_estimate": 726, "desktop_anchor_based": "about 390 (27 s build + 200 x 1.8 s)", "cloud": "1100-2100", "label": "ANALYTIC_ESTIMATE / MEASURED_HISTORICAL per-frame / EXTRAPOLATED"}, "raw_peak_mib": {"value": "1500-2000", "label": "MEASURED_HISTORICAL range of the S2 and S3 42 m runs (1.57-2.0 GiB), 200-frame histories smaller"}},
+      "guard": {"estimate_mib": 1800, "margin": 2.0, "required_mib": 3600, "policy_budget_mib": 2011.6, "authorized_budget_mib": 4096, "timeout_s": 5400, "threads": 2},
+      "acceptance": ["authorization accepted and supervisor COMPLETED", "record validates against records/plan_full.json run full_baseline_plain_r0 (single arm, paired DeltaV unavailable by plan, regenerated bands)", "ru_maxrss at most 2000 MiB, else the E3 budget is revised", "twin residual, Strehl and usable fraction in the range of the recorded 42 m runs (about 173 nm, 0.75-0.78, every frame usable) or the difference is reported"],
+      "abort": ["supervisor RESOURCE_LIMITED, timeout or pressure stop", "any refusal of the authorization"],
+      "status": "PREPARED_NOT_EXECUTED"
+    }
+  ],
+  "stages": [
+    {
+      "id": "S4-A1",
+      "protocol": "PROTOCOL.md section 1",
+      "governed": true,
+      "prerequisites": ["protocol review passed", "P2 accepted and its measured peak used as --estimate-mib", "the 2 m kappa verification of PROTOCOL.md 1.6 recorded before the analysis"],
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/authorized_supervise.py", "--label", "s4_a1_12m_traced", "--estimate-mib", "<P2 measured raw peak, default 1400>", "--authorized-budget-mib", "<2x that, default 2800>", "--authorization-note", "<note>", "--timeout-s", "8400", "--threads", "2", "--log", "outputs/post_t2/s4_a1/<series>/supervisor_<n>.log", "--record", "outputs/post_t2/s4_a1/<series>/supervisor_<n>.json", "--", "<venv>/bin/python", "scripts/run_detector_level_evidence.py", "--output-dir", "outputs/post_t2/s4_a1/<series>", "noise-isolation-12m-traced", "--enabled-by-user", "<note>"],
+      "resume": "re-invoke the same command with --resume inserted before noise-isolation-12m-traced until all 20 runs are recorded; each invocation validates every saved run and sidecar first",
+      "analysis": ["<venv>/bin/python", "scripts/analyze_noise_isolation_traces.py", "outputs/post_t2/s4_a1/<series>/det09_noise_isolation_12m_traced.json", "--output-dir", "outputs/post_t2/s4_a1/<series>/analysis", "--historical", "docs/refactor/detector_level_evidence/det09_noise_isolation_12m_v3.json", "--gate-quiet-labels", "m8,m9,m10"],
+      "runs": 20,
+      "estimates": {"wall": {"desktop": "45 min (2638 s historical untraced)", "cloud": "2.0-2.2 h (EXTRAPOLATED); two invocations"}, "raw_peak_mib": "1300-1400 (EXTRAPOLATED until P2)", "disk": "0.8-1.2 GB of sidecars plus a record under 1 MB"},
+      "outputs": {"record": "det09_noise_isolation_12m_traced.json", "sidecars": "det09_noise_isolation_12m_traced__m<k>__seed<s>.npz (20)", "analysis": "analysis.json, ANALYSIS_NOTE.md"},
+      "acceptance": ["20 runs recorded under one producer; a nothing-to-run re-invocation validates every sidecar and changes no byte", "analysis completes with the seven-quantity comparison against the committed record"],
+      "abort": ["a contract violation of PROTOCOL.md section 0", "supervisor stop (resume after the cause is recorded)"],
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "A2",
+      "protocol": "PROTOCOL.md section 1.7",
+      "governed": true,
+      "status": "CONDITIONAL_NOT_REQUESTED: requested only if the A1 decision rule fires",
+      "command": ["<as S4-A1 with>", "noise-isolation-12m-masklocked", "--enabled-by-user", "<note>"],
+      "runs": 10
+    },
+    {
+      "id": "E2a",
+      "protocol": "PROTOCOL.md section 2, axes detector and spectrum",
+      "governed": true,
+      "prerequisites": ["protocol review passed", "P1a-P1c accepted"],
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "e2a_medium_detector_spectrum", "--estimate-mib", "<P1 measured child peak plus 150, default 900>", "--timeout-s", "8400", "--threads", "2", "--log", "outputs/post_t2/e2a/<series>/supervisor_<n>.log", "--record", "outputs/post_t2/e2a/<series>/supervisor_<n>.json", "--", "<venv>/bin/python", "scripts/detector_level_convergence_study.py", "--scale", "medium", "--axes", "detector,spectrum", "--output-dir", "outputs/post_t2/e2a/<series>", "--enabled-by-user", "<note>"],
+      "resume": "re-invoke the identical command until convergence_medium.json is written; the driver reuses planned runs of the same producer only",
+      "runs": 15,
+      "estimates": {"wall": {"desktop": "0.69 h (2494 s, driver)", "cloud": "1.9 h (EXTRAPOLATED); one or two invocations"}, "raw_peak_mib": "500-700 per child plus the parent"},
+      "outputs": {"summary": "convergence_medium.json (axes detector, spectrum, baseline)", "runs": "runs/<key>.json (15)"},
+      "acceptance": ["summary written once; every pairing check true; each axis classified under PROTOCOL.md 2.4 or marked not expressible with its extension decision"],
+      "abort": ["a contract violation", "two or more refused settings"],
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "E2b",
+      "protocol": "PROTOCOL.md section 2, axes exposure and science",
+      "governed": true,
+      "prerequisites": ["E2a gate passed (PROTOCOL.md 2.6)"],
+      "command": ["<as E2a with>", "--axes", "exposure,science", "--output-dir", "outputs/post_t2/e2b/<series>"],
+      "runs": 24,
+      "estimates": {"wall": {"desktop": "1.61 h (5811 s, driver)", "cloud": "4.5 h (EXTRAPOLATED); two or three invocations"}},
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "E2c",
+      "protocol": "PROTOCOL.md section 2, axis pupil",
+      "governed": true,
+      "prerequisites": ["E2a gate passed", "P1c group peak decides policy versus authorized budget"],
+      "command": ["<as E2a with>", "--axes", "pupil", "--output-dir", "outputs/post_t2/e2c/<series>", "(under tools/authorized_supervise.py with 2500 MiB if P1c requires it)"],
+      "runs": 18,
+      "estimates": {"wall": {"desktop": "1.10 h (3970 s, driver)", "cloud": "3.1 h (EXTRAPOLATED); two invocations"}, "raw_peak_mib": "up to about 1000 per child at 20 samples plus the parent"},
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "E3",
+      "protocol": "PROTOCOL.md section 3",
+      "governed": true,
+      "prerequisites": ["E2a interpreted", "P3 accepted and its measured peak used"],
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/authorized_supervise.py", "--label", "e3_full_twin_only", "--estimate-mib", "<P3 measured raw peak plus 150, default 2000>", "--authorized-budget-mib", "4096", "--authorization-note", "<note>", "--timeout-s", "8400", "--threads", "2", "--log", "outputs/post_t2/e3/<series>/supervisor_<n>.log", "--record", "outputs/post_t2/e3/<series>/supervisor_<n>.json", "--", "<venv>/bin/python", "scripts/detector_level_convergence_study.py", "--scale", "full", "--output-dir", "outputs/post_t2/e3/<series>", "--enabled-by-user", "<note>"],
+      "runs": 5,
+      "estimates": {"wall": {"desktop": "1.71 h (6173 s, driver)", "cloud": "4.6-5.0 h (EXTRAPOLATED); three invocations"}, "raw_peak_mib": "1500-2000 per child"},
+      "outputs": {"summary": "convergence_full.json", "runs": "runs/<key>.json (5)"},
+      "acceptance": ["five runs under one producer; summary written once; the change tables of PROTOCOL.md 3.2 reported without any order estimate"],
+      "status": "PREPARED_NOT_EXECUTED"
+    }
+  ],
+  "decision_gates": [
+    "after P1a-P1c: revise every E2 estimate with measured values; decide E2c's budget (policy or authorized)",
+    "after P2: fix the S4-A1 estimate and authorized budget; confirm the cross-host agreement level at m8",
+    "done in this session: the 2 m kappa verification (CHK-0b) did not confirm the model under actuator clipping; the 12 m band is fixed a priori at 10 % with the saturation exclusion and the clipping hypothesis H_sat (PROTOCOL.md 1.6)",
+    "after S4-A1 analysis: A2 per PROTOCOL.md 1.7; seed extension per 1.7 (mechanism D3)",
+    "after E2a: expansion per PROTOCOL.md 2.6; extension per 2.5 (mechanism D3)",
+    "after E2a interpretation and P3: E3"
+  ],
+  "what_a_pilot_is_not": "a timing pilot measures cost and admission on the producing host; its record is not a study run, enters no study directory and supports no scientific sentence of PROTOCOL.md section 5"
+}
