@@ -224,7 +224,10 @@ Callers either pass a selected residual OPD to the configured propagator, or
 attach passive frame observers (`control.observation.FrameObserver`, e.g.
 `science.long_exposure.StreamingLongExposure`). Observers receive immutable
 per-frame atmosphere and pre-/post-update residual snapshots after each DM
-update. They cannot reach live components, and the run's telemetry and hash
+update and, when they ask for them, the frame's effective measurement row
+mask and a detached, deeply immutable copy of the sensor's detector telemetry
+(`measurement_row_mask`, `detector_telemetry`; S4 traced experiment, T1).
+They cannot reach live components, and the run's telemetry and hash
 are identical with or without them.
 
 Schema-v5 profiles with a `scalable` block take the high-order path through

@@ -29,6 +29,7 @@ from ..core.protocols import (
 )
 from ..core.random import DEFAULT_RANDOM_DOMAINS
 from ..core.types import (
+    DetectorTelemetry,
     DmCommandVector,
     DmSynthesisResult,
     ReconstructionEstimate,
@@ -41,6 +42,8 @@ from .observation import (
     FrameObservation,
     FrameObservationError,
     FrameObserver,
+    immutable_detector_telemetry,
+    immutable_mask_snapshot,
     immutable_snapshot,
     validate_frame_observers,
 )
@@ -518,6 +521,8 @@ def run_closed_loop(
                 atmosphere_opd_m=atmospheric_opd,
                 pre_update_residual_opd_m=residual_before,
                 post_update_residual_opd_m=residual_after,
+                measurement_row_mask=effective_rows,
+                detector_telemetry=detector_telemetry,
             )
 
     assert expected_subaperture_count is not None
@@ -828,8 +833,16 @@ def _notify_observers(
     atmosphere_opd_m: np.ndarray,
     pre_update_residual_opd_m: np.ndarray,
     post_update_residual_opd_m: np.ndarray,
+    measurement_row_mask: np.ndarray,
+    detector_telemetry: DetectorTelemetry | None,
 ) -> None:
-    """Hand one immutable frame record to every observer, in order."""
+    """Hand one immutable frame record to every observer, in order.
+
+    Each requested field is copied once per frame: the maps as float64
+    snapshots, the row mask as a boolean snapshot and the sensor's telemetry
+    as a detached, deeply immutable copy (``None`` when the sensor produced
+    none, whether or not it was requested).
+    """
 
     maps = {
         "atmosphere_opd_m": atmosphere_opd_m,
@@ -847,6 +860,16 @@ def _notify_observers(
             name: immutable_snapshot(values) if name in fields else None
             for name, values in maps.items()
         },
+        measurement_row_mask=(
+            immutable_mask_snapshot(measurement_row_mask)
+            if "measurement_row_mask" in fields
+            else None
+        ),
+        detector_telemetry=(
+            immutable_detector_telemetry(detector_telemetry)
+            if "detector_telemetry" in fields and detector_telemetry is not None
+            else None
+        ),
     )
     for index, observer in enumerate(observers):
         try:

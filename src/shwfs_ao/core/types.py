@@ -248,6 +248,21 @@ class DetectorTelemetry:
     uncertainty_supported: np.ndarray | None = None
     masked_pixel_fraction: np.ndarray | None = None
     saturated_pixel_count: np.ndarray | None = None
+    # S4 traced telemetry (T1, 2026-10-20; physical camera path only, None on
+    # every other path): the ``detector_covariance_v2`` temporal sigma of each
+    # axis, NaN where the model does not support the lenslet, and the plain
+    # centre of gravity of the expected processed window of the same frame,
+    # in the window pixel coordinates of ``centroids_xy_px``.  The expected
+    # centroid is defined for the plain centre-of-gravity estimator only (the
+    # sensor leaves it None for a thresholded or minimum-subtracted estimator)
+    # and is NaN where the expected window total is not positive: a zero-flux
+    # window has no centroid.  Both are diagnostics: NaN means "unavailable"
+    # on its own terms, and neither field is coupled to ``valid_subapertures``
+    # or any gate, so an undefined expectation can never refuse a measurement
+    # (independent review T1-01, 2026-10-20).  Only infinities and negative
+    # sigmas are rejected.
+    centroid_sigma_xy_px: np.ndarray | None = None
+    expected_centroids_xy_px: np.ndarray | None = None
 
     def __post_init__(self) -> None:
         subaperture_ids = _validated_ids(
@@ -280,6 +295,18 @@ class DetectorTelemetry:
                 _length_bool_array(
                     self.uncertainty_supported, count, label="uncertainty_supported"
                 ),
+            )
+        for label in ("centroid_sigma_xy_px", "expected_centroids_xy_px"):
+            value = getattr(self, label)
+            if value is not None:
+                array = _float_array(value, label=label, ndim=2)
+                _require_shape(array, (count, 2), label=label)
+                if np.any(np.isinf(array)):
+                    raise ValueError(f"{label} must not contain infinite values.")
+                object.__setattr__(self, label, array)
+        if self.centroid_sigma_xy_px is not None:
+            _require_nonnegative_finite_entries(
+                self.centroid_sigma_xy_px, label="centroid_sigma_xy_px"
             )
         centroids_xy_px = _float_array(
             self.centroids_xy_px,

@@ -727,6 +727,25 @@ class PhysicalShackHartmannSensor:
         )
         clipping = np.clip(1.0 - np.asarray(parts["window_capture"], dtype=float), 0.0, 1.0)
         finite = np.all(np.isfinite(centroids), axis=1)
+        # S4 operating-state telemetry (T1): the per-axis model sigma the
+        # gates already computed, NaN where the model does not support the
+        # lenslet, and the plain centre of gravity of the expected processed
+        # window of this very frame (the frame the gates use), in the same
+        # window coordinates and from the same estimator as ``centroids``.
+        # Neither enters any identity, draws nothing and changes no gate.
+        model_supported = np.asarray(quality.supported, dtype=bool)
+        sigma_xy = np.where(
+            model_supported[:, None],
+            np.asarray(quality.centroid_sigma_xy_px, dtype=float),
+            math.nan,
+        )
+        expected_centroids: np.ndarray | None = None
+        if _plain_center_of_gravity(self._centroid_config):
+            window_rows, window_cols = self._layout.window_slice
+            expected_centroids = _window_centroids(
+                np.asarray(quality.expected_processed_e, dtype=float)[:, window_rows, window_cols],
+                self._centroid_config,
+            )
         config = self._validity
         by_flux = quality.total_flux_e >= config.min_flux_e
         by_snr = quality.peak_snr >= config.min_peak_snr
@@ -814,6 +833,8 @@ class PhysicalShackHartmannSensor:
             uncertainty_supported=quality.supported,
             masked_pixel_fraction=masked_fraction,
             saturated_pixel_count=np.sum(saturated, axis=(1, 2)).astype(float),
+            centroid_sigma_xy_px=sigma_xy,
+            expected_centroids_xy_px=expected_centroids,
         )
         metadata = {
             "sensor_config_hash": self._config_hash,
@@ -842,10 +863,20 @@ class PhysicalShackHartmannSensor:
         )
 
 
-def _window_centroids(window: np.ndarray, config: CentroidConfig) -> np.ndarray:
-    """Centre-of-gravity centroids of every window, absolute window coordinates."""
+def _plain_center_of_gravity(config: CentroidConfig) -> bool:
+    """Whether ``config`` is the plain centre of gravity (no threshold, no minimum)."""
 
-    if config.estimator == "center_of_gravity" and not config.subtract_minimum:
+    return config.estimator == "center_of_gravity" and not config.subtract_minimum
+
+
+def _window_centroids(window: np.ndarray, config: CentroidConfig) -> np.ndarray:
+    """Centre-of-gravity centroids of every window, absolute window coordinates.
+
+    A window whose total is not positive, or whose centroid is not finite,
+    reports NaN: a zero-flux window has no centroid.
+    """
+
+    if _plain_center_of_gravity(config):
         n, rows, columns = window.shape
         total = np.sum(window, axis=(1, 2))
         x = np.arange(columns, dtype=float)
