@@ -4,7 +4,8 @@ Prepared 2026-10-21 (UTC) in a cloud session on the published commit
 `55142852d8e01f0c6b2828480c64c5792e7d5302` (tree
 `75c4fe7c9d8a90ef5f26fc174187cf8f82bd4ba9`) for independent
 experimental-design review; revised 2026-10-22 for the eight findings of
-review round 1 (section 8). This packet is a protocol-design and bounded
+review round 1 (section 8) and again for the seven findings of review
+round 2 (section 9). This packet is a protocol-design and bounded
 readiness deliverable. It authorizes nothing: no 12 m or 42 m job was run, no
 runtime code, profile, baseline or historical record was changed, and every
 pilot and study request below is `PREPARED_NOT_EXECUTED` until the protocol
@@ -289,3 +290,29 @@ speed varies by about 1.5x between sessions for identical work (section 4),
 so cloud wall estimates are indicative until the pilots measure them in the
 producing session. No runtime code, profile, baseline or historical record
 was changed; no governed run or 12 m or 42 m system build took place.
+
+## 9. Review round 2 (2026-10-22): findings and repairs
+
+Review round 2 on `bd90acd` resolved seven of the eight round-1 findings,
+kept POST-T2-04 partly open (a broad E0 interval could still earn an
+agreement claim) and raised seven new P2 findings. Each repair and its
+evidence (`records/cloud_checks/round2/SUMMARY.md` for the numbers):
+
+| # | Finding | Repair | Evidence |
+| --- | --- | --- | --- |
+| 04 (open part) | A broad E0 interval can still earn an agreement claim | the E0 ratio gets the same equivalence test as the loop ratio: per gate-quiet magnitude the whole 95 % t interval of the propagation-weighted E0 ratio over the admissible seeds must lie inside an a-priori 10 % band ("verified"), else "rejected" or "not expressible"; "within its own interval of unity" is struck as a criterion; the closure sentence needs both tests "verified" (PROTOCOL.md 1.6 "Use", 1.7 "E0 test", 5) | text |
+| N1 | Incorrect P1c pupil-size acceptance check | the check named `geometry.pupil_samples 480`, but that field is the illuminated sample count (10,224 at ci scale, 18,296 at 16 samples per lenslet); the grid is `geometry.pupil_shape`, so P1c now requires `pupil_shape == [480, 480]` and records `pupil_samples`, retained lenslets and the illuminated-area fraction (`pilot_requests.json` P1c) | ci rows of the T2 self-check (`records/cloud_checks/ci_selfcheck/`) |
+| N2 | Incorrect P2 recovery acceptance check | the check required `recovery null`, but the 12 m profile carries a recovery policy, so the core records a recovery block whose counters must be zero; P2 now reads the core's `trace_summary.arms[arm].recovery_acted` and `rejected_frames_after_burn_in` (the gate-quiet rule's own fields) and `gate_quiet` (`pilot_requests.json` P2; `detector_level.py:1224-1252`) | text; CHK-2b records show the fields |
+| N3 | Premature noise injection in the model | the latency queue starts with `d` zeros, so the noise of frame `k` first moves the command applied after update `k + d`; the transient now adds the forcing only for `k >= d` (`window_covariance`), the self-test checks that the first `d` post-update covariances are exactly zero and the next equals `g^2 R Sigma R^T` (PROTOCOL.md 7; notes section 3) | CHK-2a self-test |
+| N4 | Mismatched mask assumptions in the model | the reconstructor was probed with every row valid while the noise of unused rows was zeroed, which describes a different loop from the one that drops those rows; the reconstructor is now probed on exactly the rows that carry noise (`reconstructor_matrix_masked`), one fixed mask per support rule for `L`, the injection and `Sigma`; the series' all-valid propagation weights are kept only for the first draft's scalar value (PROTOCOL.md 1.6, 7) | CHK-2c, CHK-2d: the available-rule predictions on all-valid masks are unchanged; the strict-rule predictions move where lenslets flicker |
+| N5 | Incorrect rejection counts | the traced pilot recounted rejected frames from the trace arrays under its own field name; it now repeats the core's `trace_summary` counts (`rejected_frames_after_burn_in`, `recovery_acted`) and refuses a record whose arrays disagree with them; the model tool reports the same core-rule counts for both arms and the core's gate-quiet rule | CHK-2b: the recount equals the core's count on every rerun pilot (the tool would refuse otherwise) |
+| N6 | Missing sidecar semantic validation | before a sidecar is read as data the tool checks the declared array table (names, dtypes, shapes), the frame domains, the two-arm layout and the canonical interleaved rows of one lenslet order, the label and seed, the configuration hash against the built configuration, and, with `--record`, the series row's digest and size plus the evidence runner's own `validate_trace_payload`, or, with `--pilot-record`, the pilot's digest, size, frame counts, label, seed and hash; a refusal reads nothing | CHK-2c (32 series sidecars validated against their record), CHK-2b (pilot sidecars), CHK-2e (three negative checks refused) |
+| N7 | Degrees of freedom that ignore excluded seeds | every interval uses `n_adm - 1` degrees of freedom over the admissible units with the quantile of the count actually used; the loop and E0 tests state the counts their outcomes require (4 for "verified", 3 for "rejected"); E2 pairs use the realizations completed in both settings (PROTOCOL.md 0, 1.7, 2.3, 2.4, 2.5) | text |
+
+No runtime code, profile, baseline or historical record was changed; no
+governed run or 12 m or 42 m system build took place. The round-1 records
+stay under `records/cloud_checks/round1/` as the record of that revision;
+the round-2 reruns with the corrected tools go under
+`records/cloud_checks/round2/` (added by the commit that follows this
+section's first revision, once the ungoverned reruns complete; until then
+the evidence column names the checks that are running).
