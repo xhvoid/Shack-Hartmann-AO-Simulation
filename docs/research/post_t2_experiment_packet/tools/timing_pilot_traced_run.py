@@ -52,7 +52,7 @@ from _packet_common import (
     write_record_once,
 )
 
-SCHEMA = "post_t2_timing_pilot.traced_run.v2"
+SCHEMA = "post_t2_timing_pilot.traced_run.v3"
 PILOT_SIDECAR_SCHEMA = "post_t2_pilot_trace_sidecar.v1"
 SEVEN_RECORDED = (
     ("noise_variance_m2",),
@@ -114,20 +114,35 @@ def _compare_with_historical(result: dict[str, Any], historical: Path, *, label:
     }
 
 
-def _arm_telemetry_summary(trace: dict[str, Any], arm: str, burn_in: int) -> dict[str, Any]:
+def _arm_telemetry_summary(trace: dict[str, Any], core_summary: dict[str, Any], arm: str, burn_in: int) -> dict[str, Any]:
+    """The experiment core's own per-arm trace summary, plus two per-frame counts it does not carry.
+
+    Rejected frames and recovery actions are the core's numbers
+    (``trace_summary.arms[arm].rejected_frames_after_burn_in`` and
+    ``recovery_acted``, the fields the gate-quiet rule reads); this tool does
+    not recount them.  The recount from the trace arrays is made only to
+    refuse an internally inconsistent record (review round 2).
+    """
+
     entry = trace["arms"][arm]
+    core = core_summary["arms"][arm]
     saturation = np.asarray(entry["saturation_fraction"], dtype=float)[burn_in:]
     usable = np.asarray(entry["reconstruction_usable"], dtype=bool)[burn_in:]
-    valid = np.asarray(entry["valid_measurement_fraction"], dtype=float)[burn_in:]
+    recount = int(np.count_nonzero(~usable))
+    if recount != int(core["rejected_frames_after_burn_in"]):
+        raise SystemExit(f"arm {arm}: the trace arrays count {recount} rejected frames after burn-in, the core's summary {core['rejected_frames_after_burn_in']}; the record is inconsistent and is not written.")
     return {
-        "saturation_fraction_mean_after_burn_in": float(np.mean(saturation)),
-        "saturation_fraction_max_after_burn_in": float(np.max(saturation)),
+        "rejected_frames_after_burn_in": int(core["rejected_frames_after_burn_in"]),
+        "recovery_acted": bool(core["recovery_acted"]),
+        "recovery": jsonable(core.get("recovery")),
+        "min_valid_measurement_fraction_after_burn_in": float(core["min_valid_measurement_fraction_after_burn_in"]),
+        "max_saturation_fraction_after_burn_in": float(core["max_saturation_fraction_after_burn_in"]),
+        "mean_saturation_fraction_after_burn_in": float(core["mean_saturation_fraction_after_burn_in"]),
         "frames_with_saturation_after_burn_in": int(np.count_nonzero(saturation > 0.0)),
-        "rejected_reconstructions_after_burn_in": int(np.count_nonzero(~usable)),
-        "valid_measurement_fraction_min_after_burn_in": float(np.min(valid)),
-        "recovery": jsonable(entry.get("recovery")),
-        "telemetry_frames": int(entry["telemetry_frames"]),
-        "telemetry_unavailable": list(entry["telemetry_unavailable"]),
+        "telemetry_frames": int(core["telemetry_frames"]),
+        "telemetry_unavailable": list(core["telemetry_unavailable"]),
+        "history_config_hash": core.get("history_config_hash"),
+        "source": "trace_summary.arms (experiment core) except frames_with_saturation_after_burn_in (this tool, from the trace arrays)",
     }
 
 
@@ -230,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
         "seven_recorded_quantities": jsonable(seven),
         "historical_comparison": jsonable(comparison),
         "arms": jsonable(result.get("arms")),
-        "arm_telemetry": {arm: _arm_telemetry_summary(trace, arm, int(arguments.burn_in)) for arm in trace["arm_order"]},
+        "arm_telemetry": {arm: _arm_telemetry_summary(trace, result["trace_summary"], arm, int(arguments.burn_in)) for arm in trace["arm_order"]},
         "mask_disagreement": {
             "row_frames_fraction_after_burn_in": float(np.sum(disagreement[int(arguments.burn_in):]) / (rows * analysed)),
             "frames_with_disagreement_after_burn_in": int(np.count_nonzero(disagreement[int(arguments.burn_in):])),

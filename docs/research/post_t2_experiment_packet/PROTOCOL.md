@@ -6,7 +6,10 @@ only after its stage completes, and nothing in a result changes this text.
 Once approved, amendments are appended as dated sections and never rewrite
 an earlier rule. Revision 2 (2026-10-22, before approval, review round 1):
 sections 1.6, 1.7, 2.3, 2.4, 2.5, 3.3, 4, 5 and 7 were revised; the list of
-changes is in `README.md` section 8.
+changes is in `README.md` section 8. Revision 3 (2026-10-22, before
+approval, review round 2): sections 0, 1.6, 1.7, 2.3, 2.5, 5 and 7 (E0
+equivalence band, degrees of freedom over admissible units, the model's
+delayed injection and single mask); `README.md` section 9.
 
 ## 0. Rules common to every stage
 
@@ -23,10 +26,17 @@ counted as independent samples; within-run errors come from block means with
 a predeclared plateau rule (section 6). Magnitudes within a seed (S4 A1) and
 settings within a realization (E2 twin arm, non-pupil axes) are paired.
 
-**Intervals.** Student t with `n - 1` degrees of freedom over the units
-(`t_0.975` = 2.776 for 5 seeds, 4.303 for 3 realizations, 2.365 for 8 seeds).
-A "resolved" change is one whose interval excludes zero; the drivers' 2-SE
-flags are screening flags, not claims.
+**Intervals.** Student t with `n_adm - 1` degrees of freedom over the
+**admissible** units, `n_adm` being the units that remain after the
+predeclared exclusions of the stage (refused rows, the saturation and
+gate-quiet exclusions of 1.6, a missing realization); the quantile follows
+the count actually used (`t_0.975` = 2.776 at 4 dof, 3.182 at 3 dof, 4.303
+at 2 dof, 12.706 at 1 dof, 2.365 at 7 dof, 2.262 at 9 dof) and is never the
+planned count's quantile when units were excluded. Every interval is
+reported with its `n_adm`. A statistic over fewer than two admissible units
+has no interval and its outcome is "not expressible" (or "not classified"
+in E2). A "resolved" change is one whose interval excludes zero; the
+drivers' 2-SE flags are screening flags, not claims.
 
 **Excursions.** An excursion is flagged by the rules in section 6, listed
 with its trace, and kept in every statistic. No run is deleted, repeated,
@@ -257,13 +267,16 @@ feedback included.
   temporal correlation of the realized noise), the model is not used for
   closure, and A1 stays descriptive (P1-P6 reported).
 - **Use.** At 12 m, on gate-quiet, non-clipping runs only, the closure test
-  of 1.7 is applied per magnitude to `rho = DeltaV / DeltaV_pred`; the
-  closure sentence of section 5 may be written only when the test is
-  "verified" at every gate-quiet magnitude and the E0 ratio is within its
-  own reported interval of unity on the supported lenslets. A
-  magnitude-dependent `rho` with E0 near unity localizes the departure in
-  the loop (mask activity, saturation, temporal correlation); an E0 ratio
-  away from unity with `rho` verified localizes it in the sensor model.
+  of 1.7 is applied per magnitude to `rho = DeltaV / DeltaV_pred`, and the
+  E0 test of 1.7 to the propagation-weighted E0 ratio; the closure sentence
+  of section 5 may be written only when both tests are "verified" at every
+  gate-quiet magnitude. "Within its own reported interval of unity" is not
+  a criterion: a broad E0 interval that happens to contain one earns
+  nothing (review round 2). A `rho` outcome other than "verified" with E0
+  "verified" localizes the departure in the loop (mask activity,
+  saturation, temporal correlation); an E0 outcome other than "verified"
+  with `rho` "verified" localizes it in the sensor model; both "not
+  expressible" is a precision outcome and triggers the seed extension.
   Neither outcome is tuned away.
 
 ### 1.7 Decision rules
@@ -280,26 +293,38 @@ only if m10 shows gate activity, which is not expected.
 
 **Closure test of the loop model (equivalence semantics).** Per run,
 `rho = DeltaV / DeltaV_pred`, with `DeltaV_pred` the exact linear model's
-prediction (1.6) from that run's own realized noise covariance. Per
-gate-quiet magnitude, `rho_bar` is the mean over the five seeds and `h` the
-half-width of its 95 % t interval (4 dof, `t_0.975` = 2.776); the band is
-`[1 - b, 1 + b]` with `b = 0.10` fixed a priori. Exactly one of three
-outcomes is recorded per magnitude: **verified** when the whole interval lies
-inside the band, `rho_bar - h >= 1 - b` and `rho_bar + h <= 1 + b` (an
-equivalence test; a point estimate inside the band whose interval crosses a
-band edge is not a pass, and an interval wider than the band can never
-pass); **rejected** when the whole interval lies outside the band on one
-side, `rho_bar - h > 1 + b` or `rho_bar + h < 1 - b`; **not expressible**
-otherwise. "Not expressible" at a gate-quiet magnitude is a precision
-outcome and triggers the seed extension below (at most once); after the
-extension (9 dof, `t_0.975` = 2.262) the three outcomes are applied again
-and are final for this stage. The closure sentence of section 5 requires
-"verified" at every gate-quiet magnitude; a single "rejected" magnitude
-makes the model rejected for this stage, and the E0 and E1 results are then
-reported descriptively. The runs excluded by the saturation rule of 1.6 are
-listed with their saturation level and do not enter `rho_bar`; a magnitude
-with fewer than four admissible seeds after the extension is "not
-expressible" and stays so.
+prediction (1.6) from that run's own realized noise covariance (available
+rule). Per magnitude, the admissible seeds are those not excluded by the
+saturation and gate-quiet rules of 1.6 and not refused; `n_adm` is their
+count, `rho_bar` their mean and `h` the half-width of the 95 % t interval
+with `n_adm - 1` degrees of freedom (`t_0.975` = 2.776 at `n_adm` = 5, 3.182
+at 4, 4.303 at 3; the quantile follows `n_adm`, never the planned five); the
+band is `[1 - b, 1 + b]` with `b = 0.10` fixed a priori. Exactly one of
+three outcomes is recorded per magnitude: **verified** when `n_adm >= 4` and
+the whole interval lies inside the band, `rho_bar - h >= 1 - b` and
+`rho_bar + h <= 1 + b` (an equivalence test; a point estimate inside the
+band whose interval crosses a band edge is not a pass, and an interval
+wider than the band can never pass); **rejected** when `n_adm >= 3` and the
+whole interval lies outside the band on one side, `rho_bar - h > 1 + b` or
+`rho_bar + h < 1 - b`; **not expressible** otherwise, including every case
+with fewer admissible seeds than the outcome requires. "Not expressible" at
+a gate-quiet magnitude is a precision outcome and triggers the seed
+extension below (at most once); after the extension the three outcomes are
+applied again with the new `n_adm` (at most 10 seeds, 9 dof, `t_0.975` =
+2.262 when none is excluded) and are final for this stage. The excluded
+runs are listed with their saturation level or gate activity and do not
+enter `rho_bar`.
+
+**E0 test (the same semantics).** Per admissible run, `e = ` the
+propagation-weighted E0 ratio (realized centred variance over the model
+variance on the support lenslets, P2); per magnitude `e_bar`, `h_e` and
+`n_adm` as above, band `[1 - b_E0, 1 + b_E0]` with `b_E0 = 0.10` fixed a
+priori; outcomes **verified**, **rejected**, **not expressible** by the
+same inequalities and count requirements. The closure sentence of section 5
+requires both the loop test and the E0 test "verified" at every gate-quiet
+magnitude; a single "rejected" magnitude in either test makes that model
+rejected for this stage, and the other results are then reported
+descriptively.
 
 **Seed extension** (five further seeds at one magnitude): triggered only when
 the t half-width of `DeltaV` at a gate-quiet magnitude exceeds 5 % of its
@@ -369,7 +394,7 @@ no inference assumes noise pairing.
 
 | Arm | Endpoints per setting (units) | Inference |
 | --- | --- | --- |
-| twin (`operating_expectation`) | `post_update_rms` (nm), `peak_strehl` (1), `ee50_production` and `ee50_fourier` (rad, reported in mas), `reconstruction_usable_fraction` | deterministic given the paired input. The realization index is the unit and adjacent settings are **paired per realization** on every axis: the primary uncertainty of a change `Delta` is the Student t interval (2 dof, `t_0.975` = 4.303) of the three per-realization differences `Delta_r = Q_r(fine) - Q_r(coarse)`, computed offline from the run rows. On the non-pupil axes every realization sees the identical open-loop series in every setting (digests checked by the driver), so the pairing is exact in input and in series; on the pupil axis the input is the same continuous field on different rasters (exact physical pairing, dilation reported), so the pairing is in input only and the per-realization differences carry the raster-dependent series as part of the change being measured. The driver's unpaired `sqrt(s_i^2 + s_j^2)` is **descriptive only**: it ignores the covariance of the two settings' metrics across realizations, so it is neither a conservative nor a liberal bound in general (it exceeds the paired error when the settings are positively correlated, which pairing is designed to exploit, and falls below it when they are negatively correlated); it is printed beside the paired interval and no decision reads it |
+| twin (`operating_expectation`) | `post_update_rms` (nm), `peak_strehl` (1), `ee50_production` and `ee50_fourier` (rad, reported in mas), `reconstruction_usable_fraction` | deterministic given the paired input. The realization index is the unit and adjacent settings are **paired per realization** on every axis: the primary uncertainty of a change `Delta` is the Student t interval of the per-realization differences `Delta_r = Q_r(fine) - Q_r(coarse)` over the realizations completed in **both** settings (`n_adm` pairs, `n_adm - 1` dof: `t_0.975` = 4.303 for the three planned pairs, 12.706 if one realization was refused in either setting; fewer than two pairs gives no interval and the change is "not classified"), computed offline from the run rows. On the non-pupil axes every realization sees the identical open-loop series in every setting (digests checked by the driver), so the pairing is exact in input and in series; on the pupil axis the input is the same continuous field on different rasters (exact physical pairing, dilation reported), so the pairing is in input only and the per-realization differences carry the raster-dependent series as part of the change being measured. The driver's unpaired `sqrt(s_i^2 + s_j^2)` is **descriptive only**: it ignores the covariance of the two settings' metrics across realizations, so it is neither a conservative nor a liberal bound in general (it exceeds the paired error when the settings are positively correlated, which pairing is designed to exploit, and falls below it when they are negatively correlated); it is printed beside the paired interval and no decision reads it |
 | noise-on | the same metrics plus the per-setting `DeltaV` mean and block SE | paired per realization exactly as the twin (the atmosphere realization is shared; the re-keyed detector draws on the optics axes are part of the measured change and widen the paired interval); the unpaired SE is descriptive only |
 | paired `DeltaV` | mean (nm^2), block SE at 10 frames (driver) and at the plateau length (offline, section 6) | paired per realization across settings as above; a change of `DeltaV` across settings is a change of propagated noise plus re-keyed draws, and is reported as such |
 
@@ -379,7 +404,8 @@ Tolerances are the driver's contract tolerances (`CONTRACT_TOLERANCES`):
 residual 1.0 nm, peak Strehl 0.002, EE50 2 % relative, applied to the twin
 arm at the two finest settings of each scan. Let `Delta` be the paired mean
 of the finest adjacent change (2.3), `h` the half-width of its 95 % t
-interval (2 dof) and `tol` the metric's tolerance, so that the interval is
+interval (`n_adm - 1` dof over the completed pairs, section 0) and `tol`
+the metric's tolerance, so that the interval is
 `[Delta - h, Delta + h]` and the tolerance band is `[-tol, +tol]`. Every
 outcome falls in exactly one of three classes:
 
@@ -435,12 +461,15 @@ follows from it.
 ### 2.5 Uncertainty and extension rules
 
 Three realizations give 2 degrees of freedom (`t_0.975` = 4.303), so "not
-expressible" is the expected class for small changes. Extension trigger: a
-metric classified "not expressible" on the finest change of a scan with the
+expressible" is the expected class for small changes; a refused realization
+in either setting of a pair reduces the pairs and the dof accordingly
+(section 0). Extension trigger: a metric classified "not expressible" (or
+"not classified" for want of pairs) on the finest change of a scan with the
 three planned realizations extends that scan by three realizations (3, 4, 5)
-for every setting of the scan, at most once; after the extension (5 dof,
-`t_0.975` = 2.571) the three classes of 2.4 are applied again and the outcome
-is final for this stage, "not expressible" included. The mechanism is
+for every setting of the scan, at most once; after the extension the three
+classes of 2.4 are applied again with the completed pairs' dof (5 dof,
+`t_0.975` = 2.571 when all six completed) and the outcome is final for this
+stage, "not expressible" included. The mechanism is
 decision D3 (the driver's realizations are constants). The trigger reads the
 class, never the sign or size of `Delta`.
 Temporal-block sensitivity for `DeltaV` (150 analysed frames): block SE at
@@ -535,18 +564,19 @@ cloud 4.6-5.0 h (EXTRAPOLATED), chunked into resumed invocations.
 
 ## 5. Closure sentences each stage can earn
 
-- S4 A1 (gate-quiet magnitudes, model "verified" under 1.7 at each of
-  them): "At m_AB 8-10 on `@3` the isolated detector-noise variance equals
-  the exact linear closed loop's response (reconstructed spatial feedback
-  `L = R M`, gain 0.3, latency 2) to the realized centroid noise covariance:
-  the whole 95 % interval of the ratio `DeltaV / DeltaV_pred` over five seeds
+- S4 A1 (gate-quiet magnitudes, loop test and E0 test both "verified"
+  under 1.7 at each of them): "At m_AB 8-10 on `@3` the isolated
+  detector-noise variance equals the exact linear closed loop's response
+  (reconstructed spatial feedback `L = R M` on the fixed support mask, gain
+  0.3, latency 2) to the realized centroid noise covariance: the whole 95 %
+  interval of the ratio `DeltaV / DeltaV_pred` over the admissible seeds
   lies inside the predeclared 10 % band at every gate-quiet magnitude, and
-  the realized noise agrees with `detector_covariance_v2` at the operating
-  spots within its reported interval; the recorded 12 m slope departure is
-  therefore located in <the loop | the sensor model | neither>." A "not
-  expressible" or "rejected" outcome at any gate-quiet magnitude forbids this
-  sentence; the stage then reports P1-P6 descriptively and the outcome by
-  magnitude. LIM-18's recorded verdict is unchanged in any case; AR-006 is
+  the whole 95 % interval of the propagation-weighted E0 ratio lies inside
+  its predeclared 10 % band at every gate-quiet magnitude; the recorded 12 m
+  slope departure is therefore located in <the loop | the sensor model |
+  neither>." A "not expressible" or "rejected" outcome of either test at any
+  gate-quiet magnitude forbids this sentence; the stage then reports P1-P6
+  descriptively and the outcomes by magnitude. LIM-18's recorded verdict is unchanged in any case; AR-006 is
   closed only if the departure is explained or bounded by this sentence and
   the m10 dip is reproduced and attributed.
 - E2: per axis, "converged at the quoted precision", "unconverged" or "not
@@ -591,12 +621,17 @@ traces.
   without pixel integration; the WFS term scales about as `k^2` and linearly
   with nodes and sub-samples; cloud factor 2.7-2.9 (ci scale).
 - Exact linear loop model (1.6): `dc_{k+1} = (1 - l) dc_k - g L dc_{k-d} +
-  g R n_{k-d}`, `L = R M`; state `x_k = (dc_k, ..., dc_{k-d})`, `x_{k+1} = F
-  x_k + G n`; transient `P_{k+1} = F P_k F^T + G Sigma G^T` from `P_0 = 0`
-  (identical initial commands), stationary `P = F P F^T + G Sigma G^T`;
-  `DeltaV_pred = mean_k tr(Gram P_k[dc]) / N_pupil` over the analysed frames,
-  `Gram = W_c^T W_c` with `W_c` the piston-removed pupil response of the
-  controlled actuators; unit-feedback reduction `kappa * sum_r w_r sigma_r^2`
+  g R n_{k-d}` for `k >= d` and `dc_{k+1} = (1 - l) dc_k` for `k < d` (the
+  latency queue starts with `d` zeros), `L = R M` with `R` probed on the
+  fixed support mask that carries `Sigma` (rows outside it invalid, not
+  noiseless); state `x_k = (dc_k, ..., dc_{k-d})`, `x_{k+1} = F x_k + [k >=
+  d] G n_{k-d}`; transient `P_{k+1} = F P_k F^T + [k >= d] G Sigma G^T` from
+  `P_0 = 0` (identical initial commands), stationary `P = F P F^T + G Sigma
+  G^T`; `DeltaV_pred = mean_k tr(Gram P_{k+1}[dc]) / N_pupil` over the
+  analysed frames `k` (the post-update residual of frame `k` carries
+  `dc_{k+1}`), `Gram = W_c^T W_c` with `W_c` the piston-removed pupil
+  response of the controlled actuators; unit-feedback reduction `kappa *
+  sum_r w_r sigma_r^2`
   with `kappa = (1/2 pi) int |g e^{iw} / (e^{i(d+1)w} - (1-l) e^{idw} + g)|^2
   dw` (0.35005 at g = 0.3, l = 0, d = 2). Cost at 12 m: dense `W_c` about
   65,000 x 500 doubles (0.26 GB); the Lyapunov state is 3 x 500; the window

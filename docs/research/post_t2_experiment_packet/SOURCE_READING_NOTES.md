@@ -51,24 +51,37 @@ unit-feedback reduction of the exact linear model; both are implemented in
 the reconstructed increment of frame `k` is appended to a queue initialized
 with `d` zero entries, the oldest entry is released, and
 `c_{k+1} = (1 - l) c_k + g * released`; so the increment used at update `k`
-is the one computed `d` updates earlier. `ControlledSubsetCommandProjector`
-expands the reconstructor's controlled-actuator estimate into the full
-layout by identifier (zeros elsewhere). With `s_k = M (phi_k - c_k) + n_k`
-the measurement (calibrated interaction matrix `M`, rows x controlled
-actuators, white detector noise `n_k` of covariance `Sigma`) and
-`R` the reconstructor's linear map on a fixed mask
-(`experiments/detector_level.py:reconstructor_matrix`), the difference
+is the one computed `d` updates earlier, and the first `d` updates release
+the initial zeros (the noise of frame 0 first moves the command applied
+after update `d`; review round 2 corrected a draft that injected it `d`
+frames early). `ControlledSubsetCommandProjector` expands the
+reconstructor's controlled-actuator estimate into the full layout by
+identifier (zeros elsewhere). With `s_k = M (phi_k - c_k) + n_k` the
+measurement (calibrated interaction matrix `M`, rows x controlled
+actuators, white detector noise `n_k` of covariance `Sigma`) and `R` the
+reconstructor's linear map on **one fixed mask**, probed with exactly the
+rows that carry noise in `Sigma` valid and the others invalid (the tool's
+`reconstructor_matrix_masked`; the series' `reconstructor_matrix` probes
+with every row valid and defines the propagation weights), the difference
 `dc_k` between the noise-on command and the noiseless twin's (same
 atmosphere, same calibration) obeys
 
-    dc_{k+1} = (1 - l) dc_k - g L dc_{k-d} + g R n_{k-d},    L = R M.
+    dc_{k+1} = (1 - l) dc_k - g L dc_{k-d} + g R n_{k-d}   (k >= d),
+    dc_{k+1} = (1 - l) dc_k                                (k <  d),    L = R M.
 
-**Exact stationary covariance.** With `x_k = (dc_k, dc_{k-1}, ..., dc_{k-d})`,
-`x_{k+1} = F x_k + G n_{k-d}` with `F = [[(1-l) I, 0, ..., -g L], [I, 0, ...],
-..., [..., I, 0]]` (companion blocks) and `G = [g R; 0; ...; 0]`; if the
-spectral radius of `F` is below one, `P = F P F^T + G Sigma G^T` (discrete
-Lyapunov, `scipy.linalg.solve_discrete_lyapunov`) and `Cov(dc)` is its
-leading block. The isolated detector-noise variance recorded by the paired
+Rows the loop drops are removed from the reconstruction, which changes the
+pseudo-inverse; marking them noiseless but valid would describe another
+loop (review round 2).
+
+**Transient and stationary covariance.** With `x_k = (dc_k, dc_{k-1}, ...,
+dc_{k-d})`, `x_{k+1} = F x_k + [k >= d] G n_{k-d}` with `F = [[(1-l) I, 0,
+..., -g L], [I, 0, ...], ..., [..., I, 0]]` (companion blocks) and `G = [g R;
+0; ...; 0]`; from `P_0 = 0` (identical initial commands) the covariance of
+the run is the transient `P_{k+1} = F P_k F^T + [k >= d] G Sigma G^T`, and
+the post-update residual of frame `k` carries `dc_{k+1}`; if the spectral
+radius of `F` is below one the stationary limit solves `P = F P F^T + G
+Sigma G^T` (discrete Lyapunov, `scipy.linalg.solve_discrete_lyapunov`).
+`Cov(dc)` is the leading block in both cases. The isolated detector-noise variance recorded by the paired
 runs (`delta_v_m2`: piston-removed pupil mean square of the noisy-minus-twin
 residual map) is, in expectation,
 
