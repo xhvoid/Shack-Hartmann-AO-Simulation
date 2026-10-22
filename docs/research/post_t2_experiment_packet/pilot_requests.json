@@ -301,6 +301,60 @@
       "command": ["<venv>/bin/python", "-I", "records/cloud_checks/round4/audit_fields.py"],
       "result": {"paths_checked": 50, "missing": [], "samples": "fixed-physics pilot records (P1a, P1c, P3: baseline key; P1b: exposure key, round 3), the 2 m traced pilot record (P2), a round-4 model record (P2b)"},
       "records": "records/cloud_checks/round4/audit_fields.py, records/cloud_checks/round4/audit_fields.out"
+    },
+    {
+      "id": "CHK-5a",
+      "name": "review round 5: model self-test with the carried-state sensitivity checks",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--self-test", "--output", "<out>/model_self_test.json"],
+      "result": {"passed": true, "carried_state_sensitivity": {"recurrence_vs_explicit_powers": 1.1e-15, "gamma_all_unsensed_mode_persists": 1.0, "gamma_sensed_unit_feedback_300_of_25": 0.0833, "gamma_sensed_equals_direct_simulation_of_maximizer": -1.2e-15, "unsensed_injection_of_matching_reconstructor": 0.0}},
+      "records": "records/cloud_checks/round5/model_self_test.json"
+    },
+    {
+      "id": "CHK-5b",
+      "name": "review round 5: the model with the measured carried-state bound and the memory inventory on the five pilot sidecars (round-2 pilots, unchanged)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "<configuration of the pilot>", "--sigma", "sidecar", "--sidecar", "<pilot>/trace.npz", "--pilot-record", "<pilot>/pilot.json", "--output", "<out>/model_sidecar.json"],
+      "result": {"validation": "5 of 5 accepted (61 arrays each)", "operator_error": {"2m_m5": "+0.02 %", "ci_m7_alpha0.1": "0.00 %", "ci_m9_alpha0.1": "+0.03 %", "ci_m7_ci_damping": "+0.64 %", "ci_m9_ci_damping": "+3.86 % (mask-variable)"}, "unsensed_mode_injection": {"2m_m5": "no unsensed mode", "ci alpha 0.1": "1.9e-5 (gamma over the sensed states, 0.091)", "ci damping": "2.3e-2 (gamma over every state, 1.02)"}, "first_block_excess_and_block_scatter": {"2m_m5": "-18.9 %, 26.1 % (6 blocks)", "ci_m7_alpha0.1": "-2.4 %, 10.1 % (12 blocks)", "ci_m9_alpha0.1": "-2.8 %, 9.0 %", "ci_m7_ci_damping": "-10.2 %, 43.1 %", "ci_m9_ci_damping": "+39.3 %, 50.0 %"}, "carried_state_bound": {"2m_m5": "11.9 %", "ci_m7_alpha0.1": "2.1 % (23 % had the unsensed mode carried state)", "ci_m9_alpha0.1": "1.9 % (21 %)", "ci_m7_ci_damping": "99 %", "ci_m9_ci_damping": "142 %"}, "systematic_budget_u": {"2m_m5": "11.9 %", "ci_m7_alpha0.1": "2.1 %", "ci_m9_alpha0.1": "1.9 %", "ci_m7_ci_damping": "99 %", "ci_m9_ci_damping": "146 %"}, "rows_bracketed": "0 on every pilot", "memory": "retained arrays 1.1-20.9 MiB (dense pupil response 0.2-7.5 MiB freed after the Gram), peak 103-130 MiB", "gamma_time_s": "0.0-0.3 (states 39 and 288)"},
+      "records": "records/cloud_checks/round5/{ni2m_m5s61,ci_m7_default,ci_m7_alpha0p1,ci_m9_default,ci_m9_alpha0p1}/"
+    },
+    {
+      "id": "CHK-5c",
+      "name": "review round 5: the model with the measured carried-state bound on the 32 series sidecars (--record)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--profile", "det_emccd_2m_synthetic", "--profile-version", "1", "--magnitude", "<m>", "--sigma", "sidecar", "--sidecar", "<series sidecar>", "--record", "<series record>", "--output", "<out>/<label>__seed<seed>.json"],
+      "result": {"validation": "32 of 32 accepted (64 arrays each; record digest and size; runner validate_trace_payload)", "effective_rule_ratios_unchanged_t_7dof": {"m5": "0.936 +/- 0.060", "m6": "0.892 +/- 0.076", "m7": "0.860 +/- 0.050", "m8": "descriptive: 0.9 to 12"}, "classification": {"m5-m7": "24 of 24 operator-consistent (operator error 0.00-0.02 %)", "m8": "6 mask-variable (2.7-32 %, burn-in part up to 10.4 %), 1 not assessable (an operator the reconstructor refuses), 1 operator-consistent (1.7 %, gate-active)"}, "carried_state_bound": {"gamma": "0.167 on every run (every mode at unit feedback: a state's whole effect lies inside the first block of the 150-frame window)", "first_block_excess": "-37 % to +44 %", "block_scatter": "6-33 % over six blocks", "bound": "2.3-16.7 % at m5-m7; 6.9-839 % at m8 (block scatters up to 2518 %)"}, "systematic_budget_u_mean_over_operator_consistent": {"m5": "8.5 %", "m6": "9.5 %", "m7": "6.9 %"}, "reading": "the 2 m window (150 analysed frames, six blocks) cannot express a 10 % closure test by budget, beside the saturation rule that excludes all 24 gate-quiet runs", "rows_bracketed": "0 on every run (every row outside a modal mask had at least 10 usable frames or none)", "memory": "retained at most 3.5 MiB, peak at most 105 MiB"},
+      "records": "records/cloud_checks/round5/ni2m_models/ (summary.json has the per-run table)"
+    },
+    {
+      "id": "CHK-5d",
+      "name": "review round 5: negative checks repeated with the round-5 tool (wrong units, permuted axes, wrong dtype)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<the model on a copy of the 2 m pilot sidecar with (a) delta_v_m2 declared in nm2, (b) the centroid telemetry axes permuted, (c) saturation_fraction stored and declared as float32>"],
+      "result": {"a": "refused", "b": "refused", "c": "refused", "records_written": 0},
+      "records": "records/cloud_checks/round5/negative/"
+    },
+    {
+      "id": "CHK-5e",
+      "name": "review round 5: audit of every acceptance field path against the tools' current records (P2b sample: a round-5 model record, schema v5)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "-I", "records/cloud_checks/round5/audit_fields.py"],
+      "result": {"paths_checked": 48, "missing": [], "samples": "fixed-physics pilot records (P1a, P1c, P3: baseline key; P1b: exposure key, round 3), the 2 m traced pilot record (P2), a round-5 model record (P2b)"},
+      "records": "records/cloud_checks/round5/audit_fields.py, records/cloud_checks/round5/audit_fields.out"
+    },
+    {
+      "id": "CHK-5f",
+      "name": "review round 5: covariance-bracket fixture (a 2 m pilot sidecar with one lenslet dropped from the noisy arm's effective mask and sensor validity in all analysed frames but five)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--profile", "det_emccd_2m_synthetic", "--profile-version", "1", "--magnitude", "5", "--sigma", "sidecar", "--sidecar", "<out>/bracket_fixture/fixture.npz", "--output", "<out>/bracket_fixture/model.json"],
+      "result": {"rows_outside_modal_mask_bracketed": 2, "lenslets_bracketed": ["lenslet-r0000-c0001"], "envelope_px2": 0.0030, "estimated_lenslets": 20, "modal_operator_rows": "40 of 42 (3 distinct operators over the run)", "operator_error_lower_end": "-0.38 % (the rows' covariance at zero)", "operator_error_upper_end": "-0.12 % (at the envelope)", "operator_error_taken": "-0.38 % (the worse end)", "bracket_width_over_modal": "0.26 % (below the 2 % tolerance: the error is determined)", "classification": "operator-consistent", "note": "a fixture, not a run: it shows the bracket in the record; the structural validation accepts it because the declared table, shapes and hash are the pilot's, and no --record or --pilot-record digest check was requested"},
+      "records": "records/cloud_checks/round5/bracket_fixture/"
     }
   ],
   "pilots": [

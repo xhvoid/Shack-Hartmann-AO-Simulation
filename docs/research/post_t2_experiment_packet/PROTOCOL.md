@@ -284,24 +284,27 @@ feedback included.
   0.4 %) and the 2 m result of the first session stands as a result about
   the whole linear model, not about the omitted feedback: `DeltaV /
   DeltaV_pred` over 8 seeds is 0.936 +/- 0.060, 0.892 +/- 0.076 and
-  0.860 +/- 0.050 (t, 7 dof; effective rule; the operator error of every
-  run is below 0.03 % and both arms used the modal operator in at least
-  99.3 % of the frames, but the loop closure clips actuators during
-  burn-in, so 12 of the 24 runs restart the carried-state bound at the last
-  clipped burn-in frame 49 and are carried-state-sensitive at 2.44 %, the
-  share of their 150-frame window inherited from before it, and all 24 are
-  excluded by the saturation rule of (iv) in any case; available rule
-  0.936, 0.892, 0.860; strict rule 0.933, 0.890, 0.857) at
+  0.860 +/- 0.050 (t, 7 dof; effective rule; every run operator-consistent
+  with an operator error below 0.03 %, both arms under the modal operator
+  in at least 99.3 % of the frames; the carried-state bound, with
+  `gamma = 0.167` (every mode at unit feedback, so a state's whole effect
+  falls inside the first block of the 150-frame window) and first-block
+  excesses of -37 % to +44 % against block scatters of 6-33 % over six
+  blocks, is 2-17 % per run and the mean budget `u_bar` 8.5 %, 9.5 % and
+  6.9 % at m5, m6, m7, which would leave the 10 % band an agreement width
+  of 0.5-3 % and make the 2 m closure test "not expressible" by budget
+  even if the saturation rule of (iv) did not exclude all 24 runs;
+  available rule 0.936, 0.892, 0.860; strict rule 0.933, 0.890, 0.857) at
   m5, m6, m7, with the E0 ratio at unity (0.996-1.010) and 1.5-15 % of the
   actuators clipped per frame in both arms (stroke 1 um), so the model is
   **not verified at 2 m** and the 2 m record cannot settle it either way; at
-  the gate-active m8 the error bounds show what a frame count could not:
-  seven of the eight runs are mask-variable (operator error 2.7-32 %, of
-  which up to 10.4 % is carried in from the burn-in's operators; 9-40
-  distinct operators over a run) or not assessable (one run used an
-  operator the reconstructor refuses), the eighth is operator-consistent
-  at 1.7 % and 1.1 % but gate-active; the eight effective-rule ratios
-  scatter from 0.9 to 12 and are descriptive only, and the reconstructor's
+  the gate-active m8 the operator error shows what a frame count could
+  not: six of the eight runs are mask-variable (operator error 2.7-32 %,
+  of which up to 10.4 % is carried in from the burn-in's operators; 9-40
+  distinct operators over a run), one is not assessable (an operator the
+  reconstructor refuses), the eighth is operator-consistent at 1.7 % but
+  gate-active with a carried-state bound of 17 %; the eight effective-rule
+  ratios scatter from 0.9 to 12 and are descriptive only, and the reconstructor's
   own valid-fraction policy (0.75) refuses the strict mask on six of eight
   runs and the available mask on one. On the convergence driver's ci geometry
   (the 12 m `@3` detector physics on the 5 m smoke geometry, 96 controlled
@@ -313,21 +316,29 @@ feedback included.
   run's realized covariance is 0.987 at m7 (92.9 +/- 2.8 nm^2 measured) and
   1.011 at m9 (614.6 +/- 15.9 nm^2), each within one 25-frame block standard
   error; these are two runs and a pilot-level consistency check, not a
-  verification; both runs are operator-consistent under the error bounds
-  (operator error below 0.03 %, quiet burn-ins, 1.6 % of the window value
-  inherited from before it as a sensitivity). The same geometry with its
-  own damping (0.001) shows what the bounds measure: at m7 the run is
-  gate-quiet by the 0.1 % rule and changed its operator twelve times in
-  the window (the arms used the modal one in 94 % and 93 % of the frames),
-  which a frame-count threshold would have excluded, yet the transient
-  propagated with the actual operator of every frame differs from the
-  modal one by 0.64 % (the burn-in's operators carry in under 1e-7 of it)
-  and the one burn-in frame with a disagreeing row (frame 35) leaves a
-  carried-state bound of 1e-5, so the run is operator-consistent and its
-  ratio of 1.07 (1.06 against the time-varying value, within one block
-  SE) stands as a pilot-level check, while the strict mask, probed on its
-  own 126 rows, leaves modes unsensed and predicts about twice the
-  measured value (ratio 0.53); at m9 the run is gate-active and
+  verification; both runs are operator-consistent (operator error below
+  0.03 %, quiet burn-ins) and their systematic budget is 2.1 % and 1.9 %:
+  the one mode the operator does not sense receives an injection of
+  1.9e-5 relative (the Tikhonov property holds for the LSMR
+  reconstructor), so `gamma` runs over the sensed states and is 0.091
+  (the slowest sensed mode, feedback 0.12, decays within the first block),
+  the first-block excesses are -2.4 % and -2.8 % against block scatters
+  of 10 % and 9 % over twelve blocks, and the bound is 2.1 % and 1.9 %
+  (23 % and 21 % had the unsensed mode carried state). The same geometry
+  with its own damping (0.001) shows what the bound measures: at m7 the
+  run is gate-quiet by the 0.1 % rule and changed its operator twelve
+  times in the window (the arms used the modal one in 94 % and 93 % of
+  the frames), which a frame-count threshold would have excluded, yet the
+  transient propagated with the actual operator of every frame differs
+  from the modal one by 0.64 % (the burn-in's operators carry in under
+  1e-7 of it), so the run is operator-consistent and its ratio of 1.07
+  (1.06 against the time-varying value, within one block SE) stands as a
+  pilot-level check; but its almost unsensed mode (feedback 4.6e-7)
+  receives 2.3e-2 of the injection, `gamma` must run over every state and
+  is 1.02, the block scatter is 43 %, and the budget is 99 %: this loop
+  cannot express a closure test over a 400-frame window; the strict mask,
+  probed on its own 126 rows, leaves modes unsensed and predicts about
+  twice the measured value (ratio 0.53). At m9 the run is gate-active and
   mask-variable (55 distinct operators over the run, operator error
   +3.9 % with 0.01 % carried in from burn-in), the measured
   1772 +/- 190 nm^2 is 1.35 times the effective-rule prediction (1.30
