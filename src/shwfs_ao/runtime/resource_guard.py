@@ -1,6 +1,6 @@
 """Desktop-safe memory preflight and process-group supervision.
 
-The ESO SCAO development prompt (``docs/refactor/ESO_SCAO_DEVELOPMENT_PROMPT.md``
+The ESO SCAO development plan (``docs/refactor/eso_scao_development_plan.md``
 section 2.3) requires that scientific runs on the developer's desktop keep the
 machine responsive.  This module implements that policy with the standard
 library only, so a supervising parent never imports NumPy:

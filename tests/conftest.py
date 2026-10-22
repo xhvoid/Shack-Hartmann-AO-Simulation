@@ -8,7 +8,7 @@ They never run by default: a broad ``pytest`` invocation, a ``-m elt_scale``
 marker expression, or a ``-m "not slow"`` selection all skip them unless the
 caller also passes the explicit ``--enable-elt-scale`` option.  The option is
 the human authorization required by section 2.3 of
-``docs/refactor/ESO_SCAO_DEVELOPMENT_PROMPT.md``; the marker alone is only a
+``docs/refactor/eso_scao_development_plan.md``; the marker alone is only a
 label.  Collection and fixtures of those tests must not allocate the large
 system, so the guard below runs before any fixture is set up.
 """
@@ -26,7 +26,7 @@ ELT_SCALE_SKIP_REASON = (
     "elt_scale test refused: medium/full-scale runs need the explicit "
     f"{ELT_SCALE_OPTION} option after a human has reviewed the run's "
     "configuration, estimated peak memory, thread count, timeout, and output "
-    "path (docs/refactor/ESO_SCAO_DEVELOPMENT_PROMPT.md section 2.3)."
+    "path (docs/refactor/eso_scao_development_plan.md section 2.3)."
 )
 
 

@@ -137,7 +137,7 @@ and LIM-07.
   can decay or reset the requested command after a set number of consecutive
   rejected frames, reconstruct a rejected frame from its usable rows (sparse
   LSMR only, optionally guarded by actuator coverage, which is response-energy
-  coverage, not a rank or observability test: GPT pre-refactor audit F-05),
+  coverage, not a rank or observability test: pre-refactor audit F-05),
   and scale increments
   by the valid fraction. It acts after the controller update and never clears
   the latency queue; the controller still synchronizes to the applied command.
@@ -220,7 +220,7 @@ and LIM-07.
   lenslet is then invalid): threshold/minimum subtraction, negative clipping,
   non-linearity, expected pixel/register/ADC saturation above 90 % of capacity,
   read noise below half an ADC step on a pixel that enters the centroid, or
-  total-flux SNR below 7. Updated 2026-10-18 (GPT pre-refactor audit F-01):
+  total-flux SNR below 7. Updated 2026-10-18 (pre-refactor audit F-01):
   the quantization gate had used the scalar read noise and the largest gain
   multiplier of the whole batch (rejecting every block when it failed), so a
   CMOS read-noise map could leave contributing pixels under half a step while
@@ -250,7 +250,7 @@ and LIM-07.
   Supporting sensors can average optical intensities over several exposure
   samples, with one detector-noise application and the DM held fixed. The
   frame's residual metrics still use the first atmosphere sample.
-- Updated 2026-10-18 (GPT pre-refactor audit F-02): the effective
+- Updated 2026-10-18 (pre-refactor audit F-02): the effective
   quadrature of `control.run_closed_loop` is part of the run identity. Runs
   that differed only in `exposure_subsamples` or `exposure_s` used to share a
   `config_hash`; a multi-sample run now records the count and duration in its
@@ -344,7 +344,7 @@ and LIM-07.
   travels one screen period; low-frequency modes do not share that period.
   `periodic_band_repeated` flags that travel as an advisory: an exact repeat
   needs both wind components times the elapsed time to be whole periods, as
-  for the packaged axis-aligned winds (GPT pre-refactor audit F-12).
+  for the packaged axis-aligned winds (pre-refactor audit F-12).
   The recorded 4 s reference run repeats the fastest periodic bands.
   Introductory studies use short trajectories and limited realizations.
 - **Consequence / next evidence:** More frames do not automatically supply
@@ -401,7 +401,7 @@ and LIM-07.
   `a31099b` had caused; the native selection does not run them. The local
   development environment is not the constraint lock (numpy 2.5.0 against the
   pinned 2.5.1, plus optional extras).
-- Updated 2026-10-18 (GPT pre-refactor audit F-03): a resumed evidence series
+- Updated 2026-10-18 (pre-refactor audit F-03): a resumed evidence series
   used to retain old runs under the header of the newest environment. Series
   protocol 3 makes the producing environment part of every run's protocol and
   refuses a resume under another environment or of a version-2 record, and a
@@ -411,7 +411,7 @@ and LIM-07.
   backend, thread settings, OS version and optional packages are not bound.
   Version-2 records stay read-only history; their producers are not
   reconstructed.
-- Updated 2026-10-20 (GPT independent review AR-014, AR-016): a resume of
+- Updated 2026-10-20 (independent review AR-014, AR-016): a resume of
   the detector evidence series also refuses a record that contradicts
   itself -- a stored protocol hash that is not its payload's digest, a run
   whose label, seed, configuration hash, frame count or burn-in is not its
@@ -530,7 +530,7 @@ and LIM-07.
   photon-limited or as an exact match to the model. Explaining the
   departures is a separate study (roadmap S4); a new record must not
   overwrite this one. A five-seed paired bootstrap of the saved 12 m records
-  (GPT pre-refactor audit F-06, an unweighted estimator) is exploratory
+  (pre-refactor audit F-06, an unweighted estimator) is exploratory
   evidence, not a validated ensemble uncertainty.
 - **Evidence:** [12 m record](refactor/detector_level_evidence/det09_noise_isolation_12m_v3.json),
   [2 m record](refactor/detector_level_evidence/det09_noise_isolation_2m.json),
@@ -539,7 +539,7 @@ and LIM-07.
 ### LIM-19 — HCIPy science images are conditional on their captured window
 
 - **Status:** Observable boundary; HCIPy science propagation. Added 2026-10-18
-  (GPT pre-refactor audit F-04).
+  (pre-refactor audit F-04).
 - The HCIPy science propagator normalizes each frame's image to unit sum over
   its finite focal window, and the long exposure averages those images with
   equal weights. For captured fractions `c_k` the grid Strehl is the source
@@ -553,7 +553,7 @@ and LIM-07.
   normalize once; validate the field of view at any claimed configuration.
 - **Evidence:** [science metrics](../src/shwfs_ao/science/metrics.py),
   [HCIPy propagation](../src/shwfs_ao/backends/hcipy/propagation.py),
-  GPT audit oracle `reviewers/atmosphere_science/oracles/science_window_oracle.py`
+  audit oracle `reviewers/atmosphere_science/oracles/science_window_oracle.py`
   (main checkout `outputs/pre_refactor_audit/20261017T143700Z/`).
 
 ## Keeping this record current

@@ -2,7 +2,7 @@
 
 Version: 1.0. Prepared 2026-10-18, Europe/Berlin.
 
-Use this exchange format for subsequent GPT and Claude reconciliation, repair,
+Use this exchange format for independent audit reconciliation, repair,
 and verification. Preserve original reports, report-local IDs, logs and raw
 evidence unchanged. Do not rewrite historical reports to match this format.
 The format aligns evidence and decisions; it does not require identical prose
@@ -94,7 +94,7 @@ For DISPUTED decisions retain both interpretations and a discriminating check.
 DUPLICATE records point to the canonical root finding and preserve all aliases.
 
 An implementer cannot move a finding directly to CLOSED using its own green
-summary. An independent agent or later separate reviewer may verify closure.
+summary. An independent reviewer may verify closure.
 Record who did what; agreement alone is not proof. Preserve before/after
 observations and any contrary source evidence.
 

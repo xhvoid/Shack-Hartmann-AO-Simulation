@@ -187,7 +187,7 @@ def run_closed_loop(
     single-sample run keeps the identity and metadata it always had, except
     that ``wfs_exposure`` is recorded when the WFS declares a different
     configured count (``exposure_subsamples``), so the override stays visible.
-    Before 2026-10-18 (GPT pre-refactor audit F-02) runs that differed only in
+    Before 2026-10-18 (pre-refactor audit F-02) runs that differed only in
     these arguments shared one ``config_hash``.
 
     ``recovery`` (opt-in, default ``None``) is a
@@ -269,7 +269,7 @@ def run_closed_loop(
         ):
             raise ControlLoopError("wfs.exposure_subsamples must be a positive integer.")
         configured_subsamples = int(configured_subsamples)
-    # The quadrature the loop actually applies (GPT audit F-02).  The
+    # The quadrature the loop actually applies (audit F-02).  The
     # left-point payload is exactly the historical one; the midpoint rule
     # carries its own scheme and names its rule at every count.
     effective_exposure: dict[str, Any] | None = (
