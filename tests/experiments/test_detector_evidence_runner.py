@@ -363,7 +363,7 @@ def test_saved_evidence_records_keep_their_identities_and_summaries() -> None:
     assert checked_hashes > 0 and checked_summaries > 0
 
 
-# -- GPT pre-refactor audit F-03 (2026-10-18): who produced each retained run --
+# -- pre-refactor audit F-03 (2026-10-18): who produced each retained run --
 
 
 def _environment(monkeypatch: pytest.MonkeyPatch, environment: dict[str, str]) -> None:
@@ -451,7 +451,7 @@ def test_appending_needs_a_known_code_identity(isolated_runner: Path, monkeypatc
     assert (isolated_runner / "series.json").read_bytes() == before  # nothing to add: verified, not written
 
 
-# -- GPT independent review AR-016 (2026-10-20): a saved record agrees with itself --
+# -- independent review AR-016 (2026-10-20): a saved record agrees with itself --
 
 
 OTHER_ARM = [("other arm", CONFIG, 31)]

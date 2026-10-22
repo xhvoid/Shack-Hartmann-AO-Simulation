@@ -11,7 +11,7 @@ Scales:
 
 ``--scale analogue`` (default)
     A desktop-safe analogue at the fixture limits of
-    ``docs/refactor/ESO_SCAO_DEVELOPMENT_PROMPT.md`` section 2.3: 80 pupil
+    ``docs/refactor/eso_scao_development_plan.md`` section 2.3: 80 pupil
     pixels, 10x10 SH, 11x11 DM, 32 frames, one science wavelength (2.2 um)
     and science pad 3.  It keeps the published lenslet pitch, spot sampling,
     8-pixel windows, sensing wavelength, r0, L0, wind, gain and latency.  It

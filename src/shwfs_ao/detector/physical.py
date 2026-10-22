@@ -2,7 +2,7 @@
 
 The chain acts on a batch of lenslet blocks, arrays of shape
 ``(n_lenslets, block, block)``, in the declared order of
-``docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_PROMPT.md`` section 4:
+``docs/refactor/detector_level_development_plan.md`` section 4:
 
 1. optical photoresponse ``r = PRNU * live`` multiplies the source and sky
    photoelectron expectations (input e-; QE was applied once by photometry);

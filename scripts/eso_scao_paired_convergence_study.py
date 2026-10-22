@@ -35,7 +35,7 @@ grid's own band power.
 own process, so the recorded ``ru_maxrss`` is that run's peak; a finished run
 is never repeated (rerunning the command resumes).
 
-**Run identity and resume** (GPT independent review AR-014, 2026-10-20).
+**Run identity and resume** (independent review AR-014, 2026-10-20).
 Every run file is named by scale and setting (``full_s12_wfs2_sci2_r0``) and
 carries its run protocol: the planned setting, scale, frames, burn-in,
 wavelength, paired grid, band storage and configuration hash, and the
