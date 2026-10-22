@@ -115,9 +115,29 @@ def test_subsamples_need_an_exposure_and_a_capable_wfs() -> None:
 
 # -- GPT pre-refactor audit F-02 (2026-10-18): the effective quadrature is identity --
 
-# The single-sample identity of this 3-frame system before the change; it
-# must stay exactly the same.
-SINGLE_SAMPLE_HASH = "02cc0257e875ed44588f24bb93211490294856ecafaa128cb882d9a6b06de7e1"
+# A single-sample run must keep exactly the identity it had before the change
+# (2312502): the run payload without any exposure entry.  Its digest binds
+# numerically computed inputs (probe influences, calibration products) whose
+# last bits differ between CPUs and NumPy builds, so pinning one host's value
+# (02cc0257... on the producing macOS arm64 machine) fails on every CI runner.
+# The test rebuilds that pre-change payload from the run's own record instead.
+def _pre_change_identity(history) -> str:
+    from shwfs_ao.core.hashing import component_config_hash
+
+    metadata = history.metadata
+    return component_config_hash(
+        "control.closed_loop_run",
+        {
+            "component_hashes": metadata["component_hashes"],
+            "random_derivation_scheme_id": metadata["random_derivation_scheme_id"],
+            "random_stream_ids": metadata["random_stream_ids"],
+            "include_noise": metadata["include_noise"],
+            "realization_index": metadata["realization_index"],
+            "residual_sign_convention": metadata["residual_sign_convention"],
+            "command_sign_convention": metadata["command_sign_convention"],
+            "frame_sequence": "shwfs_ao.control.run_closed_loop.v1",
+        },
+    )
 
 
 def _DeclaredExposureWfs(wfs, configured):
@@ -143,7 +163,9 @@ def test_the_effective_quadrature_is_part_of_the_run_identity() -> None:
     single = [_loop(system, config), _loop(system, config, exposure_subsamples=1, exposure_s=1.0e-3),
               _loop(system, config, exposure_subsamples=1, exposure_s=5.0e-4)]
     # exposure_s has no effect on one sample, so it changes nothing.
-    assert {history.config_hash for history in single} == {SINGLE_SAMPLE_HASH}
+    single_hash = _pre_change_identity(single[0])
+    assert {history.config_hash for history in single} == {single_hash}
+    assert all(_pre_change_identity(history) == single_hash for history in single)
     assert all("wfs_exposure" not in history.metadata for history in single)
     multi = {
         (2, 1.0e-3): _loop(system, config, exposure_subsamples=2, exposure_s=1.0e-3),
@@ -151,7 +173,9 @@ def test_the_effective_quadrature_is_part_of_the_run_identity() -> None:
         (4, 1.0e-3): _loop(system, config, exposure_subsamples=4, exposure_s=1.0e-3),
     }
     hashes = {key: history.config_hash for key, history in multi.items()}
-    assert len(set(hashes.values()) | {SINGLE_SAMPLE_HASH}) == 4
+    assert len(set(hashes.values()) | {single_hash}) == 4
+    # A multi-sample run leaves the pre-change form: its quadrature enters.
+    assert all(history.config_hash != _pre_change_identity(history) for history in multi.values())
     assert _loop(system, config, exposure_subsamples=2, exposure_s=1.0e-3).config_hash == hashes[(2, 1.0e-3)]
     for (count, duration), history in multi.items():
         record = dict(history.metadata["wfs_exposure"])
@@ -168,14 +192,15 @@ def test_an_override_of_the_configured_exposure_is_recorded() -> None:
     # A WFS configured for two samples, run on one: the effective single
     # sample keeps the single-sample identity, and the metadata says so.
     declared = _loop(system, config, atmosphere=None, wfs=_DeclaredExposureWfs(system.wfs, 2))
-    assert declared.config_hash == SINGLE_SAMPLE_HASH
+    single_hash = _loop(system, config).config_hash
+    assert declared.config_hash == single_hash == _pre_change_identity(declared)
     assert dict(declared.metadata["wfs_exposure"]) == {
         "scheme": "single_sample_at_frame_time.v1", "subsamples": 1, "duration_s": None,
         "source": "run_closed_loop arguments", "wfs_configured_subsamples": 2,
     }
     # Any integer type is a count (recorded as an int); other types are not.
     numpy_count = _loop(system, config, atmosphere=None, wfs=_DeclaredExposureWfs(system.wfs, np.int64(2)))
-    assert numpy_count.config_hash == SINGLE_SAMPLE_HASH
+    assert numpy_count.config_hash == single_hash
     assert dict(numpy_count.metadata["wfs_exposure"]) == dict(declared.metadata["wfs_exposure"])
     assert type(numpy_count.metadata["wfs_exposure"]["wfs_configured_subsamples"]) is int
     for invalid in (0, np.int64(0), True, np.True_, 2.0):
