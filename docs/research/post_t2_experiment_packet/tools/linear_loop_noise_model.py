@@ -174,7 +174,7 @@ from _packet_common import (
     write_record_once,
 )
 
-SCHEMA = "post_t2_linear_loop_noise_model.v8"
+SCHEMA = "post_t2_linear_loop_noise_model.v9"
 UNSENSED_FEEDBACK = 1.0e-6
 BLOCK_FRAMES = 25
 UNSENSED_CONTENT_LEVEL = 1.0e-3
@@ -431,37 +431,38 @@ def deterministic_window(start_state: np.ndarray, start_queue: list[np.ndarray],
 
 
 def quadratic_box_extremes(a: float, b: float, h: float, p_range: tuple[float, float], q_range: tuple[float, float]) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
-    """Exact minimum and maximum of ``a p^2 + b q^2 + 2 h p q`` over ``p_range x q_range`` (``p, q >= 0``).
+    """Exact minimum and maximum of ``a p^2 + b q^2 + 2 h p q`` over ``p_range x q_range`` (``0 <= p``, ``0 <= q``).
 
-    Returns ``((min, p, q), (max, p, q))``.  The candidates are the corners,
-    the vertex of the quadratic on each edge, and, for a singular form, a
-    point of its null ray inside the box (value zero); a homogeneous quadratic
-    has no other critical point.
+    Returns ``((min, p, q), (max, p, q))``.  The extremes of a continuous
+    function over a compact box lie at interior critical points or on the
+    boundary.  A homogeneous quadratic's interior critical points lie on a
+    line through the origin on which the form vanishes; that line meets the
+    box boundary wherever it meets the box, so the value there (zero) is also
+    a boundary value.  The boundary is four edges, on each of which the form
+    is a 1-D quadratic whose extremes are its two ends (the corners) or its
+    vertex.  So the candidates are the corners and the edge vertices that lie
+    on their edge; every candidate satisfies both intervals (review round 8:
+    the round-7 null-ray candidate could leave a positive or fixed interval).
     """
 
-    candidates: list[tuple[float, float]] = [(p, q) for p in p_range for q in q_range]
-    for p in p_range:
+    p_low, p_high = float(p_range[0]), float(p_range[1])
+    q_low, q_high = float(q_range[0]), float(q_range[1])
+    if not (0.0 <= p_low <= p_high and 0.0 <= q_low <= q_high):
+        raise ValueError(f"invalid box {p_range} x {q_range}")
+    candidates: list[tuple[float, float]] = [(p, q) for p in (p_low, p_high) for q in (q_low, q_high)]
+    for p in (p_low, p_high):
         if b != 0.0:
             q = -h * p / b
-            if q_range[0] <= q <= q_range[1]:
+            if q_low <= q <= q_high:
                 candidates.append((p, q))
-    for q in q_range:
+    for q in (q_low, q_high):
         if a != 0.0:
             p = -h * q / a
-            if p_range[0] <= p <= p_range[1]:
+            if p_low <= p <= p_high:
                 candidates.append((p, q))
-    scale = max(abs(a), abs(b), abs(h), 1.0e-300)
-    if abs(a * b - h * h) <= 1.0e-12 * scale * scale:
-        direction = np.array([-h, a]) if abs(a) >= abs(b) and a != 0.0 else np.array([b, -h])
-        if np.linalg.norm(direction) > 0.0:
-            direction = direction / np.linalg.norm(direction)
-            if direction[0] < 0.0 or direction[1] < 0.0:
-                direction = -direction
-            if direction[0] >= 0.0 and direction[1] >= 0.0:
-                low = max(p_range[0] / direction[0] if direction[0] > 0.0 else 0.0, q_range[0] / direction[1] if direction[1] > 0.0 else 0.0)
-                high = min(p_range[1] / direction[0] if direction[0] > 0.0 else np.inf, q_range[1] / direction[1] if direction[1] > 0.0 else np.inf)
-                if low <= high and np.isfinite(low):
-                    candidates.append((float(low * direction[0]), float(low * direction[1])))
+    for p, q in candidates:
+        if not (p_low <= p <= p_high and q_low <= q <= q_high):
+            raise AssertionError(f"candidate ({p}, {q}) outside the box {p_range} x {q_range}")
     scored = [(a * p * p + b * q * q + 2.0 * h * p * q, p, q) for p, q in candidates]
     minimum = min(scored, key=lambda item: item[0])
     maximum = max(scored, key=lambda item: item[0])
@@ -744,6 +745,21 @@ def self_test() -> dict[str, Any]:
         grid_p, grid_q = np.meshgrid(np.linspace(p_t[0], p_t[1], 301), np.linspace(q_t[0], q_t[1], 301))
         grid_values = a_t * grid_p**2 + b_t * grid_q**2 + 2.0 * h_t * grid_p * grid_q
         box_gap = max(box_gap, float(np.min(grid_values) - low_t) * -1.0 if np.min(grid_values) < low_t else 0.0, float(np.max(grid_values) - high_t) if np.max(grid_values) > high_t else 0.0)
+    # Review round 8: singular forms (rank one, one-sided, zero) on boxes with positive and fixed intervals,
+    # against a dense grid of the box itself; and a lenslet with one axis unused and the other fixed.
+    singular_gap = 0.0
+    singular_cases = 0
+    for a_s, b_s, h_s in ((0.0, 2.0, 0.0), (1.5, 0.0, 0.0), (0.0, 0.0, 0.0), (1.0, 4.0, 2.0), (1.0, 4.0, -2.0), (-1.0, -4.0, 2.0), (-1.0, -4.0, -2.0), (0.25, 1.0, 0.5)):
+        for p_s, q_s in (((0.3, 1.2), (0.7, 0.7)), ((0.3, 1.2), (0.5, 0.9)), ((0.6, 0.6), (0.0, 1.0)), ((0.6, 0.6), (0.4, 0.4)), ((0.0, 1.0), (0.0, 1.0)), ((0.2, 0.9), (0.1, 1.3))):
+            (low_s, p_low_s, q_low_s), (high_s, p_high_s, q_high_s) = quadratic_box_extremes(a_s, b_s, h_s, p_s, q_s)
+            grid_p, grid_q = np.meshgrid(np.linspace(p_s[0], p_s[1], 401), np.linspace(q_s[0], q_s[1], 401))
+            grid_values = a_s * grid_p**2 + b_s * grid_q**2 + 2.0 * h_s * grid_p * grid_q
+            inside = all(p_s[0] <= value <= p_s[1] for value in (p_low_s, p_high_s)) and all(q_s[0] <= value <= q_s[1] for value in (q_low_s, q_high_s))
+            singular_gap = max(singular_gap, abs(low_s - float(np.min(grid_values))), abs(high_s - float(np.max(grid_values))), 0.0 if inside else np.inf)
+            singular_cases += 1
+    per_axis_coefficient = np.zeros((rows_t, rows_t))
+    per_axis_coefficient[1, 1] = 2.0
+    per_axis_extremes = admissible_extremes(per_axis_coefficient, np.diag([0.0, 0.3, 0.0, 0.0, 0.0, 0.0]), [{"lenslet": "per-axis", "rows": [0, 1], "lower_px2": [0.1, 0.3], "upper_px2": [0.5, 0.3]}])
     indefinite = rng3.standard_normal((rows_t, rows_t))
     indefinite = 0.5 * (indefinite + indefinite.T)
     admissible_t = [{"lenslet": "a", "rows": [0, 1], "lower_px2": [0.0, 0.2], "upper_px2": [1.5, 0.9]}, {"lenslet": "b", "rows": [2, 3], "lower_px2": [0.1, 0.0], "upper_px2": [0.4, 2.0]}]
@@ -790,6 +806,9 @@ def self_test() -> dict[str, Any]:
         "indefinite_functional_extremes": [extremes_t["min"], extremes_t["max"]],
         "indefinite_functional_variance_corners": corners_only,
         "constant_sequence_cold_equals_modal_cold": constant_error,
+        "singular_forms_on_positive_and_fixed_intervals_cases": singular_cases,
+        "singular_forms_largest_deviation_from_box_grid": singular_gap,
+        "per_axis_unused_axis_fixed_axis_extremes": [per_axis_extremes["min"], per_axis_extremes["max"]],
         "carried_mode_unsensed_by_modal_operator_window_ratio_actual_over_modal": float(np.mean(removed) / np.mean(kept)),
     }
     passed = (
@@ -817,6 +836,9 @@ def self_test() -> dict[str, Any]:
         and operator_error_checks["admissible_samples_outside_extremes_of_4000"] == 0
         and operator_error_checks["admissible_extremes_attained"] < 1.0e-12
         and operator_error_checks["constant_sequence_cold_equals_modal_cold"] < 1.0e-12
+        and operator_error_checks["singular_forms_largest_deviation_from_box_grid"] < 1.0e-12
+        and abs(operator_error_checks["per_axis_unused_axis_fixed_axis_extremes"][0] - 0.6) < 1.0e-15
+        and abs(operator_error_checks["per_axis_unused_axis_fixed_axis_extremes"][1] - 0.6) < 1.0e-15
         and operator_error_checks["carried_mode_unsensed_by_modal_operator_window_ratio_actual_over_modal"] < 0.5
     )
     return {"unit_feedback_cases": cases, "decoupled_modes_gain_0.3_latency_2": modal, "structured_propagation_max_error": propagation_error, "window_mean_unit_feedback_400_100": window_check, "delayed_injection": delay_checks, "unsensed_mode_has_no_stationary_limit": {"stationary_returned": unit_pole[0], "spectral_radius": unit_pole[1]}, "operator_sequence_and_carried_state": sequence_checks, "carried_state_sensitivity": sensitivity_checks, "operator_error_on_the_conditional_prediction": operator_error_checks, "passed": bool(passed)}

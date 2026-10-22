@@ -127,7 +127,10 @@ the same run against every lenslet with an estimate of its own, and every
 positive-semidefinite completion), over which the operator error is
 extremized exactly: with `p = sqrt(s_x)`, `q = sqrt(s_y)` and the cross
 term at its PSD limit, each lenslet contributes a 2 x 2 quadratic form
-over a box.
+over a box, whose extremes lie at its corners or edge vertices (review
+round 8: a homogeneous quadratic vanishes along the line of its interior
+critical points, which meets the boundary, so no interior candidate is
+needed, and none may leave either interval).
 
 **Transient and stationary covariance.** With `x_k = (dc_k, dc_{k-1}, ...,
 dc_{k-d})`, `x_{k+1} = F x_k + [k >= d] G n_{k-d}` with `F = [[(1-l) I, 0,

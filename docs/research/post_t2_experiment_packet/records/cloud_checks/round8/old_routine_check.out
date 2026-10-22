@@ -1,0 +1,14 @@
+{
+ "round-7 (v8)": {
+  "cases": 48,
+  "extremes_wrong": 9,
+  "points_outside_an_interval": 9,
+  "largest_deviation_from_grid": 0.9799999999999999
+ },
+ "round-8 (v9)": {
+  "cases": 48,
+  "extremes_wrong": 0,
+  "points_outside_an_interval": 0,
+  "largest_deviation_from_grid": 4.440892098500626e-16
+ }
+}

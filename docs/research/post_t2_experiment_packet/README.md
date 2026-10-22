@@ -7,8 +7,9 @@ experimental-design review; revised 2026-10-22 for the eight findings of
 review round 1 (section 8), the seven findings of review round 2 (section
 9), the five findings of review round 3 (section 10), the two findings of
 review round 4 (section 11), the three findings of review round 5
-(section 12), the two findings of review round 6 (section 13) and the two
-findings of review round 7 (section 14). This packet is a protocol-design and bounded
+(section 12), the two findings of review round 6 (section 13), the two
+findings of review round 7 (section 14) and the finding of review round 8
+(section 15). This packet is a protocol-design and bounded
 readiness deliverable. It authorizes nothing: no 12 m or 42 m job was run, no
 runtime code, profile, baseline or historical record was changed, and every
 pilot and study request below is `PREPARED_NOT_EXECUTED` until the protocol
@@ -216,14 +217,16 @@ directory; copies of the records are under `records/cloud_checks/`.
 | Round 5: model reruns with the measured carried-state bound, the covariance bracket and the memory inventory (CHK-5a to CHK-5f) | the model's self-test; the model on the five pilot sidecars (`--pilot-record`) and the 32 series sidecars (`--record`); three negative checks; a bracket fixture (a 2 m pilot sidecar with one lenslet outside the modal operator and usable in five frames only); the acceptance field-path audit | self-test passed (the leading-block-row recurrence equals explicit powers of `F` to 1e-15, `gamma` equals a direct simulation of its maximizing state, an unsensed mode persists at ratio one and receives zero injection); 37 of 37 genuine sidecars validated and the three corrupted ones refused as in rounds 3 and 4; effective-rule ratios unchanged; on the ci runs with the 12 m damping the unsensed mode receives 1.9e-5 of the injection, `gamma` over the sensed states is 0.091, the first-block excesses are -2.4 % and -2.8 % against block scatters of 10 % and 9 %, and the systematic budget is 2.1 % and 1.9 %; on the ci runs with the ci damping the almost unsensed mode receives 2.3e-2 of the injection, `gamma` over every state is 1.02 and the budget is 99 % and 146 % (no closure test can be expressed on that loop); on the 2 m series every m5-m7 run is operator-consistent (operator error below 0.03 %) with carried-state bounds of 2-17 % (`gamma` 0.167, six blocks of scatter 6-33 %) and mean budgets of 8.5 %, 9.5 % and 6.9 %, while at m8 six runs are mask-variable (2.7-32 %), one not assessable and one consistent at 1.7 % with a bound of 17 %; no genuine run had a row to bracket, the fixture bracketed two rows and reported both ends; the retained-array inventory is 1-21 MiB against peaks of 103-130 MiB (interpreter, libraries and build about 100 MiB); 48 acceptance field paths resolve | EXECUTED_CURRENT |
 | Round 6: model reruns with the measured carried state, the conditional prediction, the calibrated sensor-model margin and the budget exclusion (CHK-6a to CHK-6i) | the model's self-test; three traced ci pilots with residual maps retained; the model on the five round-2 pilot sidecars, the three new pilot sidecars and the 32 series sidecars; a carried-state fixture, a scaled-series fixture and the round-5 bracket fixture; two logged replays of traced ci pilots; three negative checks; the acceptance field-path audit | self-test passed (schema v7); the replays reproduce the pilots' series exactly and show every reconstructor input to be the centroid minus the sensor's calibration reference (0.0 px), the probed operator to match the actual LSMR estimate to 1.3e-6 at damping 0.1 and to 1-5 % at 0.001; on the ci runs with the 12 m damping the command difference rebuilt from the telemetry reproduces the series to 1.6e-5 and 6.8e-6, the measured carried state contributes 1.2 % and 1.4 % (model 1.6 %), the conditional ratios are 0.991 and 1.012 and the budgets 0.002 % and 0.026 %; the ci m7 run with the ci damping is assessable only with its maps (reconstruction 2.8e-3; ratio 1.072, budget 0.92 %); every 2 m run is not assessable (54-193 clipped frames; reconstruction 21-427 %); the carried-state fixture (+25 % window variance through the loop) is measured as 26.7 % carried, ratio 0.986 conditional against 1.234 unconditional, budget 1.3e-5; the scaled-series fixture is caught (reconstruction 21 %, budget at or above the band); the sensor-model margin of two is supported on every one of the 40 genuine records (largest 97.5 % upper ratio 0.81-1.47); 57 acceptance field paths resolve | EXECUTED_CURRENT |
 | Round 7: the operator error on the conditional prediction with exact extremes over the admissible covariance (CHK-7a to CHK-7h) | the model's self-test; the model on the five round-2 pilot sidecars, the three round-6 pilot sidecars with maps and the 32 series sidecars; three linear re-synthesis fixtures (an operator change after the first analysed frame with and without noise, sparse lenslets), each also run with the round-6 tool; the round-6 carried-state and scaled-series fixtures and the round-5 bracket fixture; three negative checks; the acceptance field-path audit, now resolving relative paths | self-test passed (schema v8; adjoint functional against forward propagation 2.7e-16; box extremes against a dense grid; 0 of 4000 random admissible covariances outside the exact extremes, while the variance corners of an indefinite functional miss them); operator-change fixture: the round-6 tool reports a 0.8 % budget while its prediction is 20 times the measured value, the v8 tool an operator error of -94.8 % (not assessable), and the actual-operator prediction is within 6 % of the measured value; quiet operator-change fixture with five arm-disagreement frames: the actual-operator prediction reproduces the measured window mean to 2.1e-5 (the realized cross terms of the noise scaled by 1e-4); sparse-lenslet fixture: exact extremes -0.12 % to +0.10 %, none of 200 sampled admissible covariances outside; ci runs with the 12 m damping: operator errors 0.00 % and +0.39 %, budgets 0.002 % and 0.39 %; the ci m7 run with the ci damping: operator error +18.6 % from 15 arm-disagreement frames, mask-variable; every 2 m run not assessable as before; 66 absolute and 28 relative acceptance field paths resolve | EXECUTED_CURRENT |
+| Round 8: the exact extremes evaluated at the corners and edge vertices only (CHK-8a to CHK-8f) | the model's self-test with 48 singular forms on positive and fixed intervals; the round-7 and round-8 extreme routines on those cases; a per-axis fixture (one lenslet's x row outside every operator while the lenslet stays valid; identical operators throughout) with both tools; the whole round-7 batch with the v9 tool; negative checks; the field audit | self-test passed (schema v9; the 48 singular cases match a 401 x 401 grid of the box to 4.4e-16; the per-axis case has zero width); the round-7 routine gets 9 of the 48 cases wrong, each with a returned point outside an interval, the round-8 routine none; per-axis fixture: the round-7 tool reports a false 0.39 % extreme range, the v9 tool zero width and an operator error of 1.3e-16; every other record equals round 7 (50 compared); 66 absolute and 28 relative acceptance field paths resolve | EXECUTED_CURRENT |
 
 Details and tables: `records/cloud_checks/round1/SUMMARY.md`,
 `records/cloud_checks/round2/SUMMARY.md`,
 `records/cloud_checks/round3/SUMMARY.md`,
 `records/cloud_checks/round4/SUMMARY.md`,
 `records/cloud_checks/round5/SUMMARY.md`,
-`records/cloud_checks/round6/SUMMARY.md` and
-`records/cloud_checks/round7/SUMMARY.md`.
+`records/cloud_checks/round6/SUMMARY.md`,
+`records/cloud_checks/round7/SUMMARY.md` and
+`records/cloud_checks/round8/SUMMARY.md`.
 
 Speed anchor: the cloud host completes the same ci-scale work 2.7 to 2.9
 times slower than the desktop anchors (driver wall ratio 2.73, summed child
@@ -474,4 +477,19 @@ and P2b reads it at 12 m.
 No runtime code, profile, baseline or historical record was changed; no
 governed run or 12 m or 42 m system build took place. The round-7 reruns
 are under `records/cloud_checks/round7/`; the earlier rounds' records stay
+as the record of those revisions.
+
+## 15. Review round 8 (2026-10-22): finding and repair
+
+Review round 8 on `32470bc` resolved POST-T2-12 within the declared
+linear-model scope, kept POST-T2-20 resolved and left one P2 in POST-T2-21
+(`records/cloud_checks/round8/SUMMARY.md` has the tables):
+
+| # | Finding | Repair | Evidence |
+| --- | --- | --- | --- |
+| 21 | A null-ray candidate can violate positive or fixed variance intervals; a supported per-axis fixture with identical operators falsely reports a 48.61 % error range and excludes the run | The candidate on the null ray of a singular form set a coordinate to zero whenever the ray's direction had a zero component, ignoring a positive or fixed interval on that axis. That candidate was never needed: the extremes of a continuous function over a box lie at interior critical points or on the boundary, and a homogeneous quadratic's interior critical points lie on a line through the origin where it vanishes, which meets the box boundary. The candidates are now the corners and the edge vertices that lie on their edge, and the routine checks every candidate against both intervals (PROTOCOL.md 1.6 (1), 7) | CHK-8a: 48 singular forms (rank one, one-sided, zero) on positive, fixed and zero-based intervals match a 401 x 401 grid of the box to 4.4e-16, and a lenslet with an unused x axis and a fixed y axis has zero width. CHK-8b: the round-7 routine gets 9 of those 48 wrong, each with a point outside an interval. CHK-8c: a per-axis fixture (one lenslet's x row outside every operator while the lenslet stays valid) gets a false 0.39 % extreme range from the round-7 tool and zero width from v9. CHK-8d: every other record equals round 7 |
+
+No runtime code, profile, baseline or historical record was changed; no
+governed run or 12 m or 42 m system build took place. The round-8 reruns
+are under `records/cloud_checks/round8/`; the earlier rounds' records stay
 as the record of those revisions.

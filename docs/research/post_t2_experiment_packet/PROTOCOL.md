@@ -39,7 +39,10 @@ conditional prediction, with the measured carried state and the noise
 propagated through the actual later operators and the arm-operator
 forcing included; the rows outside the modal mask given an admissible
 covariance set over which the operator error is extremized exactly);
-`README.md` section 14.
+`README.md` section 14. Revision 9 (2026-10-22, before approval, review
+round 8): section 1.6 (the candidates of the exact per-lenslet extremes
+restricted to the corners and edge vertices of the interval box, so that
+every candidate satisfies both variance intervals); `README.md` section 15.
 
 ## 0. Rules common to every stage
 
@@ -252,9 +255,12 @@ feedback included.
   faintest quarter of the spots is reported apart). Lenslets are independent
   (separate pixels, independent photon and read noise), so the set is a
   product of per-lenslet sets. The operator error is extremized exactly over
-  it: per lenslet the contribution is a 2 x 2 quadratic form in `(sqrt(s_x),
-  sqrt(s_y))` over a box, whose extremes lie at a corner, at an edge vertex
-  or on a null ray, and the per-lenslet extremes add. The bracket ends of
+  it: per lenslet the contribution is a 2 x 2 quadratic form in
+  `(sqrt(s_x), sqrt(s_y))` over a box, whose extremes lie at a corner or at
+  the vertex of an edge (a homogeneous quadratic vanishes along the line of
+  its interior critical points, and that line meets the box boundary, so the
+  boundary candidates suffice; every candidate lies inside both intervals,
+  review round 8), and the per-lenslet extremes add. The bracket ends of
   round 6 were not the extremes of that round's error, which was the
   difference of two transients with an indefinite dependence on the
   covariance; the exact extremes cover every admissible case by
@@ -870,7 +876,8 @@ traces.
   from the backward pass `H_k = w Gram_dc + F_{k+1}^T H_{k+1} F_{k+1}`;
   extremes over the admissible `Sigma` per lenslet from `max/min a p^2 + b
   q^2 +- 2 |h| p q` over `p in [sqrt(l_x), sqrt(u_x)]`, `q in [sqrt(l_y),
-  sqrt(u_y)]`; the run is admissible for the fixed-operator comparison
+  sqrt(u_y)]`, evaluated at the corners and the edge vertices; the run is
+  admissible for the fixed-operator comparison
   only if the larger magnitude is at most 2 % (1.6 (iv)). Reconstructed
   trajectory: `inc_k =
   R_k^noisy (m_k^noisy - m_ref) - R_k^twin (m_k^twin - m_ref)` (each arm's
