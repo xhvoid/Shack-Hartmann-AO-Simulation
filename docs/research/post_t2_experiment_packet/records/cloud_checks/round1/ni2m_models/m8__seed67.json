@@ -1,0 +1,160 @@
+{
+ "schema": "post_t2_linear_loop_noise_model.v1",
+ "mode": "model",
+ "purpose": "analysis-only linear closed-loop noise model; no loop is run; no scientific claim by itself",
+ "configuration": "det_emccd_2m_synthetic@1, m_AB 8",
+ "diagnostic_alpha_override": null,
+ "config_hash": "0915342515d10e0fb8b9edf95faf627a5d692b8b00862c965ae3c339556250e5",
+ "root_seed": 67,
+ "n_steps_in_hash": 200,
+ "controller": {
+  "gain": 0.2,
+  "leak": 0.02,
+  "latency_frames": 2
+ },
+ "reconstructor": {
+  "kind": "tsvd",
+  "alpha": null,
+  "rcond": 1e-08
+ },
+ "dimensions": {
+  "rows": 42,
+  "controlled_actuators": 13,
+  "pupil_samples": 2032,
+  "lyapunov_state": 39
+ },
+ "feedback_spectrum": {
+  "definition": "eigenvalues of L = R M on the controlled actuators (1 = unit feedback; below 1 = damped mode; the scalar model assumes all 1)",
+  "min": 0.9999999999999987,
+  "percentile_10": 0.9999999999999987,
+  "median": 0.9999999999999998,
+  "max": 1.000000000000001,
+  "fraction_below_0.9": 0.0,
+  "fraction_below_0.5": 0.0,
+  "max_abs_imaginary": 5.20740757162067e-16,
+  "max_abs_deviation_of_L_from_identity": 1.7091302476276525e-15
+ },
+ "stationarity": {
+  "spectral_radius_F": 0.7225795558226936,
+  "lyapunov_relative_residual": 2.2297157475364377e-14,
+  "window_end_over_stationary": 1.0000000000000013,
+  "window_frames": [
+   50,
+   200
+  ]
+ },
+ "noise_covariance": {
+  "source": "sidecar_realized_residuals (c_noisy - c_expected on the noisy arm's support lenslets, ddof 1, 2x2 per lenslet)",
+  "sidecar": "/tmp/claude-0/-home-user-Shack-Hartmann-AO-Simulation/f1f3bff0-5382-5b19-9652-6c00a445942e/scratchpad/checks/ni2m_traced/det09_noise_isolation_2m_traced__m8__seed67.npz",
+  "sidecar_schema": "shwfs_ao.noise_isolation_trace_sidecar.v1",
+  "label": "m8",
+  "root_seed": 67,
+  "config_hash": "0915342515d10e0fb8b9edf95faf627a5d692b8b00862c965ae3c339556250e5",
+  "analysed_frames": 150,
+  "support_rules": {
+   "strict": {
+    "definition": "lenslets valid, supported and finite in every analysed frame (the E0 rule)",
+    "lenslet_fraction": 0.47619047619047616,
+    "rows_with_noise": 20
+   },
+   "available": {
+    "definition": "lenslets valid, supported and finite in at least 0.9 of the analysed frames; covariance over each lenslet's own valid frames",
+    "min_fraction": 0.9,
+    "lenslet_fraction": 0.9047619047619048,
+    "rows_with_noise": 38,
+    "mean_valid_fraction_of_included": 0.9754385964912281
+   }
+  },
+  "support_lenslet_fraction": 0.47619047619047616,
+  "rows_with_noise": 20,
+  "mean_realized_sigma_px_on_support": 0.16758389730379947,
+  "measured_delta_v_mean_m2": 6.601792707153513e-17,
+  "measured_delta_v_block25_se_m2": 4.4029524296718236e-18,
+  "measured_mean_square_difference_mean_m2": 3.7014453137841325e-16,
+  "noisy_arm_saturation_fraction_mean": 0.06153846153846154,
+  "noisy_arm_frames_with_saturation": 80,
+  "twin_arm_saturation_fraction_mean": 0.06307692307692309,
+  "noisy_arm_rejected_reconstructions": 109,
+  "mask_disagreement_row_frames_fraction": 0.0015873015873015873,
+  "residual_map_pupil_samples": null,
+  "pupil_samples_equal_to_model": null,
+  "primary_rule": "available"
+ },
+ "prediction": {
+  "units": "m2 (piston-removed pupil mean square of the noise-driven correction difference; the sidecar's delta_v_m2 in expectation)",
+  "delta_v_exact_window_m2": 6.745851690271351e-17,
+  "delta_v_exact_window_diagonal_sigma_m2": 6.763710534766815e-17,
+  "delta_v_exact_stationary_m2": 6.745851690271341e-17,
+  "delta_v_exact_stationary_diagonal_sigma_m2": 6.763710534766809e-17,
+  "delta_v_scalar_reduction_m2": 6.763710534766816e-17,
+  "delta_v_one_step_open_loop_m2": 4.3647060958897897e-16,
+  "scalar_kappa": 0.15455454598933627,
+  "primary": "delta_v_exact_window_m2 (transient from identical initial commands, averaged over the analysed frames; noise covariance rule 'available')",
+  "by_noise_covariance_rule": {
+   "strict": {
+    "delta_v_exact_window_m2": 3.144053256197436e-17,
+    "delta_v_exact_window_diagonal_sigma_m2": 3.145101025657354e-17,
+    "delta_v_exact_stationary_m2": 3.144053256197436e-17,
+    "delta_v_exact_stationary_diagonal_sigma_m2": 3.1451010256573584e-17,
+    "delta_v_scalar_reduction_m2": 3.145101025657358e-17,
+    "delta_v_one_step_open_loop_m2": 2.0342677312218083e-16,
+    "window_over_stationary": 1.0,
+    "exact_window_over_scalar": 0.9996668566601282,
+    "exact_stationary_over_scalar": 0.9996668566601282,
+    "exact_window_over_diagonal_sigma": 0.9996668566601294,
+    "window_end_over_stationary": 1.0000000000000007,
+    "spectral_radius_F": 0.7225795558226936,
+    "lyapunov_relative_residual": 2.3381302778288048e-14
+   },
+   "available": {
+    "delta_v_exact_window_m2": 6.745851690271351e-17,
+    "delta_v_exact_window_diagonal_sigma_m2": 6.763710534766815e-17,
+    "delta_v_exact_stationary_m2": 6.745851690271341e-17,
+    "delta_v_exact_stationary_diagonal_sigma_m2": 6.763710534766809e-17,
+    "delta_v_scalar_reduction_m2": 6.763710534766816e-17,
+    "delta_v_one_step_open_loop_m2": 4.3647060958897897e-16,
+    "window_over_stationary": 1.0000000000000016,
+    "exact_window_over_scalar": 0.9973596083978361,
+    "exact_stationary_over_scalar": 0.9973596083978347,
+    "exact_window_over_diagonal_sigma": 0.9973596083978363,
+    "window_end_over_stationary": 1.0000000000000013,
+    "spectral_radius_F": 0.7225795558226936,
+    "lyapunov_relative_residual": 2.2297157475364377e-14
+   }
+  },
+  "window_over_stationary": 1.0000000000000016,
+  "exact_window_over_scalar": 0.9973596083978361,
+  "exact_stationary_over_scalar": 0.9973596083978347,
+  "exact_window_over_diagonal_sigma": 0.9973596083978363,
+  "propagation_weights_sum_m2_per_px2": 1.5784937045296864e-14
+ },
+ "timing": {
+  "build_s": 2.8042477889998736,
+  "reconstructor_probe_s": 0.020770956999967893,
+  "lyapunov_two_solves_s": 0.006029701999977988,
+  "window_two_propagations_s": 0.025756006000392517
+ },
+ "ru_maxrss_bytes": 102756352,
+ "host": {
+  "platform": "linux",
+  "machine": "x86_64",
+  "node": "vm",
+  "python": "3.11.17 (main, Oct  1 2026, 15:41:07) [GCC 13.3.0]",
+  "numpy": "2.4.6"
+ },
+ "enabled_by_user": null,
+ "comparison": {
+  "measured_delta_v_mean_m2": 6.601792707153513e-17,
+  "measured_delta_v_block25_se_m2": 4.4029524296718236e-18,
+  "measured_over_exact_window": 0.9786448042838541,
+  "measured_over_exact_stationary": 0.9786448042838556,
+  "measured_over_exact_window_diagonal_sigma": 0.976060798761122,
+  "measured_over_scalar": 0.9760607987611218,
+  "exact_window_within_2_block_se": true,
+  "measured_over_exact_window_by_rule": {
+   "strict": 2.0997712726844924,
+   "available": 0.9786448042838541
+  },
+  "note": "a pilot-level consistency check of the model against one run; the protocol's acceptance rules, not this ratio, decide anything"
+ }
+}

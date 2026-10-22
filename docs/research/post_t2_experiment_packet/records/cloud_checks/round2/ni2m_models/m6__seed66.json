@@ -1,0 +1,227 @@
+{
+ "schema": "post_t2_linear_loop_noise_model.v2",
+ "mode": "model",
+ "purpose": "analysis-only linear closed-loop noise model; no loop is run; no scientific claim by itself",
+ "configuration": "det_emccd_2m_synthetic@1, m_AB 6",
+ "diagnostic_alpha_override": null,
+ "config_hash": "be39f06c297a5a3a2709574018bd2a812d69fa7578fc4e143a534982d547b861",
+ "root_seed": 66,
+ "n_steps_in_hash": 200,
+ "window_frames": [
+  50,
+  200
+ ],
+ "controller": {
+  "gain": 0.2,
+  "leak": 0.02,
+  "latency_frames": 2
+ },
+ "reconstructor": {
+  "kind": "tsvd",
+  "alpha": null,
+  "rcond": 1e-08
+ },
+ "dimensions": {
+  "rows": 42,
+  "controlled_actuators": 13,
+  "pupil_samples": 2032,
+  "lyapunov_state": 39
+ },
+ "mask_rule": "the reconstructor is probed with exactly the rows that carry noise valid (one fixed mask for L, the injection and Sigma); the series' all-valid propagation weights are kept for the first draft's scalar value",
+ "feedback_spectrum": {
+  "definition": "eigenvalues of L = R_mask M on the controlled actuators (1 = unit feedback; below 1 = damped mode; the scalar model assumes all 1)",
+  "min": 0.9999999999999982,
+  "percentile_10": 0.9999999999999984,
+  "median": 1.0,
+  "max": 1.0000000000000016,
+  "fraction_below_0.9": 0.0,
+  "fraction_below_0.5": 0.0,
+  "max_abs_imaginary": 0.0,
+  "max_abs_deviation_of_L_from_identity": 8.881784197001252e-16
+ },
+ "stationarity": {
+  "spectral_radius_F": 0.7225795558226938,
+  "stationary_limit_exists": true,
+  "lyapunov_relative_residual": 3.043538474614497e-14,
+  "window_end_over_stationary": 1.0,
+  "note": null
+ },
+ "noise_covariance": {
+  "source": "sidecar_realized_residuals (c_noisy - c_expected on the noisy arm's lenslets, ddof 1, 2x2 per lenslet)",
+  "sidecar_schema": "shwfs_ao.noise_isolation_trace_sidecar.v1",
+  "label": "m6",
+  "root_seed": 66,
+  "config_hash": "be39f06c297a5a3a2709574018bd2a812d69fa7578fc4e143a534982d547b861",
+  "analysed_frames": 150,
+  "support_rules": {
+   "strict": {
+    "definition": "lenslets valid, supported and finite in every analysed frame (the E0 rule); covariance over all analysed frames",
+    "lenslet_fraction": 1.0,
+    "rows_with_noise": 42
+   },
+   "available": {
+    "definition": "lenslets valid, supported and finite in at least 0.9 of the analysed frames; covariance over each lenslet's own valid frames",
+    "min_fraction": 0.9,
+    "lenslet_fraction": 1.0,
+    "rows_with_noise": 42,
+    "mean_valid_fraction_of_included": 1.0
+   }
+  },
+  "mean_realized_sigma_px_on_strict_support": 0.07053032184300378,
+  "measured_delta_v_mean_m2": 9.79614766245263e-18,
+  "measured_delta_v_block25_se_m2": 3.3129466905974484e-19,
+  "measured_mean_square_difference_mean_m2": -2.0544377519672934e-16,
+  "noisy_arm_saturation_fraction_mean": 0.09846153846153846,
+  "noisy_arm_frames_with_saturation": 120,
+  "twin_arm_saturation_fraction_mean": 0.09743589743589744,
+  "rejected_frames_after_burn_in": {
+   "noise_on": 0,
+   "operating_expectation": 0
+  },
+  "recovery_acted": {
+   "noise_on": false,
+   "operating_expectation": false
+  },
+  "gate_quiet_by_core_rule": true,
+  "mask_disagreement_row_frames_fraction": 0.0,
+  "residual_map_pupil_samples": null,
+  "pupil_samples_equal_to_model": null,
+  "primary_rule": "available",
+  "sidecar_validation": {
+   "structural": "passed (declared table, frame domains, two-arm layout, canonical rows, label)",
+   "schema": "shwfs_ao.noise_isolation_trace_sidecar.v1",
+   "record": {
+    "path": "/tmp/claude-0/-home-user-Shack-Hartmann-AO-Simulation/f1f3bff0-5382-5b19-9652-6c00a445942e/scratchpad/checks/ni2m_traced/det09_noise_isolation_2m_traced.json",
+    "run_row": {
+     "label": "m6",
+     "root_seed": 66
+    },
+    "digest_and_size": "match",
+    "runner_validate_trace_payload": "passed"
+   }
+  }
+ },
+ "prediction": {
+  "units": "m2 (piston-removed pupil mean square of the noise-driven correction difference; the sidecar's delta_v_m2 in expectation)",
+  "primary": "delta_v_exact_window_m2 (transient from identical initial commands with the noise entering after the latency, averaged over the analysed frames; noise covariance rule 'available')",
+  "delta_v_exact_window_m2": 1.2548604148401226e-17,
+  "delta_v_exact_window_diagonal_sigma_m2": 1.2569357620368522e-17,
+  "delta_v_exact_stationary_m2": 1.2548604148401235e-17,
+  "delta_v_scalar_reduction_mask_m2": 1.2569357620368533e-17,
+  "delta_v_scalar_reduction_series_weights_m2": 1.2569357620368533e-17,
+  "delta_v_one_step_open_loop_m2": 8.1192074086692e-17,
+  "scalar_kappa": 0.15455454598933627,
+  "window_over_stationary": 0.9999999999999992,
+  "exact_window_over_scalar_mask": 0.9983488836427348,
+  "exact_window_over_scalar_series_weights": 0.9983488836427348,
+  "exact_window_over_diagonal_sigma": 0.9983488836427357,
+  "propagation_weights_series_sum_m2_per_px2": 1.5806226056276326e-14,
+  "by_noise_covariance_rule": {
+   "strict": {
+    "rows_valid_in_mask": 42,
+    "rows_total": 42,
+    "feedback_spectrum": {
+     "definition": "eigenvalues of L = R_mask M on the controlled actuators (1 = unit feedback; below 1 = damped mode; the scalar model assumes all 1)",
+     "min": 0.9999999999999982,
+     "percentile_10": 0.9999999999999984,
+     "median": 1.0,
+     "max": 1.0000000000000016,
+     "fraction_below_0.9": 0.0,
+     "fraction_below_0.5": 0.0,
+     "max_abs_imaginary": 0.0,
+     "max_abs_deviation_of_L_from_identity": 8.881784197001252e-16
+    },
+    "stationarity": {
+     "spectral_radius_F": 0.7225795558226938,
+     "stationary_limit_exists": true,
+     "lyapunov_relative_residual": 3.043538474614497e-14,
+     "window_end_over_stationary": 1.0,
+     "note": null
+    },
+    "delta_v_exact_window_m2": 1.2548604148401226e-17,
+    "delta_v_exact_window_diagonal_sigma_m2": 1.2569357620368522e-17,
+    "delta_v_exact_stationary_m2": 1.2548604148401235e-17,
+    "delta_v_exact_stationary_diagonal_sigma_m2": 1.2569357620368528e-17,
+    "delta_v_scalar_reduction_mask_m2": 1.2569357620368533e-17,
+    "delta_v_scalar_reduction_series_weights_m2": 1.2569357620368533e-17,
+    "delta_v_one_step_open_loop_m2": 8.1192074086692e-17,
+    "window_over_stationary": 0.9999999999999992,
+    "exact_window_over_scalar_mask": 0.9983488836427348,
+    "exact_window_over_scalar_series_weights": 0.9983488836427348,
+    "exact_window_over_diagonal_sigma": 0.9983488836427357,
+    "masked_probe_equals_full_probe_when_all_valid": 0.0
+   },
+   "available": {
+    "rows_valid_in_mask": 42,
+    "rows_total": 42,
+    "feedback_spectrum": {
+     "definition": "eigenvalues of L = R_mask M on the controlled actuators (1 = unit feedback; below 1 = damped mode; the scalar model assumes all 1)",
+     "min": 0.9999999999999982,
+     "percentile_10": 0.9999999999999984,
+     "median": 1.0,
+     "max": 1.0000000000000016,
+     "fraction_below_0.9": 0.0,
+     "fraction_below_0.5": 0.0,
+     "max_abs_imaginary": 0.0,
+     "max_abs_deviation_of_L_from_identity": 8.881784197001252e-16
+    },
+    "stationarity": {
+     "spectral_radius_F": 0.7225795558226938,
+     "stationary_limit_exists": true,
+     "lyapunov_relative_residual": 3.043538474614497e-14,
+     "window_end_over_stationary": 1.0,
+     "note": null
+    },
+    "delta_v_exact_window_m2": 1.2548604148401226e-17,
+    "delta_v_exact_window_diagonal_sigma_m2": 1.2569357620368522e-17,
+    "delta_v_exact_stationary_m2": 1.2548604148401235e-17,
+    "delta_v_exact_stationary_diagonal_sigma_m2": 1.2569357620368528e-17,
+    "delta_v_scalar_reduction_mask_m2": 1.2569357620368533e-17,
+    "delta_v_scalar_reduction_series_weights_m2": 1.2569357620368533e-17,
+    "delta_v_one_step_open_loop_m2": 8.1192074086692e-17,
+    "window_over_stationary": 0.9999999999999992,
+    "exact_window_over_scalar_mask": 0.9983488836427348,
+    "exact_window_over_scalar_series_weights": 0.9983488836427348,
+    "exact_window_over_diagonal_sigma": 0.9983488836427357,
+    "masked_probe_equals_full_probe_when_all_valid": 0.0
+   }
+  }
+ },
+ "timing": {
+  "build_s": 2.9305527090000396,
+  "full_probe_s": 0.011449150000089503,
+  "strict_s": {
+   "reconstructor_probe": 6.250000069485395e-06,
+   "lyapunov_two_solves": 0.004195177999918087,
+   "window_two_propagations": 0.01311956199992892
+  },
+  "available_s": {
+   "reconstructor_probe": 1.2554000022646505e-05,
+   "lyapunov_two_solves": 0.003697543000043879,
+   "window_two_propagations": 0.017588670999884926
+  }
+ },
+ "ru_maxrss_bytes": 105009152,
+ "host": {
+  "platform": "linux",
+  "machine": "x86_64",
+  "node": "vm",
+  "python": "3.11.17 (main, Oct  1 2026, 15:41:07) [GCC 13.3.0]",
+  "numpy": "2.4.6"
+ },
+ "enabled_by_user": null,
+ "comparison": {
+  "measured_delta_v_mean_m2": 9.79614766245263e-18,
+  "measured_delta_v_block25_se_m2": 3.3129466905974484e-19,
+  "measured_over_exact_window": 0.7806563619827568,
+  "measured_over_exact_stationary": 0.7806563619827561,
+  "measured_over_scalar_mask": 0.7793674074940838,
+  "measured_over_scalar_series_weights": 0.7793674074940838,
+  "exact_window_within_2_block_se": false,
+  "measured_over_exact_window_by_rule": {
+   "strict": 0.7806563619827568,
+   "available": 0.7806563619827568
+  },
+  "note": "a pilot-level consistency check of the model against one run; the protocol's acceptance rules, not this ratio, decide anything"
+ }
+}

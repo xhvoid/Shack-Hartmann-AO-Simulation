@@ -208,6 +208,7 @@ flowchart BT
     EXPERIMENTS --> CONTROL
     EXPERIMENTS --> SCIENCE
     EXPERIMENTS --> IO
+    EXPERIMENTS -- "convergence study: validation-only references" --> VALIDATION
     EXPERIMENTS -. "deferred backend factory" .-> NATIVE
     EXPERIMENTS -. "deferred backend factory" .-> HCIPY
     VALIDATION --> CORE
@@ -425,6 +426,29 @@ Status: implemented as listed; `native_frozen_flow` retained; refused: the
 `normalize_rms` or a target RMS. Future: anisoplanatism, scintillation and
 propagation between layers (layer altitude is metadata only).
 
+Fixed-physics pairing (ticket T2, 2026-10-21). `LayeredFrozenFlowAtmosphereConfig`
+has three optional, identity-bearing fields that all default to the model
+above (the default draw, hash and metadata are unchanged; the canonical
+identity payload omits them while they are unset): `band_draw_reference_screen_size`
+draws the periodic band on a reference grid that a smaller screen reads at its
+own signed FFT indices, so the low-frequency draws follow from the same
+generator state on every paired setting; `band_limit_screen_size` keeps the
+common band `|k| ≤ (B−1)//2` of the coarsest screen (an even `B` excludes its
+own Nyquist row and column, so the band is one real trigonometric polynomial on
+every grid); `screen_period_rule = "pupil_diameter"` makes the screen
+`factor·(N−1)` samples so that its period is `factor·D` on every grid and equal
+indices are equal physical frequencies. Under the default rule the period is
+`factor·D·N/(N−1)`, so equal indices differ in frequency by `N/(N−1)` between
+two samplings (0.087 % for 288 → 384 samples; the coarse band-edge mode's phase
+error at the pupil edge is `π(1 − N_c/N_f)`, π/4 for 12 → 16 samples per
+lenslet) and the common-band fields of two settings differ by 5–12 % RMS in
+physical coordinates; under the `pupil_diameter` rule they agree to rounding
+(`shwfs_ao.validation.atmosphere_pairing`). The S3 driver keeps its own
+equal-index monkeypatch unchanged; the construction route is
+`experiments.scao.LayeredAtmosphereOptions` through
+`build_scao_system(atmosphere_options=...)`, recorded on the system and in its
+build attestation.
+
 ### 5.2 Wavefront sensing
 
 | Mode | Model and assumptions | Backend, profiles | Measurement unit |
@@ -472,6 +496,7 @@ geometric slope.
 | Diffusion vs electronic coupling | charge spreading before collection (flux-conserving, part of the optics) vs a declared 3×3 kernel `K` on the realized signal after the register (correlates noise as `K diag(μ) Kᵀ`) | `sampling.diffusion_sigma_px`; camera preset (`synthetic_emccd_coupled@1`) | both need a guard ring; coupling needs `guard_px ≥ 1` | partition-of-unity and covariance tests |
 | Monochromatic vs polychromatic WFS | one wavelength vs Gauss–Legendre (or midpoint) nodes across a band with detected-electron weights | `detector_physics.bandpass` | polychromatic needs MFT sampling; cost linear in nodes (10.18/13.51/17.14/20.69 ms per 2 m measurement for 1/3/5/7 nodes, det10); at 12 m, `@3`, 700 nm optics with matched photometry changed the residual by −0.30, −0.75 and −0.79 nm (E6) | DET-04 quadrature convergence (2e-3 px between 5 and 7 nodes) |
 | One atmosphere sample vs exposure sub-samples | snapshot at the start of the exposure vs `n` samples at `t + jτ/n` with intensities averaged and noise applied once | `detector_physics.exposure_subsamples` | `n = 2, 4` changed the 12 m residual by −3.4 and −4.5 nm paired, within seed scatter (DET-08) | `tests/control/test_exposure_subsamples.py` |
+| Left-point vs midpoint exposure samples (T2, 2026-10-21) | left point: `n` samples at `t + jτ/n`, the first the frame-start sample, mean sample time `t + τ(n−1)/(2n)`; midpoint: `t + (j+½)τ/n` for every `n` (`n = 1` is one sample at `t + τ/2`, a changed measurement, not the frame-start snapshot), mean sample time `t + τ/2`; for a centroid drifting at slope `v` the midpoint mean leads the left mean by `vτ/(2n)` | `run_closed_loop(exposure_sample_rule=...)`; `experiments.ExposureOverride` through `scao.run_closed_loop(exposure=...)`; default `left_point` | the midpoint rule carries the scheme `midpoint_uniform_held_dm.v1` in the run identity and in `wfs_exposure` (sample-time offsets, mean offset `τ/2`, frame-start convention of the residual metrics); every left-point identity and metadata entry is unchanged; the DM is held and camera noise is applied once per frame under both rules; the science observer still samples the frame start (G3 deferred) | `tests/control/test_exposure_subsamples.py` (sample times, linear drift, one noise application, static atmosphere, validation, identities) |
 | Identity-neutral execution options | how a run is computed, not what | `ScaoExecutionOptions`: `lenslet_batch_size`, `atmosphere_band_storage`, `telemetry_level`, `calibration_cache` | bit-identical results; memory and time change | witness `sparse_ci_smoke@2_batch7_regenerate` equals the default; `physical_emccd_summary_telemetry_20f` |
 
 The defaults are not the low-memory settings used for the 42 m E5 run
@@ -514,7 +539,7 @@ datasheet, a named commercial camera or a measured calibration (LIM-01).
 | Gain treatment | `known_per_pixel` applies the CMOS gain map as conversion gain; `flat_absorbs_gain_map` leaves it in the flat | `processing.gain_treatment` | no gain estimation is modelled |
 | Bad pixels | `zero_weight` or `interpolate_mean4` | `processing.bad_pixel_policy` | profiles use `zero_weight` |
 | Internal calibration source | a bright source observed without sky for references and interaction probes; its frames subtract bias and dark only (`without_sky_master`) | `detector_physics.calibration_source_detected_e_per_full_subap_frame` | `measure_operating_expectation` (star and sky through the operating products, noiseless) differs from `measure(include_noise=False)` (the calibration observation) |
-| Estimators | plain centre of gravity; thresholded centre of gravity (fraction of the processed maximum); optional minimum subtraction | `wfs.centroid_estimator`, `threshold_fraction`, `subtract_minimum` | thresholding is not first-order linear (Thomas et al. 2006) |
+| Estimators | plain centre of gravity; thresholded centre of gravity (fraction of the processed maximum); optional minimum subtraction | `wfs.centroid_estimator`, `threshold_fraction`, `subtract_minimum` | the first-order noise models do not cover thresholding or minimum subtraction: a repository support rule (`detector.noise_model` reports such blocks unsupported), not a result of Thomas et al. (2006), whose section 4.1 evaluates the thresholded estimator's noise approximately with their equations 11–12 (N_s² the mean number of pixels above threshold) and requires subtracting the threshold for unit response |
 | Negative pixels | compatibility path: `wfs.clip_negative_pixels` (schema ≥ 3; earlier schemas clip); physical path: `processing.clip_negative` | — | clipping rectifies read noise into a pedestal that pulls faint spots toward the window centre (backends.md) |
 
 | Uncertainty model | Definition | Supported domain | Use |
@@ -609,6 +634,7 @@ reacquires a lost spot (LIM-13, LIM-16).
 | Maréchal estimate | `exp(−(2π σ_OPD/λ)²)` from piston-removed RMS (tilt retained) | an estimate from RMS, not an image metric | `marechal_strehl_from_opd` |
 | FWHM | diameter at half maximum of an area-weighted radial profile of surface brightness about the metric centre | sampled estimate; coarse sampling biases it (TIPTOP study: −0.50 % and −0.12 % at 5 and 2.5 mas) | `fwhm_diameter_from_angular_surface_brightness` |
 | Encircled energy, halo | EE50/EE80 radii and flux outside a radius, from discrete pixel flux with whole equal-radius rings | the denominator is the full computational field, also after a crop | `encircled_energy_radius_from_discrete_flux`, `halo_fraction_from_discrete_flux` |
+| Fourier encircled-energy reference (validation only, T2, 2026-10-21) | the sampled PSF read as point values of its trigonometric interpolant (the Nyquist coefficient of an even axis split half and half), integrated over a disc in closed form (`r J1(2π|q| r)/|q|` per Fourier mode); for `pad ≥ 2` the interpolant is the raster model's continuous-angle intensity, so the reference does not depend on the pad (pads 2, 3, 4 agree to 1e-13) | the same whole-field flux denominator (one periodic cell); the disc must lie inside one periodic cell; negative lobes of the interpolant are reported, never clipped; continuous Airy and 0.28-annulus references beside it. Measured on diffraction-limited raster pupils at 60, 120 and 240 samples across (`oracle/ee_budgets.json` of the T2 record): for the unobstructed pupil the production ring-merged EE50 reads +5.5 to +6.0 % (pad 2), +0.9 to +1.6 % (pad 3) and −0.3 to +0.4 % (pad 4) of the reference, for the 0.28-obstructed annulus +4.3 to +4.9 % (pad 2), +5.9 to +6.3 % (pad 3) and −0.5 to −1.0 % (pad 4); the raster model's EE50 is within 1.8e-3, 1.2e-3 and 6.1e-4 of the continuous Airy value at 60, 120 and 240 samples across the pupil | `shwfs_ao.validation.encircled_energy.fourier_encircled_energy`; never used by `science.metrics`, whose EE50 definition is unchanged |
 | Band summaries | weighted average of monochromatic scalar metrics (`aggregation = "weighted_scalar_average"`) | never a broadband image | `science.bandpass.ScienceBandpass` |
 | Streamed long exposure | `Σ a_k I_k / Σ a_k` of instantaneous unit-flux intensities per wavelength from frame `k ≥ burn_in`, every `stride` frames; the mean OPD is never propagated and frames are never recentred | memory: one sum image per wavelength, independent of frame count | `science.long_exposure.StreamingLongExposure` (an observer) |
 
@@ -632,6 +658,8 @@ analytic reference at the claimed sampling.
 | Physical integration (`physical_*`) | the same instrument against a calibrated von Kármán screen (`subharmonic_von_karman_v2`), two frames of latency | seeded regression | real fitting error, servo lag and aliasing on a constrained 13-actuator case | an optimized design |
 | Detector-level evidence (`scripts/run_detector_level_evidence.py`) | predeclared experiments over profiles and seeds with protocol identities; each run names its code (the imported package and the runner script, with Git where it tracks the package; series protocol 4, 2026-10-20, OBS-07) and its producing environment (Python version, NumPy, SciPy and machine; not the BLAS backend, threads or OS; series protocol 3, 2026-10-18, GPT audit F-03), and version-2 and version-3 records cannot be continued | model-versus-Monte-Carlo and closed-loop simulation evidence | detector-noise propagation, magnitude limits under declared control settings | camera or instrument validation |
 | Paired noise isolation (`paired_noise_run`) | two identical systems, one measuring with noise and one the noiseless operating expectation; the per-frame difference of residual maps | isolated temporal detector-noise variance with block-averaged errors | the scaling of the noise contribution | separating calibration-master errors (they are common to both arms) |
+| Traced paired noise isolation (`paired_noise_run_traced`, `paired_noise_run_mask_locked`; runner `noise-isolation-*-traced`, `-masklocked`; S4 contract, T1, 2026-10-20) | the same two arms observed per frame through two passive observable fields (effective row mask, detached deeply immutable sensor telemetry): per-frame ΔV_t, the difference of mean squares and their cross term, both arms' masks, gate activity, saturation and recovery, the per-lenslet model sigma, measured and expected centroids (E0 on the noisy arm's own operating state), the fixed reconstructor's propagation weights; one allow-pickle-free sidecar per run beside a series-protocol-4 record, bound by a separate diagnostic protocol; the mask-locked arm replays the twin's effective rows through a separately identified wrapper (twin first) | the recorded scalars bit for bit, plus per-frame and per-lenslet diagnostics analysed by `scripts/analyze_noise_isolation_traces.py` (NumPy only: blocking plateau, autocorrelation time, gate-quiet domain, per-seed paired slopes with Student t intervals, excursion flags, cross-term statistics, replay comparison; no verdict asserted) | separating sensor-model behaviour at the operating spots (E0) from the loop's response (E1), and localizing mask divergence in time | closing LIM-18 by itself; the first-order bias band of the contract is a hypothesis, not an acceptance criterion; no 12 m arm has run (governed) |
+| Fixed-physics convergence study (`scripts/detector_level_convergence_study.py`, `experiments.convergence_study`; ticket T2, 2026-10-21) | one numerical axis at a time around a detector-level profile with every physical input fixed: pupil samples per lenslet with paired turbulence input (`LayeredAtmosphereOptions`: reference-grid band draw, common band, one physical period; a growing-band reading recorded apart), detector-plane oversampling, spectral nodes (declared non-power-law), the centred midpoint exposure family (the legacy left-point rule compared apart, never fitted with it), science pad; twin and noise-on arms in fresh child processes with two native threads; streaming reductions (the paired ΔV from a disk-backed record of the twin arm's pupil samples); immutable resumable run protocols bound to the imported package, the driver, the helper modules and the numerical environment; Richardson analysis with declared refinement parameters, an observed order only from three resolved, same-sign, shrinking differences | the ci self-check (5 m smoke geometry with the 12 m @3 detector physics, 36 frames, burn-in 12, one realization; 11 paired runs) is machinery evidence; the medium (12 m) and full (42 m) scales are governed and have not run | per axis at a governed scale: converged at a quoted precision, unconverged, or not expressible, each with a change table and, with three settings, an observed order and extrapolated limit | the continuum limit; exposure-integrated science imaging (G3 deferred: the science observer samples the frame start); any scientific claim from the ci scale |
 | ESO-derived benchmark (`experiments.eso_scao_benchmark`) | four tiers from historical DRM parameters with source and assumption ledgers | capability and single-realization performance | that the full 84×84 / 85×85 scale runs and what it costs | comparison with an ESO result (none exists for SCAO in the DRM database) |
 | Native versus HCIPy suite | thirteen comparison groups on one small deterministic profile | cross-implementation agreement within declared tolerances | the tested conventions and quantities | backend interchangeability in general |
 | Component oracles and Monte Carlo | analytic or statistical references for one component | numerical verification | the component's implementation | system performance |
@@ -745,8 +773,16 @@ camera, DM and controller value is synthetic). Packaged ledgers hold the
 row-level detail and are checked against every profile they cover:
 [`eso_drm_42m_scao_derived.assumptions.v2.json`](../src/shwfs_ao/resources/benchmarks/eso_drm_42m_scao_derived.assumptions.v2.json)
 (ESO rows S/A/T/P) and
-[`detector_level.assumptions.v1.json`](../src/shwfs_ao/resources/benchmarks/detector_level.assumptions.v1.json)
-(B01–B21), validated by `shwfs_ao.io.benchmark_ledgers`.
+[`detector_level.assumptions.v2.json`](../src/shwfs_ao/resources/benchmarks/detector_level.assumptions.v2.json)
+(B01–B21) with its source ledger
+[`detector_source_ledger.v2.json`](../src/shwfs_ao/resources/benchmarks/detector_source_ledger.v2.json),
+validated by `shwfs_ao.io.benchmark_ledgers`. Version 2 of the detector
+ledgers (roadmap G11) corrects descriptions only: B14 states the current
+`detector_covariance_v2` domain, B18 separates its historical producer from
+the current gating, and source D4 states what Thomas et al. (2006) cover,
+checked against the paper's full text. No
+value, gate or profile changed. Version 1 of both files, which every
+detector-level profile references, is kept byte-identical as history.
 
 | ID | Assumption | Category | Implementation and configuration | Affected results | Tested domain | Unresolved uncertainty |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -899,7 +935,9 @@ the stated values), **listing** (confirmed only through a search listing or
 package index), **ledger** (as recorded in a packaged source ledger, not
 re-fetched here), **not verified**. A record check confirms that the source
 exists and is correctly cited; it does not confirm an equation locator unless
-the entry says so. No paywalled text was copied into the repository.
+the entry says so. No paywalled text was copied into the repository. Added
+2026-10-20 (roadmap G11): **full text** (the cited sections, equations and
+appendices were read in the publisher's PDF).
 
 | ID | Source | DOI or URL | Locator | Supports | Used in | Verification |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -919,7 +957,7 @@ the entry says so. No paywalled text was copied into the repository.
 | [Rob03] | M. S. Robbins, B. J. Hadwen, "The noise performance of electron multiplying charge-coupled devices", IEEE Trans. Electron Devices 50(5), 1227–1232 (2003) | [10.1109/TED.2003.813462](https://doi.org/10.1109/TED.2003.813462) | excess noise factor (ledger D2) | `F² → 2` at high gain | `detector.physical`, `detector.noise_model` | record (the ledger's open DOI question is now confirmed); full text not read |
 | [Tut12] | J. H. Tutt et al., "The noise performance of electron-multiplying charge-coupled devices at X-ray energies", IEEE Trans. Electron Devices 59(1), 167–175 (2012) | [10.1109/TED.2011.2172611](https://doi.org/10.1109/TED.2011.2172611) | abstract | independent statement that the excess noise factor tends to √2 at gains above 100 | corroborates DET-2 | abstract |
 | [Jan07] | J. R. Janesick, *Photon Transfer*, SPIE Press (2007), ISBN 9780819478382 | [10.1117/3.725073](https://doi.org/10.1117/3.725073) | photon-transfer definitions (ledger D3) | conversion gain, read noise, PRNU, fixed pattern | `detector.camera`, `detector.processing` | record |
-| [Tho06] | S. Thomas et al., "Comparison of centroid computation algorithms in a Shack–Hartmann sensor", MNRAS 371(1), 323–336 (2006) | [10.1111/j.1365-2966.2006.10661.x](https://doi.org/10.1111/j.1365-2966.2006.10661.x) | centre-of-gravity noise, thresholding (ledger D4) | first-order CoG noise; thresholding is not first-order linear | `detector.validity`, `detector.noise_model` | record |
+| [Tho06] | S. Thomas et al., "Comparison of centroid computation algorithms in a Shack–Hartmann sensor", MNRAS 371(1), 323–336 (2006) | [10.1111/j.1365-2966.2006.10661.x](https://doi.org/10.1111/j.1365-2966.2006.10661.x) | §3.1 (eqs 11–13), §3.2 (eq. 14), §4.1, App. A and B (ledger D4, version 2) | photon and read-noise CoG terms for a Gaussian spot (§3.1, eqs 11–12); photon noise of a diffraction-limited spot growing linearly with the lenslet field of view (eq. 13, App. A); CoG response non-linearity on a finite window (§3.2, eq. 14, App. B); the thresholded CoG's noise approximated with eqs 11–12 (§4.1). The implementation uses none of these closed forms | `detector.validity`, `detector.noise_model` | full text |
 | [Oke83] | J. B. Oke, J. E. Gunn, "Secondary standard stars for absolute spectrophotometry", ApJ 266, 713 (1983) | [10.1086/160817](https://doi.org/10.1086/160817) | AB system (ledger D5) | `m_AB = −2.5 log₁₀ f_ν − 48.60` (cgs) | `detector.photometry`, the parameter-source inventory | record; the inventory's earlier `10.1086/113325` resolved to an unrelated paper and was corrected (status U5) |
 | [EMVA] | EMVA Standard 1288, Release 4.0 (in effect since June 2021) | [emva.org](https://www.emva.org/standards-technology/emva-1288/) | linear-camera definitions (ledger D7) | separate pixel and digital saturation; PRNU/DSNU definitions | `detector.camera` | page (release confirmed; the release PDF was not re-fetched) |
 | [Kan16] | A. Kannawadi et al., "The impact of interpixel capacitance in CMOS detectors on PSF shapes and implications for WFIRST", PASP 128(967), 095001 (2016) | [10.1088/1538-3873/128/967/095001](https://doi.org/10.1088/1538-3873/128/967/095001), arXiv:1512.01570 | IPC (ledger D8) | a 3×3 coupling kernel and its covariance | electronic coupling in `detector.physical` | abstract; equation locator not read |
@@ -1004,6 +1042,7 @@ command) are not loop timings.
 | `eso_scao_smoke_5m_software@2`, 32 frames | 0.21 s | 22.9 ms | 0.94 s | 128 MiB | MEASURED_CURRENT |
 | same with the streamed science observer | 0.20 s | 24.8 ms | 1.08 s | 130 MiB | MEASURED_CURRENT |
 | `ci` geometry with 12 m @3 physics, summary telemetry, 32 frames | 1.30 s | 33.0 ms | 2.36 s | 155 MiB | MEASURED_CURRENT |
+| T2 convergence self-check at `ci` scale (`scripts/detector_level_convergence_study.py --scale ci`): 11 paired runs × 2 arms × 36 frames, one fresh child process per run, two native threads, streamed science and disk-backed paired ΔV | 1.3–1.6 s per build, two builds per run | 31–37 ms at the baseline; up to about 1.8× at 16 samples per lenslet or `k = 8` | 89.3 s driver wall; 79.4 s summed child wall; 6.1–8.2 s per paired run | 222–307 MiB per child (`ru_maxrss`, each child's own peak; the largest at 16 samples per lenslet) | MEASURED_CURRENT (2026-10-21, commit `229fb6a` plus the uncommitted review repairs; the resource guard refused the job on warn memory pressure at the first three preflights (the fourth to sixth, before the round-3 and round-4 self-checks, admitted the job); the user directed that the guard be ignored for this task, and it ran serially as a bounded check under the T2 evidence supervise wrapper) |
 
 Per-frame component probe (means of three calls after the run): the
 `native_frozen_flow_v2` atmosphere costs about 15 ms of the 2 m frames and

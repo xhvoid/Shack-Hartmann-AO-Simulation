@@ -96,6 +96,7 @@ flowchart BT
     EXPERIMENTS --> CONTROL
     EXPERIMENTS --> SCIENCE
     EXPERIMENTS --> IO
+    EXPERIMENTS -- "convergence study: validation-only references" --> VALIDATION
     EXPERIMENTS -. "deferred backend factory" .-> NATIVE
     EXPERIMENTS -. "deferred backend factory" .-> HCIPY
     VALIDATION --> CORE
@@ -152,7 +153,7 @@ canonical shared SCAO contracts directly.
 | `shwfs_ao.control` | typed command projection, gain/leak, sole latency queue, applied-command acknowledgement, loop sequencing, history, replay-safe sweeps | optical kernels, artifact writing |
 | `shwfs_ao.science` | wavelength quadrature, propagation selection, physical-axis PSF metrics | detector effects, controller state |
 | `shwfs_ao.experiments` | versioned-profile assembly, preflight identity checks, shared SCAO runner, conditioned scenarios, and a retained legacy-shape error-budget adapter | new low-level physics kernels, output paths |
-| `shwfs_ao.validation` | physical estimators, regression governance, native-versus-HCIPy comparison | baseline mutation during ordinary runs |
+| `shwfs_ao.validation` | physical estimators, regression governance, native-versus-HCIPy comparison, and the validation-only references of ticket T2 (Fourier encircled energy, Richardson analysis, atmosphere pairing checks), none of which production code imports | baseline mutation during ordinary runs; changing a production metric definition |
 | `shwfs_ao.io` | strict profile/public-data/resource loading and explicit artifact serialization | physical propagation or control |
 | `shwfs_ao.experimental.pwfs` | frozen exploratory PWFS forward model | stable SH-WFS protocol conformance or validated PWFS control |
 | `shwfs_ao.runtime` | standard-library desktop resource policy: memory-budget preflight, native thread limits, process-group supervision | numerics (it never imports NumPy), physics |
@@ -224,7 +225,10 @@ Callers either pass a selected residual OPD to the configured propagator, or
 attach passive frame observers (`control.observation.FrameObserver`, e.g.
 `science.long_exposure.StreamingLongExposure`). Observers receive immutable
 per-frame atmosphere and pre-/post-update residual snapshots after each DM
-update. They cannot reach live components, and the run's telemetry and hash
+update and, when they ask for them, the frame's effective measurement row
+mask and a detached, deeply immutable copy of the sensor's detector telemetry
+(`measurement_row_mask`, `detector_telemetry`; S4 traced experiment, T1).
+They cannot reach live components, and the run's telemetry and hash
 are identical with or without them.
 
 Schema-v5 profiles with a `scalable` block take the high-order path through

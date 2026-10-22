@@ -987,3 +987,84 @@ the repair, its ledger keeps it `FIXED_PENDING_VERIFICATION`.
 | Unit | Finding | Change | Behaviour and identity |
 | --- | --- | --- | --- |
 | K | OBS-15–OBS-18 (review RV-01–RV-04; P3) | `scripts/run_detector_level_evidence.py` and `scripts/eso_scao_paired_convergence_study.py`: `_package_sha256` returns null, and the code identity is unknown, when the package is not a directory with `__init__.py` or holds a symlinked directory, a sourceless `.pyc` outside `__pycache__` (OBS-15) or a source whose cache, where this interpreter reads it, Python would run unchecked (review RV-05, RV-07; an unreadable cache is skipped, as Python skips it, RV-08); the Git commands read paths literally (`--literal-pathspecs`, OBS-16); the runner's version refusal gives version 3's reason only for version-3 runs (OBS-18), and a runner resume with nothing to add stops instead of verifying when the package has no digest (review RV-06); tests in both test files for each case and for file names in the digest (OBS-17); the docstrings and LIM-11 (with the timestamp-cache race) | a normal package's identity is unchanged (package digest and Git fields equal before and after), so series protocol 4 and S3 run protocol 2 stay; the changed layouts now count as unknown code, under which no runs are added; the scripts' own digests change, as with any edit |
+
+## Versioned detector ledgers: AR-008 and roadmap G11 (2026-10-20)
+
+The post-audit reconciliation deferred the packaged-ledger part of AR-008
+(GPT audit F-08) to a governed resource version (unit E above). Ticket T3 of
+the next-stage plan carried it out from `e486b18`; it is commit `d4403e6`
+(tree `15fb1e17`) on `claude/t3-g11-ledger-v2`, and its implementation record
+is in `outputs/t3_g11_ledger_v2/2026-10-20-opus-e486b18/`.
+
+| Unit | Finding | Change | Behaviour and identity |
+| --- | --- | --- | --- |
+| L | AR-008 (GPT F-08; P3), roadmap G11 | `detector_source_ledger.v2.json` and `detector_level.assumptions.v2.json` beside the version 1 files: B14 states the current uncertainty model `detector_covariance_v2`, its support gates and the separate calibration-ensemble sigma; B18 and `historical_producers` attribute the `@2` gating decision and its records to version 1; D4 was checked against the publisher PDF of Thomas et al. (2006) and attributes the thresholding rule to the repository; the profile generator writes and checks version 2, and a test pins the version 1 bytes; the technical reference and the roadmap | descriptions only: the profiles keep referencing version 1, so every profile file and configuration hash is unchanged; the manifest gains the two resources (81); the package digest of both evidence scripts changes with them |
+
+An independent review, `outputs/t3_g11_ledger_v2/review-2026-10-20-gpt/`,
+read the uncommitted change that `d4403e6` commits byte for byte (base
+`e486b18`, tracked diff SHA-256 `d7f4303e…`, new files `fa56a8d4…` and
+`20cf6dd3…`) and accepted it, `PASS_WITH_DECLARED_VALIDATION_LIMITS`, with no
+material finding. Its declared limits: CI has not run on the change; the
+checks ran in the local macOS environment, not the constraint lock; the DOI
+page could not be opened, so the paper was read in the owner's copy of the
+publisher PDF, SHA-256
+`4f26c5c1f1ff9cc372c43725fc93297e6be47b35390f626a082c0b6b9b215f59` (the
+implementation record and the review assignment give this digest with two
+characters missing; review observation T3-OBS-01, P3). As the review
+proposes, this record closes AR-008 and roadmap G11 for that change; the
+frozen reconciliation ledgers and the implementation record are left as
+they are.
+
+## Traced paired-noise instrument: ticket T1 and roadmap S4 (2026-10-21)
+
+Ticket T1 of the next-stage plan (S4 tracing and the bounded 2 m replay) was
+carried out from `b644a08`; it is commit `36768d2` on `claude/t1-s4-telemetry`,
+and its implementation record is in
+`outputs/t1_s4_telemetry/2026-10-20-fable-b644a08/`.
+
+| Unit | Finding | Change | Behaviour and identity |
+| --- | --- | --- | --- |
+| M | roadmap S4 (an instrument for LIM-18 and AR-006, not their closure) | passive frame observation of the effective measurement row mask and the current frame's detector telemetry (model sigma and expected centroid per lenslet and axis, validated on their own domain); `paired_noise_run_traced` beside the unchanged `paired_noise_run`; the mask-locked arm with its own protocol identity (twin first; a partial lock is never reported exact); the traced record family (`noise-isolation-2m-traced`; the gated `-12m-traced` and `-12m-masklocked`) with one verified, allow-pickle-free NumPy sidecar per run under a diagnostic protocol beside series protocol 4, validated against the full schema (exact arrays, dtype, shape, canonical units, axes and meaning, frame domains, one lenslet order, canonical interleaved rows, map retention, mode-specific arrays) before any reuse; the NumPy-only analysis script and the 2 m H5 bound; tests, `docs/backends.md`, `docs/architecture.md`, technical reference 5.11 and the roadmap S4 note | every configuration, sensor, loop and detector hash, every history and the RNG draw order are unchanged (witnesses: 0 changed scientific leaves; five historical 2 m runs and the 32-run C0 replay reproduce `det09_noise_isolation_2m.json` bit for bit, and the traced and untraced runs of the current code are identical); the 12 m commands refuse before any profile or model without the user's enablement note; LIM-18 and the recorded records are untouched |
+
+Three independent reviews read the uncommitted change
+(`outputs/t1_s4_telemetry/review-2026-10-20-gpt/`,
+`review-2026-10-21-gpt-r2/` and `review-2026-10-21-gpt-r3/`). The first
+returned five P2 findings, T1-01 to T1-05 (an undefined expected centroid
+could refuse a measurement; digest-bound malformed sidecars passed reuse
+validation; supported construction refusals lost their diagnostic identity;
+zero-scatter populations lost their paired slopes; a non-positive
+correlation-time estimate reported zero uncertainty as reliable). The second
+found four of them resolved and T1-02 partial: declared units, axes and
+meaning were compared by type only, row and lenslet ids by count only, and
+the standalone loader was weaker than the runner. The third accepted the tree
+that `36768d2` commits byte for byte (base `b644a08`, tracked diff SHA-256
+`c743e9ff0ae393012fe2424d5ea68bd20719a090ce32149be1d9a3907719017f`, new files
+`174acf5e…`, `79b3dd95…`, `0e0b186f…`, `5bd2006f…`), `PASS_WITH_DECLARED_VALIDATION_LIMITS`, with no actionable
+finding: the reviewer's unchanged fourteen-variant probe is refused by both
+consumers, 235 focused tests passed, all 64 saved C0 sidecars are accepted
+unchanged and the fresh offline re-analyses have zero numeric differences.
+Its declared limits: CI has not run on the change; the checks ran in the
+local macOS environment (Python 3.14.3, NumPy 2.5.0), not the constraint
+lock, serially with two threads under the user's resource-guard instruction
+of 2026-10-20; the full suite, the H5 bound and the C0 study are the
+implementation's source-bound evidence, inspected and reused rather than
+re-executed; the acceptance covers the instrument and its record contract,
+not the noise-law question. S4, AR-006 and LIM-18 keep their status; the C0
+record and its sidecars stay local under `outputs/t1_s4_telemetry/`; no 12 m
+or 42 m arm was run.
+
+## Fixed-physics convergence interfaces, oracles and driver: ticket T2 and roadmap AR-007 (2026-10-21)
+
+Ticket T2 of the next-stage plan was carried out from `e5918c1` on the
+worktree `claude/t2-convergence` and committed on that branch; its
+implementation record is in `outputs/t2_convergence/2026-10-21-fable-e5918c1/`
+(git-ignored; `IMPLEMENTATION_RECORD.md`, `REVIEWER_BRIEF.md`, `RECORD.json`,
+the pre-edit `DESIGN_NOTE.md`, the review under `review/`). Status: implementation
+complete; accepted by the first independent review on 2026-10-21 (review round 2); a second
+independent review of the committed delta requested repairs (retained-row validation bound to the plan's expected records,
+pairing per realization, Richardson endpoints and conditioning), applied the same day
+(rounds 3 and 4).
+
+| Unit | Finding | Change | Behaviour and identity |
+| --- | --- | --- | --- |
+| N | AR-007 and roadmap S3: the detector-level profiles had no fixed-physics convergence instrument; the S3 pairing was a script monkeypatch that equates FFT indices with physical frequencies; the exposure rule shifted the mean sample time with `n`; EE50 had no grid-independent reference | G1: three identity-bearing options on the native layered atmosphere (reference-grid band draw, common band, `pupil_diameter` screen-period rule; `canonical_identity_payload` keeps the legacy hash while they are unset) with the construction route `LayeredAtmosphereOptions` through `build_scao_system` and the attestation; G2: the midpoint exposure rule (`exposure_sample_rule`, `ExposureOverride`) with its own scheme and labelled metadata; G5: the validation-only Fourier encircled-energy reference with separate error budgets; the Richardson and atmosphere-pairing validation modules; the experiment core `experiments.convergence_study` (streaming reductions, disk-backed paired ΔV); the driver `scripts/detector_level_convergence_study.py` (plan, protocols with producer identity, atomic never-clobbering records, strict refusals, summary written once, `--plan`, governed `--enabled-by-user`); tests; technical reference 5.1, 5.4, 5.10, 5.11, 9.2, roadmap S3, LIM-05, LIM-07, the turbulence-model, architecture and validation pages | every default identity, draw, history and metadata unchanged (pre/post witnesses: 3862 common leaves, 0 scientific leaves changed; the pre-change identity formula is asserted by a test); the equal-index pairing is quantified as approximate (common-band fields differ by 5–12 % RMS; band-edge phase error `π(1 − N_c/N_f)`) and the matched rule pairs to rounding; the ci self-check ran in fresh child processes (11 paired runs, 89 s, at most 307 MiB per child) with an exact byte-and-mtime no-op rerun and an independent re-analysis; the resource guard refused the job on warn memory pressure at the first three preflights (the fourth to sixth, before the round-3 and round-4 self-checks, admitted the job), the user directed that the guard be ignored for this task, and the self-check ran as a bounded check (recorded); no 12 m or 42 m run, no profile, metric, model or S3-driver change; G3 deferred; AR-007, S4, AR-006, LIM-18 and LIM-01 keep their status |

@@ -20,7 +20,19 @@ performance.
 ## Internal physical and trend checks
 
 The canonical helpers in `shwfs_ao.validation.physical`, focused component
-tests, and the retained compatibility validation adapter cover:
+tests, and the retained compatibility validation adapter cover the table
+below. Ticket T2 (2026-10-21) adds three validation-only modules that no
+production code imports: `shwfs_ao.validation.encircled_energy` (the Fourier
+encircled-energy reference of a sampled PSF, with the continuous Airy and
+0.28-annulus references and separate error budgets for interpolant
+integration, pupil raster, periodic far field and continuous reference),
+`shwfs_ao.validation.richardson` (the Richardson analysis of a refinement
+scan with unequal ratios, an observed order only from resolved, same-sign,
+shrinking differences, and `NOT_ESTIMATED` with a reason otherwise) and
+`shwfs_ao.validation.atmosphere_pairing` (the physical-coordinate checks of
+the paired layered-atmosphere input). Their tests live under
+`tests/validation/`; passing them verifies the references and the numerics
+they describe, not any instrument.
 
 | Check | Required behavior |
 | --- | --- |

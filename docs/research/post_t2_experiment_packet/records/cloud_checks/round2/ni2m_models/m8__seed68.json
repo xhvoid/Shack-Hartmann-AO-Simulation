@@ -1,0 +1,118 @@
+{
+ "schema": "post_t2_linear_loop_noise_model.v2",
+ "mode": "model",
+ "purpose": "analysis-only linear closed-loop noise model; no loop is run; no scientific claim by itself",
+ "configuration": "det_emccd_2m_synthetic@1, m_AB 8",
+ "diagnostic_alpha_override": null,
+ "config_hash": "ce75f231463e7104352b06930841dccd3744f7e7a5417f61a47a06e9883b15bf",
+ "root_seed": 68,
+ "n_steps_in_hash": 200,
+ "window_frames": [
+  50,
+  200
+ ],
+ "controller": {
+  "gain": 0.2,
+  "leak": 0.02,
+  "latency_frames": 2
+ },
+ "reconstructor": {
+  "kind": "tsvd",
+  "alpha": null,
+  "rcond": 1e-08,
+  "min_valid_fraction": 0.75
+ },
+ "dimensions": {
+  "rows": 42,
+  "controlled_actuators": 13,
+  "pupil_samples": 2032
+ },
+ "noise_covariance": {
+  "source": "sidecar_realized_residuals (c_noisy - c_expected on the noisy arm's lenslets, ddof 1, 2x2 per lenslet)",
+  "sidecar_schema": "shwfs_ao.noise_isolation_trace_sidecar.v1",
+  "label": "m8",
+  "root_seed": 68,
+  "config_hash": "ce75f231463e7104352b06930841dccd3744f7e7a5417f61a47a06e9883b15bf",
+  "analysed_frames": 150,
+  "support_rules": {
+   "strict": {
+    "definition": "lenslets valid, supported and finite in every analysed frame (the E0 rule); covariance over all analysed frames",
+    "lenslet_fraction": 0.42857142857142855,
+    "rows_with_noise": 18
+   },
+   "available": {
+    "definition": "lenslets valid, supported and finite in at least 0.9 of the analysed frames; covariance over each lenslet's own valid frames",
+    "min_fraction": 0.9,
+    "lenslet_fraction": 0.7142857142857143,
+    "rows_with_noise": 30,
+    "mean_valid_fraction_of_included": 0.984
+   }
+  },
+  "mean_realized_sigma_px_on_strict_support": 0.17044170111119616,
+  "measured_delta_v_mean_m2": 9.327491024254974e-16,
+  "measured_delta_v_block25_se_m2": 8.071971108550706e-16,
+  "measured_mean_square_difference_mean_m2": -1.5465080480268965e-15,
+  "noisy_arm_saturation_fraction_mean": 0.07999999999999997,
+  "noisy_arm_frames_with_saturation": 82,
+  "twin_arm_saturation_fraction_mean": 0.07794871794871794,
+  "rejected_frames_after_burn_in": {
+   "noise_on": 0,
+   "operating_expectation": 0
+  },
+  "recovery_acted": {
+   "noise_on": false,
+   "operating_expectation": false
+  },
+  "gate_quiet_by_core_rule": false,
+  "mask_disagreement_row_frames_fraction": 0.012698412698412698,
+  "residual_map_pupil_samples": 2032,
+  "pupil_samples_equal_to_model": true,
+  "primary_rule": "available",
+  "sidecar_validation": {
+   "structural": "passed (declared table, frame domains, two-arm layout, canonical rows, label)",
+   "schema": "shwfs_ao.noise_isolation_trace_sidecar.v1",
+   "record": {
+    "path": "/tmp/claude-0/-home-user-Shack-Hartmann-AO-Simulation/f1f3bff0-5382-5b19-9652-6c00a445942e/scratchpad/checks/ni2m_traced/det09_noise_isolation_2m_traced.json",
+    "run_row": {
+     "label": "m8",
+     "root_seed": 68
+    },
+    "digest_and_size": "match",
+    "runner_validate_trace_payload": "passed"
+   }
+  }
+ },
+ "prediction": {
+  "primary_status": "not defined",
+  "primary_rule": "available",
+  "reason": "the reconstructor refused the support mask (30 of 42 rows valid); the model is not defined for it",
+  "by_noise_covariance_rule": {
+   "strict": {
+    "status": "not defined",
+    "reason": "the reconstructor refused the support mask (18 of 42 rows valid); the model is not defined for it",
+    "rows_valid_in_mask": 18,
+    "rows_total": 42
+   },
+   "available": {
+    "status": "not defined",
+    "reason": "the reconstructor refused the support mask (30 of 42 rows valid); the model is not defined for it",
+    "rows_valid_in_mask": 30,
+    "rows_total": 42
+   }
+  },
+  "note": "the reconstructor refuses the primary rule's support mask under its own valid-fraction or rank policy, so the fixed-mask model is not defined for this run; such a run is gate-active in the loop as well"
+ },
+ "timing": {
+  "build_s": 2.306884514999865,
+  "full_probe_s": 0.019305239999994228
+ },
+ "ru_maxrss_bytes": 108011520,
+ "host": {
+  "platform": "linux",
+  "machine": "x86_64",
+  "node": "vm",
+  "python": "3.11.17 (main, Oct  1 2026, 15:41:07) [GCC 13.3.0]",
+  "numpy": "2.4.6"
+ },
+ "enabled_by_user": null
+}
