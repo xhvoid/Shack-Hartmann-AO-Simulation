@@ -36,6 +36,7 @@ tree; "status record" means `docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md`
 | `src/shwfs_ao/experiments/eso_scao_benchmark.py` 220-270 (dry run), 760-800 (`_authorized_decision`), 826-900 (budget and launch) | the authorized-budget semantics mirrored by `tools/authorized_supervise.py` |
 | `src/shwfs_ao/control/controller.py` 49-51, 75, 142-175 (`update`); `src/shwfs_ao/control/command_mapping.py` 95-120 (`ControlledSubsetCommandProjector`); `src/shwfs_ao/calibration/sparse.py` 35, 916-1013 (`SparseLsmrReconstructor`, `damp = damping_relative x rms column norm`); `src/shwfs_ao/calibration/interaction.py` 446-500 (dense `InteractionMatrix` fields); `src/shwfs_ao/dm/model.py` 416-424, 495-520 (`opd_from_commands`); `src/shwfs_ao/detector/noise_model.py` 130-143 (`ExtendedCentroidQuality`) | review round 1: the loop update equation and latency queue, the projector's expansion by identifier, the damping semantics behind the feedback spectrum, the matrices and responses the exact linear model reads (section 3) |
 | `src/shwfs_ao/experiments/detector_level.py` 261-278 (`reconstructor_matrix`), 957-1020 (`_flat_wavefront_model`, `_propagation_weights`), 1060-1120 (`_trace_payload` arrays), 1134-1225 (`_operating_state_summary`), 1285-1300 (the run configuration a paired run hashes); `scripts/run_detector_level_evidence.py` 1175-1265 (sidecar layout constants), 1336-1456 (`_sidecar_arrays`, `publish_sidecar`, `read_sidecar`), 1664-1668 and 1831-1840 (leftover refusals); `scripts/detector_level_convergence_study.py` 1002-1047 (`_run_child` row composition), 1072-1083 (`_refuse_unplanned_files`) | review round 1: the row a study child publishes and how the pilot reproduces it; the sidecar's array names, units and the record's reference to it; the exact refusal messages for leftovers; the fixed-mask probing the model shares with the propagation weights |
+| `src/shwfs_ao/wfs/shack_hartmann/physical_measurement.py` 153-155, 475-477, 755 (the reference and `shifts = centroids - self._reference`); `src/shwfs_ao/control/loop.py` 515-551 (`_estimate`, `command_projector.project`, `controller.update`, `_synthesize`, `accept_applied_commands`); `src/shwfs_ao/control/controller.py` 151-188 (`update`, `accept_applied_commands`); `src/shwfs_ao/calibration/sparse.py` 1059 (`SparseLsmrReconstructor.reconstruct`; metadata `atol`, `btol`, `max_iterations`); `src/shwfs_ao/experiments/detector_level.py` 1273-1320 (`_paired_noise_core`: each arm built with the run's seed) | review round 6: what the reconstructor reads (centroid minus the calibration reference, which the sidecar does not hold), the path from estimate to applied command, why the reference must come from a build with the run's own seed, and the solver tolerances behind the 1-5 % non-linearity at damping 0.001 |
 | `scripts/verify_environment_lock.py` | installed is a subset of pinned at exact versions; `pip` and the project ignored |
 | `tests/experiments/test_detector_level_convergence.py` (names and markers) | the real self-check is `slow`; `--plan` is tested for governed scales without enablement |
 | profiles `det_emccd_12m_medium_derived.v3.json`, `det_ccd_42m_r3band_derived.v1.json`, `det_emccd_2m_synthetic.v1.json` | the fixed quantities of PROTOCOL.md 1.3 and 3.1; the 2 m controller (gain 0.2, leak 0.02, latency 2) for the `kappa` check |
@@ -79,24 +80,42 @@ fixed operator describes the run is decided by two error bounds (review
 round 4): the transient propagated with the operator of every frame,
 burn-in included (update `k` carrying the operator of frame `k - d`),
 against the modal one; and the carried state itself, measured
-(review round 6): the sidecar holds both arms' reference-subtracted
-centroids (`<arm>__telemetry__centroids_xy_px`, the reference cancelling in
-the difference) and the rows each arm's reconstructor used
-(`<arm>__measurement_row_masks`), and `controller.py` 142-175 gives the
-update (`c_{k+1} = (1 - l) c_k + g released`, the delay queue of `d`
-zeros), so `dc_{k+1} = (1 - l) dc_k + g (R_k^noisy m_k^noisy - R_k^twin
-m_k^twin)_{k-d}` is computed frame by frame with each frame's operator
-probed on its own effective mask, and checked against the sidecar's
-`delta_v_m2` (and against the state fitted from the residual maps where
-retained). Its state at the first analysed frame, propagated under the
-modal loop without noise, is the exact carried contribution `D`, and the
-prediction becomes `W_cold + D`. The all-state `gamma` bound of round 5
-(at most `gamma` times the first-block effect, `gamma = max_x (x^T
-M_window x) / (x^T M_block x)`) and the restart values of round 4 stay as
-diagnostics; the match fractions too. A lenslet outside the modal mask with
-fewer than 10 usable frames gets no covariance of its own but a bracket
-from its own frames (97.5 % chi-square) and the sensor model at its spot
-(twice), and the operator error is taken at the worse end.
+(review round 6): the sidecar holds both arms' centroids
+(`<arm>__telemetry__centroids_xy_px`) and the rows each arm's reconstructor
+used (`<arm>__measurement_row_masks`); the reconstructor reads the centroid
+minus the sensor's zero-phase calibration reference
+(`physical_measurement.py` 755, `shifts = centroids - self._reference`;
+the reference is built from the run's own seed and exposed as
+`PhysicalShackHartmannSensor.reference_centroids_px`, 475-477), which
+cancels between the arms only on frames where both use the same operator
+and is therefore subtracted; and `controller.py` 151-188 gives the update
+(`c_{k+1} = (1 - l) c_applied + g released`, the delay queue of `d`
+zeros, `accept_applied_commands` feeding back the applied command, so
+clipping breaks the law). So `dc_{k+1} = (1 - l) dc_k + g (R_k^noisy
+(m_k^noisy - m_ref) - R_k^twin (m_k^twin - m_ref))_{k-d}` is computed frame
+by frame with each frame's operator probed on its own effective mask, and
+checked against the sidecar's `delta_v_m2`. Two logged replays of traced ci
+pilots (every `reconstruct` input and output and every controller update
+recorded; the replays reproduce the sidecars' series exactly) confirm the
+inputs as centroid minus reference to 0.0 px in both arms, and show the
+`sparse_lsmr_tikhonov` solve (`calibration/sparse.py` 1059, LSMR with
+`atol = btol = 1e-8`, at most 5000 iterations) to be a fixed linear operator
+to 1.3e-6 at relative damping 0.1 but only to 1-5 % per frame at 0.001: the
+reconstruction residual measures that and enters the budget. The state at
+the first analysed frame comes from the reconstruction when it reproduces
+the series to 1e-3, else from the residual maps where retained (least
+squares on the pupil response; the map difference is explained to 1e-13);
+propagated under the modal loop without noise it is the exact carried
+contribution `D`, and the prediction becomes `W_cold + D`. The all-state
+`gamma` bound of round 5 (at most `gamma` times the first-block effect,
+`gamma = max_x (x^T M_window x) / (x^T M_block x)`) and the restart values
+of round 4 stay as diagnostics; the match fractions too. A lenslet outside
+the modal mask with fewer than 10 usable frames gets no covariance of its
+own but a bracket from its own frames (97.5 % chi-square) and the sensor
+model's variance at its spot (`centroid_sigma_xy_px`, twice), the margin
+of two being checked on the same run against every lenslet with an
+estimate of its own (realized over model variance, 97.5 % upper bound),
+and the operator error is taken at the worse end.
 
 **Transient and stationary covariance.** With `x_k = (dc_k, dc_{k-1}, ...,
 dc_{k-d})`, `x_{k+1} = F x_k + [k >= d] G n_{k-d}` with `F = [[(1-l) I, 0,
