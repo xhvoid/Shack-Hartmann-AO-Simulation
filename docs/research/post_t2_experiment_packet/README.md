@@ -4,8 +4,8 @@ Prepared 2026-10-21 (UTC) in a cloud session on the published commit
 `55142852d8e01f0c6b2828480c64c5792e7d5302` (tree
 `75c4fe7c9d8a90ef5f26fc174187cf8f82bd4ba9`) for independent
 experimental-design review; revised 2026-10-22 for the eight findings of
-review round 1 (section 8) and again for the seven findings of review
-round 2 (section 9). This packet is a protocol-design and bounded
+review round 1 (section 8), the seven findings of review round 2 (section
+9) and the five findings of review round 3 (section 10). This packet is a protocol-design and bounded
 readiness deliverable. It authorizes nothing: no 12 m or 42 m job was run, no
 runtime code, profile, baseline or historical record was changed, and every
 pilot and study request below is `PREPARED_NOT_EXECUTED` until the protocol
@@ -326,3 +326,25 @@ tool now reports the count of such modes and the run is
 refuses the strict support mask of most gate-active 2 m runs (and the
 available mask of one), so the fixed-mask model is "not defined" for that
 rule exactly where the loop itself is gate-active.
+
+## 10. Review round 3 (2026-10-22): findings and repairs
+
+Review round 3 on `4960b76` resolved six prior findings and left five P2
+findings. Each repair and its evidence (`records/cloud_checks/round3/SUMMARY.md`
+for the numbers):
+
+| # | Finding | Repair | Evidence |
+| --- | --- | --- | --- |
+| 12 | Changing masks can still produce comparison against the wrong operator | the model's primary operator is now the one the loop used: the row set the noisy arm's reconstructor used in the plurality of analysed frames (the sidecar's per-frame effective row masks), with `Sigma` from the frames in which that operator was in use; the tool records in how many analysed frames each arm used it, and a run in which either arm used it in fewer than 95 % of the frames is "mask-variable": its prediction is reported, its comparison is descriptive, and the protocol excludes it from the closure test as a third predeclared exclusion beside saturation and gate activity; the telemetry-based `available` and `strict` rules stay as sensitivities (PROTOCOL.md 1.6, 1.7, 7) | CHK-3b, CHK-3c: the 2 m gate-quiet runs and the ci runs with the 12 m damping are operator-consistent (both arms under the modal operator in 97-100 % of the frames); the ci runs with the ci damping are mask-variable (94 % and 74 %) although the m7 one is gate-quiet, which is the case the finding describes |
+| 14 | Pilot and bare sidecars accept incorrect units or axes | every sidecar's declared array table is compared array by array with the evidence runner's own canonical layout constants (units, axes and meanings), the dtype the core writes, and the shape the declared axes imply from the frame, row, lenslet and pupil-sample counts; unknown array names and missing required arrays are refused; the check runs for pilot and bare sidecars alike, before `--record` or `--pilot-record` add the digest checks | CHK-3d: a sidecar with a wrong unit string, one with permuted axes and one with a wrong dtype are refused with nothing read; CHK-3b, CHK-3c: 37 of 37 genuine sidecars pass |
+| 16 | P2b's second command reuses a supervisor record and refuses execution | the second command is spelled out with its own supervisor label, log and record (`p2b_flat.log`, `p2b_flat_supervisor.json`); the launcher refuses an existing record path by design, so the two commands never share one (`pilot_requests.json` P2b) | text |
+| 17 | P2b requires a field removed from the current output schema | the acceptance rules name the fields of the tool's current schema (`post_t2_linear_loop_noise_model.v3`: `primary_status`, `delta_v_scalar_reduction_mask_m2`, `stationary_limit_exists`, the operator block, the per-rule entries); an audit script resolves every dotted field path named in the requests' acceptance rules against the tools' actual records and is part of the checks | CHK-3f: every named path resolves in the matching record |
+| 18 | The protocol can interpret an inconclusive result as a physical departure | only a "rejected" outcome localizes a departure (in the loop, in the sensor model, or both); a "not expressible" outcome of either test is a precision outcome that triggers the seed extension once and, if it persists, leaves the localization "undetermined", never an agreement and never a departure (PROTOCOL.md 1.6 "Use", 1.7, 5) | text |
+
+No runtime code, profile, baseline or historical record was changed; no
+governed run or 12 m or 42 m system build took place. The round-1 and
+round-2 records stay as the record of those revisions; the round-3 model
+reruns on the unchanged round-2 pilot sidecars and the series sidecars go
+under `records/cloud_checks/round3/` (added by the commit that follows this
+section's first revision, once the reruns complete; until then the
+evidence column names the checks that are running).

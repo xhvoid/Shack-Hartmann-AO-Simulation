@@ -71,7 +71,12 @@ atmosphere, same calibration) obeys
 
 Rows the loop drops are removed from the reconstruction, which changes the
 pseudo-inverse; marking them noiseless but valid would describe another
-loop (review round 2).
+loop (review round 2). The row set itself is the one the loop used: the
+noisy arm's effective row mask in the plurality of analysed frames
+(`<arm>__measurement_row_masks`, "effective rows used by the reconstructor"),
+not a set inferred from telemetry validity; a run whose arms used that
+operator in fewer than 95 % of the analysed frames had no single operator
+and is outside the fixed-mask model's domain (review round 3).
 
 **Transient and stationary covariance.** With `x_k = (dc_k, dc_{k-1}, ...,
 dc_{k-d})`, `x_{k+1} = F x_k + [k >= d] G n_{k-d}` with `F = [[(1-l) I, 0,

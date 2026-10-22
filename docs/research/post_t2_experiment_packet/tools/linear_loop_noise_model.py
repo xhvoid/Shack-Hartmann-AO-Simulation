@@ -2,18 +2,19 @@
 """Exact linear closed-loop detector-noise model with the reconstructed spatial feedback.
 
 Proposed in the post-T2 experiment packet (review round 1, finding 3; revised
-in round 2).  The scalar transfer factor ``kappa(g, l, d)`` of the first
-draft assumed that the reconstructor feeds every DM mode back with unit gain.
-The loop's actual feedback is the matrix ``L = R M`` (reconstructor times
-calibrated interaction matrix on the controlled actuators); under Tikhonov or
-LSMR damping its eigenvalues ``s_i^2 / (s_i^2 + damp^2)`` are below one for
-poorly sensed modes, so those modes reject noise differently from the
-unit-feedback loop, and the noise enters as ``R n``.  This tool computes the
-covariance of the command difference between the noise-on loop and its
-noiseless twin for the loop of technical reference 4.2 (leaky integrator,
-gain ``g``, leak ``l``, queue latency ``d`` frames; ``controller.update``:
-``c_{k+1} = (1 - l) c_k + g * released``, the released increment being the
-one enqueued ``d`` updates earlier, the queue starting with ``d`` zeros):
+in rounds 2 and 3).  The scalar transfer factor ``kappa(g, l, d)`` of the
+first draft assumed that the reconstructor feeds every DM mode back with
+unit gain.  The loop's actual feedback is the matrix ``L = R M``
+(reconstructor times calibrated interaction matrix on the controlled
+actuators); under Tikhonov or LSMR damping its eigenvalues
+``s_i^2 / (s_i^2 + damp^2)`` are below one for poorly sensed modes, so those
+modes reject noise differently from the unit-feedback loop, and the noise
+enters as ``R n``.  This tool computes the covariance of the command
+difference between the noise-on loop and its noiseless twin for the loop of
+technical reference 4.2 (leaky integrator, gain ``g``, leak ``l``, queue
+latency ``d`` frames; ``controller.update``: ``c_{k+1} = (1 - l) c_k + g *
+released``, the released increment being the one enqueued ``d`` updates
+earlier, the queue starting with ``d`` zeros):
 
     dc_{k+1} = (1 - l) dc_k - g L dc_{k-d} + g R n_{k-d}    (k >= d)
     dc_{k+1} = (1 - l) dc_k                                 (k <  d)
@@ -22,14 +23,12 @@ with ``n`` white measurement noise of covariance ``Sigma`` (2x2 blocks per
 lenslet).  The two arms start from the same command, so ``P_0 = 0`` exactly
 and the covariance of the run's frames is the transient
 ``P_{k+1} = F P_k F^T + [k >= d] G Sigma G^T`` for the state
-``x_k = (dc_k, ..., dc_{k-d})``; the noise measured at frame ``k`` first
-moves the command applied after update ``k + d``.  The model's prediction for
-a run is the mean of ``tr(Gram P_{k+1}) / N_pupil`` over the analysed frames
+``x_k = (dc_k, ..., dc_{k-d})``.  The model's prediction for a run is the
+mean of ``tr(Gram P_{k+1}) / N_pupil`` over the analysed frames
 (``delta_v_exact_window_m2``, the primary value: the post-update residual of
-frame ``k`` carries ``dc_{k+1}``).  The stationary limit
-``P = F P F^T + G Sigma G^T`` (discrete Lyapunov equation) is reported beside
-it; the two differ when the loop has modes whose time constant is not short
-against the run.  The predicted isolated detector-noise variance is
+frame ``k`` carries ``dc_{k+1}``).  The stationary limit (discrete Lyapunov
+equation) is reported beside it when it exists.  The predicted isolated
+detector-noise variance is
 
     DeltaV_pred = tr(Gram Cov(dc)) / N_pupil,   Gram = W_c^T W_c,
 
@@ -38,46 +37,53 @@ the pupil samples: the piston-removed pupil mean square of the noise-driven
 correction difference, which is the sidecar's ``delta_v_m2`` in
 expectation (the twin and the noisy arm see the same atmosphere).
 
-**One fixed mask for the whole model.**  The reconstructor is probed with
-exactly the rows that carry noise in ``Sigma`` marked valid and every other
-row invalid (``R_mask``), so the feedback ``L = R_mask M``, the injection
-``g R_mask n`` and ``Sigma`` describe the same fixed mask; probing with every
-row valid while zeroing the noise of unused rows would mix two masks (review
-round 2).  The series' propagation weights (every row valid) are kept for
-the scalar reduction ``kappa * sum_r w_r sigma_r^2`` reported as the first
-draft's value; the same reduction on the model's own mask is reported too.
+**The operator the loop used.**  The model is a fixed-mask model: ``R`` is
+probed with exactly one row set valid and every other row invalid, and
+``L``, the injection and ``Sigma`` describe that one mask.  The primary
+rule ``effective`` takes the row set the noisy arm's reconstructor actually
+used in the plurality of analysed frames (the sidecar's per-frame effective
+row masks), estimates ``Sigma`` from the realized residuals of the frames in
+which that operator was in use, and reports in how many analysed frames
+each arm used it (``operator.noisy_match_fraction``,
+``twin_match_fraction``).  A run in which either arm used the modal operator
+in fewer than ``--min-operator-match`` of the analysed frames is
+``mask-variable``: the loop had no single operator, the prediction is
+reported, and the comparison is descriptive (review round 3).  Two
+telemetry-based rules are reported as sensitivities: ``available``
+(lenslets valid, supported and finite in at least ``--support-min-fraction``
+of the analysed frames, covariance over each lenslet's own valid frames) and
+``strict`` (lenslets valid in every analysed frame, the E0 rule).  ``flat``
+uses the sensor's flat-wavefront ``detector_covariance_v2`` model on its
+supported lenslets (a-priori, no run needed).  The series' propagation
+weights (every row valid) are kept for the first draft's scalar value
+``kappa * sum_r w_r sigma_r^2``; the same reduction on the model's own mask
+is reported too.
 
-Noise covariance (``--sigma``): ``flat`` uses the sensor's flat-wavefront
-``detector_covariance_v2`` model on its supported lenslets (a-priori
-prediction); ``sidecar`` uses a traced sidecar's realized residuals
-``c_noisy - c_expected`` (``ddof = 1``) under two support rules, both
-reported: ``available`` (primary by default) takes every lenslet that is
-valid, supported and finite in at least ``--support-min-fraction`` of the
-analysed frames and estimates its covariance over its own valid frames;
-``strict`` takes only lenslets valid in every analysed frame (the E0
-summary's rule).  A sidecar is validated before it is read as data: the
-declared array table (names, dtypes, shapes), the frame domains, the
-two-arm layout and the canonical interleaved x/y rows of one lenslet order,
-the label and seed, and the configuration hash against the built
-configuration; with ``--record`` (a series record) the run row's digest and
-size are checked and the evidence runner's own ``validate_trace_payload``
-runs; with ``--pilot-record`` the pilot's digest, size and frame counts are
-checked.  The prediction is then compared with the sidecar's measured
-``delta_v_m2`` (mean and 25-frame block standard error).  ``--self-test``
-checks the solver against ``kappa`` in the unit-feedback limit, the delayed
-injection and the structured propagation, and exits.
+**Validation before any read.**  A sidecar's declared array table is
+compared, array by array, with the evidence runner's canonical layout
+(names, units, axes and meanings as the runner declares them, the dtype of
+each array, and the shape its axes imply from the frame, row, lenslet and
+pupil-sample counts); the frame domains, the two-arm layout, the canonical
+interleaved x/y rows of one lenslet order, the label, the seed and the
+configuration hash against the built configuration are checked; with
+``--record`` (a series record) the run row's digest and size are checked and
+the runner's own ``validate_trace_payload`` runs; with ``--pilot-record``
+the pilot's digest, size, frame counts, label, seed and hash are checked.  A
+refusal reads nothing.  ``--self-test`` checks the solver against ``kappa``
+in the unit-feedback limit, the delayed injection and the structured
+propagation, and exits.
 
 Building a 12 m or 42 m system is governed (``--enabled-by-user``).  The
-dense ``W_c`` (pupil samples x controlled actuators) and the Lyapunov state
-(controlled actuators x (d + 1)) are sized before anything is allocated and
-refused above ``--max-dense-mib`` / ``--max-state``; the 42 m geometry is
-out of reach of this tool.  Analysis only: no loop is run and nothing in the
-repository is changed.
+dense ``W_c`` and the Lyapunov state are sized before anything is allocated
+and refused above ``--max-dense-mib`` / ``--max-state``; the 42 m geometry
+is out of reach of this tool.  Analysis only: no loop is run and nothing in
+the repository is changed.
 """
 
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import hashlib
 import json
 from pathlib import Path
@@ -101,12 +107,30 @@ from _packet_common import (
     write_record_once,
 )
 
-SCHEMA = "post_t2_linear_loop_noise_model.v2"
+SCHEMA = "post_t2_linear_loop_noise_model.v3"
 PROBE_M = 1.0e-9
 SERIES_SIDECAR_SCHEMA = "shwfs_ao.noise_isolation_trace_sidecar.v1"
 PILOT_SIDECAR_SCHEMA = "post_t2_pilot_trace_sidecar.v1"
 ACCEPTED_SIDECAR_SCHEMAS = (SERIES_SIDECAR_SCHEMA, PILOT_SIDECAR_SCHEMA)
-PER_ARM_FRAME_ARRAYS = ("valid_measurement_fraction", "valid_subaperture_fraction", "saturation_fraction", "reconstruction_usable", "open_loop_opd_rms_m", "pre_update_residual_opd_rms_m", "post_update_residual_opd_rms_m")
+RULES = ("effective", "available", "strict")
+# The dtype the experiment core writes for each canonical array ("U" = fixed-width unicode).
+CANONICAL_DTYPES = {
+    "frame_index": "int64", "analysed_frame_index": "int64", "delta_v_m2": "float64", "mean_square_difference_m2": "float64",
+    "cross_term_m2": "float64", "mask_disagreement_rows": "int64", "calibration_valid_rows": "bool", "row_ids": "U",
+    "measurement_row_masks": "bool", "valid_measurement_fraction": "float64", "valid_subaperture_fraction": "float64",
+    "saturation_fraction": "float64", "reconstruction_usable": "bool", "open_loop_opd_rms_m": "float64",
+    "pre_update_residual_opd_rms_m": "float64", "post_update_residual_opd_rms_m": "float64", "subaperture_ids": "U",
+    "centroids_xy_px": "float64", "expected_centroids_xy_px": "float64", "centroid_sigma_xy_px": "float64", "fluxes_e": "float64",
+    "peak_snr": "float64", "total_snr": "float64", "centroid_sigma_px": "float64", "clipping_fraction": "float64",
+    "centroid_calibration_sigma_px": "float64", "masked_pixel_fraction": "float64", "saturated_pixel_count": "float64",
+    "valid_subapertures": "bool", "valid_by_flux": "bool", "valid_by_snr": "bool", "valid_by_uncertainty": "bool",
+    "valid_by_clipping": "bool", "uncertainty_supported": "bool", "propagation_weights__weights_m2_per_px2": "float64",
+    "residual_maps__pupil_mask": "bool", "residual_maps__arm": "float32", "mask_lock__rows_removed": "int64",
+    "mask_lock__rows_added": "int64", "mask_lock__rows_unaddable": "int64", "mask_lock__own_valid_subapertures": "bool",
+}
+REQUIRED_SHARED = ("frame_index", "analysed_frame_index", "delta_v_m2", "mean_square_difference_m2", "cross_term_m2", "mask_disagreement_rows", "calibration_valid_rows", "row_ids")
+REQUIRED_HISTORY = ("measurement_row_masks", "valid_measurement_fraction", "valid_subaperture_fraction", "saturation_fraction", "reconstruction_usable", "open_loop_opd_rms_m", "pre_update_residual_opd_rms_m", "post_update_residual_opd_rms_m", "subaperture_ids")
+REQUIRED_TELEMETRY = ("centroids_xy_px", "expected_centroids_xy_px", "valid_subapertures", "uncertainty_supported")
 
 
 class SidecarRefused(SystemExit):
@@ -189,13 +213,7 @@ def window_covariance(loop: np.ndarray, forcing: np.ndarray, *, gain: float, lea
 
 
 def stationary_covariance(response: np.ndarray, loop: np.ndarray, sigma: np.ndarray, *, gain: float, leak: float, latency: int) -> tuple[np.ndarray | None, float, float | None]:
-    """Stationary ``Cov(dc)`` of the noise-driven command difference, the spectral radius of ``F`` and the Lyapunov residual.
-
-    A mode the mask leaves unsensed with no leak has a unit pole: the
-    spectral radius reaches one, no stationary covariance exists, and
-    ``None`` is returned for it (the finite-window transient still exists
-    and stays the primary prediction).
-    """
+    """Stationary ``Cov(dc)``, the spectral radius of ``F`` and the Lyapunov residual; ``None`` when a unit pole leaves no stationary limit."""
 
     size = response.shape[0]
     transition = transition_matrix(loop, gain=gain, leak=leak, latency=latency)
@@ -233,22 +251,21 @@ def self_test() -> dict[str, Any]:
     forcing = forcing_matrix(np.eye(1), np.eye(1), gain=0.3, latency=2)
     window_mean, _ = window_covariance(np.eye(1), forcing, gain=0.3, leak=0.0, latency=2, n_steps=400, burn_in=100)
     window_check = {"window_mean_variance": float(window_mean[0, 0]), "kappa": scalar_kappa(0.3, 0.0, 2), "relative_difference": float(window_mean[0, 0] / scalar_kappa(0.3, 0.0, 2) - 1.0)}
-    # Delayed injection: with latency d the first d post-update covariances are exactly zero and the
-    # (d+1)-th equals g^2 R Sigma R^T (the first released increment carries the frame-0 noise).
     delay_checks = []
     for latency in (0, 1, 2):
         zero_mean, state_d = window_covariance(np.eye(1), forcing_matrix(np.eye(1), np.eye(1), gain=0.3, latency=latency), gain=0.3, leak=0.0, latency=latency, n_steps=latency + 1, burn_in=0)
         first_nonzero = float(state_d[0, 0])
-        expected_zero = float(zero_mean[0, 0]) * (latency + 1) - first_nonzero  # sum over the first d frames
-        delay_checks.append({"latency": latency, "sum_of_first_d_variances": expected_zero, "variance_after_update_d": first_nonzero, "expected_after_update_d": 0.3**2})
+        delay_checks.append({"latency": latency, "sum_of_first_d_variances": float(zero_mean[0, 0]) * (latency + 1) - first_nonzero, "variance_after_update_d": first_nonzero, "expected_after_update_d": 0.3**2})
+    unit_pole = stationary_covariance(np.eye(1), np.zeros((1, 1)), np.eye(1), gain=0.3, leak=0.0, latency=2)
     passed = (
         all(abs(case["relative_difference"]) < 1.0e-6 for case in cases)
         and all(abs(entry["variance_in_3x3"] / entry["variance_alone"] - 1.0) < 1.0e-9 for entry in modal)
         and propagation_error < 1.0e-12
         and abs(window_check["relative_difference"]) < 1.0e-6
         and all(abs(check["sum_of_first_d_variances"]) < 1.0e-15 and abs(check["variance_after_update_d"] - 0.3**2) < 1.0e-12 for check in delay_checks)
+        and unit_pole[0] is None and abs(unit_pole[1] - 1.0) < 1.0e-12
     )
-    return {"unit_feedback_cases": cases, "decoupled_modes_gain_0.3_latency_2": modal, "structured_propagation_max_error": propagation_error, "window_mean_unit_feedback_400_100": window_check, "delayed_injection": delay_checks, "passed": bool(passed)}
+    return {"unit_feedback_cases": cases, "decoupled_modes_gain_0.3_latency_2": modal, "structured_propagation_max_error": propagation_error, "window_mean_unit_feedback_400_100": window_check, "delayed_injection": delay_checks, "unsensed_mode_has_no_stationary_limit": {"stationary_returned": unit_pole[0], "spectral_radius": unit_pole[1]}, "passed": bool(passed)}
 
 
 # -- system responses --------------------------------------------------------------
@@ -314,7 +331,175 @@ def system_parts(system: Any) -> dict[str, Any]:
     return {"interaction": dense, "pupil_response": columns, "row_ids": row_ids, "coordinate_ids": coordinate_ids, "n_pupil": n_pupil, "lenslet_ids": tuple(system.wfs.subaperture_ids)}
 
 
+# -- sidecar validation --------------------------------------------------------------
+
+
+def load_sidecar(path: Path) -> tuple[dict[str, Any], dict[str, np.ndarray], str, int]:
+    payload = path.read_bytes()
+    digest = hashlib.sha256(payload).hexdigest()
+    with np.load(path, allow_pickle=False) as archive:
+        names = set(archive.files)
+        if "metadata_json" not in names:
+            raise SidecarRefused(f"{path}: no metadata_json entry.")
+        metadata = json.loads(str(archive["metadata_json"]))
+        arrays = {name: archive[name] for name in names if name != "metadata_json"}
+    if not isinstance(metadata, dict) or metadata.get("schema") not in ACCEPTED_SIDECAR_SCHEMAS:
+        raise SidecarRefused(f"{path}: schema {metadata.get('schema') if isinstance(metadata, dict) else None!r} is none of {ACCEPTED_SIDECAR_SCHEMAS}.")
+    return metadata, arrays, digest, len(payload)
+
+
+def canonical_layout(name: str, arm_order: list[str], runner: Any) -> tuple[str, str, tuple[str, ...], str]:
+    """``(units, meaning, axes, dtype)`` the evidence runner declares for a sidecar array name; raises ``KeyError`` for an unknown name."""
+
+    if name in runner._SIDECAR_SHARED_ARRAYS:
+        unit, meaning, axes = runner._SIDECAR_SHARED_ARRAYS[name]
+        return unit, meaning, tuple(axes), CANONICAL_DTYPES[name]
+    for table in (runner._SIDECAR_WEIGHT_ARRAYS, runner._SIDECAR_MAP_ARRAYS, runner._SIDECAR_LOCK_ARRAYS):
+        if name in table:
+            unit, meaning, axes = table[name]
+            return unit, meaning, tuple(axes), CANONICAL_DTYPES[name]
+    if name.startswith("residual_maps__") and name[len("residual_maps__"):] in arm_order:
+        unit, meaning, axes = runner._SIDECAR_RESIDUAL_MAP_ARM
+        return unit, meaning, tuple(axes), CANONICAL_DTYPES["residual_maps__arm"]
+    arm, _, rest = name.partition("__")
+    if arm in arm_order:
+        if rest.startswith("telemetry__"):
+            field = rest[len("telemetry__"):]
+            unit, meaning, axes = runner._SIDECAR_TELEMETRY_ARRAYS[field]
+            return unit, meaning, tuple(axes), CANONICAL_DTYPES[field]
+        unit, meaning, axes = runner._SIDECAR_HISTORY_ARRAYS[rest]
+        return unit, meaning, tuple(axes), CANONICAL_DTYPES[rest]
+    raise KeyError(name)
+
+
+def validate_sidecar(path: Path, metadata: dict[str, Any], arrays: dict[str, np.ndarray], *, expected_label: str | None, record: Path | None, pilot_record: Path | None, digest: str, size: int) -> dict[str, Any]:
+    """Refuse a sidecar whose content does not carry the trace semantics the model reads; return what was checked."""
+
+    from shwfs_ao.wfs.shack_hartmann.calibration import row_ids_for_subapertures
+
+    runner = load_script_module("run_detector_level_evidence")
+
+    def refuse(reason: str) -> None:
+        raise SidecarRefused(f"{path.name}: {reason}; the sidecar is not read as data.")
+
+    try:
+        n_steps, burn_in = int(metadata["n_steps"]), int(metadata["burn_in_frames"])
+    except (KeyError, TypeError, ValueError):
+        refuse("no integer n_steps and burn_in_frames")
+    if not (0 <= burn_in < n_steps):
+        refuse(f"burn-in {burn_in} and n_steps {n_steps} are not a frame domain")
+    arm_order = list(metadata.get("arm_order", []))
+    noisy, twin = metadata.get("noisy_arm"), metadata.get("twin_arm")
+    if len(arm_order) != 2 or noisy not in arm_order or twin not in arm_order or noisy == twin or not str(noisy).startswith("noise_on"):
+        refuse(f"arm order {arm_order!r} with noisy {noisy!r} and twin {twin!r} is not a two-arm paired trace")
+    arms_meta = metadata.get("arms")
+    if not isinstance(arms_meta, dict) or set(arms_meta) != set(arm_order):
+        refuse("the per-arm metadata does not name exactly the two arms")
+    declared = metadata.get("arrays")
+    if not isinstance(declared, dict) or set(declared) != set(arrays):
+        refuse("the arrays present do not match the declared array table")
+    missing = [name for name in REQUIRED_SHARED if name not in arrays]
+    missing += [f"{arm}__{name}" for arm in arm_order for name in REQUIRED_HISTORY if f"{arm}__{name}" not in arrays]
+    missing += [f"{arm}__telemetry__{name}" for arm in arm_order for name in REQUIRED_TELEMETRY if f"{arm}__telemetry__{name}" not in arrays]
+    if missing:
+        refuse(f"required arrays are missing: {missing[:8]}{'...' if len(missing) > 8 else ''}")
+    if arrays["row_ids"].ndim != 1:
+        refuse("row_ids is not one-dimensional")
+    n_rows = int(arrays["row_ids"].shape[0])
+    first = arrays[f"{noisy}__subaperture_ids"]
+    if first.ndim != 1:
+        refuse("no lenslet layout for the noisy arm")
+    lenslet_ids = tuple(str(item) for item in first.tolist())
+    n_lenslets = len(lenslet_ids)
+    if len(set(lenslet_ids)) != n_lenslets or n_rows != 2 * n_lenslets:
+        refuse(f"{n_rows} rows for {n_lenslets} lenslets (two canonical rows per distinct lenslet expected)")
+    pupil_samples = int(np.count_nonzero(arrays["residual_maps__pupil_mask"])) if "residual_maps__pupil_mask" in arrays else None
+    sizes = {"frame": n_steps, "analysed_frame": n_steps - burn_in, "row": n_rows, "lenslet": n_lenslets, "xy": 2, "pupil_sample": pupil_samples}
+    # Every array against the runner's canonical units, axes, meaning, the core's dtype and the shape its axes imply.
+    for name, array in arrays.items():
+        spec = declared[name]
+        try:
+            unit, meaning, axes, dtype = canonical_layout(name, arm_order, runner)
+        except KeyError:
+            refuse(f"array {name} is not a canonical sidecar array")
+        if spec.get("units") != unit or list(spec.get("axes", [])) != list(axes) or spec.get("meaning") != meaning:
+            refuse(f"array {name} is declared with units {spec.get('units')!r}, axes {spec.get('axes')!r} and meaning {str(spec.get('meaning'))[:60]!r}; the canonical layout is {unit!r}, {list(axes)!r}, {meaning[:60]!r}")
+        if dtype == "U":
+            if array.dtype.kind != "U":
+                refuse(f"array {name} must hold unicode identifiers, not {array.dtype}")
+        elif str(array.dtype) != dtype:
+            refuse(f"array {name} has dtype {array.dtype}, the canonical layout requires {dtype}")
+        if spec.get("dtype") != str(array.dtype) or [int(s) for s in array.shape] != list(spec.get("shape", [])):
+            refuse(f"array {name} has dtype {array.dtype} and shape {array.shape}, declared {spec.get('dtype')!r} {spec.get('shape')!r}")
+        if array.ndim != len(axes):
+            refuse(f"array {name} has {array.ndim} dimensions for axes {list(axes)!r}")
+        for axis_name, extent in zip(axes, array.shape):
+            expected = sizes.get(axis_name)
+            if expected is not None and int(extent) != int(expected):
+                refuse(f"array {name} has {extent} entries along {axis_name!r}, the trace has {expected}")
+    if not np.array_equal(arrays["frame_index"], np.arange(n_steps)):
+        refuse("frame_index is not 0..n_steps-1")
+    if not np.array_equal(arrays["analysed_frame_index"], np.arange(burn_in, n_steps)):
+        refuse("analysed_frame_index is not burn_in..n_steps-1")
+    for name in ("delta_v_m2", "mean_square_difference_m2", "cross_term_m2"):
+        if not np.all(np.isfinite(arrays[name])):
+            refuse(f"{name} is not finite")
+    if not np.allclose(arrays["cross_term_m2"], arrays["mean_square_difference_m2"] - arrays["delta_v_m2"], rtol=0.0, atol=1e-30 + 1e-9 * np.max(np.abs(arrays["mean_square_difference_m2"]))):
+        refuse("cross_term_m2 is not mean_square_difference_m2 minus delta_v_m2")
+    if tuple(str(item) for item in arrays["row_ids"].tolist()) != tuple(row_ids_for_subapertures(lenslet_ids)):
+        refuse("row_ids are not the canonical interleaved x/y rows of the lenslet order")
+    for arm in arm_order:
+        if tuple(str(item) for item in arrays[f"{arm}__subaperture_ids"].tolist()) != lenslet_ids:
+            refuse(f"arm {arm} lists the lenslets in another order than the noisy arm")
+    if expected_label is not None and metadata.get("label") != expected_label:
+        refuse(f"label {metadata.get('label')!r} is not the configuration's {expected_label!r}")
+    if not isinstance(metadata.get("root_seed"), int) or not isinstance(metadata.get("config_hash"), str):
+        refuse("no integer root seed or configuration hash")
+    checked: dict[str, Any] = {
+        "structural": "passed (declared table against the runner's canonical units, axes, meanings, dtypes and axis-implied shapes; frame domains; two-arm layout; canonical rows; label)",
+        "arrays_checked": len(arrays), "schema": metadata["schema"],
+    }
+    if record is not None:
+        if metadata["schema"] != SERIES_SIDECAR_SCHEMA:
+            refuse("--record names a series record but the sidecar is not a series sidecar")
+        series = json.loads(record.read_text())
+        rows = [row for row in series.get("runs", []) if row.get("label") == metadata["label"] and row.get("root_seed") == metadata["root_seed"]]
+        if len(rows) != 1:
+            refuse(f"{len(rows)} run rows of {record.name} carry label {metadata['label']!r} and seed {metadata['root_seed']}")
+        row = rows[0]
+        reference = row.get("sidecar") or {}
+        if reference.get("file") != path.name or reference.get("sha256") != digest or int(reference.get("bytes", -1)) != size:
+            refuse(f"the record's sidecar reference ({reference.get('file')!r}, {str(reference.get('sha256'))[:12]}..., {reference.get('bytes')} B) does not match this file ({path.name}, {digest[:12]}..., {size} B)")
+        if row.get("config_hash") != metadata["config_hash"] or int(row.get("n_steps", -1)) != n_steps or int(row.get("burn_in_frames", -1)) != burn_in:
+            refuse("the record's run row disagrees with the sidecar's configuration hash or frame counts")
+        runner.validate_trace_payload(
+            metadata, arrays, label=metadata["label"], root_seed=metadata["root_seed"], n_steps=n_steps, burn_in=burn_in,
+            diagnostic=row["diagnostic_protocol"], diagnostic_hash=row["diagnostic_protocol_hash"], where=f"{path.name} against {record.name}",
+        )
+        checked["record"] = {"path": str(record), "run_row": {"label": row["label"], "root_seed": row["root_seed"]}, "digest_and_size": "match", "runner_validate_trace_payload": "passed"}
+    if pilot_record is not None:
+        if metadata["schema"] != PILOT_SIDECAR_SCHEMA:
+            refuse("--pilot-record names a pilot record but the sidecar is not a pilot sidecar")
+        pilot = json.loads(pilot_record.read_text())
+        reference = pilot.get("trace_sidecar") or {}
+        if reference.get("file") != path.name or reference.get("sha256") != digest or int(reference.get("bytes", -1)) != size:
+            refuse("the pilot record's trace_sidecar reference does not match this file")
+        for key, value in (("config_hash", metadata["config_hash"]), ("n_steps", n_steps), ("burn_in_frames", burn_in), ("label", metadata["label"]), ("root_seed", metadata["root_seed"])):
+            if pilot.get(key) != value:
+                refuse(f"the pilot record's {key} ({pilot.get(key)!r}) is not the sidecar's ({value!r})")
+        checked["pilot_record"] = {"path": str(pilot_record), "digest_size_hash_frames_label_seed": "match"}
+    return checked
+
+
 # -- noise covariance --------------------------------------------------------------
+
+
+def recovery_acted(recovery: Any) -> bool:
+    """The core's rule (``_recovery_acted``): any positive numeric counter in the recovery record other than its hash."""
+
+    if not isinstance(recovery, dict):
+        return False
+    return any(isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0 for key, value in recovery.items() if key != "config_hash")
 
 
 def sigma_from_flat_wavefront(system: Any, row_ids: tuple[str, ...]) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, Any]]:
@@ -341,139 +526,17 @@ def sigma_from_flat_wavefront(system: Any, row_ids: tuple[str, ...]) -> tuple[di
     return {"flat": sigma}, {"flat": mask}, info
 
 
-def load_sidecar(path: Path) -> tuple[dict[str, Any], dict[str, np.ndarray], str, int]:
-    payload = path.read_bytes()
-    digest = hashlib.sha256(payload).hexdigest()
-    with np.load(path, allow_pickle=False) as archive:
-        names = set(archive.files)
-        if "metadata_json" not in names:
-            raise SidecarRefused(f"{path}: no metadata_json entry.")
-        metadata = json.loads(str(archive["metadata_json"]))
-        arrays = {name: archive[name] for name in names if name != "metadata_json"}
-    if not isinstance(metadata, dict) or metadata.get("schema") not in ACCEPTED_SIDECAR_SCHEMAS:
-        raise SidecarRefused(f"{path}: schema {metadata.get('schema') if isinstance(metadata, dict) else None!r} is none of {ACCEPTED_SIDECAR_SCHEMAS}.")
-    return metadata, arrays, digest, len(payload)
+def _block_covariance(residual: np.ndarray, frames_of: np.ndarray, lenslet: int, axes: np.ndarray) -> np.ndarray | None:
+    """Covariance (``ddof = 1``) of the chosen axes of one lenslet over the chosen frames, or None with fewer than three frames."""
+
+    if np.count_nonzero(frames_of) < 3:
+        return None
+    sample = residual[frames_of][:, lenslet, :][:, axes]
+    return np.atleast_2d(np.cov(sample, rowvar=False, ddof=1))
 
 
-def validate_sidecar(path: Path, metadata: dict[str, Any], arrays: dict[str, np.ndarray], *, expected_label: str | None, record: Path | None, pilot_record: Path | None, digest: str, size: int) -> dict[str, Any]:
-    """Refuse a sidecar whose content does not carry the trace semantics the model reads; return what was checked."""
-
-    from shwfs_ao.wfs.shack_hartmann.calibration import row_ids_for_subapertures
-
-    def refuse(reason: str) -> None:
-        raise SidecarRefused(f"{path.name}: {reason}; the sidecar is not read as data.")
-
-    declared = metadata.get("arrays")
-    if not isinstance(declared, dict) or set(declared) != set(arrays):
-        refuse("the arrays present do not match the declared array table")
-    for name, spec in declared.items():
-        array = arrays[name]
-        if str(array.dtype) != spec.get("dtype") or [int(s) for s in array.shape] != list(spec.get("shape", [])):
-            refuse(f"array {name} has dtype {array.dtype} and shape {array.shape}, declared {spec.get('dtype')!r} {spec.get('shape')!r}")
-    try:
-        n_steps, burn_in = int(metadata["n_steps"]), int(metadata["burn_in_frames"])
-    except (KeyError, TypeError, ValueError):
-        refuse("no integer n_steps and burn_in_frames")
-    if not (0 <= burn_in < n_steps):
-        refuse(f"burn-in {burn_in} and n_steps {n_steps} are not a frame domain")
-    if not np.array_equal(arrays.get("frame_index"), np.arange(n_steps)):
-        refuse("frame_index is not 0..n_steps-1")
-    if not np.array_equal(arrays.get("analysed_frame_index"), np.arange(burn_in, n_steps)):
-        refuse("analysed_frame_index is not burn_in..n_steps-1")
-    for name in ("delta_v_m2", "mean_square_difference_m2", "cross_term_m2"):
-        if name not in arrays or arrays[name].shape != (n_steps - burn_in,) or arrays[name].dtype != np.float64 or not np.all(np.isfinite(arrays[name])):
-            refuse(f"{name} is not a finite float64 series over the analysed frames")
-    if not np.allclose(arrays["cross_term_m2"], arrays["mean_square_difference_m2"] - arrays["delta_v_m2"], rtol=0.0, atol=1e-30 + 1e-9 * np.max(np.abs(arrays["mean_square_difference_m2"]))):
-        refuse("cross_term_m2 is not mean_square_difference_m2 minus delta_v_m2")
-    if "mask_disagreement_rows" not in arrays or arrays["mask_disagreement_rows"].shape != (n_steps,):
-        refuse("mask_disagreement_rows is not one count per frame")
-    arm_order = list(metadata.get("arm_order", []))
-    noisy, twin = metadata.get("noisy_arm"), metadata.get("twin_arm")
-    if len(arm_order) != 2 or noisy not in arm_order or twin not in arm_order or noisy == twin or not str(noisy).startswith("noise_on"):
-        refuse(f"arm order {arm_order!r} with noisy {noisy!r} and twin {twin!r} is not a two-arm paired trace")
-    arms_meta = metadata.get("arms")
-    if not isinstance(arms_meta, dict) or set(arms_meta) != set(arm_order):
-        refuse("the per-arm metadata does not name exactly the two arms")
-    if "row_ids" not in arrays or arrays["row_ids"].ndim != 1 or "calibration_valid_rows" not in arrays:
-        refuse("no row layout (row_ids and calibration_valid_rows)")
-    n_rows = int(arrays["row_ids"].shape[0])
-    if arrays["calibration_valid_rows"].shape != (n_rows,):
-        refuse("calibration_valid_rows does not cover the rows")
-    first = arrays.get(f"{noisy}__subaperture_ids")
-    if first is None or first.ndim != 1:
-        refuse("no lenslet layout for the noisy arm")
-    lenslet_ids = tuple(str(item) for item in first.tolist())
-    n_lenslets = len(lenslet_ids)
-    if len(set(lenslet_ids)) != n_lenslets or n_rows != 2 * n_lenslets:
-        refuse(f"{n_rows} rows for {n_lenslets} lenslets (two canonical rows per distinct lenslet expected)")
-    if tuple(str(item) for item in arrays["row_ids"].tolist()) != tuple(row_ids_for_subapertures(lenslet_ids)):
-        refuse("row_ids are not the canonical interleaved x/y rows of the lenslet order")
-    for arm in arm_order:
-        if tuple(str(item) for item in arrays.get(f"{arm}__subaperture_ids", np.array([])).tolist()) != lenslet_ids:
-            refuse(f"arm {arm} lists the lenslets in another order than the noisy arm")
-        masks = arrays.get(f"{arm}__measurement_row_masks")
-        if masks is None or masks.shape != (n_steps, n_rows) or masks.dtype != np.bool_:
-            refuse(f"arm {arm} has no boolean row masks of shape (frames, rows)")
-        for name in PER_ARM_FRAME_ARRAYS:
-            array = arrays.get(f"{arm}__{name}")
-            if array is None or array.shape != (n_steps,):
-                refuse(f"arm {arm} has no per-frame {name}")
-        for name in ("centroids_xy_px", "expected_centroids_xy_px"):
-            array = arrays.get(f"{arm}__telemetry__{name}")
-            if array is None or array.shape != (n_steps, n_lenslets, 2):
-                refuse(f"arm {arm} has no {name} telemetry of shape (frames, lenslets, 2)")
-        for name in ("valid_subapertures", "uncertainty_supported"):
-            array = arrays.get(f"{arm}__telemetry__{name}")
-            if array is None or array.shape != (n_steps, n_lenslets) or array.dtype != np.bool_:
-                refuse(f"arm {arm} has no boolean {name} telemetry of shape (frames, lenslets)")
-    if expected_label is not None and metadata.get("label") != expected_label:
-        refuse(f"label {metadata.get('label')!r} is not the configuration's {expected_label!r}")
-    if not isinstance(metadata.get("root_seed"), int) or not isinstance(metadata.get("config_hash"), str):
-        refuse("no integer root seed or configuration hash")
-    checked: dict[str, Any] = {"structural": "passed (declared table, frame domains, two-arm layout, canonical rows, label)", "schema": metadata["schema"]}
-    if record is not None:
-        if metadata["schema"] != SERIES_SIDECAR_SCHEMA:
-            refuse("--record names a series record but the sidecar is not a series sidecar")
-        series = json.loads(record.read_text())
-        rows = [row for row in series.get("runs", []) if row.get("label") == metadata["label"] and row.get("root_seed") == metadata["root_seed"]]
-        if len(rows) != 1:
-            refuse(f"{len(rows)} run rows of {record.name} carry label {metadata['label']!r} and seed {metadata['root_seed']}")
-        row = rows[0]
-        reference = row.get("sidecar") or {}
-        if reference.get("file") != path.name or reference.get("sha256") != digest or int(reference.get("bytes", -1)) != size:
-            refuse(f"the record's sidecar reference ({reference.get('file')!r}, {str(reference.get('sha256'))[:12]}..., {reference.get('bytes')} B) does not match this file ({path.name}, {digest[:12]}..., {size} B)")
-        if row.get("config_hash") != metadata["config_hash"] or int(row.get("n_steps", -1)) != n_steps or int(row.get("burn_in_frames", -1)) != burn_in:
-            refuse("the record's run row disagrees with the sidecar's configuration hash or frame counts")
-        evidence = load_script_module("run_detector_level_evidence")
-        evidence.validate_trace_payload(
-            metadata, arrays, label=metadata["label"], root_seed=metadata["root_seed"], n_steps=n_steps, burn_in=burn_in,
-            diagnostic=row["diagnostic_protocol"], diagnostic_hash=row["diagnostic_protocol_hash"], where=f"{path.name} against {record.name}",
-        )
-        checked["record"] = {"path": str(record), "run_row": {"label": row["label"], "root_seed": row["root_seed"]}, "digest_and_size": "match", "runner_validate_trace_payload": "passed"}
-    if pilot_record is not None:
-        if metadata["schema"] != PILOT_SIDECAR_SCHEMA:
-            refuse("--pilot-record names a pilot record but the sidecar is not a pilot sidecar")
-        pilot = json.loads(pilot_record.read_text())
-        reference = pilot.get("trace_sidecar") or {}
-        if reference.get("file") != path.name or reference.get("sha256") != digest or int(reference.get("bytes", -1)) != size:
-            refuse("the pilot record's trace_sidecar reference does not match this file")
-        for key, value in (("config_hash", metadata["config_hash"]), ("n_steps", n_steps), ("burn_in_frames", burn_in), ("label", metadata["label"]), ("root_seed", metadata["root_seed"])):
-            if pilot.get(key) != value:
-                refuse(f"the pilot record's {key} ({pilot.get(key)!r}) is not the sidecar's ({value!r})")
-        checked["pilot_record"] = {"path": str(pilot_record), "digest_size_hash_frames_label_seed": "match"}
-    return checked
-
-
-def recovery_acted(recovery: Any) -> bool:
-    """The core's rule (``_recovery_acted``): any positive numeric counter in the recovery record other than its hash."""
-
-    if not isinstance(recovery, dict):
-        return False
-    return any(isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0 for key, value in recovery.items() if key != "config_hash")
-
-
-def sigma_from_sidecar(metadata: dict[str, Any], arrays: dict[str, np.ndarray], row_ids: tuple[str, ...], n_pupil: int, *, min_fraction: float) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, Any]]:
-    """2x2 blocks per lenslet of the realized noisy-arm residuals under the ``strict`` and ``available`` rules, their row masks, and the measured series."""
+def sigma_from_sidecar(metadata: dict[str, Any], arrays: dict[str, np.ndarray], row_ids: tuple[str, ...], n_pupil: int, *, min_fraction: float, min_operator_match: float) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, Any]]:
+    """Noise covariances and row masks under the ``effective``, ``available`` and ``strict`` rules, the operator record and the measured series."""
 
     noisy, twin = metadata["noisy_arm"], metadata["twin_arm"]
     sidecar_rows = tuple(str(value) for value in arrays["row_ids"])
@@ -488,20 +551,63 @@ def sigma_from_sidecar(metadata: dict[str, Any], arrays: dict[str, np.ndarray], 
     delta_v = np.asarray(arrays["delta_v_m2"], dtype=float)
     msd = np.asarray(arrays["mean_square_difference_m2"], dtype=float)
     rows = lenslet_rows(row_ids, lenslets)
-    usable = valid & supported & np.all(np.isfinite(centroids), axis=2) & np.all(np.isfinite(expected), axis=2)
+    finite = np.all(np.isfinite(centroids), axis=2) & np.all(np.isfinite(expected), axis=2)
+    residual = np.where(finite[:, :, None], centroids - expected, 0.0)
+    n_rows = len(row_ids)
+
+    # The operator the loop used: the modal effective row set of the noisy arm over the analysed frames.
+    effective_noisy = np.asarray(arrays[f"{noisy}__measurement_row_masks"], dtype=bool)[frames]
+    effective_twin = np.asarray(arrays[f"{twin}__measurement_row_masks"], dtype=bool)[frames]
+    keys = [row.tobytes() for row in effective_noisy]
+    counter = Counter(keys)
+    modal_key, modal_count = counter.most_common(1)[0]
+    modal_mask = np.frombuffer(modal_key, dtype=bool).copy()
+    noisy_match = np.array([key == modal_key for key in keys])
+    twin_match = np.all(effective_twin == modal_mask, axis=1)
+    noisy_fraction, twin_fraction = float(np.mean(noisy_match)), float(np.mean(twin_match))
+    operator_consistent = bool(noisy_fraction >= min_operator_match and twin_fraction >= min_operator_match)
+    sigma_effective = np.zeros((n_rows, n_rows))
+    sigma_frames_rule = "frames in which the noisy arm used the modal operator"
+    frames_for_sigma = noisy_match if np.count_nonzero(noisy_match) >= 3 else np.ones(frames.size, dtype=bool)
+    if np.count_nonzero(noisy_match) < 3:
+        sigma_frames_rule = "all analysed frames (fewer than three frames under the modal operator)"
+    for lenslet in range(len(lenslets)):
+        axes = np.flatnonzero(modal_mask[rows[lenslet]])
+        if axes.size == 0:
+            continue
+        block = _block_covariance(residual, frames_for_sigma & finite[:, lenslet], lenslet, axes)
+        if block is not None:
+            target = rows[lenslet][axes]
+            sigma_effective[np.ix_(target, target)] = block
+    operator = {
+        "definition": "the row set the noisy arm's reconstructor used in the plurality of analysed frames (<arm>__measurement_row_masks); the model's operator R is probed on exactly this set",
+        "rows_in_modal_mask": int(np.count_nonzero(modal_mask)), "rows_total": n_rows,
+        "distinct_effective_masks_noisy": len(counter),
+        "noisy_frames_under_modal_operator": int(modal_count), "noisy_match_fraction": noisy_fraction,
+        "twin_frames_under_modal_operator": int(np.count_nonzero(twin_match)), "twin_match_fraction": twin_fraction,
+        "rows_always_effective_noisy": int(np.count_nonzero(np.all(effective_noisy, axis=0))),
+        "rows_ever_effective_noisy": int(np.count_nonzero(np.any(effective_noisy, axis=0))),
+        "min_operator_match_fraction": float(min_operator_match),
+        "operator_consistent": operator_consistent,
+        "sigma_frames": sigma_frames_rule,
+        "comparison_status": "operator-consistent" if operator_consistent else "mask-variable: the loop had no single operator in at least one arm; the prediction is reported and the comparison is descriptive",
+    }
+
+    # Telemetry-based sensitivities.
+    usable = valid & supported & finite
     fraction = np.mean(usable, axis=0)
-    support = fraction >= 1.0
-    available = fraction >= float(min_fraction)
-    residual = centroids - expected
-    sigmas: dict[str, np.ndarray] = {}
-    masks: dict[str, np.ndarray] = {}
-    for rule, lenslet_mask, own_frames in (("strict", support, False), ("available", available, True)):
-        sigma = np.zeros((len(row_ids), len(row_ids)))
-        mask = np.zeros(len(row_ids), dtype=bool)
+    strict_lenslets = fraction >= 1.0
+    available_lenslets = fraction >= float(min_fraction)
+    sigmas: dict[str, np.ndarray] = {"effective": sigma_effective}
+    masks: dict[str, np.ndarray] = {"effective": modal_mask}
+    for rule, lenslet_mask, own_frames in (("available", available_lenslets, True), ("strict", strict_lenslets, False)):
+        sigma = np.zeros((n_rows, n_rows))
+        mask = np.zeros(n_rows, dtype=bool)
         for lenslet in np.flatnonzero(lenslet_mask):
             frames_of = usable[:, lenslet] if own_frames else np.ones(frames.size, dtype=bool)
-            if np.count_nonzero(frames_of) >= 3:
-                sigma[np.ix_(rows[lenslet], rows[lenslet])] = np.cov(residual[frames_of, lenslet, :], rowvar=False, ddof=1)
+            block = _block_covariance(residual, frames_of, lenslet, np.array([0, 1]))
+            if block is not None:
+                sigma[np.ix_(rows[lenslet], rows[lenslet])] = block
                 mask[rows[lenslet]] = True
         sigmas[rule], masks[rule] = sigma, mask
     blocks = int(len(delta_v) // 25)
@@ -517,11 +623,13 @@ def sigma_from_sidecar(metadata: dict[str, Any], arrays: dict[str, np.ndarray], 
         "root_seed": metadata["root_seed"],
         "config_hash": metadata["config_hash"],
         "analysed_frames": int(frames.size),
+        "operator": operator,
         "support_rules": {
-            "strict": {"definition": "lenslets valid, supported and finite in every analysed frame (the E0 rule); covariance over all analysed frames", "lenslet_fraction": float(np.mean(support)), "rows_with_noise": int(np.count_nonzero(masks["strict"]))},
-            "available": {"definition": f"lenslets valid, supported and finite in at least {float(min_fraction):g} of the analysed frames; covariance over each lenslet's own valid frames", "min_fraction": float(min_fraction), "lenslet_fraction": float(np.mean(available)), "rows_with_noise": int(np.count_nonzero(masks["available"])), "mean_valid_fraction_of_included": float(np.mean(fraction[available])) if np.any(available) else None},
+            "effective": {"definition": "rows of the modal effective mask (the operator the loop used); covariance over the frames in which the noisy arm used that operator", "lenslet_fraction": float(np.mean(np.all(modal_mask[rows], axis=1))), "rows_with_noise": int(np.count_nonzero(np.any(sigma_effective != 0.0, axis=0)))},
+            "available": {"definition": f"lenslets valid, supported and finite in at least {float(min_fraction):g} of the analysed frames; covariance over each lenslet's own valid frames", "min_fraction": float(min_fraction), "lenslet_fraction": float(np.mean(available_lenslets)), "rows_with_noise": int(np.count_nonzero(masks["available"])), "mean_valid_fraction_of_included": float(np.mean(fraction[available_lenslets])) if np.any(available_lenslets) else None},
+            "strict": {"definition": "lenslets valid, supported and finite in every analysed frame (the E0 rule); covariance over all analysed frames", "lenslet_fraction": float(np.mean(strict_lenslets)), "rows_with_noise": int(np.count_nonzero(masks["strict"]))},
         },
-        "mean_realized_sigma_px_on_strict_support": float(np.mean(np.sqrt(np.sum(residual[:, support, :] ** 2, axis=0) / (frames.size - 1)))) if np.any(support) else None,
+        "mean_realized_sigma_px_on_strict_support": float(np.mean(np.sqrt(np.sum(residual[:, strict_lenslets, :] ** 2, axis=0) / (frames.size - 1)))) if np.any(strict_lenslets) else None,
         "measured_delta_v_mean_m2": float(np.mean(delta_v)),
         "measured_delta_v_block25_se_m2": block_se,
         "measured_mean_square_difference_mean_m2": float(np.mean(msd)),
@@ -530,8 +638,8 @@ def sigma_from_sidecar(metadata: dict[str, Any], arrays: dict[str, np.ndarray], 
         "twin_arm_saturation_fraction_mean": float(np.mean(np.asarray(arrays[f"{twin}__saturation_fraction"], dtype=float)[frames])),
         "rejected_frames_after_burn_in": rejected,
         "recovery_acted": acted,
-        "gate_quiet_by_core_rule": bool(float(np.sum(disagreement)) / (len(row_ids) * frames.size) < 1.0e-3 and all(v == 0 for v in rejected.values()) and not any(acted.values())),
-        "mask_disagreement_row_frames_fraction": float(np.sum(disagreement) / (len(row_ids) * frames.size)),
+        "gate_quiet_by_core_rule": bool(float(np.sum(disagreement)) / (n_rows * frames.size) < 1.0e-3 and all(v == 0 for v in rejected.values()) and not any(acted.values())),
+        "mask_disagreement_row_frames_fraction": float(np.sum(disagreement) / (n_rows * frames.size)),
         "residual_map_pupil_samples": map_pupil,
         "pupil_samples_equal_to_model": None if map_pupil is None else map_pupil == n_pupil,
     }
@@ -551,8 +659,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--sidecar", type=Path, help="a traced sidecar of exactly this configuration (for --sigma sidecar)")
     parser.add_argument("--record", type=Path, help="the series record that references the sidecar (its digest, size and the runner's semantic validation are checked)")
     parser.add_argument("--pilot-record", type=Path, help="the timing pilot's record that references the sidecar (digest, size, frame counts, label, seed and hash are checked)")
-    parser.add_argument("--support", choices=("available", "strict"), default="available", help="which realized-covariance support rule is the primary prediction (sidecar mode; both are reported)")
+    parser.add_argument("--support", choices=RULES, default="effective", help="which noise-covariance rule is the primary prediction (sidecar mode; every rule is reported)")
     parser.add_argument("--support-min-fraction", type=float, default=0.9, help="inclusion threshold of the available rule (fraction of analysed frames a lenslet must be usable)")
+    parser.add_argument("--min-operator-match", type=float, default=0.95, help="fraction of analysed frames in which each arm must have used the modal operator for the comparison to count as operator-consistent")
     parser.add_argument("--max-state", type=int, default=4000, help="refuse a Lyapunov state larger than this (controlled actuators x (latency + 1))")
     parser.add_argument("--max-dense-mib", type=float, default=1024.0, help="refuse a dense pupil response larger than this")
     parser.add_argument("--self-test", action="store_true", help="check the solver against kappa in the unit-feedback limit, the delayed injection and the structured propagation, and exit")
@@ -593,8 +702,8 @@ def main(argv: list[str] | None = None) -> int:
     expected_label = None if magnitude is None else f"m{magnitude:g}"
     validation: dict[str, Any] | None = None
     if metadata is not None:
-        if config.config_hash != metadata["config_hash"]:
-            raise SidecarRefused(f"the built configuration {config.config_hash[:16]} is not the sidecar's {metadata['config_hash'][:16]}: the sidecar was traced on another configuration; it is not read as data.")
+        if config.config_hash != metadata.get("config_hash"):
+            raise SidecarRefused(f"the built configuration {config.config_hash[:16]} is not the sidecar's {str(metadata.get('config_hash'))[:16]}: the sidecar was traced on another configuration; it is not read as data.")
         validation = validate_sidecar(arguments.sidecar, metadata, arrays, expected_label=expected_label, record=arguments.record, pilot_record=arguments.pilot_record, digest=digest, size=size)
     controller = config.controller
     gain, leak, latency = float(controller.gain), float(controller.leak), int(controller.latency_frames)
@@ -627,13 +736,12 @@ def main(argv: list[str] | None = None) -> int:
         sigmas, masks, sigma_info = sigma_from_flat_wavefront(system, row_ids)
         primary_rule = "flat"
     else:
-        sigmas, masks, sigma_info = sigma_from_sidecar(metadata, arrays, row_ids, n_pupil, min_fraction=arguments.support_min_fraction)
+        sigmas, masks, sigma_info = sigma_from_sidecar(metadata, arrays, row_ids, n_pupil, min_fraction=arguments.support_min_fraction, min_operator_match=arguments.min_operator_match)
         primary_rule = arguments.support
     sigma_info["primary_rule"] = primary_rule
     if validation is not None:
         sigma_info["sidecar_validation"] = validation
 
-    # The series' definition of the propagation weights: every row valid.
     started = time.perf_counter()
     response_full = reconstructor_matrix(system.reconstructor, row_ids)
     probe_full_s = time.perf_counter() - started
@@ -643,16 +751,12 @@ def main(argv: list[str] | None = None) -> int:
         started = time.perf_counter()
         if np.all(mask):
             response = response_full
-            probe_check = 0.0
         else:
             try:
                 response = reconstructor_matrix_masked(system.reconstructor, row_ids, mask, coordinate_ids)
             except MaskRefused as exc:
                 return {"status": "not defined", "reason": str(exc), "rows_valid_in_mask": int(np.count_nonzero(mask)), "rows_total": int(len(mask))}
-            probe_check = None
         probe_s = time.perf_counter() - started
-        if probe_check is None and np.count_nonzero(mask) == len(mask):
-            probe_check = float(np.max(np.abs(response - response_full)))
         loop = response @ dense
         eigen = np.linalg.eigvals(loop)
         real_eigen = np.sort(np.real(eigen))
@@ -701,48 +805,39 @@ def main(argv: list[str] | None = None) -> int:
             "exact_window_over_scalar_mask": window / scalar_mask if scalar_mask > 0 else None,
             "exact_window_over_scalar_series_weights": window / scalar_series if scalar_series > 0 else None,
             "exact_window_over_diagonal_sigma": window / window_diagonal if window_diagonal > 0 else None,
-            "masked_probe_equals_full_probe_when_all_valid": probe_check,
             "timing_s": {"reconstructor_probe": probe_s, "lyapunov_two_solves": lyapunov_s, "window_two_propagations": window_s},
         }
 
     predictions = {rule: predict(rule, sigmas[rule], masks[rule]) for rule in sigmas}
     primary = predictions[primary_rule]
-    if primary.get("status") != "defined":
-        defined = {rule: entry for rule, entry in predictions.items() if entry.get("status") == "defined"}
-        record_undefined: dict[str, Any] = {
-            "schema": SCHEMA, "mode": "model", "purpose": "analysis-only linear closed-loop noise model; no loop is run; no scientific claim by itself",
-            "configuration": described, "diagnostic_alpha_override": arguments.alpha, "config_hash": config.config_hash, "root_seed": root_seed, "n_steps_in_hash": n_steps, "window_frames": [burn_in, n_steps],
-            "controller": {"gain": gain, "leak": leak, "latency_frames": latency},
-            "reconstructor": {"kind": config.reconstructor.kind, "alpha": config.reconstructor.alpha, "rcond": config.reconstructor.rcond, "min_valid_fraction": config.reconstructor.min_valid_fraction},
-            "dimensions": {"rows": len(row_ids), "controlled_actuators": size_c, "pupil_samples": n_pupil},
-            "noise_covariance": jsonable(sigma_info),
-            "prediction": {"primary_status": "not defined", "primary_rule": primary_rule, "reason": primary["reason"], "by_noise_covariance_rule": {rule: {key: value for key, value in entry.items() if key != "timing_s"} for rule, entry in predictions.items()}, "note": "the reconstructor refuses the primary rule's support mask under its own valid-fraction or rank policy, so the fixed-mask model is not defined for this run; such a run is gate-active in the loop as well"},
-            "timing": {"build_s": build_s, "full_probe_s": probe_full_s}, "ru_maxrss_bytes": peak_rss_bytes(),
-            "host": {"platform": sys.platform, "machine": platform.machine(), "node": platform.node(), "python": sys.version, "numpy": np.__version__}, "enabled_by_user": arguments.enabled_by_user,
-        }
-        if defined:
-            record_undefined["prediction"]["defined_rules"] = sorted(defined)
-        write_record_once(arguments.output, record_undefined)
-        print(json.dumps({"configuration": described, "primary_rule": primary_rule, "primary_status": "not defined", "reason": primary["reason"], "defined_rules": sorted(defined)}))
-        return 0
-    record: dict[str, Any] = {
-        "schema": SCHEMA,
-        "mode": "model",
-        "purpose": "analysis-only linear closed-loop noise model; no loop is run; no scientific claim by itself",
-        "configuration": described,
-        "diagnostic_alpha_override": arguments.alpha,
-        "config_hash": config.config_hash,
-        "root_seed": root_seed,
-        "n_steps_in_hash": n_steps,
-        "window_frames": [burn_in, n_steps],
+    common: dict[str, Any] = {
+        "schema": SCHEMA, "mode": "model", "purpose": "analysis-only linear closed-loop noise model; no loop is run; no scientific claim by itself",
+        "configuration": described, "diagnostic_alpha_override": arguments.alpha, "config_hash": config.config_hash, "root_seed": root_seed, "n_steps_in_hash": n_steps, "window_frames": [burn_in, n_steps],
         "controller": {"gain": gain, "leak": leak, "latency_frames": latency},
         "reconstructor": {"kind": config.reconstructor.kind, "alpha": config.reconstructor.alpha, "rcond": config.reconstructor.rcond, "min_valid_fraction": config.reconstructor.min_valid_fraction},
         "dimensions": {"rows": len(row_ids), "controlled_actuators": size_c, "pupil_samples": n_pupil, "lyapunov_state": size_c * (latency + 1)},
-        "mask_rule": "the reconstructor is probed with exactly the rows that carry noise valid (one fixed mask for L, the injection and Sigma); the series' all-valid propagation weights are kept for the first draft's scalar value",
+        "mask_rule": "the reconstructor is probed with exactly the rows that carry noise valid (one fixed mask per rule for L, the injection and Sigma); the primary rule takes the operator the loop used in the plurality of analysed frames; the series' all-valid propagation weights are kept for the first draft's scalar value",
+        "noise_covariance": jsonable(sigma_info),
+        "timing": {"build_s": build_s, "full_probe_s": probe_full_s, **{f"{rule}_s": entry.get("timing_s") for rule, entry in predictions.items()}},
+        "ru_maxrss_bytes": peak_rss_bytes(),
+        "host": {"platform": sys.platform, "machine": platform.machine(), "node": platform.node(), "python": sys.version, "numpy": np.__version__},
+        "enabled_by_user": arguments.enabled_by_user,
+    }
+    by_rule = {rule: {key: value for key, value in entry.items() if key != "timing_s"} for rule, entry in predictions.items()}
+    if primary.get("status") != "defined":
+        defined = sorted(rule for rule, entry in predictions.items() if entry.get("status") == "defined")
+        record = {**common, "prediction": {"primary_status": "not defined", "primary_rule": primary_rule, "reason": primary["reason"], "defined_rules": defined, "by_noise_covariance_rule": by_rule, "note": "the reconstructor refuses the primary rule's mask under its own valid-fraction or rank policy, so the fixed-mask model is not defined for this run; such a run is gate-active in the loop as well"}}
+        write_record_once(arguments.output, record)
+        print(json.dumps({"configuration": described, "primary_rule": primary_rule, "primary_status": "not defined", "reason": primary["reason"], "defined_rules": defined}))
+        return 0
+    operator = sigma_info.get("operator")
+    record = {
+        **common,
         "feedback_spectrum": primary["feedback_spectrum"],
         "stationarity": primary["stationarity"],
-        "noise_covariance": jsonable(sigma_info),
         "prediction": {
+            "primary_status": "defined",
+            "primary_rule": primary_rule,
             "units": "m2 (piston-removed pupil mean square of the noise-driven correction difference; the sidecar's delta_v_m2 in expectation)",
             "primary": f"delta_v_exact_window_m2 (transient from identical initial commands with the noise entering after the latency, averaged over the analysed frames; noise covariance rule {primary_rule!r})",
             "delta_v_exact_window_m2": primary["delta_v_exact_window_m2"],
@@ -757,18 +852,16 @@ def main(argv: list[str] | None = None) -> int:
             "exact_window_over_scalar_series_weights": primary["exact_window_over_scalar_series_weights"],
             "exact_window_over_diagonal_sigma": primary["exact_window_over_diagonal_sigma"],
             "propagation_weights_series_sum_m2_per_px2": float(np.sum(weights_series)),
-            "by_noise_covariance_rule": {rule: {key: value for key, value in entry.items() if key != "timing_s"} for rule, entry in predictions.items()},
+            "by_noise_covariance_rule": by_rule,
         },
-        "timing": {"build_s": build_s, "full_probe_s": probe_full_s, **{f"{rule}_s": entry.get("timing_s") for rule, entry in predictions.items()}},
-        "ru_maxrss_bytes": peak_rss_bytes(),
-        "host": {"platform": sys.platform, "machine": platform.machine(), "node": platform.node(), "python": sys.version, "numpy": np.__version__},
-        "enabled_by_user": arguments.enabled_by_user,
     }
     measured = sigma_info.get("measured_delta_v_mean_m2")
     if measured is not None:
         se = sigma_info.get("measured_delta_v_block25_se_m2")
         window = primary["delta_v_exact_window_m2"]
         record["comparison"] = {
+            "status": operator["comparison_status"] if operator is not None else "operator-consistent",
+            "operator_consistent": None if operator is None else operator["operator_consistent"],
             "measured_delta_v_mean_m2": measured,
             "measured_delta_v_block25_se_m2": se,
             "measured_over_exact_window": measured / window if window > 0 else None,
@@ -777,13 +870,15 @@ def main(argv: list[str] | None = None) -> int:
             "measured_over_scalar_series_weights": measured / primary["delta_v_scalar_reduction_series_weights_m2"] if primary["delta_v_scalar_reduction_series_weights_m2"] > 0 else None,
             "exact_window_within_2_block_se": None if se is None else bool(abs(measured - window) <= 2.0 * se),
             "measured_over_exact_window_by_rule": {rule: (None if entry.get("status") != "defined" or entry["delta_v_exact_window_m2"] <= 0 else measured / entry["delta_v_exact_window_m2"]) for rule, entry in predictions.items()},
-            "note": "a pilot-level consistency check of the model against one run; the protocol's acceptance rules, not this ratio, decide anything",
+            "note": "a pilot-level consistency check of the model against one run; the protocol's acceptance rules, not this ratio, decide anything; a mask-variable run's comparison is descriptive",
         }
     write_record_once(arguments.output, record)
-    print(json.dumps({"configuration": described, "controlled": size_c, "primary_rule": primary_rule, "rows_in_mask": primary["rows_valid_in_mask"], "feedback_min": primary["feedback_spectrum"]["min"], "fraction_below_0.9": primary["feedback_spectrum"]["fraction_below_0.9"],
+    print(json.dumps({"configuration": described, "controlled": size_c, "primary_rule": primary_rule, "rows_in_mask": primary["rows_valid_in_mask"],
+                      "operator": None if operator is None else {k: operator[k] for k in ("noisy_match_fraction", "twin_match_fraction", "operator_consistent")},
+                      "feedback_min": primary["feedback_spectrum"]["min"], "fraction_below_0.9": primary["feedback_spectrum"]["fraction_below_0.9"],
                       "delta_v_exact_window_nm2": primary["delta_v_exact_window_m2"] * 1e18, "delta_v_exact_stationary_nm2": None if primary["delta_v_exact_stationary_m2"] is None else primary["delta_v_exact_stationary_m2"] * 1e18, "delta_v_scalar_mask_nm2": primary["delta_v_scalar_reduction_mask_m2"] * 1e18,
                       "sidecar_validation": None if validation is None else {k: v for k, v in validation.items() if k != "structural"} | {"structural": "passed"},
-                      "comparison": None if record.get("comparison") is None else {k: record["comparison"][k] for k in ("measured_over_exact_window", "measured_over_exact_window_by_rule", "exact_window_within_2_block_se")}}, default=float))
+                      "comparison": None if record.get("comparison") is None else {k: record["comparison"][k] for k in ("status", "measured_over_exact_window", "measured_over_exact_window_by_rule", "exact_window_within_2_block_se")}}, default=float))
     return 0
 
 

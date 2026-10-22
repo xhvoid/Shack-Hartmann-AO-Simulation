@@ -9,7 +9,11 @@ sections 1.6, 1.7, 2.3, 2.4, 2.5, 3.3, 4, 5 and 7 were revised; the list of
 changes is in `README.md` section 8. Revision 3 (2026-10-22, before
 approval, review round 2): sections 0, 1.6, 1.7, 2.3, 2.5, 5 and 7 (E0
 equivalence band, degrees of freedom over admissible units, the model's
-delayed injection and single mask); `README.md` section 9.
+delayed injection and single mask); `README.md` section 9. Revision 4
+(2026-10-22, before approval, review round 3): sections 1.6, 1.7, 5 and 7
+(the operator the loop used as the model's mask, the mask-variable
+exclusion, and "not expressible" never read as a departure); `README.md`
+section 10.
 
 ## 0. Rules common to every stage
 
@@ -184,20 +188,29 @@ feedback included.
   of the noisy-minus-twin residual map). The stationary limit (discrete
   Lyapunov equation) is reported beside it; the two differ when weakly fed
   back modes have time constants that are not short against the run.
-  `Sigma` is, primarily, the run's own realized covariance of
-  `c_noisy - c_expected` per lenslet (2 x 2 blocks, x/y correlation kept,
-  `ddof = 1`), read from the sidecar, under the predeclared **available
-  rule**: every lenslet of the noisy arm that is valid, supported and finite
-  in at least 90 % of the analysed frames enters with the covariance over
-  its own valid frames (a lenslet whose gate flickers rarely still fed its
-  noise to the loop); rows outside that support carry no noise in the model.
-  The **strict rule** (lenslets valid in every analysed frame, the E0
-  summary's support) is computed and reported beside it: it under-states the
-  noise power when edge lenslets flicker, and the difference between the two
-  predictions is itself a measure of gate activity. Secondarily, `Sigma` is
-  the flat-wavefront `detector_covariance_v2` model (a-priori, no run
-  needed; it under-predicts the realized noise at the operating spots, by a
-  factor of about two at 2 m m5 and at the ci geometry). Under the 12 m
+  The model is a fixed-mask model, so its operator is **the operator the
+  loop used**: the primary rule (`effective`) takes the row set the noisy
+  arm's reconstructor actually used in the plurality of analysed frames (the
+  sidecar's per-frame effective row masks), probes `R` on exactly that set,
+  and takes `Sigma` as the realized covariance of `c_noisy - c_expected`
+  per lenslet (2 x 2 blocks, x/y correlation kept, `ddof = 1`) over the
+  frames in which that operator was in use. The sidecar also tells in how
+  many analysed frames each arm used that operator; a run in which either
+  arm used it in fewer than 95 % of the analysed frames is **mask-variable**
+  (the loop had no single operator), its prediction is reported, and it is
+  excluded from the closure test as a predeclared exclusion beside
+  saturation and gate activity (a mask-variable run is usually gate-active
+  as well, but the two rules are distinct: a run can change operator over
+  time with both arms agreeing). Two telemetry-based rules are reported as
+  sensitivities, never as the primary: **available** (lenslets valid,
+  supported and finite in at least 90 % of the analysed frames, covariance
+  over each lenslet's own valid frames) and **strict** (lenslets valid in
+  every analysed frame, the E0 summary's support). A rule whose mask the
+  reconstructor refuses under its own valid-fraction or rank policy is "not
+  defined" for that run. Secondarily, `Sigma` is the flat-wavefront
+  `detector_covariance_v2` model (a-priori, no run needed; it under-predicts
+  the realized noise at the operating spots, by a factor of about two at
+  2 m m5 and at the ci geometry). Under the 12 m
   damping (`sparse_lsmr_tikhonov`, relative damping 0.1) the eigenvalues of
   `L` are `s_i^2 / (s_i^2 + damp^2) < 1` for weakly sensed modes; the earlier
   scalar factor `kappa * sum_r w_r sigma_r^2` (with `kappa = 0.35005` at
@@ -281,12 +294,14 @@ feedback included.
   of section 5 may be written only when both tests are "verified" at every
   gate-quiet magnitude. "Within its own reported interval of unity" is not
   a criterion: a broad E0 interval that happens to contain one earns
-  nothing (review round 2). A `rho` outcome other than "verified" with E0
-  "verified" localizes the departure in the loop (mask activity,
-  saturation, temporal correlation); an E0 outcome other than "verified"
-  with `rho` "verified" localizes it in the sensor model; both "not
-  expressible" is a precision outcome and triggers the seed extension.
-  Neither outcome is tuned away.
+  nothing (review round 2). Only a **rejected** outcome is a departure: a
+  rejected `rho` with E0 verified localizes the departure in the loop (mask
+  activity, saturation, temporal correlation); a rejected E0 with `rho`
+  verified localizes it in the sensor model; both rejected is a departure
+  of both. A **not expressible** outcome in either test is a precision
+  outcome, never a departure and never an agreement: it triggers the seed
+  extension once, and if it persists the localization is **undetermined**
+  and reported as such (review round 3). Neither outcome is tuned away.
 
 ### 1.7 Decision rules
 
@@ -302,10 +317,10 @@ only if m10 shows gate activity, which is not expected.
 
 **Closure test of the loop model (equivalence semantics).** Per run,
 `rho = DeltaV / DeltaV_pred`, with `DeltaV_pred` the exact linear model's
-prediction (1.6) from that run's own realized noise covariance (available
-rule). Per magnitude, the admissible seeds are those not excluded by the
-saturation and gate-quiet rules of 1.6 and not refused; `n_adm` is their
-count, `rho_bar` their mean and `h` the half-width of the 95 % t interval
+prediction (1.6) from that run's own realized noise covariance under the
+`effective` rule (the operator the loop used). Per magnitude, the
+admissible seeds are those not excluded by the saturation, gate-quiet and
+mask-variable rules of 1.6 and not refused; `n_adm` is their count, `rho_bar` their mean and `h` the half-width of the 95 % t interval
 with `n_adm - 1` degrees of freedom (`t_0.975` = 2.776 at `n_adm` = 5, 3.182
 at 4, 4.303 at 3; the quantile follows `n_adm`, never the planned five); the
 band is `[1 - b, 1 + b]` with `b = 0.10` fixed a priori. Exactly one of
@@ -320,9 +335,10 @@ with fewer admissible seeds than the outcome requires. "Not expressible" at
 a gate-quiet magnitude is a precision outcome and triggers the seed
 extension below (at most once); after the extension the three outcomes are
 applied again with the new `n_adm` (at most 10 seeds, 9 dof, `t_0.975` =
-2.262 when none is excluded) and are final for this stage. The excluded
-runs are listed with their saturation level or gate activity and do not
-enter `rho_bar`.
+2.262 when none is excluded) and are final for this stage; a persisting
+"not expressible" is reported as such and is never read as a departure or
+an agreement. The excluded runs are listed with their saturation level,
+gate activity or operator match fractions and do not enter `rho_bar`.
 
 **E0 test (the same semantics).** Per admissible run, `e = ` the
 propagation-weighted E0 ratio (realized centred variance over the model
@@ -583,9 +599,12 @@ cloud 4.6-5.0 h (EXTRAPOLATED), chunked into resumed invocations.
   the whole 95 % interval of the propagation-weighted E0 ratio lies inside
   its predeclared 10 % band at every gate-quiet magnitude; the recorded 12 m
   slope departure is therefore located in <the loop | the sensor model |
-  neither>." A "not expressible" or "rejected" outcome of either test at any
-  gate-quiet magnitude forbids this sentence; the stage then reports P1-P6
-  descriptively and the outcomes by magnitude. LIM-18's recorded verdict is unchanged in any case; AR-006 is
+  both | neither>." A "not expressible" or "rejected" outcome of either test
+  at any gate-quiet magnitude forbids this sentence; the stage then reports
+  P1-P6 descriptively and the outcomes by magnitude, and the localization
+  is "the loop", "the sensor model" or "both" only where the corresponding
+  test is **rejected**, and "undetermined" where a test is "not
+  expressible" after the extension (1.6 "Use"). LIM-18's recorded verdict is unchanged in any case; AR-006 is
   closed only if the departure is explained or bounded by this sentence and
   the m10 dip is reproduced and attributed.
 - E2: per axis, "converged at the quoted precision", "unconverged" or "not
@@ -632,8 +651,11 @@ traces.
 - Exact linear loop model (1.6): `dc_{k+1} = (1 - l) dc_k - g L dc_{k-d} +
   g R n_{k-d}` for `k >= d` and `dc_{k+1} = (1 - l) dc_k` for `k < d` (the
   latency queue starts with `d` zeros), `L = R M` with `R` probed on the
-  fixed support mask that carries `Sigma` (rows outside it invalid, not
-  noiseless); state `x_k = (dc_k, ..., dc_{k-d})`, `x_{k+1} = F x_k + [k >=
+  one fixed row set that carries `Sigma` (rows outside it invalid, not
+  noiseless), that set being the operator the loop used in the plurality
+  of analysed frames (the sidecar's effective row masks) and the run
+  admissible only if both arms used it in at least 95 % of the analysed
+  frames; state `x_k = (dc_k, ..., dc_{k-d})`, `x_{k+1} = F x_k + [k >=
   d] G n_{k-d}`; transient `P_{k+1} = F P_k F^T + [k >= d] G Sigma G^T` from
   `P_0 = 0` (identical initial commands), stationary `P = F P F^T + G Sigma
   G^T`; `DeltaV_pred = mean_k tr(Gram P_{k+1}[dc]) / N_pupil` over the
