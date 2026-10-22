@@ -211,8 +211,11 @@ directory; copies of the records are under `records/cloud_checks/`.
 
 | Round 2: reruns with the corrected tools (CHK-2a to CHK-2e) | the model's self-test; the 2 m and four ci-geometry traced pilots; the model on the 32 series sidecars with `--record` and on the four pilot sidecars with `--pilot-record`; three negative checks | self-test passed (delayed injection: the first `d` post-update covariances are exactly zero); every pilot's per-arm telemetry equals the core's trace summary; 32 of 32 series sidecars and 4 of 4 pilot sidecars validated (declared table, frame domains, layout, canonical rows, label, seed, hash, record digest and size, runner `validate_trace_payload`); available-rule ratios unchanged (2 m: 0.936, 0.892, 0.860 at m5-m7; ci with the 12 m damping: 0.987, 1.011); the strict mask probed on its own rows leaves modes unsensed where lenslets flicker (0.53 at ci m7, no stationary limit at ci m9) and is refused by the 2 m reconstructor's valid-fraction policy on 6 of 8 gate-active m8 runs (the available mask on 1 of 8); the three corrupted or misattributed sidecars were refused with nothing read | EXECUTED_CURRENT |
 
-Details and tables: `records/cloud_checks/round1/SUMMARY.md` and
-`records/cloud_checks/round2/SUMMARY.md`.
+| Round 3: model reruns with the effective operator and canonical validation (CHK-3a to CHK-3f) | the model's self-test; the model on the five pilot sidecars (`--pilot-record`) and the 32 series sidecars (`--record`); three negative checks (wrong units, permuted axes, wrong dtype); a fixed-physics pilot on an exposure key; the acceptance field-path audit | self-test passed (the unit-pole case returns no stationary limit); 37 of 37 genuine sidecars pass the canonical units/axes/meaning/dtype/shape check and the record or pilot-record digest check; the three corrupted sidecars are refused with nothing read; under the effective rule the 2 m gate-quiet ratios are 0.936, 0.892, 0.860 at m5-m7 (all 24 runs operator-consistent, arms under the modal operator in at least 99.3 % of the frames) and the ci runs with the 12 m damping 0.987 and 1.010 (operator-consistent), while the ci runs with the ci damping are mask-variable (arms under the modal operator in 93-94 % and 73-74 % of the frames) and descriptive; 42 acceptance field paths resolve in the matching tool records | EXECUTED_CURRENT |
+
+Details and tables: `records/cloud_checks/round1/SUMMARY.md`,
+`records/cloud_checks/round2/SUMMARY.md` and
+`records/cloud_checks/round3/SUMMARY.md`.
 
 Speed anchor: the cloud host completes the same ci-scale work 2.7 to 2.9
 times slower than the desktop anchors (driver wall ratio 2.73, summed child
@@ -344,7 +347,11 @@ for the numbers):
 No runtime code, profile, baseline or historical record was changed; no
 governed run or 12 m or 42 m system build took place. The round-1 and
 round-2 records stay as the record of those revisions; the round-3 model
-reruns on the unchanged round-2 pilot sidecars and the series sidecars go
-under `records/cloud_checks/round3/` (added by the commit that follows this
-section's first revision, once the reruns complete; until then the
-evidence column names the checks that are running).
+reruns on the unchanged round-2 pilot sidecars and the series sidecars are
+under `records/cloud_checks/round3/` (`SUMMARY.md` there has the tables).
+
+One observation from the round-3 reruns entered the protocol: a run can be
+gate-quiet by the 0.1 % disagreement rule and still change its operator
+over time (the ci m7 run with the ci damping used twelve distinct row sets
+and the modal one in 94 % of the frames), so the mask-variable exclusion is
+a rule of its own beside gate activity.

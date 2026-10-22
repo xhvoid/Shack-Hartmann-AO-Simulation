@@ -202,6 +202,60 @@
       "command": ["<the model with (a) a magnitude that is not the sidecar's, (b) a series sidecar renamed to another run's file name against the record, (c) a sidecar whose delta_v_m2 series is one frame short of its declared shape>"],
       "result": {"a": "refused: the built configuration hash is not the sidecar's; nothing read", "b": "refused: the record's sidecar reference (file name, digest, size) does not match the file", "c": "refused: array delta_v_m2 has shape (149,), declared [150]", "records_written": 0},
       "records": "records/cloud_checks/round2/negative/"
+    },
+    {
+      "id": "CHK-3a",
+      "name": "review round 3: model self-test with the unit-pole case",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--self-test", "--output", "<out>/model_self_test.json"],
+      "result": {"passed": true, "unit_pole": "an unsensed mode with no leak returns no stationary limit (spectral radius 1.0) instead of a refusal"},
+      "records": "records/cloud_checks/round3/model_self_test.json"
+    },
+    {
+      "id": "CHK-3b",
+      "name": "review round 3: the model on the five round-2 pilot sidecars with --pilot-record, effective operator primary",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; implementation evidence, no scientific claim)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "<configuration>", "--sigma", "sidecar", "--sidecar", "<round-2 pilot sidecar>", "--pilot-record", "<round-2 pilot record>", "--output", "<out>/model_sidecar.json"],
+      "result": {"validation": "5 of 5 accepted (61 arrays each checked against the canonical units, axes, meanings, dtypes and shapes; pilot-record digest, size, frame counts, label, seed, hash)", "operator_consistent": {"2m_m5": "0.993 / 0.993 (noisy / twin match)", "ci_m7_alpha0.1": "1.000 / 1.000", "ci_m9_alpha0.1": "0.980 / 0.983", "ci_m7_ci_damping": "0.937 / 0.927: mask-variable although gate-quiet", "ci_m9_ci_damping": "0.743 / 0.730: mask-variable, gate-active"}, "measured_over_effective_prediction": {"2m_m5": 0.878, "ci_m7_alpha0.1": 0.987, "ci_m9_alpha0.1": 1.010, "ci_m7_ci_damping (descriptive)": 1.072, "ci_m9_ci_damping (descriptive)": 1.349}},
+      "records": "records/cloud_checks/round3/ni2m_m5s61/, ci_m7_default/, ci_m7_alpha0p1/, ci_m9_default/, ci_m9_alpha0p1/"
+    },
+    {
+      "id": "CHK-3c",
+      "name": "review round 3: the model on the 32 series sidecars with --record, effective operator primary",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; implementation evidence, no scientific claim)",
+      "command": ["<as CHK-2c>"],
+      "result": {"validation": "32 of 32 accepted (64 arrays each; record digest and size; runner validate_trace_payload)", "operator_consistent": "24 of 24 gate-quiet runs (m5-m7; arms under the modal operator in at least 99.3 % of the frames); 0 of 8 at the gate-active m8 (13-93 %)", "measured_over_effective_prediction_t_7dof": {"m5": "0.936 +/- 0.060", "m6": "0.892 +/- 0.076", "m7": "0.860 +/- 0.050", "m8": "mask-variable, descriptive: eight ratios from 0.1 to 9"}, "sensitivities": "available 0.936, 0.892, 0.860; strict 0.933, 0.890, 0.857"},
+      "records": "records/cloud_checks/round3/ni2m_models/"
+    },
+    {
+      "id": "CHK-3d",
+      "name": "review round 3: negative checks of the canonical-layout validation",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<the model on a copy of the 2 m pilot sidecar with (a) delta_v_m2 declared in nm2, (b) the centroid telemetry axes permuted, (c) saturation_fraction stored and declared as float32>"],
+      "result": {"a": "refused: declared units 'nm2', the canonical layout is 'm2'", "b": "refused: declared axes [frame, xy, lenslet], the canonical layout is [frame, lenslet, xy]", "c": "refused: dtype float32, the canonical layout requires float64", "records_written": 0},
+      "records": "records/cloud_checks/round3/negative/"
+    },
+    {
+      "id": "CHK-3e",
+      "name": "review round 3: fixed-physics pilot on an exposure key (sample for the P1b field audit)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; MEASURED_CURRENT)",
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "round3_p1_ci_exposure", "--estimate-mib", "400", "--timeout-s", "1800", "--threads", "2", "--log", "<out>/guard.log", "--record", "<out>/guard.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_fixed_physics.py", "--scale", "ci", "--key", "ci_exposure_mid_n1_r0", "--output", "<out>/pilot.json", "--scratch-dir", "<out>/scratch"],
+      "result": {"check_run": "passed", "acceptance_evidence.wfs_exposure": "populated for both arms (scheme midpoint_uniform_held_dm.v1, one centred offset); exposure_override {subsamples 1, sample_rule midpoint}"},
+      "records": "records/cloud_checks/round3/p1_ci_exposure/"
+    },
+    {
+      "id": "CHK-3f",
+      "name": "review round 3: audit of every acceptance field path against the tools' current records",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "-I", "records/cloud_checks/round3/audit_fields.py"],
+      "result": {"paths_checked": 42, "missing": [], "samples": "fixed-physics pilot records (P1a, P1c, P3: baseline key; P1b: exposure key), the 2 m traced pilot record (P2), a round-3 model record (P2b)"},
+      "records": "records/cloud_checks/round3/audit_fields.py, records/cloud_checks/round3/audit_fields.out"
     }
   ],
   "pilots": [
