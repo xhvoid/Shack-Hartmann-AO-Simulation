@@ -79,10 +79,19 @@ fixed operator describes the run is decided by two error bounds (review
 round 4): the transient propagated with the operator of every frame,
 burn-in included (update `k` carrying the operator of frame `k - d`),
 against the modal one; and, because the window value is affine in the
-loop's state at any frame, the window value restarted from a zero state
-right after the last burn-in frame the model does not carry (a row of mask
-disagreement, a rejected reconstruction, a recovery action, saturation
-above 1e-3) against the primary. The match fractions are diagnostics.
+loop's state at any frame, a bound on what an unknown carried state can do
+to the window mean (review round 5): at most `gamma` times what it does to
+the first analysed 25-frame block, `gamma = max_x (x^T M_window x) /
+(x^T M_block x)` over the loop's companion states (the sensed ones when the
+operator injects nothing into its unsensed modes), with the first-block
+effect measured against the model's own transient and the run's block
+scatter as its uncertainty. The restart values of round 4 (the window from
+a zero state at the first analysed frame or after the last burn-in frame
+with gate activity or saturation) stay as sensitivities. The match
+fractions are diagnostics. A row outside the modal mask whose lenslet has
+fewer than 10 usable frames gets no covariance of its own but a bracket
+(zero to the realized envelope), and the operator error is taken at the
+worse end.
 
 **Transient and stationary covariance.** With `x_k = (dc_k, dc_{k-1}, ...,
 dc_{k-d})`, `x_{k+1} = F x_k + [k >= d] G n_{k-d}` with `F = [[(1-l) I, 0,

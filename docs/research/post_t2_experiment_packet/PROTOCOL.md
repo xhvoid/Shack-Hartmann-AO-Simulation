@@ -17,7 +17,13 @@ section 10. Revision 5 (2026-10-22, before approval, review round 4):
 sections 0, 1.6, 1.7 and 7 (the operator exclusion decided by two
 quantified error bounds instead of a frame-count threshold, burn-in state
 included; one authoritative exclusion list in 1.6 (iv)); `README.md`
-section 11.
+section 11. Revision 6 (2026-10-22, before approval, review round 5):
+sections 1.6, 1.7 and 7 (the carried-state bound measured from the run's
+first analysed block with the loop's own sensitivity and entering the
+closure test as the model's systematic budget beside the operator error;
+the covariance of rows outside the modal operator bracketed, never zero;
+the operator exclusion reduced to the operator error and the
+not-assessable cases); `README.md` section 12.
 
 ## 0. Rules common to every stage
 
@@ -198,37 +204,54 @@ feedback included.
   sidecar's per-frame effective row masks), probes `R` on exactly that set,
   and takes `Sigma` as the realized covariance of `c_noisy - c_expected`
   per lenslet (2 x 2 blocks, x/y correlation kept, `ddof = 1`) over the
-  frames in which that operator was in use. Whether taking that operator
-  as fixed describes the run is decided by two quantified error bounds, not
-  by a frame-count threshold (review round 4): (1) the **time-varying
-  prediction** propagates the same transient with the noisy arm's actual
-  operator of every frame of the run, burn-in included (each distinct
-  effective mask probed once; the increment released at update `k` carries
-  the operator of frame `k - d`), so the state the loop carried into the
-  analysed window under whatever operators the burn-in used is accounted
-  for; its relative difference from the modal-operator prediction is the
-  operator error (reported with its two parts: the state carried in from
-  burn-in under the actual operators, and operator changes inside the
-  window); (2) the **carried-state bound**: the linear model does not carry
-  a burn-in frame with gate activity (a row on which the two arms' masks
-  differ, a rejected reconstruction, a recovery action, which the counters
-  give only run-wide) or with command saturation above 1e-3 in either arm;
-  the window value is affine in the loop's state at any frame, so the model
-  re-runs the modal-operator window from a zero state right after the last
-  such frame (as if the run had started there: identical commands, an empty
-  queue), and the fraction of the primary value this removes is the largest
-  relative error a wrong carried state can cause per unit of its own
-  relative error. A run is **operator-consistent** when the operator error
-  is within the predeclared 2 % and, if its burn-in had such a frame, the
-  carried-state bound is within 2 % as well (a quiet burn-in carries the
-  modelled state; the share of the window value carried in from the whole
-  burn-in and the window value under a stationary carried state are
-  reported as sensitivities); otherwise it is **mask-variable** (operator
-  error) or **carried-state-sensitive** (carried-state bound): the
-  fixed-operator model does not describe it, its prediction is reported,
-  and it is excluded from the closure test by the operator exclusion of
-  (iv). The fractions of analysed and burn-in frames in which each arm used
-  the modal operator are reported as diagnostics only. Two telemetry-based
+  frames in which that operator was in use. Two quantities bound the error of
+  taking that operator as fixed, and no frame-count threshold does (review
+  rounds 4 and 5): (1) the **operator error**: the same transient
+  propagated with the noisy arm's actual operator of every frame of the
+  run, burn-in included (each distinct effective mask probed once; the
+  increment released at update `k` carries the operator of frame `k - d`),
+  so the state the loop carried into the analysed window under whatever
+  operators the burn-in used is accounted for; its relative difference
+  from the modal-operator prediction is the operator error, reported with
+  its two parts (carried in from burn-in; operator changes inside the
+  window). A row outside the modal mask whose lenslet has fewer than 10
+  usable analysed frames has no covariance estimate of its own: its
+  covariance is bracketed between zero and the largest realized per-axis
+  variance of the estimated lenslets, the transient is propagated with
+  both ends, the operator error is the worse of the two, and a bracket
+  wider than the tolerance leaves the error undetermined (nothing that
+  contributes is ever set to zero). (2) the **carried-state bound**: the
+  state the loop carries into the window may differ from the modelled one
+  for reasons the model does not see (loop non-linearity during burn-in).
+  The window mean is affine in the state at the first analysed frame, so
+  any such deviation changes the window mean by at most `gamma` times its
+  change of the first 25-frame block mean, `gamma` being the largest
+  generalized eigenvalue of the window-mean and first-block-mean quadratic
+  forms of the loop's own companion dynamics. The first-block change is
+  measured: the measured first analysed block of `DeltaV_t` minus the
+  model's own first-block mean (its per-frame transient), with the run's
+  25-frame block scatter as its uncertainty; the bound is
+  `gamma (|excess_1| + 2 s_block) / DeltaV_pred`. `gamma` is taken over the
+  states the operator senses when the operator injects nothing into the
+  modes it does not sense (feedback below 1e-6: for a Tikhonov-type
+  reconstructor a left null vector of `L` is a left null vector of `R`, so
+  those modes hold no noise-driven state in the model or in the loop
+  without a flagged event; the tool verifies the injection numerically, at
+  most 1e-3 relative), and over every state otherwise; the all-state bound
+  is reported as a sensitivity in either case, as are the restarts of
+  round 4 (the window value from a zero state at the first analysed frame
+  and after the last burn-in frame with gate activity or saturation). A
+  run is **operator-consistent** when its operator error, at the worse end
+  of the bracket, is within the predeclared 2 %; **mask-variable** when it
+  is not; **not assessable** when the time-varying prediction cannot be
+  computed (more distinct operators than the tool's probe budget, an
+  operator its reconstructor refuses), the bracket is wider than 2 %, or
+  the bound cannot be measured (fewer than two analysed blocks). The
+  carried-state bound is not a threshold: with the operator error it forms
+  the run's **systematic budget** `u = |operator error| + carried-state
+  bound`, which the closure test of 1.7 subtracts from its band. The
+  fractions of analysed and burn-in frames in which each arm used the
+  modal operator are reported as diagnostics only. Two telemetry-based
   rules are reported as sensitivities, never as the primary: **available**
   (lenslets valid,
   supported and finite in at least 90 % of the analysed frames, covariance
@@ -330,16 +353,16 @@ feedback included.
   not gate-quiet under the data-driven rule of 1.5 (mask disagreement below
   0.1 % of row-frames after burn-in, no rejected reconstruction, no
   recovery action in either arm); (c) **operator**: a run that is
-  mask-variable or carried-state-sensitive under the two error bounds
-  above (operator error above 2 %, or a burn-in frame the model does not
-  carry followed by a carried-state bound above 2 %), or whose operator
-  sequence the tool cannot assess (more distinct operators than its probe
-  budget, or an operator its reconstructor refuses). Each excluded run is
-  reported with its saturation level, gate activity or error bounds; none
-  is tuned away; the primary prediction of every admissible run is the
-  effective-rule, modal-operator value, and no other rule or label (the
-  telemetry-based rules, the count of unsensed modes, the match fractions)
-  decides anything. (v) Secondary hypothesis H_sat, predeclared: the 2 m
+  mask-variable (operator error above 2 % at the worse end of the
+  covariance bracket) or not assessable (more distinct operators than the
+  tool's probe budget, an operator its reconstructor refuses, a covariance
+  bracket wider than 2 %, a carried-state bound that cannot be measured).
+  Each excluded run is reported with its saturation level, gate activity
+  or operator record; none is tuned away; the primary prediction of every
+  admissible run is the effective-rule, modal-operator value with its
+  systematic budget `u` (1.6, 1.7), and no other rule or label (the
+  telemetry-based rules, the count of unsensed modes, the match fractions,
+  the restart sensitivities) decides anything. (v) Secondary hypothesis H_sat, predeclared: the 2 m
   deficit and its growth with magnitude are stroke clipping of the noise
   response. H_sat is supported if the 12 m ratio is "verified" (1.7) at
   m8-m10; if instead the 12 m ratio shows a deficit of the same size without
@@ -356,12 +379,16 @@ feedback included.
   a criterion: a broad E0 interval that happens to contain one earns
   nothing (review round 2). Only a **rejected** outcome is a departure: a
   rejected `rho` with E0 verified localizes the departure in the loop (mask
-  activity, saturation, temporal correlation); a rejected E0 with `rho`
-  verified localizes it in the sensor model; both rejected is a departure
-  of both. A **not expressible** outcome in either test is a precision
-  outcome, never a departure and never an agreement: it triggers the seed
-  extension once, and if it persists the localization is **undetermined**
-  and reported as such (review round 3). Neither outcome is tuned away.
+  activity, saturation, temporal correlation; beyond the model's own
+  systematic budget, which 1.7 adds to the departure band); a rejected E0
+  with `rho` verified localizes it in the sensor model; both rejected is a
+  departure of both. A **not expressible** outcome in either test is a
+  precision outcome or, when the admissible runs' mean systematic budget
+  `u_bar` reaches the band, a model-budget outcome; it is never a departure
+  and never an agreement: a precision outcome triggers the seed extension
+  once, and if it persists, or the budget caused it, the localization is
+  **undetermined** and reported as such (review rounds 3 and 5). Neither
+  outcome is tuned away.
 
 ### 1.7 Decision rules
 
@@ -383,23 +410,30 @@ admissible seeds are those that pass the three exclusions of 1.6 (iv) and
 are not refused; `n_adm` is their count, `rho_bar` their mean and `h` the half-width of the 95 % t interval
 with `n_adm - 1` degrees of freedom (`t_0.975` = 2.776 at `n_adm` = 5, 3.182
 at 4, 4.303 at 3; the quantile follows `n_adm`, never the planned five); the
-band is `[1 - b, 1 + b]` with `b = 0.10` fixed a priori. Exactly one of
-three outcomes is recorded per magnitude: **verified** when `n_adm >= 4` and
-the whole interval lies inside the band, `rho_bar - h >= 1 - b` and
-`rho_bar + h <= 1 + b` (an equivalence test; a point estimate inside the
-band whose interval crosses a band edge is not a pass, and an interval
-wider than the band can never pass); **rejected** when `n_adm >= 3` and the
-whole interval lies outside the band on one side, `rho_bar - h > 1 + b` or
-`rho_bar + h < 1 - b`; **not expressible** otherwise, including every case
-with fewer admissible seeds than the outcome requires. "Not expressible" at
-a gate-quiet magnitude is a precision outcome and triggers the seed
-extension below (at most once); after the extension the three outcomes are
-applied again with the new `n_adm` (at most 10 seeds, 9 dof, `t_0.975` =
-2.262 when none is excluded) and are final for this stage; a persisting
-"not expressible" is reported as such and is never read as a departure or
-an agreement. The excluded runs are listed with their saturation level,
-gate activity or operator error bounds (1.6 (iv)) and do not enter
-`rho_bar`.
+band is `[1 - b, 1 + b]` with `b = 0.10` fixed a priori. The model's own
+error enters the band: `u_bar` is the mean over the admissible seeds of
+each run's systematic budget `u` (1.6: operator error plus carried-state
+bound), the agreement band is `[1 - b + u_bar, 1 + b - u_bar]` and the
+departure band `[1 - b - u_bar, 1 + b + u_bar]`. Exactly one of three
+outcomes is recorded per magnitude: **verified** when `n_adm >= 4` and the
+whole interval lies inside the agreement band, `rho_bar - h >= 1 - b +
+u_bar` and `rho_bar + h <= 1 + b - u_bar` (an equivalence test; a point
+estimate inside the band whose interval crosses a band edge is not a pass,
+an interval wider than the band can never pass, and `u_bar >= b` leaves no
+agreement band at all); **rejected** when `n_adm >= 3` and the whole
+interval lies outside the departure band on one side, `rho_bar - h > 1 + b
++ u_bar` or `rho_bar + h < 1 - b - u_bar`; **not expressible** otherwise,
+including every case with fewer admissible seeds than the outcome requires.
+"Not expressible" at a gate-quiet magnitude is a precision outcome and
+triggers the seed extension below (at most once), unless `u_bar >= b`
+caused it: that is a model-budget outcome, reported as such, which more
+seeds cannot change. After the extension the three outcomes are applied
+again with the new `n_adm` (at most 10 seeds, 9 dof, `t_0.975` = 2.262
+when none is excluded) and are final for this stage; a persisting "not
+expressible" is reported as such and is never read as a departure or an
+agreement. The excluded runs are listed with their saturation level, gate
+activity or operator record (1.6 (iv)) and do not enter `rho_bar`; every
+admissible run's `u` is listed with `u_bar`.
 
 **E0 test (the same semantics).** Per admissible run, `e = ` the
 propagation-weighted E0 ratio (realized centred variance over the model
@@ -414,7 +448,8 @@ descriptively.
 
 **Seed extension** (five further seeds at one magnitude): triggered only when
 the t half-width of `DeltaV` at a gate-quiet magnitude exceeds 5 % of its
-mean, or when the closure test above is "not expressible" at that magnitude;
+mean, or when the closure test above is "not expressible" at that magnitude
+for want of precision (not when `u_bar >= b` caused it);
 at most once per magnitude; never at m11 through A1 (A2 covers it). The
 runner has no seed option (E-2); the trigger is predeclared and the mechanism
 is decision D3. The trigger reads precision outcomes only, never the sign
@@ -717,11 +752,15 @@ traces.
   of analysed frames (the sidecar's effective row masks); the run is
   admissible for the fixed-operator comparison only if the transient
   propagated with the actual operator of every frame (burn-in included,
-  update `k` carrying the operator of frame `k - d`) differs from the
-  modal-operator value by at most 2 % and, when a burn-in frame had gate
-  activity or saturation above 1e-3, the window value restarted from a
-  zero state right after the last such frame removes at most 2 % of the
-  primary value (1.6 (iv)); state `x_k = (dc_k, ..., dc_{k-d})`, `x_{k+1} = F x_k + [k >=
+  update `k` carrying the operator of frame `k - d`; rows outside the
+  modal mask at the worse end of their covariance bracket) differs from
+  the modal-operator value by at most 2 % (1.6 (iv)); its systematic
+  budget `u = |operator error| + gamma (|excess_1| + 2 s_block) /
+  DeltaV_pred` with `gamma = max_x (x^T M_window x) / (x^T M_block x)`,
+  `M = mean_j (F^j)^T Gt F^j / N_pupil` over the window's and the first
+  block's frames (`Gt` the piston-removed pupil Gram matrix on the leading
+  block of the state; `x` over the sensed states when the operator injects
+  nothing into its unsensed modes), enters 1.7; state `x_k = (dc_k, ..., dc_{k-d})`, `x_{k+1} = F x_k + [k >=
   d] G n_{k-d}`; transient `P_{k+1} = F P_k F^T + [k >= d] G Sigma G^T` from
   `P_0 = 0` (identical initial commands), stationary `P = F P F^T + G Sigma
   G^T`; `DeltaV_pred = mean_k tr(Gram P_{k+1}[dc]) / N_pupil` over the

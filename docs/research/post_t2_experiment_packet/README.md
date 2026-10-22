@@ -5,8 +5,9 @@ Prepared 2026-10-21 (UTC) in a cloud session on the published commit
 `75c4fe7c9d8a90ef5f26fc174187cf8f82bd4ba9`) for independent
 experimental-design review; revised 2026-10-22 for the eight findings of
 review round 1 (section 8), the seven findings of review round 2 (section
-9), the five findings of review round 3 (section 10) and the two findings
-of review round 4 (section 11). This packet is a protocol-design and bounded
+9), the five findings of review round 3 (section 10), the two findings of
+review round 4 (section 11) and the three findings of review round 5
+(section 12). This packet is a protocol-design and bounded
 readiness deliverable. It authorizes nothing: no 12 m or 42 m job was run, no
 runtime code, profile, baseline or historical record was changed, and every
 pilot and study request below is `PREPARED_NOT_EXECUTED` until the protocol
