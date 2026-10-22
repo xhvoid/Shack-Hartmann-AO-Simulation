@@ -34,6 +34,8 @@ tree; "status record" means `docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md`
 | `src/shwfs_ao/validation/encircled_energy.py` 1-75 (docstring) | pad independence of the interpolant for pad >= 2; whole-field flux denominator; what the reference does not remove |
 | `src/shwfs_ao/runtime/resource_guard.py` 1-30, 79-100 (defaults), 363-401 (snapshot and budget), 404-437 (thread environment), 523-592 (preflight), 763-800 (`run_supervised` signature), 914-970 (CLI) | the budget formula, the 2x margin, the pressure stop, the CLI's inability to raise the budget, the aggregate-RSS supervision |
 | `src/shwfs_ao/experiments/eso_scao_benchmark.py` 220-270 (dry run), 760-800 (`_authorized_decision`), 826-900 (budget and launch) | the authorized-budget semantics mirrored by `tools/authorized_supervise.py` |
+| `src/shwfs_ao/control/controller.py` 49-51, 75, 142-175 (`update`); `src/shwfs_ao/control/command_mapping.py` 95-120 (`ControlledSubsetCommandProjector`); `src/shwfs_ao/calibration/sparse.py` 35, 916-1013 (`SparseLsmrReconstructor`, `damp = damping_relative x rms column norm`); `src/shwfs_ao/calibration/interaction.py` 446-500 (dense `InteractionMatrix` fields); `src/shwfs_ao/dm/model.py` 416-424, 495-520 (`opd_from_commands`); `src/shwfs_ao/detector/noise_model.py` 130-143 (`ExtendedCentroidQuality`) | review round 1: the loop update equation and latency queue, the projector's expansion by identifier, the damping semantics behind the feedback spectrum, the matrices and responses the exact linear model reads (section 3) |
+| `src/shwfs_ao/experiments/detector_level.py` 261-278 (`reconstructor_matrix`), 957-1020 (`_flat_wavefront_model`, `_propagation_weights`), 1060-1120 (`_trace_payload` arrays), 1134-1225 (`_operating_state_summary`), 1285-1300 (the run configuration a paired run hashes); `scripts/run_detector_level_evidence.py` 1175-1265 (sidecar layout constants), 1336-1456 (`_sidecar_arrays`, `publish_sidecar`, `read_sidecar`), 1664-1668 and 1831-1840 (leftover refusals); `scripts/detector_level_convergence_study.py` 1002-1047 (`_run_child` row composition), 1072-1083 (`_refuse_unplanned_files`) | review round 1: the row a study child publishes and how the pilot reproduces it; the sidecar's array names, units and the record's reference to it; the exact refusal messages for leftovers; the fixed-mask probing the model shares with the propagation weights |
 | `scripts/verify_environment_lock.py` | installed is a subset of pinned at exact versions; `pip` and the project ignored |
 | `tests/experiments/test_detector_level_convergence.py` (names and markers) | the real self-check is `slow`; `--plan` is tested for governed scales without enablement |
 | profiles `det_emccd_12m_medium_derived.v3.json`, `det_ccd_42m_r3band_derived.v1.json`, `det_emccd_2m_synthetic.v1.json` | the fixed quantities of PROTOCOL.md 1.3 and 3.1; the 2 m controller (gain 0.2, leak 0.02, latency 2) for the `kappa` check |
@@ -41,19 +43,75 @@ tree; "status record" means `docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md`
 
 ## 3. Derivation used by the alternative closure model (repository-style derivation, checked numerically)
 
-Loop of technical reference 4.2 with gain `g`, leak `l`, queue latency `d`
-and measurement noise `n_k` on the reconstructed increment: the command
-difference between the noisy and the twin arm obeys
-`dc_k = (1-l) dc_{k-1} + g (dr_{k-d} + n_{k-d})` with `dr_k = -dc_{k-1}`, so
-`dC(z) (1 - (1-l) z^{-1} + g z^{-(d+1)}) = g z^{-d} N(z)`, i.e.
-`H(z) = g z / (z^{d+1} - (1-l) z^d + g)`; the residual transfer `-g / (...)` has
-the same modulus on the unit circle. For white noise the mean-square gain is
-`kappa = (1/2 pi) integral_0^{2 pi} |H(e^{i w})|^2 dw`. Checks: at `d = 0`,
-`l = 0` the closed form `g/(2-g)` is reproduced to five digits (0.17647 for
-g = 0.3); the denominator is the stability polynomial `z^{d+1} - z^d + g`
-of the reference (largest pole modulus 0.813 at g = 0.3, d = 2, stable).
-Values on a 2^16-point grid: g = 0.3, l = 0, d = 2: **0.35005**; g = 0.2,
-l = 0.02, d = 2 (the 2 m profile): **0.15455** (0.16959 without the leak).
+Revised in review round 1 (2026-10-22): the scalar factor below is now the
+unit-feedback reduction of the exact linear model; both are implemented in
+`tools/linear_loop_noise_model.py`.
+
+**Loop equations.** `control/controller.py` (`update`, lines 151-175):
+the reconstructed increment of frame `k` is appended to a queue initialized
+with `d` zero entries, the oldest entry is released, and
+`c_{k+1} = (1 - l) c_k + g * released`; so the increment used at update `k`
+is the one computed `d` updates earlier. `ControlledSubsetCommandProjector`
+expands the reconstructor's controlled-actuator estimate into the full
+layout by identifier (zeros elsewhere). With `s_k = M (phi_k - c_k) + n_k`
+the measurement (calibrated interaction matrix `M`, rows x controlled
+actuators, white detector noise `n_k` of covariance `Sigma`) and
+`R` the reconstructor's linear map on a fixed mask
+(`experiments/detector_level.py:reconstructor_matrix`), the difference
+`dc_k` between the noise-on command and the noiseless twin's (same
+atmosphere, same calibration) obeys
+
+    dc_{k+1} = (1 - l) dc_k - g L dc_{k-d} + g R n_{k-d},    L = R M.
+
+**Exact stationary covariance.** With `x_k = (dc_k, dc_{k-1}, ..., dc_{k-d})`,
+`x_{k+1} = F x_k + G n_{k-d}` with `F = [[(1-l) I, 0, ..., -g L], [I, 0, ...],
+..., [..., I, 0]]` (companion blocks) and `G = [g R; 0; ...; 0]`; if the
+spectral radius of `F` is below one, `P = F P F^T + G Sigma G^T` (discrete
+Lyapunov, `scipy.linalg.solve_discrete_lyapunov`) and `Cov(dc)` is its
+leading block. The isolated detector-noise variance recorded by the paired
+runs (`delta_v_m2`: piston-removed pupil mean square of the noisy-minus-twin
+residual map) is, in expectation,
+
+    DeltaV_pred = tr(Gram Cov(dc)) / N_pupil,    Gram = W_c^T W_c,
+
+with `W_c` the piston-removed DM response of each controlled actuator at
+the pupil samples (probed through `dm.opd_from_commands` at 1 nm) and
+`N_pupil` the pupil sample count. Assumptions: linear sensor response on a
+fixed mask, no stroke clipping, no recovery action, temporally white noise,
+stationary loop.
+
+**Unit-feedback reduction (the earlier scalar factor).** If `L = I`, every
+component of `dc` obeys the same scalar recursion, `Cov(dc) = kappa R Sigma
+R^T` and `DeltaV_pred = kappa tr(Gram R Sigma R^T)/N_pupil`; for diagonal
+`Sigma` this is `kappa * sum_r w_r sigma_r^2` with the series' propagation
+weights `w_r = ||W_c R e_r||^2 / N_pupil` (`detector_level._propagation_weights`),
+where `kappa = (1/2 pi) int |H(e^{i w})|^2 dw`,
+`H(z) = g z / (z^{d+1} - (1-l) z^d + g)` (the denominator is the stability
+polynomial of technical reference 4.2). Checks: `kappa = g/(2-g)` at `d = 0`,
+`l = 0` (0.17647 for g = 0.3; 1/3 for g = 0.5); on a 2^16-point grid
+g = 0.3, l = 0, d = 2 gives **0.35005**, g = 0.4, l = 0, d = 2 (the ci
+geometry) **0.70455**, g = 0.2, l = 0.02, d = 2 (the 2 m profile) **0.15455**.
+`tools/linear_loop_noise_model.py --self-test` reproduces each value from
+the Lyapunov solution with `L = R = Sigma = 1` to 1e-15 and checks that
+decoupled modes with feedback 1, 0.5 and 0.1 keep their own scalar
+variances.
+
+**When the reduction is exact and when it is not.** `L = I` on the
+controlled subspace for a truncated-SVD or least-squares reconstructor of
+full column rank (the 2 m profile: TSVD, `rcond` 1e-8, 13 controlled
+actuators, `max |L - I|` 1e-15 measured), so at 2 m the exact model and
+the scalar factor agree to the x/y cross-covariance term (0.04 % at m5, seed
+61). Under Tikhonov or LSMR damping (`SparseLsmrReconstructor`, `damp =
+damping_relative x rms column norm`, relative damping 0.1 at 12 m and 0.001
+at 42 m and in the ci geometry) the eigenvalues of `L` are
+`s_i^2 / (s_i^2 + damp^2) < 1` and the damped modes see a different noise
+rejection; the scalar factor then over- or under-predicts depending on the
+spectrum and on how much noise power `R Sigma R^T` puts into those modes.
+The exact model needs no such assumption. Its 12 m prediction is a
+governed computation (a 12 m system build) and is pilot P2b of
+`pilot_requests.json`; the ungoverned checks of the implementation are in
+`records/cloud_checks/round1/`.
+
 This is a derivation of this packet, not a literature result; the
 literature status of the method is in section 4.
 
@@ -81,16 +139,25 @@ The supplied copies are not part of the repository.
 Consequence for the protocols: the Richardson rules are the repository's
 implemented and tested rules and now also match the cited procedure passage
 by passage; the loop model of PROTOCOL.md 1.6 has its structure in Gendron
-and Léna (1994) and its discrete filter form in Agapito et al. (2019), while
-its numerical constants remain this packet's derivation; the blocking and
+and Léna (1994) (modal noise propagation times the integral of the squared
+noise transfer function) and its discrete filter form in Agapito et al.
+(2019), while the matrix form with the reconstructed feedback `L = R M`, its
+Lyapunov solution and its numerical constants are this packet's derivation; the blocking and
 autocorrelation rules stay the repository's declared rules with
 listing-status attributions.
 
 ## 5. Bounded checks of this session (what was executed)
 
-See `README.md` section 4 and `records/cloud_checks/SUMMARY.md`. Executed:
-the targeted test selection, the T2 ci self-check under the guard, the 2 m
-traced replay and its analysis (including the 2 m verification step of
-PROTOCOL.md 1.6, which did not confirm the loop model under actuator
-clipping). Not executed: every pilot and stage of `pilot_requests.json`, any
-12 m or 42 m run, any slow test, any HCIPy test.
+See `README.md` sections 4 and 8, `records/cloud_checks/SUMMARY.md` and
+`records/cloud_checks/round1/SUMMARY.md`. Executed in the first session: the
+targeted test selection, the T2 ci self-check under the guard, the 2 m
+traced replay and its analysis (including the 2 m check of the loop model,
+which did not confirm it under actuator clipping). Executed in review round
+1 (ungoverned, under the guard with the policy budget): the repaired
+fixed-physics pilot at ci scale; the traced pilot on the 2 m profile and on
+the ci geometry (m7 and m9, with the ci damping and with the 12 m damping as
+a diagnostic override); the exact linear model's self-test and its
+evaluation on 33 two-metre sidecars and the ci-geometry sidecars; the
+leftover quarantine tool on synthetic directories. Not executed: every pilot
+and stage of `pilot_requests.json` (P1a-P3 and P2b included), any 12 m or 42 m
+run or system build, any slow test, any HCIPy test.

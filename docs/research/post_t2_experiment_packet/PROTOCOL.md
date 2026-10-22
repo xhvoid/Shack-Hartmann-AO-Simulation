@@ -3,7 +3,10 @@
 Written before any governed run, for the exact tree `5514285`. Every number
 that a decision depends on is stated here; the analysis of a stage is read
 only after its stage completes, and nothing in a result changes this text.
-Amendments are appended as dated sections and never rewrite an earlier rule.
+Once approved, amendments are appended as dated sections and never rewrite
+an earlier rule. Revision 2 (2026-10-22, before approval, review round 1):
+sections 1.6, 1.7, 2.3, 2.4, 2.5, 3.3, 4, 5 and 7 were revised; the list of
+changes is in `README.md` section 8.
 
 ## 0. Rules common to every stage
 
@@ -110,9 +113,9 @@ runs whose protocol matches.
 | --- | --- | --- |
 | P1 `DeltaV` per magnitude | mean over analysed frames of the piston-removed pupil mean square of (noisy minus twin) post-update residual map; seed mean and t interval over 5 seeds; per-run block SE at the plateau length | nm^2 (recorded in m^2) |
 | P2 E0 ratio | realized centred variance of `c_noisy - c_expected` on the noisy arm's own operating state over the model `sigma^2`, equal-weight and propagation-weighted, on the lenslets valid, supported and finite in every analysed frame; also split by SNR_T tertile and by clipping class (below or above 0.05 expected flux outside the window) | dimensionless |
-| P3 E1 proportionality | per-seed slope of `log DeltaV` against `log P` over the gate-quiet magnitudes, where `P` is the propagated sensor noise (1.6); mean slope and t interval over seeds | dimensionless |
+| P3 E1 proportionality | per-seed slope of `log DeltaV` against `log P` over the gate-quiet magnitudes, where `P = sum_r w_r sigma_r^2` is the propagated realized sensor noise (propagation weights of the sidecar, E0 variances); mean slope and t interval over seeds; descriptive, as in the T1 analysis | dimensionless |
 | P4 Mask and gate activity | mask-disagreement row-frames fraction per run; per-gate activity (flux, SNR, uncertainty, clipping) and support loss per frame; rejected reconstructions, recovery actions and DM saturation fraction per arm | fractions |
-| P5 Loop transfer ratio | `DeltaV / P` per run and per magnitude (1.6) | dimensionless |
+| P5 Loop model ratio | `rho = DeltaV / DeltaV_pred` per run, with `DeltaV_pred` the exact linear model's finite-window prediction from the run's realized noise covariance (1.6); per magnitude its five-seed mean and t interval (the closure test of 1.7); beside it, descriptively, `DeltaV / P` and the unit-feedback factor `kappa` | dimensionless |
 | P6 Replay comparison | the seven recorded quantities of every run against `det09_noise_isolation_12m_v3.json` (`--historical`): relative difference per run | dimensionless |
 
 The recorded flat-wavefront model column (`predicted_centroid_variance_px2`)
@@ -139,75 +142,129 @@ negative result is re-read on the new record without being re-interpreted.
 4. P1, P5, P2 on the gate-quiet runs; P3 over the gate-quiet magnitudes of
    each seed; P4 for every run.
 5. Temporal-block sensitivity and excursion flags (section 6) for every run.
-6. The alternative model (1.6) is applied only if its verification step
-   passed before this analysis was read.
+6. The alternative model (1.6) is applied only if its implementation checks
+   (1.6, "Justification before use") and pilot P2b were recorded before this
+   analysis was read; its prediction per run is computed from the run's own
+   sidecar, and the closure test of 1.7 is applied per gate-quiet magnitude.
 
 ### 1.6 The alternative statistical/physical model and its justification
 
 The first-order bias band (the model sigma low by about `4/SNR_T^2` near the
 support floor) is a hypothesis about the sensor model, not an acceptance law.
 Closure of the loop question needs a model whose prediction does not rest on
-that band. The proposal is the linear loop's measurement-noise transfer:
+that band. The proposal (revised in review round 1; the earlier draft used
+the scalar unit-feedback factor `kappa` alone) is the exact linear closed
+loop's response to the realized sensor noise, with the reconstructed spatial
+feedback included.
 
-- Model. With white per-row centroid noise of variance `sigma_r^2`, a fixed
-  reconstructor and the loop of technical reference 4.2 (leaky-free
-  integrator, gain `g`, queue latency `d`), the DM-space noise response
-  obeys `delta c_k = delta c_{k-1} - g delta c_{k-d-1} + g n_{k-d}`, so the
-  transfer from measurement noise to the command (and to the residual) is
-  `H(z) = g z / (z^{d+1} - z^d + g)`, the same denominator as the stability
-  polynomial already in the reference. For white noise the mean square gain is
-  `kappa(g, d) = (1/2 pi) * integral |H(e^{i w})|^2 dw`; `kappa = g/(2-g)` at
-  `d = 0` (the textbook integrator result) and, computed here on a 2^16-point
-  grid, **`kappa = 0.35005` for `g = 0.3, d = 2`** (12 m and 42 m profiles) and
-  `0.15455` for the 2 m profile (`g = 0.2`, leak 0.02, `d = 2`; the leak
-  enters as `(1-leak) z^d`). The prediction is
-  `DeltaV_pred = kappa * P`, `P = sum_r sigma_r^2 w_r`, with `w_r` the
-  propagation weight the sidecar records (pupil variance of the DM response
-  to a unit slope in row `r`, fixed reconstructor) and `sigma_r^2` either the
-  realized E0 variance (`P^E0`, the primary) or the model sigma (`P^model`).
-  Assumptions: linear reconstructor on a fixed mask, independent rows (the
-  x/y cross-covariance dropped, as the offline H5 bound does), temporally
-  white detector noise, no saturation and no recovery action.
-- Justification before use. (i) The derivation above is checked against the
-  stability polynomial of the reference and the `g/(2-g)` identity
-  (`SOURCE_READING_NOTES.md` section 3); its structure, residual noise equal
-  to a propagation coefficient times the noise variance times the integral of
-  the squared noise transfer function of an integrator with delay, is
-  Gendron and Léna (1994) eqs (14)-(15), and the discrete integrator and leak
-  form is Agapito et al. (2019) eqs (4)-(7) (both passages read, notes
-  section 4). (ii) Verification on ungoverned
-  data, **done in this session** on the cloud replay of the 2 m traced study
-  (`records/cloud_checks/SUMMARY.md`): `kappa_meas = DeltaV / P^E0` over 8
-  seeds is 0.1449 +/- 0.0089, 0.1383 +/- 0.0116 and 0.1332 +/- 0.0074 (t) at
-  m5, m6, m7, that is 0.937 +/- 0.058, 0.895 +/- 0.075 and 0.862 +/- 0.048 of
-  the derived 0.15455, while the E0 ratio is unity within its interval
-  (0.996-1.010) and the per-seed E1 slope is 0.955 +/- 0.014 (as T1 found).
-  The model is therefore **not verified at 2 m**: the deficit exceeds 10 %
-  at m6 and m7 and grows with magnitude. The 2 m profile's 1 um stroke clips
-  1.5-15 % of the actuators per frame in both arms (sidecar
-  `saturation_fraction`, run means after burn-in, identical between the
-  arms), so the model's no-saturation assumption fails there and the 2 m
-  record cannot settle the model either way. (iii) Band for 12 m: fixed a
-  priori at 10 % (not from the 2 m dispersion), with the predeclared
-  exclusion that a run whose mean saturation fraction after burn-in exceeds
-  1e-3 in either arm is excluded from the `kappa` test and reported with its
-  saturation level; the 12 m `@3` stroke is 100 um and the ci-scale
-  self-check with the 12 m physics shows zero saturation in both arms.
-  (iv) Secondary hypothesis H_sat, predeclared: the 2 m deficit and its
-  growth with magnitude are stroke clipping of the noise response. H_sat is
-  supported if the 12 m `kappa_meas` lies inside the band and is flat across
-  m8-m10; if instead the 12 m ratio shows the same deficit without
-  saturation, the deficit belongs to the linear loop model (candidates to
-  record, not to tune: the dropped x/y cross-covariance, the reconstructor's
-  valid-fraction and rank policies, the finite-window response gain), the
-  model is not used for closure, and A1 stays descriptive (P1-P6 reported).
-- Use. At 12 m, on gate-quiet runs only: the closure sentence of section 5
-  may be written when `kappa_meas` lies inside the band at every gate-quiet
-  magnitude and the E0 ratio is within its own reported interval of unity on
-  the supported lenslets. A magnitude-dependent `kappa_meas` with E0 near
-  unity localizes the departure in the loop (mask activity, saturation,
-  temporal correlation); an E0 ratio away from unity with `kappa_meas` in band
-  localizes it in the sensor model. Neither outcome is tuned away.
+- **Model.** Loop of technical reference 4.2 (`controller.update`: leaky
+  integrator, gain `g`, leak `l`, queue latency `d`), calibrated interaction
+  matrix `M` (rows x controlled actuators), reconstructor `R` as a linear
+  map on the fixed row mask (`reconstructor_matrix`), white measurement
+  noise `n_k` of covariance `Sigma`. The command difference between the
+  noise-on arm and its noiseless twin (same atmosphere, same calibration)
+  obeys `dc_{k+1} = (1 - l) dc_k - g L dc_{k-d} + g R n_{k-d}` with
+  `L = R M`. The two arms start from the same command, so the covariance of
+  the state `x_k = (dc_k, ..., dc_{k-d})` is the transient
+  `P_{k+1} = F P_k F^T + G Sigma G^T` from `P_0 = 0`, and the prediction for
+  a run is the mean over its analysed frames of
+  `DeltaV_pred,k = tr(Gram Cov(dc_k)) / N_pupil`, `Gram = W_c^T W_c`, with
+  `W_c` the piston-removed pupil response of the controlled actuators: the
+  expectation of the recorded `delta_v_m2` (piston-removed pupil mean square
+  of the noisy-minus-twin residual map). The stationary limit (discrete
+  Lyapunov equation) is reported beside it; the two differ when weakly fed
+  back modes have time constants that are not short against the run.
+  `Sigma` is, primarily, the run's own realized covariance of
+  `c_noisy - c_expected` per lenslet (2 x 2 blocks, x/y correlation kept,
+  `ddof = 1`), read from the sidecar, under the predeclared **available
+  rule**: every lenslet of the noisy arm that is valid, supported and finite
+  in at least 90 % of the analysed frames enters with the covariance over
+  its own valid frames (a lenslet whose gate flickers rarely still fed its
+  noise to the loop); rows outside that support carry no noise in the model.
+  The **strict rule** (lenslets valid in every analysed frame, the E0
+  summary's support) is computed and reported beside it: it under-states the
+  noise power when edge lenslets flicker, and the difference between the two
+  predictions is itself a measure of gate activity. Secondarily, `Sigma` is
+  the flat-wavefront `detector_covariance_v2` model (a-priori, no run
+  needed; it under-predicts the realized noise at the operating spots, by a
+  factor of about two at 2 m m5 and at the ci geometry). Under the 12 m
+  damping (`sparse_lsmr_tikhonov`, relative damping 0.1) the eigenvalues of
+  `L` are `s_i^2 / (s_i^2 + damp^2) < 1` for weakly sensed modes; the earlier
+  scalar factor `kappa * sum_r w_r sigma_r^2` (with `kappa = 0.35005` at
+  `g = 0.3, d = 2` and the sidecar's propagation weights `w_r`) is this
+  model's reduction for `L = I` and diagonal `Sigma`, and is reported beside
+  the exact value as `scalar_reduction`. Implementation:
+  `tools/linear_loop_noise_model.py`; derivation and checks:
+  `SOURCE_READING_NOTES.md` section 3. Assumptions: fixed mask, linear sensor
+  response, temporally white noise, no stroke clipping, no recovery action,
+  stationary loop (the spectral radius of `F` is reported).
+- **Justification before use.** (i) The derivation is checked against the
+  controller's update equation and the command projector (notes section 3);
+  the tool's `--self-test` reproduces `kappa` from the Lyapunov solution in
+  the unit-feedback limit to 1e-15, keeps decoupled modes' variances, and
+  reproduces the stationary value from the window propagation when the
+  transient is short. (ii) Implementation checks on ungoverned data, done in
+  review round 1 (`records/cloud_checks/round1/SUMMARY.md`): on the 2 m
+  profile (TSVD, 13 controlled actuators) `L = I` to 4e-15, so the exact
+  model and the scalar factor agree to the x/y-correlation term (within
+  0.4 %) and the 2 m result of the first session stands as a result about
+  the whole linear model, not about the omitted feedback: `DeltaV /
+  DeltaV_pred` over 8 seeds is 0.936 +/- 0.060, 0.892 +/- 0.076 and
+  0.860 +/- 0.050 (t; available rule; strict rule 0.939, 0.896, 0.862) at
+  m5, m6, m7, with the E0 ratio at unity (0.996-1.010) and 1.5-15 % of the
+  actuators clipped per frame in both arms (stroke 1 um), so the model is
+  **not verified at 2 m** and the 2 m record cannot settle it either way. On
+  the convergence driver's ci geometry (the 12 m `@3` detector physics on
+  the 5 m smoke geometry, 96 controlled actuators, gain 0.4, latency 2,
+  stroke 100 um, no clipping) with the 12 m damping applied as a diagnostic
+  override (`--alpha 0.1`), two 400-frame runs at seed 71 are gate-quiet:
+  7.3 % of the feedback eigenvalues are below 0.9 and 2.1 % below 0.5, the
+  exact prediction is 3.2-3.7 % below the scalar reduction, and the measured
+  `DeltaV` over the prediction from the run's realized covariance is 0.987
+  at m7 (92.9 +/- 2.8 nm^2 measured) and 1.011 at m9 (614.6 +/- 15.9 nm^2),
+  each within one 25-frame block standard error; these are two runs and a
+  pilot-level consistency check, not a verification. The same geometry with
+  its own damping (0.001) shows the two limits of the model: at m7, 12.5 %
+  of the lenslets flicker in 15 of 300 frames (gate-quiet by the 0.1 % rule)
+  and the ratio is 1.051 under the available rule but 1.282 under the strict
+  rule, which drops the flickering lenslets' noise; at m9 the run is
+  gate-active (71 of 300 frames, 0.58 % of row-frames, 36 % of the lenslets
+  flickering) and the measured 1772 +/- 190 nm^2 is 1.28 times the
+  available-rule prediction and 2.3 times the strict one. With that damping
+  one almost unsensed mode (feedback 4.6e-7, no leak) accumulates noise
+  through the run, so the stationary limit is about twice the 400-frame
+  window value: the finite-window prediction is the primary quantity for
+  that reason. The fixed-mask model does not describe gate-active runs by
+  construction; that gap is what P4 measures against it, not a parameter
+  to tune. (iii) Before the series, pilot P2b evaluates the model at the S4
+  A1 configuration (12 m build, governed): the feedback spectrum of `@3`,
+  the prediction from P2's realized covariance under both support rules and
+  from the flat model, and the pilot-level ratio at m8 seed 71. (iv) Band
+  for 12 m: fixed a priori at 10 % (not from the 2 m or ci dispersion), with
+  two predeclared exclusions from the closure test: a run whose mean
+  saturation fraction after burn-in exceeds 1e-3 in either arm, and a run
+  that is not gate-quiet under the data-driven rule of 1.5 (both reported
+  with their levels; neither is tuned away); a gate-quiet run whose two
+  support rules differ by more than 2 % in the prediction is flagged
+  "support-sensitive" and reported, and stays in the test under the
+  available rule. (v) Secondary hypothesis H_sat, predeclared: the 2 m
+  deficit and its growth with magnitude are stroke clipping of the noise
+  response. H_sat is supported if the 12 m ratio is "verified" (1.7) at
+  m8-m10; if instead the 12 m ratio shows a deficit of the same size without
+  saturation and without gate activity, the deficit belongs to the linear
+  loop model (candidates to record, not to tune: the reconstructor's
+  valid-fraction and rank policies, the finite-window response gain,
+  temporal correlation of the realized noise), the model is not used for
+  closure, and A1 stays descriptive (P1-P6 reported).
+- **Use.** At 12 m, on gate-quiet, non-clipping runs only, the closure test
+  of 1.7 is applied per magnitude to `rho = DeltaV / DeltaV_pred`; the
+  closure sentence of section 5 may be written only when the test is
+  "verified" at every gate-quiet magnitude and the E0 ratio is within its
+  own reported interval of unity on the supported lenslets. A
+  magnitude-dependent `rho` with E0 near unity localizes the departure in
+  the loop (mask activity, saturation, temporal correlation); an E0 ratio
+  away from unity with `rho` verified localizes it in the sensor model.
+  Neither outcome is tuned away.
 
 ### 1.7 Decision rules
 
@@ -221,11 +278,36 @@ on the gate-quiet magnitudes by more than its interval. If the masks agree at
 m11, A2 adds nothing and is not run. Mask locking for the m10 dip is justified
 only if m10 shows gate activity, which is not expected.
 
+**Closure test of the loop model (equivalence semantics).** Per run,
+`rho = DeltaV / DeltaV_pred`, with `DeltaV_pred` the exact linear model's
+prediction (1.6) from that run's own realized noise covariance. Per
+gate-quiet magnitude, `rho_bar` is the mean over the five seeds and `h` the
+half-width of its 95 % t interval (4 dof, `t_0.975` = 2.776); the band is
+`[1 - b, 1 + b]` with `b = 0.10` fixed a priori. Exactly one of three
+outcomes is recorded per magnitude: **verified** when the whole interval lies
+inside the band, `rho_bar - h >= 1 - b` and `rho_bar + h <= 1 + b` (an
+equivalence test; a point estimate inside the band whose interval crosses a
+band edge is not a pass, and an interval wider than the band can never
+pass); **rejected** when the whole interval lies outside the band on one
+side, `rho_bar - h > 1 + b` or `rho_bar + h < 1 - b`; **not expressible**
+otherwise. "Not expressible" at a gate-quiet magnitude is a precision
+outcome and triggers the seed extension below (at most once); after the
+extension (9 dof, `t_0.975` = 2.262) the three outcomes are applied again
+and are final for this stage. The closure sentence of section 5 requires
+"verified" at every gate-quiet magnitude; a single "rejected" magnitude
+makes the model rejected for this stage, and the E0 and E1 results are then
+reported descriptively. The runs excluded by the saturation rule of 1.6 are
+listed with their saturation level and do not enter `rho_bar`; a magnitude
+with fewer than four admissible seeds after the extension is "not
+expressible" and stays so.
+
 **Seed extension** (five further seeds at one magnitude): triggered only when
 the t half-width of `DeltaV` at a gate-quiet magnitude exceeds 5 % of its
-mean; at most once per magnitude; never at m11 through A1 (A2 covers it).
-The runner has no seed option (E-2); the trigger is predeclared and the
-mechanism is decision D3.
+mean, or when the closure test above is "not expressible" at that magnitude;
+at most once per magnitude; never at m11 through A1 (A2 covers it). The
+runner has no seed option (E-2); the trigger is predeclared and the mechanism
+is decision D3. The trigger reads precision outcomes only, never the sign
+or size of the departure.
 
 **Stop.** The stage stops after its 20 runs, after a contract violation
 (section 0), or when the supervisor stops the group; a resumed invocation
@@ -287,22 +369,37 @@ no inference assumes noise pairing.
 
 | Arm | Endpoints per setting (units) | Inference |
 | --- | --- | --- |
-| twin (`operating_expectation`) | `post_update_rms` (nm), `peak_strehl` (1), `ee50_production` and `ee50_fourier` (rad, reported in mas), `reconstruction_usable_fraction` | deterministic given the paired input; for non-pupil axes every realization sees the identical open-loop series in every setting (digests checked by the driver), so adjacent changes are **paired per realization**: the primary uncertainty of a change is the t interval (2 dof) of the three per-realization differences, computed offline from the run rows; the driver's unpaired `sqrt(s_i^2 + s_j^2)` is reported beside it as the conservative bound; for the pupil axis the input is the same continuous field on different rasters, so realizations are paired in input but not in series, and the driver's unpaired SE is primary |
-| noise-on | the same metrics plus the per-setting `DeltaV` mean and block SE | statistical over independent realizations (unpaired t over three units); `DeltaV` per setting is paired against the twin within the setting only |
-| paired `DeltaV` | mean (nm^2), block SE at 10 frames (driver) and at the plateau length (offline, section 6) | as above; a change of `DeltaV` across settings is a change of propagated noise plus re-keyed draws |
+| twin (`operating_expectation`) | `post_update_rms` (nm), `peak_strehl` (1), `ee50_production` and `ee50_fourier` (rad, reported in mas), `reconstruction_usable_fraction` | deterministic given the paired input. The realization index is the unit and adjacent settings are **paired per realization** on every axis: the primary uncertainty of a change `Delta` is the Student t interval (2 dof, `t_0.975` = 4.303) of the three per-realization differences `Delta_r = Q_r(fine) - Q_r(coarse)`, computed offline from the run rows. On the non-pupil axes every realization sees the identical open-loop series in every setting (digests checked by the driver), so the pairing is exact in input and in series; on the pupil axis the input is the same continuous field on different rasters (exact physical pairing, dilation reported), so the pairing is in input only and the per-realization differences carry the raster-dependent series as part of the change being measured. The driver's unpaired `sqrt(s_i^2 + s_j^2)` is **descriptive only**: it ignores the covariance of the two settings' metrics across realizations, so it is neither a conservative nor a liberal bound in general (it exceeds the paired error when the settings are positively correlated, which pairing is designed to exploit, and falls below it when they are negatively correlated); it is printed beside the paired interval and no decision reads it |
+| noise-on | the same metrics plus the per-setting `DeltaV` mean and block SE | paired per realization exactly as the twin (the atmosphere realization is shared; the re-keyed detector draws on the optics axes are part of the measured change and widen the paired interval); the unpaired SE is descriptive only |
+| paired `DeltaV` | mean (nm^2), block SE at 10 frames (driver) and at the plateau length (offline, section 6) | paired per realization across settings as above; a change of `DeltaV` across settings is a change of propagated noise plus re-keyed draws, and is reported as such |
 
 ### 2.4 Convergence classification per axis (declared criteria)
 
 Tolerances are the driver's contract tolerances (`CONTRACT_TOLERANCES`):
 residual 1.0 nm, peak Strehl 0.002, EE50 2 % relative, applied to the twin
-arm at the two finest settings of each scan.
+arm at the two finest settings of each scan. Let `Delta` be the paired mean
+of the finest adjacent change (2.3), `h` the half-width of its 95 % t
+interval (2 dof) and `tol` the metric's tolerance, so that the interval is
+`[Delta - h, Delta + h]` and the tolerance band is `[-tol, +tol]`. Every
+outcome falls in exactly one of three classes:
 
-- **Converged at the quoted precision**: the finest adjacent change is inside
-  the tolerance and its interval is inside the tolerance.
-- **Unconverged**: the finest adjacent change is outside the tolerance and
-  resolved.
-- **Not expressible**: the interval is wider than the tolerance; the metric
-  is reported with its interval and the seed-extension trigger (2.5) applies.
+- **Converged at the quoted precision**: `|Delta| + h <= tol`. The whole
+  interval lies inside the tolerance band (an equivalence test at the 95 %
+  level, not a point estimate inside the band).
+- **Unconverged**: `|Delta| - h >= tol`. The whole interval lies outside the
+  tolerance band on one side (which implies that the change is resolved,
+  since `tol > 0`).
+- **Not expressible**: otherwise, that is `|Delta| - h < tol < |Delta| + h`.
+  The interval crosses a tolerance edge; this covers an interval wider than
+  the band (`h > tol`), a point estimate inside the band whose interval
+  reaches outside it, and a point estimate outside the band whose interval
+  reaches inside it. The metric is reported with its interval and the
+  extension trigger of 2.5 applies.
+
+The three conditions are mutually exclusive and exhaustive for finite `Delta`
+and `h`; a scan with a refused or missing finest setting is "not classified"
+and is reported as such, never as converged. The classes are applied per
+metric; a scan is "converged" only if every metric of the twin arm is.
 
 Richardson rules (the module's, `validation/richardson.py`): an observed
 order and extrapolated limit only from three settings with resolved,
@@ -337,11 +434,15 @@ follows from it.
 
 ### 2.5 Uncertainty and extension rules
 
-Three realizations give 2 degrees of freedom; "not expressible" is expected
-for small changes. Extension trigger: a metric that is "not expressible" on
-the finest change of a scan with the three planned realizations is extended
-by three realizations (3, 4, 5) for every setting of that scan, at most once;
-the mechanism is decision D3 (the driver's realizations are constants).
+Three realizations give 2 degrees of freedom (`t_0.975` = 4.303), so "not
+expressible" is the expected class for small changes. Extension trigger: a
+metric classified "not expressible" on the finest change of a scan with the
+three planned realizations extends that scan by three realizations (3, 4, 5)
+for every setting of the scan, at most once; after the extension (5 dof,
+`t_0.975` = 2.571) the three classes of 2.4 are applied again and the outcome
+is final for this stage, "not expressible" included. The mechanism is
+decision D3 (the driver's realizations are constants). The trigger reads the
+class, never the sign or size of `Delta`.
 Temporal-block sensitivity for `DeltaV` (150 analysed frames): block SE at
 1, 5, 10, 25, 50 frames from the stored series; primary at the plateau.
 
@@ -390,21 +491,34 @@ fraction, per setting. One realization: the twin is noiseless, so each
 change between settings is a deterministic paired difference for this
 realization with no sampling error from noise; what is unknown is how the
 change varies with the realization. The 12 m E2 scatter of the same change
-(k2 -> k4, mid n1 -> n2, left_n2 vs mid_n2) is used as the prior scale,
-labelled EXTRAPOLATED. A 42 m change smaller than that scale is "not resolved
-by one realization" and is never called converged; a change larger than the
-contract's single-realization tolerance (residual 0.9 nm, Strehl 0.002, EE50
-2 %) is "unconverged for this realization". No order is estimated from two
-settings; the assumed-order extrapolation of the midpoint pair is reported
-with its label and not used for a claim.
+(k2 -> k4 from E2a; mid n1 -> n2 and left_n2 vs mid_n2 from E2b) is used as
+the prior scale `s`, labelled EXTRAPOLATED: `s` is the sample standard
+deviation of the three per-realization differences of that change at 12 m.
+Each 42 m change `Delta` then takes exactly one of three labels: "not
+resolved by one realization" when `|Delta| < 2 s` (never called converged),
+"unconverged for this realization" when `|Delta| >= 2 s` and `|Delta|` exceeds
+the contract's single-realization tolerance (residual 0.9 nm, Strehl 0.002,
+EE50 2 %), and "resolved and within tolerance for this realization" when
+`|Delta| >= 2 s` and `|Delta|` is within that tolerance (reported with the
+caveat that one realization cannot show convergence). No order is estimated
+from two settings; the assumed-order extrapolation of the midpoint pair is
+reported with its label and not used for a claim.
 
 ### 3.3 Prerequisites, cost, guard
 
-Proceed only after the 12 m interpretation (E2a at least) and a refreshed
-full-scale pilot (P3: one twin-only baseline run, optionally `k4`). Per
-child 1.5-2.0 GiB raw (S2 and S3 42 m records; 200 frames keep the history
-small); authorized budget 4096 MiB; desktop 1.71 h analytic, cloud 4.6-5.0 h
-(EXTRAPOLATED), chunked into resumed invocations.
+Proceed only after **both** E2a (detector and spectrum) and E2b (exposure
+and science) are interpreted under 2.4, and after a refreshed full-scale
+pilot (P3: one twin-only baseline run, optionally `k4`). E2b is a
+prerequisite because three of the five E3 settings are exposure settings
+(`exposure_mid_n1`, `exposure_mid_n2`, `exposure_left_n2`): the prior scale
+that 3.2 uses to call a 42 m exposure change "not resolved by one
+realization" is the 12 m scatter of the same change, which exists only after
+E2b, and the midpoint-versus-left-point reading of 3.2 is defined by the E2b
+rule comparison. Without E2b the exposure rows of E3 could be run but not
+interpreted, so they are not run. E2c (pupil) is not a prerequisite: E3 has
+no pupil axis. Per child 1.5-2.0 GiB raw (S2 and S3 42 m records; 200 frames
+keep the history small); authorized budget 4096 MiB; desktop 1.71 h analytic,
+cloud 4.6-5.0 h (EXTRAPOLATED), chunked into resumed invocations.
 
 ## 4. Arms and methods compared
 
@@ -416,20 +530,25 @@ small); authorized budget 4096 MiB; desktop 1.71 h analytic, cloud 4.6-5.0 h
 | E2 noise-on arm and paired `DeltaV` | how the noise contribution moves with each numerical axis | same runs; streamed, disk-backed | re-keyed draws except on the science axis; statistical over three units only | included | included (twin record on disk) |
 | E3 twin-only 42 m | whether the 42 m detector sampling (k) and WFS exposure quadrature (n) move the quoted metrics for one realization | cheapest 42 m evidence; deterministic paired differences | one realization; no order; no pupil axis; no noise arm | 726-1816 s per run / x2.7-2.9 | 1.5-2.0 GiB per child |
 | Offline H5 bound (`scripts/noise_isolation_offline_bounds.py`, 2 m) | reconstructor dependence on the calibration flux without a loop | seconds; no governed run | 2 m only; dense reconstructor; fixed covariance | seconds | small |
-| Loop noise-transfer model (`kappa`, analysis only) | whether `DeltaV` is the linear loop's response to the realized sensor noise | no new run; falsifiable on the 2 m record first | assumes white noise, fixed mask, no saturation; not an acceptance law until verified | none | none |
+| Exact linear closed-loop noise model (`tools/linear_loop_noise_model.py`, analysis only; `kappa` is its unit-feedback reduction) | whether `DeltaV` is the linear loop's response, with the reconstructed spatial feedback `L = R M` and the run's realized noise covariance, to the sensor noise; which modes the damping leaves weakly fed back; how much of the recorded variance the fixed-mask linear picture leaves unexplained | no new loop run; predicts per run from the sidecar; checked on ungoverned data where it coincides with `kappa` (2 m) and where it does not (ci geometry with the 12 m damping) | assumes a fixed mask, linear sensor response, white noise, no saturation, no recovery; silent on gate-active runs by construction (it is what gate activity is measured against); a 12 m evaluation is a governed system build (P2b); not an acceptance law until the closure test of 1.7 is passed | P2b: one 12 m build plus about 900 probes and two 400-frame propagations (minutes) | about 0.3 GB dense pupil response at 12 m |
 | Five-seed paired bootstrap (F-06, analysis only) | descriptive stability of the recorded 12 m slope | no new run | exploratory; five clusters | none | none |
 
 ## 5. Closure sentences each stage can earn
 
-- S4 A1 (gate-quiet magnitudes, model verified under 1.6): "At m_AB 8-10 on
-  `@3` the isolated detector-noise variance equals the linear loop's
-  response (`kappa = 0.350`) to the realized centroid noise within the
-  predeclared band, and the realized noise agrees with `detector_covariance_v2`
-  at the operating spots within its reported interval; the recorded 12 m slope
-  departure is therefore located in <the loop | the sensor model | neither>."
-  LIM-18's recorded verdict is unchanged in any case; AR-006 is closed only
-  if the departure is explained or bounded by this sentence and the m10 dip
-  is reproduced and attributed.
+- S4 A1 (gate-quiet magnitudes, model "verified" under 1.7 at each of
+  them): "At m_AB 8-10 on `@3` the isolated detector-noise variance equals
+  the exact linear closed loop's response (reconstructed spatial feedback
+  `L = R M`, gain 0.3, latency 2) to the realized centroid noise covariance:
+  the whole 95 % interval of the ratio `DeltaV / DeltaV_pred` over five seeds
+  lies inside the predeclared 10 % band at every gate-quiet magnitude, and
+  the realized noise agrees with `detector_covariance_v2` at the operating
+  spots within its reported interval; the recorded 12 m slope departure is
+  therefore located in <the loop | the sensor model | neither>." A "not
+  expressible" or "rejected" outcome at any gate-quiet magnitude forbids this
+  sentence; the stage then reports P1-P6 descriptively and the outcome by
+  magnitude. LIM-18's recorded verdict is unchanged in any case; AR-006 is
+  closed only if the departure is explained or bounded by this sentence and
+  the m10 dip is reproduced and attributed.
 - E2: per axis, "converged at the quoted precision", "unconverged" or "not
   expressible" for the twin arm at 12 m on the stated tolerances, with the
   change table, the observed order where admissible and the Fourier reference
@@ -471,5 +590,16 @@ traces.
 - Per-frame time at 12 m: 0.163 s (E6 baseline, k = 4, 3 nodes); 0.123 s
   without pixel integration; the WFS term scales about as `k^2` and linearly
   with nodes and sub-samples; cloud factor 2.7-2.9 (ci scale).
+- Exact linear loop model (1.6): `dc_{k+1} = (1 - l) dc_k - g L dc_{k-d} +
+  g R n_{k-d}`, `L = R M`; state `x_k = (dc_k, ..., dc_{k-d})`, `x_{k+1} = F
+  x_k + G n`; transient `P_{k+1} = F P_k F^T + G Sigma G^T` from `P_0 = 0`
+  (identical initial commands), stationary `P = F P F^T + G Sigma G^T`;
+  `DeltaV_pred = mean_k tr(Gram P_k[dc]) / N_pupil` over the analysed frames,
+  `Gram = W_c^T W_c` with `W_c` the piston-removed pupil response of the
+  controlled actuators; unit-feedback reduction `kappa * sum_r w_r sigma_r^2`
+  with `kappa = (1/2 pi) int |g e^{iw} / (e^{i(d+1)w} - (1-l) e^{idw} + g)|^2
+  dw` (0.35005 at g = 0.3, l = 0, d = 2). Cost at 12 m: dense `W_c` about
+  65,000 x 500 doubles (0.26 GB); the Lyapunov state is 3 x 500; the window
+  propagation is 400 structured products of that size.
 - Every number labelled EXTRAPOLATED is replaced by the pilot's
   MEASURED_CURRENT value before the stage request is approved.

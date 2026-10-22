@@ -3,7 +3,8 @@
 Prepared 2026-10-21 (UTC) in a cloud session on the published commit
 `55142852d8e01f0c6b2828480c64c5792e7d5302` (tree
 `75c4fe7c9d8a90ef5f26fc174187cf8f82bd4ba9`) for independent
-experimental-design review. This packet is a protocol-design and bounded
+experimental-design review; revised 2026-10-22 for the eight findings of
+review round 1 (section 8). This packet is a protocol-design and bounded
 readiness deliverable. It authorizes nothing: no 12 m or 42 m job was run, no
 runtime code, profile, baseline or historical record was changed, and every
 pilot and study request below is `PREPARED_NOT_EXECUTED` until the protocol
@@ -15,7 +16,7 @@ passes review and each exact request is approved.
 | [`PROTOCOL.md`](PROTOCOL.md) | Deliverable 2: predeclared staged protocols (S4 A1, E2, E3), arms/methods comparison, inference and stopping rules |
 | [`pilot_requests.json`](pilot_requests.json) | Deliverable 3: machine-readable pilot and study requests (commands, guard settings, timeouts, output paths, acceptance and abort rules, hashed inputs) |
 | [`SOURCE_READING_NOTES.md`](SOURCE_READING_NOTES.md) | Source-reading notes with file and line references, the derivation behind the alternative closure model, literature status |
-| [`tools/`](tools/README.md) | Caller-owned launchers the requests name (proposed, unexecuted; no runtime code is changed) |
+| [`tools/`](tools/README.md) | Caller-owned launchers and analysis tools the requests name (validated on ungoverned configurations only; no runtime code is changed) |
 | [`records/`](records/) | The drivers' own `--plan` outputs for the exact tree, the cloud host and environment record, and the bounded checks executed in this session |
 
 ## 1. Source, CI and accepted context
@@ -132,6 +133,45 @@ nothing partial is published. Records must be pushed or copied out before the
 session ends. A series that cannot finish inside one session is not resumed
 in another session (new host, new identity): it is restarted as a new series.
 
+**Leftovers of a stopped group and the resume procedure (review round 1,
+finding 8).** The guard stops a timed-out group with SIGTERM and then
+SIGKILL, so a publication can be interrupted between its steps. What such a
+stop can leave behind, and how each driver reacts on the next invocation:
+
+| Driver | Possible leftover | The driver's own reaction (unchanged code) |
+| --- | --- | --- |
+| convergence study | `runs/<key>.json.tmp-<pid>-<hex>` (a row written to its temporary file but not yet hard-linked into place); `scratch/twin_pupil_samples_*.npy` (the twin arm's disk record, normally unlinked in the core's `finally`) | `_refuse_unplanned_files` (`detector_level_convergence_study.py:1072-1083`) refuses any file in `runs/` that is not a planned run file: "another study's or scale's records, a foreign record family (S3, T1) or leftovers of an interrupted publication; they are neither reused nor relabelled"; nothing runs until `runs/` is clean; `scratch/` is not scanned, but a stale twin record occupies disk (72 MB at 12 m, 300 frames) |
+| evidence runner (traced series) | `<stem>__<label>__seed<s>.npz.tmp-<pid>-<hex>` (a sidecar written but not linked); a complete sidecar whose record row was never written (the record is rewritten after the sidecar is published, so a stop between the two leaves an orphan) | the runner refuses the record directory while a sidecar of the record's stem is not referenced by a retained run: "sidecar files [...] are not referenced by any retained run (an interrupted invocation leaves such orphans or temporary files); they are ambiguous leftovers. Move them aside or pass --output NAME" (`run_detector_level_evidence.py:1831-1840`); a sidecar that exists before its run is refused the same way (1664-1668); nothing is deleted or overwritten |
+
+The resume procedure of every stage request is therefore:
+
+1. read the supervisor record of the stopped invocation (status, reason,
+   peak RSS, pressure levels) and write it into the series log; a
+   `RESOURCE_LIMITED` or pressure stop is a cost or admission finding to act
+   on before resuming, a timeout is expected on the cloud host;
+2. list the leftovers: `tools/quarantine_leftovers.py --study <dir>` for a
+   convergence study or `--record <dir>/<record>.json` for an evidence
+   series (no `--apply`): it prints each candidate with size and SHA-256 and
+   its reason, and never names a planned run file, a referenced sidecar or
+   the record itself;
+3. move them aside with `--apply`: the candidates are renamed into
+   `<dir>/leftovers/<UTC timestamp>/` (beside `runs/`, or beside the record),
+   keeping their relative paths, with a `manifest.json` of what moved and
+   why; nothing is deleted, and the quarantine directory is outside both
+   drivers' scans (`runs/` only; the record directory's `<stem>__*.npz*`
+   glob is not recursive);
+4. re-invoke the identical command (with `--resume` for the evidence runner,
+   as the stage requests list); the driver validates every retained run and
+   sidecar against the plan and the producer first, reruns only the missing
+   runs, and refuses if anything else is wrong;
+5. a leftover that is not one of the listed kinds (a planned run file that
+   fails validation, a record that fails its own checks) is not moved: it is
+   a contract violation of `PROTOCOL.md` section 0 and stops the stage.
+
+The tool was exercised on synthetic leftovers in this session
+(`records/cloud_checks/round1/quarantine_demo/`); it was not and cannot be
+exercised on a governed directory before one exists.
+
 ## 3. Interfaces reviewed for the proposed studies
 
 Only what the protocols express. Line numbers refer to the exact tree.
@@ -145,7 +185,7 @@ Only what the protocols express. Line numbers refer to the exact tree.
 | Streaming storage | convergence core: twin pupil samples go to a float64 `.npy` memory map in the caller's scratch directory (`twin_record.bytes` recorded, file removed), the noisy arm streams `DeltaV_t` against it, science is a streamed long exposure; paired-noise core: both arms keep float32 pupil samples of every analysed frame in memory, the traced run adds per-frame telemetry arrays and, at the end, the payload copies and the compressed sidecar buffer | `convergence_study.py:155-240, 456-640`; `detector_level.py:649-666, 1057-1133`; runner `publish_sidecar` 1378-1420 |
 | Run identity | convergence runs: protocol version 2 (plan-derived `expected` physical record, atmosphere options, exposure override, execution options, config hash, producer) with SHA-256; evidence series: series protocol 4 plus diagnostic protocol 1 for traced records; sidecar digests are output integrity, not protocol | driver 288-320 and 414-660; runner 320-470 and 1262-1320 |
 | Refusals | governed scales and commands refuse at argument parsing and again before any build without `--enabled-by-user`; construction, calibration, factory and study-contract errors become recorded `refused` rows (resumable); unplanned, foreign, leftover, unreadable or self-inconsistent files stop the invocation before anything runs; a child of another producer stops the study | driver 1000-1047, 1074-1083, 1086-1160; runner 650-830, 1660-1700 |
-| Resume | runs are added only under one producer with a known code identity (Git HEAD bound); the summary is written once and never rewritten, so an axis subset run into a directory cannot be expanded there later: each subset needs its own directory and repeats the baseline triple; a complete compatible rerun changes no byte or mtime | driver 1127-1160; runner 700-830 |
+| Resume | runs are added only under one producer with a known code identity (Git HEAD bound); the summary is written once and never rewritten, so an axis subset run into a directory cannot be expanded there later: each subset needs its own directory and repeats the baseline triple; a complete compatible rerun changes no byte or mtime; leftovers of an interrupted publication (temporary files, orphan sidecars) are refused, never reused, and must be moved aside (section 2.4) | driver 1072-1083, 1127-1160; runner 700-830, 1664-1668, 1831-1840 |
 | Evidence-runner execution model | one process runs the whole gated series (20 paired runs for A1) and writes the record after each run; per-run peak memory is not recorded by `paired_noise_run` (the historical 1.11 GiB came from an external measurement), so the per-run peak must be measured by the supervisor or a single-run pilot | runner 650-890; status record 2510-2520 |
 
 No new material defect was found in these interfaces. The items in section 6
@@ -161,13 +201,25 @@ directory; copies of the records are under `records/cloud_checks/`.
 | --- | --- | --- | --- |
 | Targeted fast tests of the interfaces above | `pytest -q -p no:cacheprovider -m "not hcipy and not slow and not elt_scale"` over `tests/validation/test_{richardson,atmosphere_pairing,encircled_energy}.py`, `tests/experiments/test_{detector_level_convergence,noise_isolation_trace_analysis,detector_evidence_runner}.py`, `tests/runtime/test_resource_guard.py`, `tests/control/test_exposure_subsamples.py` | **318 passed, 1 failed, 2 skipped, 1 deselected** in 59.7 s. The failure, `test_the_bytecode_cache_is_checked_where_python_reads_it`, is a root-user artifact: its last step makes a hash-based cache unreadable (`chmod 0`) and expects the tracked identity, but this session runs as `root`, which reads the file anyway, so the identity is correctly unknown (fail closed). CI runs unprivileged and is green. See E-3 | EXECUTED_CURRENT |
 | T2 ci-scale self-check under the guard | `python -m shwfs_ao.runtime.resource_guard --label t2_ci_selfcheck_cloud --estimate-mib 307 --timeout-s 1800 --threads 2 -- python scripts/detector_level_convergence_study.py --scale ci --output-dir <scratch>/ci_selfcheck` | preflight admitted (614 of 2011.6 MiB); supervisor `COMPLETED`, exit 0, group peak 338,944,000 B (323 MiB), pressure `normal` throughout; 11 paired runs, driver wall **244.0 s** (desktop T2 record 89.3 s), summed child wall 232.8 s (79.4 s), 16.8-27.0 s per paired run, child `ru_maxrss` 177-232 MiB (desktop 222-307 MiB); baseline per-frame 0.102 s twin and 0.078 s noise-on; pairing exact (dilation 0.0 rad) for both readings; every Richardson status `NOT_ESTIMATED` (two settings per axis at ci scale, as designed); producer Git `5514285`, clean | EXECUTED_CURRENT, machinery and timing evidence only |
-| 2 m traced replay against the committed record | `python -m shwfs_ao.runtime.resource_guard --label noise_isolation_2m_traced_cloud --estimate-mib 250 --timeout-s 3600 --threads 2 -- python scripts/run_detector_level_evidence.py --output-dir <scratch>/ni2m_traced noise-isolation-2m-traced`, then `scripts/analyze_noise_isolation_traces.py <record> --output-dir <dir> --historical docs/refactor/detector_level_evidence/det09_noise_isolation_2m.json --gate-quiet-labels m5,m6,m7` | supervisor `COMPLETED`, exit 0, wall **931.9 s** (desktop untraced record 290 s), group peak 122 MiB; 32 paired runs, none refused. **Replay of the committed record: every configuration hash equal, 0 of 32 runs bit-identical, largest relative difference 2.5e-9 (variance quantities), 3.0e-13 (residual RMS), 4.1e-16 (model column), the same level at the gate-active m8 runs**: the roundoff-level cross-host agreement `docs/reproducibility.md` predicts. Per magnitude `DeltaV` 4.27 ± 0.08, 10.40 ± 0.32, 25.81 ± 0.44, 200.7 ± 105.0 nm² (the committed values to the printed digits); E0 weighted ratio 0.996-1.019; gate-quiet m5-m7 per-seed E1 slope 0.955 ± 0.014 (T1's desktop finding reproduced). Loop ratio `DeltaV/P^E0` 0.1449 ± 0.0089, 0.1383 ± 0.0116, 0.1332 ± 0.0074 (t, 8 seeds) against the derived 0.1546; both arms clip 1.5-15 % of the actuators per frame (profile stroke 1 µm), so the no-saturation assumption of PROTOCOL.md 1.6 fails at 2 m (see there). Details: `records/cloud_checks/SUMMARY.md` | EXECUTED_CURRENT |
+| 2 m traced replay against the committed record | `python -m shwfs_ao.runtime.resource_guard --label noise_isolation_2m_traced_cloud --estimate-mib 250 --timeout-s 3600 --threads 2 -- python scripts/run_detector_level_evidence.py --output-dir <scratch>/ni2m_traced noise-isolation-2m-traced`, then `scripts/analyze_noise_isolation_traces.py <record> --output-dir <dir> --historical docs/refactor/detector_level_evidence/det09_noise_isolation_2m.json --gate-quiet-labels m5,m6,m7` | supervisor `COMPLETED`, exit 0, wall **931.9 s** (desktop untraced record 290 s), group peak 122 MiB; 32 paired runs, none refused. **Replay of the committed record: every configuration hash equal, 0 of 32 runs bit-identical, largest relative difference 2.5e-9 (variance quantities), 3.0e-13 (residual RMS), 4.1e-16 (model column), the same level at the gate-active m8 runs**: the roundoff-level cross-host agreement `docs/reproducibility.md` predicts. Per magnitude `DeltaV` 4.27 ± 0.08, 10.40 ± 0.32, 25.81 ± 0.44, 200.7 ± 105.0 nm² (the committed values to the printed digits); E0 weighted ratio 0.996-1.019; gate-quiet m5-m7 per-seed E1 slope 0.955 ± 0.014 (T1's desktop finding reproduced). Loop ratio `DeltaV/P^E0` 0.1449 ± 0.0089, 0.1383 ± 0.0116, 0.1332 ± 0.0074 (t, 8 seeds) against the derived 0.1546; both arms clip 1.5-15 % of the actuators per frame (profile stroke 1 µm), so the no-saturation assumption of PROTOCOL.md 1.6 fails at 2 m (see there). The 0.1546 is the scalar unit-feedback factor of the first draft; the exact linear model of review round 1 predicts the same value at 2 m to 0.4 % (`L = I` there), so this result stands for the whole linear model (section 8). Details: `records/cloud_checks/SUMMARY.md` | EXECUTED_CURRENT |
+
+| Round 1: repaired fixed-physics pilot at ci scale (CHK-1a) | `tools/timing_pilot_fixed_physics.py --scale ci --key ci_baseline_plain_r0` under the guard CLI, twice (once alone on the host) | driver imported and planned; the launcher's row passed the driver's own `check_run` against the planned protocol; every scalar, digest, `DeltaV` value and science metric bit-identical to the T2 ci self-check row of the same key (protocol hash differs in `code/git_head` only); wall 27.2 s and 26.7 s against 17.6 s for the same child on 2026-10-21 (per-frame 0.130 s against 0.102 s); `ru_maxrss` 159-160 MiB | EXECUTED_CURRENT |
+| Round 1: traced pilot on the 2 m profile (CHK-1b) | `tools/timing_pilot_traced_run.py --profile det_emccd_2m_synthetic --profile-version 1 --magnitude 5 --root-seed 61 --frames 200 --burn-in 50 --historical <committed 2 m record> --trace-sidecar <path>` under the guard | wall 39.9 s, `ru_maxrss` 104 MiB; seven recorded quantities within 8.3e-10 relative of the committed desktop record; gate-quiet; E0 ratio 1.027; clipping up to 31 % of the actuators in a frame; sidecar 0.78 MB written in the series' layout | EXECUTED_CURRENT |
+| Round 1: exact linear loop model (CHK-1c, CHK-1d) | `tools/linear_loop_noise_model.py --self-test`; `--sigma sidecar` on the 33 two-metre sidecars and on four ci-geometry sidecars (m7 and m9, ci damping and the 12 m damping as a diagnostic override) | self-test passed (Lyapunov equals `kappa` to 1e-15); at 2 m `L = I` to 4e-15 and the model reduces to `kappa` within 0.4 %, so the first session's 2 m deficit (0.936 +/- 0.060, 0.892 +/- 0.076, 0.860 +/- 0.050 at m5-m7 under clipping) is a result about the whole linear model; on the ci geometry with the 12 m damping (7.3 % of feedback eigenvalues below 0.9) the two gate-quiet runs give 0.987 and 1.011 within one block SE; the gate-active m9 run with the ci damping exceeds the fixed-mask prediction by 1.28 (available rule) and 2.3 (strict rule) | EXECUTED_CURRENT, implementation evidence only |
+| Round 1: leftover quarantine (CHK-1e) | `tools/quarantine_leftovers.py --study` and `--record` on synthetic interrupted directories, list then `--apply` | exactly the leftovers listed and moved aside with a manifest; planned run, record and referenced sidecar untouched; second pass empty | EXECUTED_CURRENT |
+
+Details and tables: `records/cloud_checks/round1/SUMMARY.md`.
 
 Speed anchor: the cloud host completes the same ci-scale work 2.7 to 2.9
 times slower than the desktop anchors (driver wall ratio 2.73, summed child
 wall ratio 2.93). Every desktop-anchored estimate for the cloud host below
 carries that factor and the label EXTRAPOLATED; the factor was measured at
 ci scale and may differ at 12 m and 42 m, which is what the pilots measure.
+Round 1 added a second anchor: the identical ci run (bit-identical output)
+took 26.7 s on 2026-10-22 against 17.6 s on 2026-10-21, so the cloud factor
+itself varies by about 1.5x between sessions; every cloud wall estimate
+below should be read with that spread, and a pilot's measured value replaces
+the estimate only for the session that produced it.
 
 ## 5. Cost anchors and cloud extrapolations
 
@@ -202,7 +254,7 @@ needs (sidecars, run files, twin records) are in `pilot_requests.json`.
 | D2 | Authorized budgets above policy | S4 A1: 2800 MiB (2 x 1400 MiB raw); E3: 4096 MiB (2 x 1800-2000 MiB raw, the ESO reference run was authorized at 4600 MiB); E2: policy budget, revisited after pilot P1 | running outside the guard with a user instruction, as T1 and T2 did: no supervision, no refusal on pressure; not recommended |
 | D3 | Seed and realization extension mechanism | predeclare triggers now; implement a reviewed `--seeds`/`--realizations` option (or constants change) only if a trigger fires, in a follow-up ticket with tests; never during a series | caller-owned extension runs outside the drivers (no study record; not recommended) |
 | D4 | E2 staging | E2a `--axes detector,spectrum` (15 runs) first; decision; E2b `--axes exposure,science` (24 runs); E2c `--axes pupil` (18 runs); separate directories | the full 54-run plan in one directory (one baseline triple, no intermediate decision, 9-10 h cloud) |
-| D5 | Alternative closure model for S4 | adopt the loop noise-transfer model (PROTOCOL.md 1.6) as a predeclared hypothesis; its 2 m verification in this session did **not** confirm it (ratio 0.86-0.94 under 1.5-15 % actuator clipping), so the 12 m band is fixed a priori at 10 % with the saturation exclusion and the clipping hypothesis H_sat predeclared; the first-order bias band stays a hypothesis | keep A1 descriptive only (E0, E1, masks) with no closure criterion |
+| D5 | Alternative closure model for S4 | adopt the exact linear closed-loop noise model with the reconstructed spatial feedback `L = R M` (PROTOCOL.md 1.6, `tools/linear_loop_noise_model.py`) as a predeclared hypothesis, closed only by the whole-interval test of PROTOCOL.md 1.7; its unit-feedback reduction is the earlier scalar `kappa`; the 2 m check did **not** confirm the model (ratio 0.86-0.94 under 1.5-15 % actuator clipping; at 2 m the exact model and `kappa` coincide, so the deficit is not the omitted feedback), so the 12 m band stays fixed a priori at 10 % with the saturation exclusion and the clipping hypothesis H_sat; the 12 m prediction is pilot P2b; the first-order bias band stays a hypothesis | keep A1 descriptive only (E0, E1, masks) with no closure criterion |
 | D6 | Network policy | allow `github.com` (Python builds for the `py314` lock) and the literature hosts, or accept the `hcipy-py311` lock and user-supplied paper copies | status quo |
 | D7 | Session handling | background invocations of at most 8400 s each with resume; push records after every invocation; one series per session | none |
 | D8 | CI coverage | dispatch the scheduled lane on `main` at `5514285` | quote the cloud self-check as the only fresh-child evidence |
@@ -212,3 +264,28 @@ needs (sidecars, run files, twin records) are in `pilot_requests.json`.
 Approving this packet means approving the protocol text in `PROTOCOL.md` and
 the exact requests in `pilot_requests.json`; execution starts with the pilots
 in their listed order and stops at every decision gate.
+
+## 8. Review round 1 (2026-10-22): findings and repairs
+
+Eight P2 findings were returned on the packet at `da44227`. Each repair,
+what evidences it, and where it lives:
+
+| # | Finding | Repair | Evidence |
+| --- | --- | --- | --- |
+| 1 | Pilot launcher fails while importing the driver | the drivers are imported by path with the module registered in `sys.modules` before execution (`tools/_packet_common.py:load_script_module`), which the drivers' dataclasses need under `from __future__ import annotations`; both pilots and the model use the helper | CHK-1a: the launcher imports, plans and runs the ci key; its row passes the driver's `check_run` and is bit-identical to the T2 self-check row |
+| 2 | Pilot output omits evidence required for acceptance | `timing_pilot_fixed_physics.py` records the complete validated study row (composed as `_run_child` plus `run_protocol`) and an `acceptance_evidence` block; `timing_pilot_traced_run.py` records the seven recorded quantities with the `--historical` comparison, per-arm telemetry summaries, mask disagreement, the `DeltaV` series summary, E0, and optionally the trace in the series' sidecar layout; every acceptance rule in `pilot_requests.json` names the JSON field it reads | CHK-1a, CHK-1b; `pilot_requests.json` (`launcher_records`, P1a-P3) |
+| 3 | S4 transfer model omits reconstructed spatial feedback | the scalar factor is replaced by the exact linear closed-loop model with `L = R M`, finite-window and stationary covariance, realized or flat noise covariance (`tools/linear_loop_noise_model.py`; PROTOCOL.md 1.6, 7; notes section 3); `kappa` is kept as its unit-feedback reduction; the 12 m evaluation is pilot P2b and a prerequisite of S4-A1 | CHK-1c (2 m: reduces to `kappa`, deficit unchanged), CHK-1d (ci geometry with the 12 m damping: 0.987, 1.011) |
+| 4 | S4 closure can pass with overly broad uncertainty | closure uses whole-interval (equivalence) semantics: "verified" only if the whole 95 % t interval of the five-seed ratio lies inside the 10 % band, "rejected" if wholly outside, "not expressible" otherwise (triggers the seed extension once); the closure sentence requires "verified" at every gate-quiet magnitude (PROTOCOL.md 1.7, 5) | text |
+| 5 | Unpaired uncertainty is incorrectly called conservative | per-realization paired differences are the primary uncertainty on every axis and for both arms; the driver's unpaired `sqrt(s_i^2 + s_j^2)` is descriptive only, neither a conservative nor a liberal bound in general, and no decision reads it (PROTOCOL.md 2.3) | text |
+| 6 | Convergence labels leave valid outcomes unclassified | converged `|Delta| + h <= tol`, unconverged `|Delta| - h >= tol`, not expressible otherwise: mutually exclusive and exhaustive for finite values; refused or missing settings are "not classified"; the E3 single-realization labels and the extension rule follow the same pattern (PROTOCOL.md 2.4, 2.5, 3.2) | text |
+| 7 | E3 exposure interpretation lacks an E2b prerequisite | E3 proceeds only after E2a **and** E2b are interpreted: three of the five 42 m settings are exposure settings whose 12 m prior scale and rule comparison come from E2b (PROTOCOL.md 3.3; `pilot_requests.json` stage E3; decision gates) | text |
+| 8 | Timeout recovery omits handling of publication leftovers | the leftovers each driver refuses after a stopped group (temporary publication files, orphan sidecars, stale twin records) and the drivers' exact reactions are tabulated; `tools/quarantine_leftovers.py` lists and moves them aside with a manifest, never deleting; the five-step resume procedure is in section 2.4 and in every stage request's `resume` field | CHK-1e |
+
+Two observations from the round-1 checks that the protocols now carry:
+the realized noise covariance must include lenslets whose gates flicker
+rarely (the "available" support rule; the strict E0 rule under-states the
+noise power by up to 28 % in a gate-quiet ci run), and the cloud host's
+speed varies by about 1.5x between sessions for identical work (section 4),
+so cloud wall estimates are indicative until the pilots measure them in the
+producing session. No runtime code, profile, baseline or historical record
+was changed; no governed run or 12 m or 42 m system build took place.
