@@ -20,6 +20,12 @@ placed in a study's `runs/` directory or beside a series' record.
 | `quarantine_leftovers.py` | list and, with `--apply`, move aside the leftovers of an interrupted invocation that both drivers refuse (temporary `*.tmp-*` publication files, orphan sidecars, a stale twin disk record) into `leftovers/<UTC>/` with a manifest; nothing is deleted or rewritten; planned run files, referenced sidecars and the record are never candidates | every stage's resume procedure (`README.md` 2.4) | synthetic interrupted study and series directories (`records/cloud_checks/round1/quarantine_demo/`) |
 | `_packet_common.py` | shared helpers: driver import by path, configuration selection (`--profile`/`--ci-geometry`, `--magnitude`, diagnostic `--alpha`), the run configuration a paired run hashes, record writing | the tools above | through them |
 
+The scripts are run by path (`python docs/research/post_t2_experiment_packet/tools/<script>.py ...`),
+as every request lists them: Python then puts the script's own directory
+first on `sys.path`, which is how they import `_packet_common.py`; none of
+them manipulates `sys.path` (the repository's lint rule), so running them
+under `python -I` or `-P` is not supported.
+
 `--alpha` is a diagnostic reconstructor-damping override for tool validation
 only: it changes the configuration hash, is recorded in every output, and is
 never part of a governed series (the 12 m series uses the profile's damping).

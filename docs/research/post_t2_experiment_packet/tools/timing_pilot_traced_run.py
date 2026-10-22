@@ -40,8 +40,9 @@ from typing import Any
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _packet_common import (  # noqa: E402
+# The shared helper lives beside this script; Python puts a script's own directory first on
+# sys.path when the script is run by path, so no path manipulation is needed (lint rule).
+from _packet_common import (
     add_configuration_arguments,
     configuration_from_arguments,
     jsonable,

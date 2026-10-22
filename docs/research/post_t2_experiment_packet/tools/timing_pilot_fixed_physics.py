@@ -35,8 +35,9 @@ import sys
 import time
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _packet_common import jsonable, load_script_module, peak_rss_bytes, write_record_once  # noqa: E402
+# The shared helper lives beside this script; Python puts a script's own directory first on
+# sys.path when the script is run by path, so no path manipulation is needed (lint rule).
+from _packet_common import jsonable, load_script_module, peak_rss_bytes, write_record_once
 
 SCHEMA = "post_t2_timing_pilot.fixed_physics.v2"
 
