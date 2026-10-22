@@ -157,6 +157,51 @@
       "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/quarantine_leftovers.py", "--study|--record", "<dir or record>", "[--apply]"],
       "result": {"listed": "exactly the leftovers (runs/*.tmp-*, scratch twin record, orphan sidecar, *.npz.tmp-*) with sizes and SHA-256", "moved": "into leftovers/<UTC>/ with a manifest; planned run, record and referenced sidecar untouched; second pass empty", "deleted": 0},
       "records": "records/cloud_checks/round1/quarantine_demo/"
+    },
+    {
+      "id": "CHK-2a",
+      "name": "review round 2: model self-test with the delayed injection and the structured propagation",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--self-test", "--output", "<out>/model_self_test.json"],
+      "result": {"passed": true, "kappa_limit": "Lyapunov variance equals kappa to 1e-15 for five (g, l, d) cases", "delayed_injection": "for d = 0, 1, 2 the first d post-update covariances are exactly zero and the next equals g^2 R Sigma R^T", "structured_propagation_max_error": 2.6e-17},
+      "records": "records/cloud_checks/round2/model_self_test.json"
+    },
+    {
+      "id": "CHK-2b",
+      "name": "review round 2: traced pilots rerun with the core-consistent telemetry (2 m m5 seed 61; ci geometry m7 and m9 with the ci damping and with the 12 m damping as a diagnostic override)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; MEASURED_CURRENT; no scientific claim)",
+      "command": ["<as CHK-1b and CHK-1d>"],
+      "result": {"arm_telemetry": "repeats trace_summary.arms (rejected_frames_after_burn_in 0 and recovery_acted false on every arm of every run; recovery null for these profiles, which carry no recovery policy); the recount from the trace arrays equalled the core's count on every run (the tool refuses otherwise)", "wall_s": {"2m": 37.0, "ci": "120.6-127.4"}, "ru_maxrss_mib": {"2m": 103, "ci": 238}, "historical_max_abs_relative_difference_2m": 8.3e-10, "gate_quiet": {"2m_m5": true, "ci_m7_default": true, "ci_m7_alpha0.1": true, "ci_m9_default": false, "ci_m9_alpha0.1": true}},
+      "records": "records/cloud_checks/round2/ni2m_m5s61/, ci_m7_default/, ci_m7_alpha0p1/, ci_m9_default/, ci_m9_alpha0p1/"
+    },
+    {
+      "id": "CHK-2c",
+      "name": "review round 2: the model on the 32 series sidecars with --record (digest, size and the runner's validate_trace_payload) and the single-mask probe",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; implementation evidence, no scientific claim)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--profile", "det_emccd_2m_synthetic", "--profile-version", "1", "--magnitude", "<5-8>", "--sigma", "sidecar", "--sidecar", "<sidecar>", "--record", "<series record>", "--output", "<out>/<label>__seed<s>.json"],
+      "result": {"validation": "32 of 32 sidecars accepted: declared table, frame domains, layout, canonical rows, label, seed, configuration hash, record digest and size, runner validate_trace_payload", "measured_over_predicted_available_rule_t_7dof": {"m5": "0.936 +/- 0.060", "m6": "0.892 +/- 0.076", "m7": "0.860 +/- 0.050", "m8": "gate-active, not fitted; the available rule is defined on 7 of 8 runs (ratios 0.10-1.23) and the strict rule on 2 of 8: the reconstructor's valid-fraction policy (0.75) refuses the other masks, so the fixed-mask model is not defined for them"}, "measured_over_predicted_strict_rule": {"m5": "0.933 +/- 0.063", "m6": "0.890 +/- 0.077", "m7": "0.857 +/- 0.052"}, "L_minus_identity_max_full_mask": 3.6e-15, "interpretation": "unchanged from round 1: the 2 m deficit under clipping stands for the whole linear model"},
+      "records": "records/cloud_checks/round2/ni2m_models/"
+    },
+    {
+      "id": "CHK-2d",
+      "name": "review round 2: the model on the ci-geometry pilot sidecars with --pilot-record",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; implementation evidence, no scientific claim; --alpha 0.1 is a diagnostic configuration)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--ci-geometry", "--magnitude", "<7|9>", "[--alpha 0.1]", "--sigma", "sidecar", "--sidecar", "<out>/trace.npz", "--pilot-record", "<out>/pilot.json", "--output", "<out>/model_sidecar.json"],
+      "result": {"validation": "4 of 4 pilot sidecars accepted against their pilot records (digest, size, frame counts, label, seed, hash)", "available_rule_measured_over_predicted": {"m7_alpha0.1": 0.987, "m9_alpha0.1": 1.011, "m7_ci_damping": 1.051, "m9_ci_damping_gate_active": 1.276}, "strict_rule_on_its_own_rows": {"m9_alpha0.1 (138 of 144 rows)": 0.979, "m7_ci_damping (126 rows)": "0.53: the mask leaves modes unsensed and the prediction doubles", "m9_ci_damping (92 rows)": "no stationary limit; window prediction dominated by the unsensed modes' random walk"}, "delayed_injection_effect_on_window_values": "below 0.1 % on these runs", "unsensed_mode_count_full_mask_ci_damping": 1},
+      "records": "records/cloud_checks/round2/ci_m7_default/, ci_m7_alpha0p1/, ci_m9_default/, ci_m9_alpha0p1/"
+    },
+    {
+      "id": "CHK-2e",
+      "name": "review round 2: negative checks of the sidecar validation",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<the model with (a) a magnitude that is not the sidecar's, (b) a series sidecar renamed to another run's file name against the record, (c) a sidecar whose delta_v_m2 series is one frame short of its declared shape>"],
+      "result": {"a": "refused: the built configuration hash is not the sidecar's; nothing read", "b": "refused: the record's sidecar reference (file name, digest, size) does not match the file", "c": "refused: array delta_v_m2 has shape (149,), declared [150]", "records_written": 0},
+      "records": "records/cloud_checks/round2/negative/"
     }
   ],
   "pilots": [

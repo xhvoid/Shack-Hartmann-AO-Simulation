@@ -113,6 +113,10 @@ class SidecarRefused(SystemExit):
     """The sidecar does not carry the trace semantics the model needs; nothing is read as data."""
 
 
+class MaskRefused(ValueError):
+    """The reconstructor refuses the support mask (its own valid-fraction or rank policy): the model is not defined for that rule."""
+
+
 # -- loop algebra ------------------------------------------------------------------
 
 
@@ -184,14 +188,20 @@ def window_covariance(loop: np.ndarray, forcing: np.ndarray, *, gain: float, lea
     return 0.5 * (mean_block + mean_block.T), state
 
 
-def stationary_covariance(response: np.ndarray, loop: np.ndarray, sigma: np.ndarray, *, gain: float, leak: float, latency: int) -> tuple[np.ndarray, float, float]:
-    """Stationary ``Cov(dc)`` of the noise-driven command difference, the spectral radius of ``F`` and the Lyapunov residual."""
+def stationary_covariance(response: np.ndarray, loop: np.ndarray, sigma: np.ndarray, *, gain: float, leak: float, latency: int) -> tuple[np.ndarray | None, float, float | None]:
+    """Stationary ``Cov(dc)`` of the noise-driven command difference, the spectral radius of ``F`` and the Lyapunov residual.
+
+    A mode the mask leaves unsensed with no leak has a unit pole: the
+    spectral radius reaches one, no stationary covariance exists, and
+    ``None`` is returned for it (the finite-window transient still exists
+    and stays the primary prediction).
+    """
 
     size = response.shape[0]
     transition = transition_matrix(loop, gain=gain, leak=leak, latency=latency)
     radius = float(np.max(np.abs(np.linalg.eigvals(transition))))
-    if radius >= 1.0:
-        raise SystemExit(f"the linear loop is not stationary (spectral radius {radius:.4f}); no stationary covariance exists.")
+    if radius >= 1.0 - 1.0e-12:
+        return None, radius, None
     forcing = forcing_matrix(response, sigma, gain=gain, latency=latency)
     covariance = linalg.solve_discrete_lyapunov(transition, forcing)
     covariance = 0.5 * (covariance + covariance.T)
@@ -266,7 +276,7 @@ def reconstructor_matrix_masked(reconstructor: Any, row_ids: tuple[str, ...], va
         values[index] = 1.0
         estimate = reconstructor.reconstruct(MeasurementVector(values=values, valid_rows=valid, row_ids=row_ids, measurement_unit="pixel"))
         if estimate is None:
-            raise SystemExit(f"the reconstructor refused the support mask ({int(np.count_nonzero(valid))} of {len(row_ids)} rows valid); the model is not defined for it.")
+            raise MaskRefused(f"the reconstructor refused the support mask ({int(np.count_nonzero(valid))} of {len(row_ids)} rows valid); the model is not defined for it")
         if tuple(estimate.coordinate_ids) != tuple(coordinate_ids):
             raise SystemExit("the reconstructor's coordinates are not the interaction matrix's controlled actuators.")
         columns[:, index] = np.asarray(estimate.delta_coordinates_opd_m, dtype=float)
@@ -635,7 +645,10 @@ def main(argv: list[str] | None = None) -> int:
             response = response_full
             probe_check = 0.0
         else:
-            response = reconstructor_matrix_masked(system.reconstructor, row_ids, mask, coordinate_ids)
+            try:
+                response = reconstructor_matrix_masked(system.reconstructor, row_ids, mask, coordinate_ids)
+            except MaskRefused as exc:
+                return {"status": "not defined", "reason": str(exc), "rows_valid_in_mask": int(np.count_nonzero(mask)), "rows_total": int(len(mask))}
             probe_check = None
         probe_s = time.perf_counter() - started
         if probe_check is None and np.count_nonzero(mask) == len(mask):
@@ -645,10 +658,13 @@ def main(argv: list[str] | None = None) -> int:
         real_eigen = np.sort(np.real(eigen))
         started = time.perf_counter()
         covariance, radius, lyapunov_residual = stationary_covariance(response, loop, sigma, gain=gain, leak=leak, latency=latency)
-        stationary = float(np.trace(gram @ covariance) / n_pupil)
         diagonal_sigma = np.diag(np.diag(sigma))
-        covariance_diagonal, _, _ = stationary_covariance(response, loop, diagonal_sigma, gain=gain, leak=leak, latency=latency)
-        stationary_diagonal = float(np.trace(gram @ covariance_diagonal) / n_pupil)
+        if covariance is None:
+            stationary = stationary_diagonal = None
+        else:
+            stationary = float(np.trace(gram @ covariance) / n_pupil)
+            covariance_diagonal, _, _ = stationary_covariance(response, loop, diagonal_sigma, gain=gain, leak=leak, latency=latency)
+            stationary_diagonal = float(np.trace(gram @ covariance_diagonal) / n_pupil)
         lyapunov_s = time.perf_counter() - started
         started = time.perf_counter()
         window_block, final_state = window_covariance(loop, forcing_matrix(response, sigma, gain=gain, latency=latency), gain=gain, leak=leak, latency=latency, n_steps=n_steps, burn_in=burn_in)
@@ -661,16 +677,19 @@ def main(argv: list[str] | None = None) -> int:
         scalar_series = float(kappa * np.sum(weights_series * np.diag(sigma)))
         one_step = float(np.trace(gram @ response @ sigma @ response.T) / n_pupil)
         return {
+            "status": "defined",
             "rows_valid_in_mask": int(np.count_nonzero(mask)),
             "rows_total": int(len(mask)),
             "feedback_spectrum": {
                 "definition": "eigenvalues of L = R_mask M on the controlled actuators (1 = unit feedback; below 1 = damped mode; the scalar model assumes all 1)",
                 "min": float(real_eigen[0]), "percentile_10": float(np.percentile(real_eigen, 10)), "median": float(np.median(real_eigen)), "max": float(real_eigen[-1]),
                 "fraction_below_0.9": float(np.mean(real_eigen < 0.9)), "fraction_below_0.5": float(np.mean(real_eigen < 0.5)),
+                "count_below_1e-6": int(np.count_nonzero(real_eigen < 1.0e-6)),
+                "unsensed_modes_note": "a mode with feedback below 1e-6 is left unsensed by this mask; with no leak it has a unit pole, no stationary limit exists and the window prediction grows with the run length (the run is support-sensitive)",
                 "max_abs_imaginary": float(np.max(np.abs(np.imag(eigen)))),
                 "max_abs_deviation_of_L_from_identity": float(np.max(np.abs(loop - np.eye(size_c)))),
             },
-            "stationarity": {"spectral_radius_F": radius, "lyapunov_relative_residual": lyapunov_residual, "window_end_over_stationary": float(np.trace(gram @ final_state[:size_c, :size_c]) / max(np.trace(gram @ covariance), 1e-300))},
+            "stationarity": {"spectral_radius_F": radius, "stationary_limit_exists": covariance is not None, "lyapunov_relative_residual": lyapunov_residual, "window_end_over_stationary": None if covariance is None else float(np.trace(gram @ final_state[:size_c, :size_c]) / max(np.trace(gram @ covariance), 1e-300)), "note": None if covariance is not None else "a mode the mask leaves unsensed has a unit pole (no leak): no stationary covariance; the finite-window prediction is the primary quantity"},
             "delta_v_exact_window_m2": window,
             "delta_v_exact_window_diagonal_sigma_m2": window_diagonal,
             "delta_v_exact_stationary_m2": stationary,
@@ -678,7 +697,7 @@ def main(argv: list[str] | None = None) -> int:
             "delta_v_scalar_reduction_mask_m2": scalar_mask,
             "delta_v_scalar_reduction_series_weights_m2": scalar_series,
             "delta_v_one_step_open_loop_m2": one_step,
-            "window_over_stationary": window / stationary if stationary > 0 else None,
+            "window_over_stationary": None if stationary is None or stationary <= 0 else window / stationary,
             "exact_window_over_scalar_mask": window / scalar_mask if scalar_mask > 0 else None,
             "exact_window_over_scalar_series_weights": window / scalar_series if scalar_series > 0 else None,
             "exact_window_over_diagonal_sigma": window / window_diagonal if window_diagonal > 0 else None,
@@ -688,6 +707,24 @@ def main(argv: list[str] | None = None) -> int:
 
     predictions = {rule: predict(rule, sigmas[rule], masks[rule]) for rule in sigmas}
     primary = predictions[primary_rule]
+    if primary.get("status") != "defined":
+        defined = {rule: entry for rule, entry in predictions.items() if entry.get("status") == "defined"}
+        record_undefined: dict[str, Any] = {
+            "schema": SCHEMA, "mode": "model", "purpose": "analysis-only linear closed-loop noise model; no loop is run; no scientific claim by itself",
+            "configuration": described, "diagnostic_alpha_override": arguments.alpha, "config_hash": config.config_hash, "root_seed": root_seed, "n_steps_in_hash": n_steps, "window_frames": [burn_in, n_steps],
+            "controller": {"gain": gain, "leak": leak, "latency_frames": latency},
+            "reconstructor": {"kind": config.reconstructor.kind, "alpha": config.reconstructor.alpha, "rcond": config.reconstructor.rcond, "min_valid_fraction": config.reconstructor.min_valid_fraction},
+            "dimensions": {"rows": len(row_ids), "controlled_actuators": size_c, "pupil_samples": n_pupil},
+            "noise_covariance": jsonable(sigma_info),
+            "prediction": {"primary_status": "not defined", "primary_rule": primary_rule, "reason": primary["reason"], "by_noise_covariance_rule": {rule: {key: value for key, value in entry.items() if key != "timing_s"} for rule, entry in predictions.items()}, "note": "the reconstructor refuses the primary rule's support mask under its own valid-fraction or rank policy, so the fixed-mask model is not defined for this run; such a run is gate-active in the loop as well"},
+            "timing": {"build_s": build_s, "full_probe_s": probe_full_s}, "ru_maxrss_bytes": peak_rss_bytes(),
+            "host": {"platform": sys.platform, "machine": platform.machine(), "node": platform.node(), "python": sys.version, "numpy": np.__version__}, "enabled_by_user": arguments.enabled_by_user,
+        }
+        if defined:
+            record_undefined["prediction"]["defined_rules"] = sorted(defined)
+        write_record_once(arguments.output, record_undefined)
+        print(json.dumps({"configuration": described, "primary_rule": primary_rule, "primary_status": "not defined", "reason": primary["reason"], "defined_rules": sorted(defined)}))
+        return 0
     record: dict[str, Any] = {
         "schema": SCHEMA,
         "mode": "model",
@@ -699,7 +736,7 @@ def main(argv: list[str] | None = None) -> int:
         "n_steps_in_hash": n_steps,
         "window_frames": [burn_in, n_steps],
         "controller": {"gain": gain, "leak": leak, "latency_frames": latency},
-        "reconstructor": {"kind": config.reconstructor.kind, "alpha": config.reconstructor.alpha, "rcond": config.reconstructor.rcond},
+        "reconstructor": {"kind": config.reconstructor.kind, "alpha": config.reconstructor.alpha, "rcond": config.reconstructor.rcond, "min_valid_fraction": config.reconstructor.min_valid_fraction},
         "dimensions": {"rows": len(row_ids), "controlled_actuators": size_c, "pupil_samples": n_pupil, "lyapunov_state": size_c * (latency + 1)},
         "mask_rule": "the reconstructor is probed with exactly the rows that carry noise valid (one fixed mask for L, the injection and Sigma); the series' all-valid propagation weights are kept for the first draft's scalar value",
         "feedback_spectrum": primary["feedback_spectrum"],
@@ -722,7 +759,7 @@ def main(argv: list[str] | None = None) -> int:
             "propagation_weights_series_sum_m2_per_px2": float(np.sum(weights_series)),
             "by_noise_covariance_rule": {rule: {key: value for key, value in entry.items() if key != "timing_s"} for rule, entry in predictions.items()},
         },
-        "timing": {"build_s": build_s, "full_probe_s": probe_full_s, **{f"{rule}_s": entry["timing_s"] for rule, entry in predictions.items()}},
+        "timing": {"build_s": build_s, "full_probe_s": probe_full_s, **{f"{rule}_s": entry.get("timing_s") for rule, entry in predictions.items()}},
         "ru_maxrss_bytes": peak_rss_bytes(),
         "host": {"platform": sys.platform, "machine": platform.machine(), "node": platform.node(), "python": sys.version, "numpy": np.__version__},
         "enabled_by_user": arguments.enabled_by_user,
@@ -735,16 +772,16 @@ def main(argv: list[str] | None = None) -> int:
             "measured_delta_v_mean_m2": measured,
             "measured_delta_v_block25_se_m2": se,
             "measured_over_exact_window": measured / window if window > 0 else None,
-            "measured_over_exact_stationary": measured / primary["delta_v_exact_stationary_m2"] if primary["delta_v_exact_stationary_m2"] > 0 else None,
+            "measured_over_exact_stationary": None if primary["delta_v_exact_stationary_m2"] is None or primary["delta_v_exact_stationary_m2"] <= 0 else measured / primary["delta_v_exact_stationary_m2"],
             "measured_over_scalar_mask": measured / primary["delta_v_scalar_reduction_mask_m2"] if primary["delta_v_scalar_reduction_mask_m2"] > 0 else None,
             "measured_over_scalar_series_weights": measured / primary["delta_v_scalar_reduction_series_weights_m2"] if primary["delta_v_scalar_reduction_series_weights_m2"] > 0 else None,
             "exact_window_within_2_block_se": None if se is None else bool(abs(measured - window) <= 2.0 * se),
-            "measured_over_exact_window_by_rule": {rule: (measured / entry["delta_v_exact_window_m2"] if entry["delta_v_exact_window_m2"] > 0 else None) for rule, entry in predictions.items()},
+            "measured_over_exact_window_by_rule": {rule: (None if entry.get("status") != "defined" or entry["delta_v_exact_window_m2"] <= 0 else measured / entry["delta_v_exact_window_m2"]) for rule, entry in predictions.items()},
             "note": "a pilot-level consistency check of the model against one run; the protocol's acceptance rules, not this ratio, decide anything",
         }
     write_record_once(arguments.output, record)
     print(json.dumps({"configuration": described, "controlled": size_c, "primary_rule": primary_rule, "rows_in_mask": primary["rows_valid_in_mask"], "feedback_min": primary["feedback_spectrum"]["min"], "fraction_below_0.9": primary["feedback_spectrum"]["fraction_below_0.9"],
-                      "delta_v_exact_window_nm2": primary["delta_v_exact_window_m2"] * 1e18, "delta_v_exact_stationary_nm2": primary["delta_v_exact_stationary_m2"] * 1e18, "delta_v_scalar_mask_nm2": primary["delta_v_scalar_reduction_mask_m2"] * 1e18,
+                      "delta_v_exact_window_nm2": primary["delta_v_exact_window_m2"] * 1e18, "delta_v_exact_stationary_nm2": None if primary["delta_v_exact_stationary_m2"] is None else primary["delta_v_exact_stationary_m2"] * 1e18, "delta_v_scalar_mask_nm2": primary["delta_v_scalar_reduction_mask_m2"] * 1e18,
                       "sidecar_validation": None if validation is None else {k: v for k, v in validation.items() if k != "structural"} | {"structural": "passed"},
                       "comparison": None if record.get("comparison") is None else {k: record["comparison"][k] for k in ("measured_over_exact_window", "measured_over_exact_window_by_rule", "exact_window_within_2_block_se")}}, default=float))
     return 0

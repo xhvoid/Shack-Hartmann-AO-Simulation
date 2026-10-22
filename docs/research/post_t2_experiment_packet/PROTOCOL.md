@@ -220,33 +220,42 @@ feedback included.
   0.4 %) and the 2 m result of the first session stands as a result about
   the whole linear model, not about the omitted feedback: `DeltaV /
   DeltaV_pred` over 8 seeds is 0.936 +/- 0.060, 0.892 +/- 0.076 and
-  0.860 +/- 0.050 (t; available rule; strict rule 0.939, 0.896, 0.862) at
-  m5, m6, m7, with the E0 ratio at unity (0.996-1.010) and 1.5-15 % of the
-  actuators clipped per frame in both arms (stroke 1 um), so the model is
-  **not verified at 2 m** and the 2 m record cannot settle it either way. On
-  the convergence driver's ci geometry (the 12 m `@3` detector physics on
-  the 5 m smoke geometry, 96 controlled actuators, gain 0.4, latency 2,
-  stroke 100 um, no clipping) with the 12 m damping applied as a diagnostic
-  override (`--alpha 0.1`), two 400-frame runs at seed 71 are gate-quiet:
-  7.3 % of the feedback eigenvalues are below 0.9 and 2.1 % below 0.5, the
-  exact prediction is 3.2-3.7 % below the scalar reduction, and the measured
-  `DeltaV` over the prediction from the run's realized covariance is 0.987
-  at m7 (92.9 +/- 2.8 nm^2 measured) and 1.011 at m9 (614.6 +/- 15.9 nm^2),
-  each within one 25-frame block standard error; these are two runs and a
-  pilot-level consistency check, not a verification. The same geometry with
-  its own damping (0.001) shows the two limits of the model: at m7, 12.5 %
-  of the lenslets flicker in 15 of 300 frames (gate-quiet by the 0.1 % rule)
-  and the ratio is 1.051 under the available rule but 1.282 under the strict
-  rule, which drops the flickering lenslets' noise; at m9 the run is
-  gate-active (71 of 300 frames, 0.58 % of row-frames, 36 % of the lenslets
-  flickering) and the measured 1772 +/- 190 nm^2 is 1.28 times the
-  available-rule prediction and 2.3 times the strict one. With that damping
-  one almost unsensed mode (feedback 4.6e-7, no leak) accumulates noise
-  through the run, so the stationary limit is about twice the 400-frame
-  window value: the finite-window prediction is the primary quantity for
-  that reason. The fixed-mask model does not describe gate-active runs by
-  construction; that gap is what P4 measures against it, not a parameter
-  to tune. (iii) Before the series, pilot P2b evaluates the model at the S4
+  0.860 +/- 0.050 (t, 7 dof; available rule; strict rule 0.933, 0.890,
+  0.857, the strict mask probed on its own rows) at m5, m6, m7, with the E0
+  ratio at unity (0.996-1.010) and 1.5-15 % of the actuators clipped per
+  frame in both arms (stroke 1 um), so the model is **not verified at 2 m**
+  and the 2 m record cannot settle it either way; at the gate-active m8 the
+  reconstructor's own valid-fraction policy (0.75) refuses the strict mask
+  on six of eight runs and the available mask on one, so the fixed-mask
+  model is "not defined" for those rules there, as the loop itself is
+  gate-active (the seven available-rule ratios scatter from 0.10 to 1.23
+  and are not fitted). On the convergence driver's ci geometry
+  (the 12 m `@3` detector physics on the 5 m smoke geometry, 96 controlled
+  actuators, gain 0.4, latency 2, stroke 100 um, no clipping) with the 12 m
+  damping applied as a diagnostic override (`--alpha 0.1`), two 400-frame
+  runs at seed 71 are gate-quiet: 7.3 % of the feedback eigenvalues are
+  below 0.9 and 2.1 % below 0.5, the exact prediction is 3.2-3.7 % below the
+  scalar reduction, and the measured `DeltaV` over the prediction from the
+  run's realized covariance is 0.987 at m7 (92.9 +/- 2.8 nm^2 measured) and
+  1.011 at m9 (614.6 +/- 15.9 nm^2), each within one 25-frame block standard
+  error; these are two runs and a pilot-level consistency check, not a
+  verification. The same geometry with its own damping (0.001) shows the
+  limits of the fixed-mask model: at m7, 12.5 % of the lenslets flicker in
+  15 of 300 frames (gate-quiet by the 0.1 % rule) and the ratio is 1.051
+  under the available rule, whose mask holds every row, while the strict
+  mask, probed on its own 126 rows, leaves modes unsensed and predicts about
+  twice the measured value (ratio 0.53); at m9 the run is gate-active (71
+  of 300 frames, 0.58 % of row-frames, 36 % of the lenslets flickering), the
+  measured 1772 +/- 190 nm^2 is 1.28 times the available-rule prediction,
+  and the strict mask (92 rows) has no stationary limit at all. With the ci
+  damping even the full mask leaves one almost unsensed mode (feedback
+  4.6e-7, no leak) that accumulates noise through the run, so the
+  stationary limit is about twice the 400-frame window value: the
+  finite-window prediction is the primary quantity for that reason, and a
+  mask that leaves modes unsensed (feedback below 1e-6, reported as a
+  count) makes the run "support-sensitive". The fixed-mask model does not
+  describe gate-active runs by construction; that gap is what P4 measures
+  against it, not a parameter to tune. (iii) Before the series, pilot P2b evaluates the model at the S4
   A1 configuration (12 m build, governed): the feedback spectrum of `@3`,
   the prediction from P2's realized covariance under both support rules and
   from the flat model, and the pilot-level ratio at m8 seed 71. (iv) Band
