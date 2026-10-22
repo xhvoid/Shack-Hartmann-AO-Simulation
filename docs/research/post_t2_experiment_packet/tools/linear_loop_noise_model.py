@@ -37,27 +37,56 @@ the pupil samples: the piston-removed pupil mean square of the noise-driven
 correction difference, which is the sidecar's ``delta_v_m2`` in
 expectation (the twin and the noisy arm see the same atmosphere).
 
-**The operator the loop used.**  The model is a fixed-mask model: ``R`` is
-probed with exactly one row set valid and every other row invalid, and
-``L``, the injection and ``Sigma`` describe that one mask.  The primary
-rule ``effective`` takes the row set the noisy arm's reconstructor actually
-used in the plurality of analysed frames (the sidecar's per-frame effective
-row masks), estimates ``Sigma`` from the realized residuals of the frames in
-which that operator was in use, and reports in how many analysed frames
-each arm used it (``operator.noisy_match_fraction``,
-``twin_match_fraction``).  A run in which either arm used the modal operator
-in fewer than ``--min-operator-match`` of the analysed frames is
-``mask-variable``: the loop had no single operator, the prediction is
-reported, and the comparison is descriptive (review round 3).  Two
-telemetry-based rules are reported as sensitivities: ``available``
-(lenslets valid, supported and finite in at least ``--support-min-fraction``
-of the analysed frames, covariance over each lenslet's own valid frames) and
-``strict`` (lenslets valid in every analysed frame, the E0 rule).  ``flat``
-uses the sensor's flat-wavefront ``detector_covariance_v2`` model on its
-supported lenslets (a-priori, no run needed).  The series' propagation
-weights (every row valid) are kept for the first draft's scalar value
-``kappa * sum_r w_r sigma_r^2``; the same reduction on the model's own mask
-is reported too.
+**The operator the loop used, and the error bounds of taking it as fixed.**
+The model is a fixed-mask model: ``R`` is probed with exactly one row set
+valid and every other row invalid, and ``L``, the injection and ``Sigma``
+describe that one mask.  The primary rule ``effective`` takes the row set
+the noisy arm's reconstructor actually used in the plurality of analysed
+frames (the sidecar's per-frame effective row masks) and estimates
+``Sigma`` from the realized residuals of the frames in which that operator
+was in use.  Whether the fixed operator describes the run is decided by two
+quantified error bounds, not by a frame-count threshold (review round 4):
+
+1. the **operator error**: the same transient propagated with the noisy
+   arm's actual operator of every frame of the run, burn-in included (each
+   distinct effective mask is probed once; the increment released at update
+   ``k`` carries the operator of frame ``k - d``), so the state the loop
+   carried into the analysed window under whatever operators the burn-in
+   used is accounted for; its relative difference from the modal-operator
+   prediction is the error, split into the part carried in from burn-in and
+   the part from operator changes inside the window;
+2. the **carried-state error**: what the linear model does not carry into
+   the window is a burn-in frame with gate activity (a row on which the two
+   arms' masks differ, a rejected reconstruction, a recovery action, which
+   the counters give only run-wide) or with command saturation (saturation
+   fraction above 1e-3 in either arm).  The window value is affine in the
+   loop's state at any frame, so the check re-runs the modal-operator window
+   from a zero state right after the last such frame (as if the run had
+   started there: identical commands, an empty queue); the fraction of the
+   primary value that this removes, the inherited fraction from the last
+   unmodelled frame, is the largest relative error a wrong carried state can
+   cause per unit of its own relative error.  The inherited fraction from
+   the first analysed frame (the share of the window value carried in from
+   the whole burn-in) and the window value under a stationary carried state
+   are reported beside it as sensitivities.
+
+A run is ``operator-consistent`` when the operator error is within
+``--operator-tolerance`` and, if its burn-in had an unmodelled frame, the
+inherited fraction from the last one is within
+``--carried-state-tolerance`` as well (a quiet burn-in carries the modelled
+state); otherwise it is ``mask-variable`` (operator error) or
+``carried-state-sensitive`` (inherited fraction): the prediction is
+reported and the comparison is descriptive.  The fractions of analysed and
+burn-in frames in which each arm used the modal operator are reported as
+diagnostics only.  Two telemetry-based rules are reported as sensitivities:
+``available`` (lenslets valid, supported and finite in at least
+``--support-min-fraction`` of the analysed frames, covariance over each
+lenslet's own valid frames) and ``strict`` (lenslets valid in every analysed
+frame, the E0 rule).  ``flat`` uses the sensor's flat-wavefront
+``detector_covariance_v2`` model on its supported lenslets (a-priori, no
+run needed).  The series' propagation weights (every row valid) are kept
+for the first draft's scalar value ``kappa * sum_r w_r sigma_r^2``; the
+same reduction on the model's own mask is reported too.
 
 **Validation before any read.**  A sidecar's declared array table is
 compared, array by array, with the evidence runner's canonical layout
@@ -107,7 +136,7 @@ from _packet_common import (
     write_record_once,
 )
 
-SCHEMA = "post_t2_linear_loop_noise_model.v3"
+SCHEMA = "post_t2_linear_loop_noise_model.v4"
 PROBE_M = 1.0e-9
 SERIES_SIDECAR_SCHEMA = "shwfs_ao.noise_isolation_trace_sidecar.v1"
 PILOT_SIDECAR_SCHEMA = "post_t2_pilot_trace_sidecar.v1"
@@ -189,21 +218,26 @@ def propagate(covariance: np.ndarray, loop: np.ndarray, *, gain: float, leak: fl
     return apply(apply(covariance).T).T
 
 
-def window_covariance(loop: np.ndarray, forcing: np.ndarray, *, gain: float, leak: float, latency: int, n_steps: int, burn_in: int) -> tuple[np.ndarray, np.ndarray]:
+def window_covariance(loop: np.ndarray, forcing: np.ndarray, *, gain: float, leak: float, latency: int, n_steps: int, burn_in: int, initial_state: np.ndarray | None = None, start_frame: int = 0, forcing_from: int | None = None) -> tuple[np.ndarray, np.ndarray]:
     """Mean leading block of ``Cov(dc_{k+1})`` over the analysed frames ``burn_in <= k < n_steps``, and the final state.
 
-    From ``P_0 = 0``: the update at frame ``k`` releases the increment
-    enqueued ``d`` updates earlier, so the first ``d`` updates release the
-    queue's initial zeros and the noise forcing enters only for ``k >= d``.
+    From ``P_0 = 0`` at frame 0 (or from ``initial_state``, the full
+    companion covariance, at ``start_frame``): the update at frame ``k``
+    releases the increment enqueued ``d`` updates earlier, so the first
+    ``d`` updates after a start from identical commands release the queue's
+    zeros and the noise forcing enters only for ``k >= start_frame + d``
+    (``forcing_from`` overrides this: a stationary start carries noise in
+    its queue, so its forcing enters at once).
     """
 
     size = loop.shape[0]
-    state = np.zeros_like(forcing)
+    state = np.zeros_like(forcing) if initial_state is None else np.array(initial_state, dtype=float)
+    first_forcing = start_frame + latency if forcing_from is None else forcing_from
     mean_block = np.zeros((size, size))
     analysed = 0
-    for frame in range(n_steps):
+    for frame in range(start_frame, n_steps):
         state = propagate(state, loop, gain=gain, leak=leak, latency=latency)
-        if frame >= latency:
+        if frame >= first_forcing:
             state = state + forcing
         if frame >= burn_in:
             mean_block += state[:size, :size]
@@ -212,8 +246,37 @@ def window_covariance(loop: np.ndarray, forcing: np.ndarray, *, gain: float, lea
     return 0.5 * (mean_block + mean_block.T), state
 
 
-def stationary_covariance(response: np.ndarray, loop: np.ndarray, sigma: np.ndarray, *, gain: float, leak: float, latency: int) -> tuple[np.ndarray | None, float, float | None]:
-    """Stationary ``Cov(dc)``, the spectral radius of ``F`` and the Lyapunov residual; ``None`` when a unit pole leaves no stationary limit."""
+def time_varying_window(loops: list[np.ndarray], forcings: list[np.ndarray], sequence: np.ndarray, *, gain: float, leak: float, latency: int, n_steps: int, burn_in: int) -> np.ndarray:
+    """Mean leading block over the analysed frames with the operator of frame ``k - d`` at update ``k`` (burn-in included).
+
+    ``sequence[k]`` indexes the operator the noisy arm used at frame ``k``.
+    The increment released at update ``k`` was computed at frame ``k - d``
+    with that frame's operator, so the feedback block and the injection of
+    update ``k`` both carry ``loops[sequence[k - d]]`` and
+    ``forcings[sequence[k - d]]``; the first ``d`` updates release the
+    queue's zeros (no feedback, no injection).
+    """
+
+    size = loops[0].shape[0]
+    state = np.zeros_like(forcings[0])
+    zero_loop = np.zeros_like(loops[0])
+    mean_block = np.zeros((size, size))
+    analysed = 0
+    for frame in range(n_steps):
+        if frame >= latency:
+            index = int(sequence[frame - latency])
+            state = propagate(state, loops[index], gain=gain, leak=leak, latency=latency) + forcings[index]
+        else:
+            state = propagate(state, zero_loop, gain=gain, leak=leak, latency=latency)
+        if frame >= burn_in:
+            mean_block += state[:size, :size]
+            analysed += 1
+    mean_block /= max(analysed, 1)
+    return 0.5 * (mean_block + mean_block.T)
+
+
+def stationary_covariance(response: np.ndarray, loop: np.ndarray, sigma: np.ndarray, *, gain: float, leak: float, latency: int, full_state: bool = False) -> tuple[np.ndarray | None, float, float | None]:
+    """Stationary ``Cov(dc)`` (the full companion covariance with ``full_state``), the spectral radius of ``F`` and the Lyapunov residual; ``None`` when a unit pole leaves no stationary limit."""
 
     size = response.shape[0]
     transition = transition_matrix(loop, gain=gain, leak=leak, latency=latency)
@@ -224,7 +287,7 @@ def stationary_covariance(response: np.ndarray, loop: np.ndarray, sigma: np.ndar
     covariance = linalg.solve_discrete_lyapunov(transition, forcing)
     covariance = 0.5 * (covariance + covariance.T)
     residual = float(np.linalg.norm(covariance - transition @ covariance @ transition.T - forcing) / max(np.linalg.norm(forcing), 1e-300))
-    return covariance[:size, :size], radius, residual
+    return (covariance if full_state else covariance[:size, :size]), radius, residual
 
 
 def self_test() -> dict[str, Any]:
@@ -257,6 +320,24 @@ def self_test() -> dict[str, Any]:
         first_nonzero = float(state_d[0, 0])
         delay_checks.append({"latency": latency, "sum_of_first_d_variances": float(zero_mean[0, 0]) * (latency + 1) - first_nonzero, "variance_after_update_d": first_nonzero, "expected_after_update_d": 0.3**2})
     unit_pole = stationary_covariance(np.eye(1), np.zeros((1, 1)), np.eye(1), gain=0.3, leak=0.0, latency=2)
+    # Operator sequence and carried state: a constant sequence equals the modal transient; a sequence whose
+    # burn-in operator is silent (R = 0: no feedback, no injection) equals the cold start at the window; a
+    # window started from the stationary state stays stationary; the cold start lies below the modal value.
+    loop2 = np.array([[1.0, 0.05], [0.05, 0.7]])
+    sigma2 = np.array([[1.0, 0.2], [0.2, 0.5]])
+    forcing2 = forcing_matrix(np.eye(2), sigma2, gain=0.3, latency=2)
+    modal_window, _ = window_covariance(loop2, forcing2, gain=0.3, leak=0.0, latency=2, n_steps=120, burn_in=40)
+    constant = time_varying_window([loop2], [forcing2], np.zeros(120, dtype=int), gain=0.3, leak=0.0, latency=2, n_steps=120, burn_in=40)
+    cold, _ = window_covariance(loop2, forcing2, gain=0.3, leak=0.0, latency=2, n_steps=120, burn_in=40, initial_state=np.zeros_like(forcing2), start_frame=40)
+    switched = time_varying_window([loop2, np.zeros((2, 2))], [forcing2, np.zeros_like(forcing2)], np.array([1] * 40 + [0] * 80), gain=0.3, leak=0.0, latency=2, n_steps=120, burn_in=40)
+    full_stationary, _, _ = stationary_covariance(np.eye(2), loop2, sigma2, gain=0.3, leak=0.0, latency=2, full_state=True)
+    warm, _ = window_covariance(loop2, forcing2, gain=0.3, leak=0.0, latency=2, n_steps=120, burn_in=40, initial_state=full_stationary, start_frame=40, forcing_from=40)
+    sequence_checks = {
+        "constant_sequence_equals_modal": float(np.max(np.abs(constant - modal_window)) / np.max(np.abs(modal_window))),
+        "silent_burn_in_equals_cold_start": float(np.max(np.abs(switched - cold)) / np.max(np.abs(cold))),
+        "stationary_start_window_over_stationary": float(np.trace(warm) / np.trace(full_stationary[:2, :2])),
+        "cold_start_window_over_modal": float(np.trace(cold) / np.trace(modal_window)),
+    }
     passed = (
         all(abs(case["relative_difference"]) < 1.0e-6 for case in cases)
         and all(abs(entry["variance_in_3x3"] / entry["variance_alone"] - 1.0) < 1.0e-9 for entry in modal)
@@ -264,8 +345,12 @@ def self_test() -> dict[str, Any]:
         and abs(window_check["relative_difference"]) < 1.0e-6
         and all(abs(check["sum_of_first_d_variances"]) < 1.0e-15 and abs(check["variance_after_update_d"] - 0.3**2) < 1.0e-12 for check in delay_checks)
         and unit_pole[0] is None and abs(unit_pole[1] - 1.0) < 1.0e-12
+        and sequence_checks["constant_sequence_equals_modal"] < 1.0e-12
+        and sequence_checks["silent_burn_in_equals_cold_start"] < 1.0e-12
+        and abs(sequence_checks["stationary_start_window_over_stationary"] - 1.0) < 1.0e-9
+        and 0.0 < sequence_checks["cold_start_window_over_modal"] < 1.0
     )
-    return {"unit_feedback_cases": cases, "decoupled_modes_gain_0.3_latency_2": modal, "structured_propagation_max_error": propagation_error, "window_mean_unit_feedback_400_100": window_check, "delayed_injection": delay_checks, "unsensed_mode_has_no_stationary_limit": {"stationary_returned": unit_pole[0], "spectral_radius": unit_pole[1]}, "passed": bool(passed)}
+    return {"unit_feedback_cases": cases, "decoupled_modes_gain_0.3_latency_2": modal, "structured_propagation_max_error": propagation_error, "window_mean_unit_feedback_400_100": window_check, "delayed_injection": delay_checks, "unsensed_mode_has_no_stationary_limit": {"stationary_returned": unit_pole[0], "spectral_radius": unit_pole[1]}, "operator_sequence_and_carried_state": sequence_checks, "passed": bool(passed)}
 
 
 # -- system responses --------------------------------------------------------------
@@ -535,8 +620,8 @@ def _block_covariance(residual: np.ndarray, frames_of: np.ndarray, lenslet: int,
     return np.atleast_2d(np.cov(sample, rowvar=False, ddof=1))
 
 
-def sigma_from_sidecar(metadata: dict[str, Any], arrays: dict[str, np.ndarray], row_ids: tuple[str, ...], n_pupil: int, *, min_fraction: float, min_operator_match: float) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, Any]]:
-    """Noise covariances and row masks under the ``effective``, ``available`` and ``strict`` rules, the operator record and the measured series."""
+def sigma_from_sidecar(metadata: dict[str, Any], arrays: dict[str, np.ndarray], row_ids: tuple[str, ...], n_pupil: int, *, min_fraction: float) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, Any], dict[str, Any]]:
+    """Noise covariances and row masks under the ``effective``, ``available`` and ``strict`` rules, the operator record and the measured series, and the whole-run operator data for the error bounds."""
 
     noisy, twin = metadata["noisy_arm"], metadata["twin_arm"]
     sidecar_rows = tuple(str(value) for value in arrays["row_ids"])
@@ -555,9 +640,12 @@ def sigma_from_sidecar(metadata: dict[str, Any], arrays: dict[str, np.ndarray], 
     residual = np.where(finite[:, :, None], centroids - expected, 0.0)
     n_rows = len(row_ids)
 
-    # The operator the loop used: the modal effective row set of the noisy arm over the analysed frames.
-    effective_noisy = np.asarray(arrays[f"{noisy}__measurement_row_masks"], dtype=bool)[frames]
-    effective_twin = np.asarray(arrays[f"{twin}__measurement_row_masks"], dtype=bool)[frames]
+    # The operator the loop used: the modal effective row set of the noisy arm over the analysed frames,
+    # and the sequence of operators over the whole run (burn-in included) for the operator error bound.
+    effective_noisy_all = np.asarray(arrays[f"{noisy}__measurement_row_masks"], dtype=bool)
+    effective_twin_all = np.asarray(arrays[f"{twin}__measurement_row_masks"], dtype=bool)
+    effective_noisy = effective_noisy_all[frames]
+    effective_twin = effective_twin_all[frames]
     keys = [row.tobytes() for row in effective_noisy]
     counter = Counter(keys)
     modal_key, modal_count = counter.most_common(1)[0]
@@ -565,7 +653,15 @@ def sigma_from_sidecar(metadata: dict[str, Any], arrays: dict[str, np.ndarray], 
     noisy_match = np.array([key == modal_key for key in keys])
     twin_match = np.all(effective_twin == modal_mask, axis=1)
     noisy_fraction, twin_fraction = float(np.mean(noisy_match)), float(np.mean(twin_match))
-    operator_consistent = bool(noisy_fraction >= min_operator_match and twin_fraction >= min_operator_match)
+    burn_in_frames = int(metadata["burn_in_frames"])
+    all_keys = [row.tobytes() for row in effective_noisy_all]
+    distinct_all: dict[bytes, int] = {}
+    sequence = np.zeros(len(all_keys), dtype=int)
+    for frame_number, key in enumerate(all_keys):
+        sequence[frame_number] = distinct_all.setdefault(key, len(distinct_all))
+    distinct_masks = [np.frombuffer(key, dtype=bool).copy() for key in distinct_all]
+    burn_in_match_noisy = float(np.mean([key == modal_key for key in all_keys[:burn_in_frames]])) if burn_in_frames else None
+    burn_in_match_twin = float(np.mean(np.all(effective_twin_all[:burn_in_frames] == modal_mask, axis=1))) if burn_in_frames else None
     sigma_effective = np.zeros((n_rows, n_rows))
     sigma_frames_rule = "frames in which the noisy arm used the modal operator"
     frames_for_sigma = noisy_match if np.count_nonzero(noisy_match) >= 3 else np.ones(frames.size, dtype=bool)
@@ -580,22 +676,69 @@ def sigma_from_sidecar(metadata: dict[str, Any], arrays: dict[str, np.ndarray], 
             target = rows[lenslet][axes]
             sigma_effective[np.ix_(target, target)] = block
     operator = {
-        "definition": "the row set the noisy arm's reconstructor used in the plurality of analysed frames (<arm>__measurement_row_masks); the model's operator R is probed on exactly this set",
+        "definition": "the row set the noisy arm's reconstructor used in the plurality of analysed frames (<arm>__measurement_row_masks); the model's operator R is probed on exactly this set; whether the fixed operator describes the run is decided by the error bounds in prediction.operator_bounds, not by these fractions",
         "rows_in_modal_mask": int(np.count_nonzero(modal_mask)), "rows_total": n_rows,
-        "distinct_effective_masks_noisy": len(counter),
+        "distinct_effective_masks_noisy_analysed": len(counter),
+        "distinct_effective_masks_noisy_all_frames": len(distinct_masks),
         "noisy_frames_under_modal_operator": int(modal_count), "noisy_match_fraction": noisy_fraction,
         "twin_frames_under_modal_operator": int(np.count_nonzero(twin_match)), "twin_match_fraction": twin_fraction,
+        "burn_in_match_fraction_noisy": burn_in_match_noisy, "burn_in_match_fraction_twin": burn_in_match_twin,
         "rows_always_effective_noisy": int(np.count_nonzero(np.all(effective_noisy, axis=0))),
         "rows_ever_effective_noisy": int(np.count_nonzero(np.any(effective_noisy, axis=0))),
-        "min_operator_match_fraction": float(min_operator_match),
-        "operator_consistent": operator_consistent,
         "sigma_frames": sigma_frames_rule,
-        "comparison_status": "operator-consistent" if operator_consistent else "mask-variable: the loop had no single operator in at least one arm; the prediction is reported and the comparison is descriptive",
     }
 
     # Telemetry-based sensitivities.
     usable = valid & supported & finite
     fraction = np.mean(usable, axis=0)
+    # The all-row covariance for the operators of the run: the modal rows keep the effective rule's blocks
+    # exactly; a row outside the modal mask takes its lenslet's own usable frames (zero when fewer than three).
+    sigma_all = sigma_effective.copy()
+    rows_outside_without_estimate = 0
+    for lenslet in range(len(lenslets)):
+        pair = rows[lenslet]
+        inside = modal_mask[pair]
+        if np.all(inside):
+            continue
+        block = _block_covariance(residual, usable[:, lenslet], lenslet, np.array([0, 1]))
+        if block is None:
+            rows_outside_without_estimate += int(np.count_nonzero(~inside))
+            continue
+        for i in range(2):
+            for j in range(2):
+                if not (inside[i] and inside[j]):
+                    sigma_all[pair[i], pair[j]] = block[i, j]
+    # Gate activity before the window (what the linear model does not carry into it).
+    all_frames = np.arange(len(all_keys))
+    burn_in_index = all_frames[:burn_in_frames]
+    disagreement_all = np.asarray(arrays["mask_disagreement_rows"], dtype=float)
+    usable_all = {arm: np.asarray(arrays[f"{arm}__reconstruction_usable"], dtype=bool) for arm in (noisy, twin)}
+    acted_any = {arm: recovery_acted(metadata.get("arms", {}).get(arm, {}).get("recovery")) for arm in (noisy, twin)}
+    burn_in_disagreement = float(np.sum(disagreement_all[burn_in_index]) / (n_rows * burn_in_frames)) if burn_in_frames else 0.0
+    burn_in_rejected = {arm: int(np.count_nonzero(~usable_all[arm][burn_in_index])) for arm in (noisy, twin)}
+    saturation_all = {arm: np.asarray(arrays[f"{arm}__saturation_fraction"], dtype=float) for arm in (noisy, twin)}
+    burn_in_saturation = {arm: (float(np.mean(saturation_all[arm][burn_in_index])) if burn_in_frames else 0.0) for arm in (noisy, twin)}
+    disagreement_frames = disagreement_all[burn_in_index] > 0
+    rejected_frames = ~usable_all[noisy][burn_in_index] | ~usable_all[twin][burn_in_index]
+    saturated_frames = (saturation_all[noisy][burn_in_index] > 1.0e-3) | (saturation_all[twin][burn_in_index] > 1.0e-3)
+    unmodelled = disagreement_frames | rejected_frames | saturated_frames
+    if any(acted_any.values()):
+        unmodelled = np.ones(burn_in_frames, dtype=bool)
+    last_unmodelled = int(np.flatnonzero(unmodelled).max()) if np.any(unmodelled) else None
+    burn_in = {
+        "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+        "frames": burn_in_frames,
+        "mask_disagreement_row_frames_fraction": burn_in_disagreement,
+        "frames_with_mask_disagreement": int(np.count_nonzero(disagreement_frames)),
+        "rejected_frames": burn_in_rejected,
+        "recovery_acted": acted_any,
+        "saturation_fraction_mean": burn_in_saturation,
+        "frames_with_saturation": int(np.count_nonzero(saturated_frames)),
+        "unmodelled_frames": int(np.count_nonzero(unmodelled)),
+        "last_unmodelled_frame": last_unmodelled,
+        "quiet": last_unmodelled is None,
+    }
+    operator_data = {"distinct_masks": distinct_masks, "sequence": sequence, "modal_index": int(distinct_all[modal_key]), "sigma_all": sigma_all, "rows_outside_without_estimate": rows_outside_without_estimate, "burn_in": burn_in}
     strict_lenslets = fraction >= 1.0
     available_lenslets = fraction >= float(min_fraction)
     sigmas: dict[str, np.ndarray] = {"effective": sigma_effective}
@@ -612,9 +755,9 @@ def sigma_from_sidecar(metadata: dict[str, Any], arrays: dict[str, np.ndarray], 
         sigmas[rule], masks[rule] = sigma, mask
     blocks = int(len(delta_v) // 25)
     block_se = None if blocks < 2 else float(np.std(delta_v[: blocks * 25].reshape(blocks, 25).mean(axis=1), ddof=1) / np.sqrt(blocks))
-    rejected = {arm: int(np.count_nonzero(~np.asarray(arrays[f"{arm}__reconstruction_usable"], dtype=bool)[frames])) for arm in (noisy, twin)}
-    acted = {arm: recovery_acted(metadata.get("arms", {}).get(arm, {}).get("recovery")) for arm in (noisy, twin)}
-    disagreement = np.asarray(arrays["mask_disagreement_rows"], dtype=float)[frames]
+    rejected = {arm: int(np.count_nonzero(~usable_all[arm][frames])) for arm in (noisy, twin)}
+    acted = acted_any
+    disagreement = disagreement_all[frames]
     map_pupil = int(np.count_nonzero(arrays["residual_maps__pupil_mask"])) if "residual_maps__pupil_mask" in arrays else None
     info = {
         "source": "sidecar_realized_residuals (c_noisy - c_expected on the noisy arm's lenslets, ddof 1, 2x2 per lenslet)",
@@ -624,6 +767,7 @@ def sigma_from_sidecar(metadata: dict[str, Any], arrays: dict[str, np.ndarray], 
         "config_hash": metadata["config_hash"],
         "analysed_frames": int(frames.size),
         "operator": operator,
+        "burn_in": burn_in,
         "support_rules": {
             "effective": {"definition": "rows of the modal effective mask (the operator the loop used); covariance over the frames in which the noisy arm used that operator", "lenslet_fraction": float(np.mean(np.all(modal_mask[rows], axis=1))), "rows_with_noise": int(np.count_nonzero(np.any(sigma_effective != 0.0, axis=0)))},
             "available": {"definition": f"lenslets valid, supported and finite in at least {float(min_fraction):g} of the analysed frames; covariance over each lenslet's own valid frames", "min_fraction": float(min_fraction), "lenslet_fraction": float(np.mean(available_lenslets)), "rows_with_noise": int(np.count_nonzero(masks["available"])), "mean_valid_fraction_of_included": float(np.mean(fraction[available_lenslets])) if np.any(available_lenslets) else None},
@@ -643,7 +787,7 @@ def sigma_from_sidecar(metadata: dict[str, Any], arrays: dict[str, np.ndarray], 
         "residual_map_pupil_samples": map_pupil,
         "pupil_samples_equal_to_model": None if map_pupil is None else map_pupil == n_pupil,
     }
-    return sigmas, masks, info
+    return sigmas, masks, info, operator_data
 
 
 # -- main ----------------------------------------------------------------------------
@@ -661,7 +805,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pilot-record", type=Path, help="the timing pilot's record that references the sidecar (digest, size, frame counts, label, seed and hash are checked)")
     parser.add_argument("--support", choices=RULES, default="effective", help="which noise-covariance rule is the primary prediction (sidecar mode; every rule is reported)")
     parser.add_argument("--support-min-fraction", type=float, default=0.9, help="inclusion threshold of the available rule (fraction of analysed frames a lenslet must be usable)")
-    parser.add_argument("--min-operator-match", type=float, default=0.95, help="fraction of analysed frames in which each arm must have used the modal operator for the comparison to count as operator-consistent")
+    parser.add_argument("--operator-tolerance", type=float, default=0.02, help="largest relative difference between the prediction propagated with the actual operator of every frame (burn-in included) and the modal-operator prediction for the run to count as operator-consistent")
+    parser.add_argument("--carried-state-tolerance", type=float, default=0.02, help="largest inherited fraction from the last burn-in frame the model does not carry (gate activity or saturation above 1e-3) for the run to count as operator-consistent; a quiet burn-in needs none")
+    parser.add_argument("--max-distinct-masks", type=int, default=64, help="above this many distinct effective masks in the run the time-varying prediction is not computed (one reconstructor probe per mask) and the run is mask-variable")
     parser.add_argument("--max-state", type=int, default=4000, help="refuse a Lyapunov state larger than this (controlled actuators x (latency + 1))")
     parser.add_argument("--max-dense-mib", type=float, default=1024.0, help="refuse a dense pupil response larger than this")
     parser.add_argument("--self-test", action="store_true", help="check the solver against kappa in the unit-feedback limit, the delayed injection and the structured propagation, and exit")
@@ -732,11 +878,12 @@ def main(argv: list[str] | None = None) -> int:
     burn_in = int(metadata["burn_in_frames"]) if metadata is not None else int(arguments.burn_in)
     kappa = scalar_kappa(gain, leak, latency)
 
+    operator_data: dict[str, Any] | None = None
     if arguments.sigma == "flat":
         sigmas, masks, sigma_info = sigma_from_flat_wavefront(system, row_ids)
         primary_rule = "flat"
     else:
-        sigmas, masks, sigma_info = sigma_from_sidecar(metadata, arrays, row_ids, n_pupil, min_fraction=arguments.support_min_fraction, min_operator_match=arguments.min_operator_match)
+        sigmas, masks, sigma_info, operator_data = sigma_from_sidecar(metadata, arrays, row_ids, n_pupil, min_fraction=arguments.support_min_fraction)
         primary_rule = arguments.support
     sigma_info["primary_rule"] = primary_rule
     if validation is not None:
@@ -746,6 +893,8 @@ def main(argv: list[str] | None = None) -> int:
     response_full = reconstructor_matrix(system.reconstructor, row_ids)
     probe_full_s = time.perf_counter() - started
     weights_series = np.einsum("ir,ij,jr->r", response_full, gram, response_full) / n_pupil
+    responses: dict[str, np.ndarray] = {}
+    loops: dict[str, np.ndarray] = {}
 
     def predict(rule: str, sigma: np.ndarray, mask: np.ndarray) -> dict[str, Any]:
         started = time.perf_counter()
@@ -758,6 +907,7 @@ def main(argv: list[str] | None = None) -> int:
                 return {"status": "not defined", "reason": str(exc), "rows_valid_in_mask": int(np.count_nonzero(mask)), "rows_total": int(len(mask))}
         probe_s = time.perf_counter() - started
         loop = response @ dense
+        responses[rule], loops[rule] = response, loop
         eigen = np.linalg.eigvals(loop)
         real_eigen = np.sort(np.real(eigen))
         started = time.perf_counter()
@@ -789,7 +939,7 @@ def main(argv: list[str] | None = None) -> int:
                 "min": float(real_eigen[0]), "percentile_10": float(np.percentile(real_eigen, 10)), "median": float(np.median(real_eigen)), "max": float(real_eigen[-1]),
                 "fraction_below_0.9": float(np.mean(real_eigen < 0.9)), "fraction_below_0.5": float(np.mean(real_eigen < 0.5)),
                 "count_below_1e-6": int(np.count_nonzero(real_eigen < 1.0e-6)),
-                "unsensed_modes_note": "a mode with feedback below 1e-6 is left unsensed by this mask; with no leak it has a unit pole, no stationary limit exists and the window prediction grows with the run length (the run is support-sensitive)",
+                "unsensed_modes_note": "a mode with feedback below 1e-6 is left unsensed by this mask; with no leak it has a unit pole, no stationary limit exists and the finite-window prediction (the primary quantity) grows with the run length; the count is reported and no rule attaches to it",
                 "max_abs_imaginary": float(np.max(np.abs(np.imag(eigen)))),
                 "max_abs_deviation_of_L_from_identity": float(np.max(np.abs(loop - np.eye(size_c)))),
             },
@@ -810,6 +960,123 @@ def main(argv: list[str] | None = None) -> int:
 
     predictions = {rule: predict(rule, sigmas[rule], masks[rule]) for rule in sigmas}
     primary = predictions[primary_rule]
+
+    def operator_bounds() -> dict[str, Any]:
+        """The two error bounds of the fixed-operator comparison, for the effective rule (sidecar mode)."""
+
+        if operator_data is None:
+            return {"status": "not applicable", "reason": "flat mode: no run, no operator sequence"}
+        effective = predictions.get("effective")
+        if effective is None or effective.get("status") != "defined":
+            return {"status": "not applicable", "reason": "the effective rule's operator is not defined for this run"}
+        sigma_modal, response_modal, loop_modal = sigmas["effective"], responses["effective"], loops["effective"]
+        modal_mask = masks["effective"]
+        modal_value = effective["delta_v_exact_window_m2"]
+        forcing_modal = forcing_matrix(response_modal, sigma_modal, gain=gain, latency=latency)
+        # (2) the carried state: the modal-operator window restarted from a zero state (sensitivities: at the first
+        # analysed frame and, where a limit exists, from the stationary state; the bound: after the last unmodelled frame).
+        cold_block, _ = window_covariance(loop_modal, forcing_modal, gain=gain, leak=leak, latency=latency, n_steps=n_steps, burn_in=burn_in, initial_state=np.zeros_like(forcing_modal), start_frame=burn_in)
+        cold_value = float(np.trace(gram @ cold_block) / n_pupil)
+        full_stationary, _, _ = stationary_covariance(response_modal, loop_modal, sigma_modal, gain=gain, leak=leak, latency=latency, full_state=True)
+        warm_value: float | None = None
+        if full_stationary is not None:
+            warm_block, _ = window_covariance(loop_modal, forcing_modal, gain=gain, leak=leak, latency=latency, n_steps=n_steps, burn_in=burn_in, initial_state=full_stationary, start_frame=burn_in, forcing_from=burn_in)
+            warm_value = float(np.trace(gram @ warm_block) / n_pupil)
+        burn_in_state = operator_data["burn_in"]
+        last_unmodelled = burn_in_state["last_unmodelled_frame"]
+        if last_unmodelled is None:
+            restart_value = None
+            error_bound = None
+        else:
+            restart_block, _ = window_covariance(loop_modal, forcing_modal, gain=gain, leak=leak, latency=latency, n_steps=n_steps, burn_in=burn_in, initial_state=np.zeros_like(forcing_modal), start_frame=last_unmodelled + 1)
+            restart_value = float(np.trace(gram @ restart_block) / n_pupil)
+            error_bound = float((modal_value - restart_value) / modal_value)
+        carried = {
+            "definition": "the window value is affine in the loop's state at any frame; the check re-runs the modal-operator window from a zero state (identical commands, an empty queue) right after the last burn-in frame the model does not carry, and the fraction of the primary value this removes (inherited_fraction_from_last_unmodelled_frame) is the largest relative error a wrong carried state can cause per unit of its own relative error; it is the carried-state error bound, required within tolerance whenever such a frame exists; the inherited fraction from the first analysed frame (the share of the window value carried in from the whole burn-in) and the window value under a stationary carried state are sensitivities",
+            "last_unmodelled_frame": last_unmodelled,
+            "cold_start_after_last_unmodelled_frame_m2": restart_value,
+            "inherited_fraction_from_last_unmodelled_frame": error_bound,
+            "cold_start_at_first_analysed_frame_m2": cold_value,
+            "inherited_fraction": float((modal_value - cold_value) / modal_value),
+            "stationary_start_window_m2": warm_value,
+            "stationary_start_over_primary": None if warm_value is None else warm_value / modal_value,
+            "tolerance": float(arguments.carried_state_tolerance),
+            "burn_in_quiet": burn_in_state["quiet"],
+            "required": last_unmodelled is not None,
+        }
+        # (1) the operator error: the transient with the operator of every frame of the run (burn-in included).
+        distinct, sequence, modal_index = operator_data["distinct_masks"], operator_data["sequence"], operator_data["modal_index"]
+        sigma_all = operator_data["sigma_all"]
+        varying: dict[str, Any]
+        if len(distinct) > arguments.max_distinct_masks:
+            varying = {"status": "not computed", "reason": f"{len(distinct)} distinct effective masks in the run exceed --max-distinct-masks {arguments.max_distinct_masks}", "distinct_masks_all_frames": len(distinct)}
+        else:
+            loop_list: list[np.ndarray] = []
+            forcing_list: list[np.ndarray] = []
+            refused: str | None = None
+            started_probe = time.perf_counter()
+            for mask in distinct:
+                if np.array_equal(mask, modal_mask):
+                    loop_list.append(loop_modal)
+                    forcing_list.append(forcing_modal)
+                    continue
+                if np.all(mask):
+                    response = response_full
+                else:
+                    try:
+                        response = reconstructor_matrix_masked(system.reconstructor, row_ids, mask, coordinate_ids)
+                    except MaskRefused as exc:
+                        refused = str(exc)
+                        break
+                loop_list.append(response @ dense)
+                forcing_list.append(forcing_matrix(response, sigma_all * np.outer(mask, mask), gain=gain, latency=latency))
+            probe_s = time.perf_counter() - started_probe
+            if refused is not None:
+                varying = {"status": "not computed", "reason": f"an operator the run used is refused by the reconstructor ({refused}); such a run has rejected frames and is gate-active", "distinct_masks_all_frames": len(distinct), "probe_s": probe_s}
+            else:
+                hybrid = sequence.copy()
+                hybrid[burn_in:] = modal_index
+                value = float(np.trace(gram @ time_varying_window(loop_list, forcing_list, sequence, gain=gain, leak=leak, latency=latency, n_steps=n_steps, burn_in=burn_in)) / n_pupil)
+                carried_in = float(np.trace(gram @ time_varying_window(loop_list, forcing_list, hybrid, gain=gain, leak=leak, latency=latency, n_steps=n_steps, burn_in=burn_in)) / n_pupil)
+                varying = {
+                    "status": "computed",
+                    "definition": "the transient propagated with the noisy arm's actual operator of every frame of the run (burn-in included; the increment released at update k carries the operator of frame k - d; each distinct effective mask probed once; Sigma restricted to each operator's rows, the modal rows keeping the effective rule's blocks); the relative difference from the modal-operator prediction is the operator error, split into the part carried in from burn-in (actual operators before the window, the modal one inside it) and the part from operator changes inside the window",
+                    "delta_v_window_m2": value,
+                    "relative_difference_vs_modal": float((value - modal_value) / modal_value),
+                    "burn_in_carried_component": float((carried_in - modal_value) / modal_value),
+                    "window_operator_component": float((value - carried_in) / modal_value),
+                    "distinct_masks_all_frames": len(distinct),
+                    "frames_not_under_modal_operator": int(np.count_nonzero(sequence != modal_index)),
+                    "burn_in_frames_not_under_modal_operator": int(np.count_nonzero(sequence[:burn_in] != modal_index)),
+                    "rows_outside_modal_mask_without_noise_estimate": int(operator_data["rows_outside_without_estimate"]),
+                    "probe_s": probe_s,
+                    "tolerance": float(arguments.operator_tolerance),
+                }
+        within_operator = varying["status"] == "computed" and abs(varying["relative_difference_vs_modal"]) <= arguments.operator_tolerance
+        within_carried = carried["inherited_fraction_from_last_unmodelled_frame"] is None or carried["inherited_fraction_from_last_unmodelled_frame"] <= arguments.carried_state_tolerance
+        reasons: list[str] = []
+        labels: list[str] = []
+        if varying["status"] != "computed":
+            reasons.append(varying["reason"])
+            labels.append("not computed")
+        elif not within_operator:
+            reasons.append(f"operator error {varying['relative_difference_vs_modal'] * 100:+.2f} % exceeds the {arguments.operator_tolerance * 100:g} % tolerance")
+            labels.append("mask-variable")
+        if not within_carried:
+            reasons.append(f"inherited fraction from the last unmodelled burn-in frame ({last_unmodelled}) {carried['inherited_fraction_from_last_unmodelled_frame'] * 100:.2f} % exceeds the {arguments.carried_state_tolerance * 100:g} % tolerance")
+            labels.append("carried-state-sensitive")
+        return {
+            "status": "evaluated",
+            "rule": "operator-consistent when the operator error is within --operator-tolerance and, if the burn-in had a frame the model does not carry, the inherited fraction from the last such frame is within --carried-state-tolerance; otherwise mask-variable (operator error) or carried-state-sensitive (inherited fraction)",
+            "operator_consistent": bool(within_operator and within_carried),
+            "classification": "operator-consistent" if within_operator and within_carried else ", ".join(labels),
+            "reasons": reasons,
+            "time_varying": varying,
+            "carried_state": carried,
+            "burn_in": burn_in_state,
+        }
+
+    bounds = operator_bounds()
     common: dict[str, Any] = {
         "schema": SCHEMA, "mode": "model", "purpose": "analysis-only linear closed-loop noise model; no loop is run; no scientific claim by itself",
         "configuration": described, "diagnostic_alpha_override": arguments.alpha, "config_hash": config.config_hash, "root_seed": root_seed, "n_steps_in_hash": n_steps, "window_frames": [burn_in, n_steps],
@@ -852,6 +1119,7 @@ def main(argv: list[str] | None = None) -> int:
             "exact_window_over_scalar_series_weights": primary["exact_window_over_scalar_series_weights"],
             "exact_window_over_diagonal_sigma": primary["exact_window_over_diagonal_sigma"],
             "propagation_weights_series_sum_m2_per_px2": float(np.sum(weights_series)),
+            "operator_bounds": bounds,
             "by_noise_covariance_rule": by_rule,
         },
     }
@@ -859,9 +1127,16 @@ def main(argv: list[str] | None = None) -> int:
     if measured is not None:
         se = sigma_info.get("measured_delta_v_block25_se_m2")
         window = primary["delta_v_exact_window_m2"]
+        consistent = bounds.get("operator_consistent") if bounds.get("status") == "evaluated" else None
+        if consistent is None:
+            status = "not assessed: " + str(bounds.get("reason"))
+        elif consistent:
+            status = "operator-consistent"
+        else:
+            status = bounds["classification"] + ": " + "; ".join(bounds["reasons"]) + "; the prediction is reported and the comparison is descriptive"
         record["comparison"] = {
-            "status": operator["comparison_status"] if operator is not None else "operator-consistent",
-            "operator_consistent": None if operator is None else operator["operator_consistent"],
+            "status": status,
+            "operator_consistent": consistent,
             "measured_delta_v_mean_m2": measured,
             "measured_delta_v_block25_se_m2": se,
             "measured_over_exact_window": measured / window if window > 0 else None,
@@ -870,11 +1145,12 @@ def main(argv: list[str] | None = None) -> int:
             "measured_over_scalar_series_weights": measured / primary["delta_v_scalar_reduction_series_weights_m2"] if primary["delta_v_scalar_reduction_series_weights_m2"] > 0 else None,
             "exact_window_within_2_block_se": None if se is None else bool(abs(measured - window) <= 2.0 * se),
             "measured_over_exact_window_by_rule": {rule: (None if entry.get("status") != "defined" or entry["delta_v_exact_window_m2"] <= 0 else measured / entry["delta_v_exact_window_m2"]) for rule, entry in predictions.items()},
-            "note": "a pilot-level consistency check of the model against one run; the protocol's acceptance rules, not this ratio, decide anything; a mask-variable run's comparison is descriptive",
+            "note": "a pilot-level consistency check of the model against one run; the protocol's acceptance rules, not this ratio, decide anything; a run that is not operator-consistent (mask-variable or carried-state-sensitive) has a descriptive comparison",
         }
     write_record_once(arguments.output, record)
     print(json.dumps({"configuration": described, "controlled": size_c, "primary_rule": primary_rule, "rows_in_mask": primary["rows_valid_in_mask"],
-                      "operator": None if operator is None else {k: operator[k] for k in ("noisy_match_fraction", "twin_match_fraction", "operator_consistent")},
+                      "operator": None if operator is None else {k: operator[k] for k in ("noisy_match_fraction", "twin_match_fraction", "burn_in_match_fraction_noisy")},
+                      "operator_bounds": None if bounds.get("status") != "evaluated" else {"classification": bounds["classification"], "operator_error": bounds["time_varying"].get("relative_difference_vs_modal"), "burn_in_carried_component": bounds["time_varying"].get("burn_in_carried_component"), "last_unmodelled_burn_in_frame": bounds["burn_in"]["last_unmodelled_frame"], "carried_state_error_bound": bounds["carried_state"]["inherited_fraction_from_last_unmodelled_frame"], "inherited_fraction_from_first_analysed_frame": bounds["carried_state"]["inherited_fraction"], "reasons": bounds["reasons"]},
                       "feedback_min": primary["feedback_spectrum"]["min"], "fraction_below_0.9": primary["feedback_spectrum"]["fraction_below_0.9"],
                       "delta_v_exact_window_nm2": primary["delta_v_exact_window_m2"] * 1e18, "delta_v_exact_stationary_nm2": None if primary["delta_v_exact_stationary_m2"] is None else primary["delta_v_exact_stationary_m2"] * 1e18, "delta_v_scalar_mask_nm2": primary["delta_v_scalar_reduction_mask_m2"] * 1e18,
                       "sidecar_validation": None if validation is None else {k: v for k, v in validation.items() if k != "structural"} | {"structural": "passed"},

@@ -1,0 +1,143 @@
+{
+ "schema": "post_t2_linear_loop_noise_model.v4",
+ "mode": "model",
+ "purpose": "analysis-only linear closed-loop noise model; no loop is run; no scientific claim by itself",
+ "configuration": "ci derivation of scripts/detector_level_convergence_study.py (eso_scao_smoke_5m_software@2 geometry with det_emccd_12m_medium_derived@3 physics), m_AB 7",
+ "diagnostic_alpha_override": null,
+ "config_hash": "1a8c21bc261c4bf1079df9a1df15070ae5d2b80aebbf09f677bc786e4c7f1724",
+ "root_seed": 71,
+ "n_steps_in_hash": 400,
+ "window_frames": [
+  100,
+  400
+ ],
+ "controller": {
+  "gain": 0.4,
+  "leak": 0.0,
+  "latency_frames": 2
+ },
+ "reconstructor": {
+  "kind": "sparse_lsmr_tikhonov",
+  "alpha": 0.001,
+  "rcond": null,
+  "min_valid_fraction": 0.5
+ },
+ "dimensions": {
+  "rows": 144,
+  "controlled_actuators": 96,
+  "pupil_samples": 10224,
+  "lyapunov_state": 288
+ },
+ "mask_rule": "the reconstructor is probed with exactly the rows that carry noise valid (one fixed mask per rule for L, the injection and Sigma); the primary rule takes the operator the loop used in the plurality of analysed frames; the series' all-valid propagation weights are kept for the first draft's scalar value",
+ "noise_covariance": {
+  "source": "flat_wavefront_model (detector_covariance_v2 at a flat wavefront; a-priori)",
+  "xy_correlation_from_model": true,
+  "support_rules": {
+   "flat": {
+    "definition": "lenslets the flat-wavefront model supports",
+    "lenslet_fraction": 1.0,
+    "rows_with_noise": 144
+   }
+  },
+  "mean_sigma_px_on_supported": 0.026833980044401923,
+  "primary_rule": "flat"
+ },
+ "timing": {
+  "build_s": 6.386269025000047,
+  "full_probe_s": 1.0862928520000423,
+  "flat_s": {
+   "reconstructor_probe": 1.6529000049558817e-05,
+   "lyapunov_two_solves": 0.32948272499993436,
+   "window_two_propagations": 0.5717142959999819
+  }
+ },
+ "ru_maxrss_bytes": 134021120,
+ "host": {
+  "platform": "linux",
+  "machine": "x86_64",
+  "node": "vm",
+  "python": "3.11.17 (main, Oct  1 2026, 15:41:07) [GCC 13.3.0]",
+  "numpy": "2.4.6"
+ },
+ "enabled_by_user": null,
+ "feedback_spectrum": {
+  "definition": "eigenvalues of L = R_mask M on the controlled actuators (1 = unit feedback; below 1 = damped mode; the scalar model assumes all 1)",
+  "min": 4.6414677876288456e-07,
+  "percentile_10": 0.999993305377419,
+  "median": 0.999998971445875,
+  "max": 0.9999995893951841,
+  "fraction_below_0.9": 0.010416666666666666,
+  "fraction_below_0.5": 0.010416666666666666,
+  "count_below_1e-6": 1,
+  "unsensed_modes_note": "a mode with feedback below 1e-6 is left unsensed by this mask; with no leak it has a unit pole, no stationary limit exists and the finite-window prediction (the primary quantity) grows with the run length; the count is reported and no rule attaches to it",
+  "max_abs_imaginary": 7.981669615584543e-09,
+  "max_abs_deviation_of_L_from_identity": 0.01756216079304156
+ },
+ "stationarity": {
+  "spectral_radius_F": 0.9999998143412194,
+  "stationary_limit_exists": true,
+  "lyapunov_relative_residual": 5.022492327958338e-11,
+  "window_end_over_stationary": 0.5003598078655592,
+  "note": null
+ },
+ "prediction": {
+  "primary_status": "defined",
+  "primary_rule": "flat",
+  "units": "m2 (piston-removed pupil mean square of the noise-driven correction difference; the sidecar's delta_v_m2 in expectation)",
+  "primary": "delta_v_exact_window_m2 (transient from identical initial commands with the noise entering after the latency, averaged over the analysed frames; noise covariance rule 'flat')",
+  "delta_v_exact_window_m2": 7.354290276501494e-17,
+  "delta_v_exact_window_diagonal_sigma_m2": 7.57223140702607e-17,
+  "delta_v_exact_stationary_m2": 1.4698818455620446e-16,
+  "delta_v_scalar_reduction_mask_m2": 7.573709650252436e-17,
+  "delta_v_scalar_reduction_series_weights_m2": 7.573709650252436e-17,
+  "delta_v_one_step_open_loop_m2": 1.0440337456913794e-16,
+  "scalar_kappa": 0.7045454545454547,
+  "window_over_stationary": 0.5003320708195702,
+  "exact_window_over_scalar_mask": 0.9710288109944076,
+  "exact_window_over_scalar_series_weights": 0.9710288109944076,
+  "exact_window_over_diagonal_sigma": 0.9712183742400747,
+  "propagation_weights_series_sum_m2_per_px2": 1.5096694998466646e-13,
+  "operator_bounds": {
+   "status": "not applicable",
+   "reason": "flat mode: no run, no operator sequence"
+  },
+  "by_noise_covariance_rule": {
+   "flat": {
+    "status": "defined",
+    "rows_valid_in_mask": 144,
+    "rows_total": 144,
+    "feedback_spectrum": {
+     "definition": "eigenvalues of L = R_mask M on the controlled actuators (1 = unit feedback; below 1 = damped mode; the scalar model assumes all 1)",
+     "min": 4.6414677876288456e-07,
+     "percentile_10": 0.999993305377419,
+     "median": 0.999998971445875,
+     "max": 0.9999995893951841,
+     "fraction_below_0.9": 0.010416666666666666,
+     "fraction_below_0.5": 0.010416666666666666,
+     "count_below_1e-6": 1,
+     "unsensed_modes_note": "a mode with feedback below 1e-6 is left unsensed by this mask; with no leak it has a unit pole, no stationary limit exists and the finite-window prediction (the primary quantity) grows with the run length; the count is reported and no rule attaches to it",
+     "max_abs_imaginary": 7.981669615584543e-09,
+     "max_abs_deviation_of_L_from_identity": 0.01756216079304156
+    },
+    "stationarity": {
+     "spectral_radius_F": 0.9999998143412194,
+     "stationary_limit_exists": true,
+     "lyapunov_relative_residual": 5.022492327958338e-11,
+     "window_end_over_stationary": 0.5003598078655592,
+     "note": null
+    },
+    "delta_v_exact_window_m2": 7.354290276501494e-17,
+    "delta_v_exact_window_diagonal_sigma_m2": 7.57223140702607e-17,
+    "delta_v_exact_stationary_m2": 1.4698818455620446e-16,
+    "delta_v_exact_stationary_diagonal_sigma_m2": 1.5320964390494384e-16,
+    "delta_v_scalar_reduction_mask_m2": 7.573709650252436e-17,
+    "delta_v_scalar_reduction_series_weights_m2": 7.573709650252436e-17,
+    "delta_v_one_step_open_loop_m2": 1.0440337456913794e-16,
+    "window_over_stationary": 0.5003320708195702,
+    "exact_window_over_scalar_mask": 0.9710288109944076,
+    "exact_window_over_scalar_series_weights": 0.9710288109944076,
+    "exact_window_over_diagonal_sigma": 0.9712183742400747
+   }
+  }
+ }
+}

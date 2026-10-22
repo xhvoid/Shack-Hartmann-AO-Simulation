@@ -74,9 +74,15 @@ pseudo-inverse; marking them noiseless but valid would describe another
 loop (review round 2). The row set itself is the one the loop used: the
 noisy arm's effective row mask in the plurality of analysed frames
 (`<arm>__measurement_row_masks`, "effective rows used by the reconstructor"),
-not a set inferred from telemetry validity; a run whose arms used that
-operator in fewer than 95 % of the analysed frames had no single operator
-and is outside the fixed-mask model's domain (review round 3).
+not a set inferred from telemetry validity (review round 3). Whether that
+fixed operator describes the run is decided by two error bounds (review
+round 4): the transient propagated with the operator of every frame,
+burn-in included (update `k` carrying the operator of frame `k - d`),
+against the modal one; and, because the window value is affine in the
+loop's state at any frame, the window value restarted from a zero state
+right after the last burn-in frame the model does not carry (a row of mask
+disagreement, a rejected reconstruction, a recovery action, saturation
+above 1e-3) against the primary. The match fractions are diagnostics.
 
 **Transient and stationary covariance.** With `x_k = (dc_k, dc_{k-1}, ...,
 dc_{k-d})`, `x_{k+1} = F x_k + [k >= d] G n_{k-d}` with `F = [[(1-l) I, 0,
@@ -88,7 +94,7 @@ radius of `F` is below one the stationary limit solves `P = F P F^T + G
 Sigma G^T` (discrete Lyapunov, `scipy.linalg.solve_discrete_lyapunov`).
 `Cov(dc)` is the leading block in both cases. The isolated detector-noise variance recorded by the paired
 runs (`delta_v_m2`: piston-removed pupil mean square of the noisy-minus-twin
-residual map) is, in expectation,
+residual map) is, in expectation, The same companion form propagates a time-varying operator: with `F_k` and `G_k` built from the operator of frame `k - d`, `P_{k+1} = F_k P_k F_k^T + [k >= d] G_k Sigma_k G_k^T`, which is the operator error bound of review round 4 (the operator of every frame, burn-in included); and because `P_k` enters every later window term linearly, the window mean is affine in the state at any frame, which is the carried-state bound (the window restarted from `P = 0` right after the last burn-in frame the model does not carry).
 
     DeltaV_pred = tr(Gram Cov(dc)) / N_pupil,    Gram = W_c^T W_c,
 

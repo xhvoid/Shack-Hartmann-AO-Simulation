@@ -13,7 +13,11 @@ delayed injection and single mask); `README.md` section 9. Revision 4
 (2026-10-22, before approval, review round 3): sections 1.6, 1.7, 5 and 7
 (the operator the loop used as the model's mask, the mask-variable
 exclusion, and "not expressible" never read as a departure); `README.md`
-section 10.
+section 10. Revision 5 (2026-10-22, before approval, review round 4):
+sections 0, 1.6, 1.7 and 7 (the operator exclusion decided by two
+quantified error bounds instead of a frame-count threshold, burn-in state
+included; one authoritative exclusion list in 1.6 (iv)); `README.md`
+section 11.
 
 ## 0. Rules common to every stage
 
@@ -32,8 +36,8 @@ settings within a realization (E2 twin arm, non-pupil axes) are paired.
 
 **Intervals.** Student t with `n_adm - 1` degrees of freedom over the
 **admissible** units, `n_adm` being the units that remain after the
-predeclared exclusions of the stage (refused rows, the saturation and
-gate-quiet exclusions of 1.6, a missing realization); the quantile follows
+predeclared exclusions of the stage (refused rows, a missing realization,
+and for S4 A1 the three exclusions listed once in 1.6 (iv)); the quantile follows
 the count actually used (`t_0.975` = 2.776 at 4 dof, 3.182 at 3 dof, 4.303
 at 2 dof, 12.706 at 1 dof, 2.365 at 7 dof, 2.262 at 9 dof) and is never the
 planned count's quantile when units were excluded. Every interval is
@@ -194,15 +198,39 @@ feedback included.
   sidecar's per-frame effective row masks), probes `R` on exactly that set,
   and takes `Sigma` as the realized covariance of `c_noisy - c_expected`
   per lenslet (2 x 2 blocks, x/y correlation kept, `ddof = 1`) over the
-  frames in which that operator was in use. The sidecar also tells in how
-  many analysed frames each arm used that operator; a run in which either
-  arm used it in fewer than 95 % of the analysed frames is **mask-variable**
-  (the loop had no single operator), its prediction is reported, and it is
-  excluded from the closure test as a predeclared exclusion beside
-  saturation and gate activity (a mask-variable run is usually gate-active
-  as well, but the two rules are distinct: a run can change operator over
-  time with both arms agreeing). Two telemetry-based rules are reported as
-  sensitivities, never as the primary: **available** (lenslets valid,
+  frames in which that operator was in use. Whether taking that operator
+  as fixed describes the run is decided by two quantified error bounds, not
+  by a frame-count threshold (review round 4): (1) the **time-varying
+  prediction** propagates the same transient with the noisy arm's actual
+  operator of every frame of the run, burn-in included (each distinct
+  effective mask probed once; the increment released at update `k` carries
+  the operator of frame `k - d`), so the state the loop carried into the
+  analysed window under whatever operators the burn-in used is accounted
+  for; its relative difference from the modal-operator prediction is the
+  operator error (reported with its two parts: the state carried in from
+  burn-in under the actual operators, and operator changes inside the
+  window); (2) the **carried-state bound**: the linear model does not carry
+  a burn-in frame with gate activity (a row on which the two arms' masks
+  differ, a rejected reconstruction, a recovery action, which the counters
+  give only run-wide) or with command saturation above 1e-3 in either arm;
+  the window value is affine in the loop's state at any frame, so the model
+  re-runs the modal-operator window from a zero state right after the last
+  such frame (as if the run had started there: identical commands, an empty
+  queue), and the fraction of the primary value this removes is the largest
+  relative error a wrong carried state can cause per unit of its own
+  relative error. A run is **operator-consistent** when the operator error
+  is within the predeclared 2 % and, if its burn-in had such a frame, the
+  carried-state bound is within 2 % as well (a quiet burn-in carries the
+  modelled state; the share of the window value carried in from the whole
+  burn-in and the window value under a stationary carried state are
+  reported as sensitivities); otherwise it is **mask-variable** (operator
+  error) or **carried-state-sensitive** (carried-state bound): the
+  fixed-operator model does not describe it, its prediction is reported,
+  and it is excluded from the closure test by the operator exclusion of
+  (iv). The fractions of analysed and burn-in frames in which each arm used
+  the modal operator are reported as diagnostics only. Two telemetry-based
+  rules are reported as sensitivities, never as the primary: **available**
+  (lenslets valid,
   supported and finite in at least 90 % of the analysed frames, covariance
   over each lenslet's own valid frames) and **strict** (lenslets valid in
   every analysed frame, the E0 summary's support). A rule whose mask the
@@ -233,15 +261,24 @@ feedback included.
   0.4 %) and the 2 m result of the first session stands as a result about
   the whole linear model, not about the omitted feedback: `DeltaV /
   DeltaV_pred` over 8 seeds is 0.936 +/- 0.060, 0.892 +/- 0.076 and
-  0.860 +/- 0.050 (t, 7 dof; effective rule, every run operator-consistent
-  with both arms under the modal operator in at least 99.3 % of the frames;
-  available rule 0.936, 0.892, 0.860; strict rule 0.933, 0.890, 0.857) at
+  0.860 +/- 0.050 (t, 7 dof; effective rule; the operator error of every
+  run is below 0.03 % and both arms used the modal operator in at least
+  99.3 % of the frames, but the loop closure clips actuators during
+  burn-in, so 12 of the 24 runs restart the carried-state bound at the last
+  clipped burn-in frame 49 and are carried-state-sensitive at 2.44 %, the
+  share of their 150-frame window inherited from before it, and all 24 are
+  excluded by the saturation rule of (iv) in any case; available rule
+  0.936, 0.892, 0.860; strict rule 0.933, 0.890, 0.857) at
   m5, m6, m7, with the E0 ratio at unity (0.996-1.010) and 1.5-15 % of the
   actuators clipped per frame in both arms (stroke 1 um), so the model is
   **not verified at 2 m** and the 2 m record cannot settle it either way; at
-  the gate-active m8 every run is mask-variable (the arms used the modal
-  operator in 13-93 % of the frames), the eight effective-rule ratios
-  scatter from 0.1 to 9 and are descriptive only, and the reconstructor's
+  the gate-active m8 the error bounds show what a frame count could not:
+  seven of the eight runs are mask-variable (operator error 2.7-32 %, of
+  which up to 10.4 % is carried in from the burn-in's operators; 9-40
+  distinct operators over a run) or not assessable (one run used an
+  operator the reconstructor refuses), the eighth is operator-consistent
+  at 1.7 % and 1.1 % but gate-active; the eight effective-rule ratios
+  scatter from 0.9 to 12 and are descriptive only, and the reconstructor's
   own valid-fraction policy (0.75) refuses the strict mask on six of eight
   runs and the available mask on one. On the convergence driver's ci geometry
   (the 12 m `@3` detector physics on the 5 m smoke geometry, 96 controlled
@@ -253,37 +290,56 @@ feedback included.
   run's realized covariance is 0.987 at m7 (92.9 +/- 2.8 nm^2 measured) and
   1.011 at m9 (614.6 +/- 15.9 nm^2), each within one 25-frame block standard
   error; these are two runs and a pilot-level consistency check, not a
-  verification; both runs are operator-consistent (the arms used the modal
-  operator in 98-100 % of the frames). The same geometry with its own
-  damping (0.001) shows the limits of the fixed-mask model: at m7 the run
-  is gate-quiet by the 0.1 % rule but **mask-variable** (twelve distinct
-  operators; the arms used the modal one in 94 % and 93 % of the frames),
-  so its ratio of 1.07 under the effective rule is descriptive and the run
-  would be excluded from the closure test, while the strict mask, probed on
-  its own 126 rows, leaves modes unsensed and predicts about twice the
+  verification; both runs are operator-consistent under the error bounds
+  (operator error below 0.03 %, quiet burn-ins, 1.6 % of the window value
+  inherited from before it as a sensitivity). The same geometry with its
+  own damping (0.001) shows what the bounds measure: at m7 the run is
+  gate-quiet by the 0.1 % rule and changed its operator twelve times in
+  the window (the arms used the modal one in 94 % and 93 % of the frames),
+  which a frame-count threshold would have excluded, yet the transient
+  propagated with the actual operator of every frame differs from the
+  modal one by 0.64 % (the burn-in's operators carry in under 1e-7 of it)
+  and the one burn-in frame with a disagreeing row (frame 35) leaves a
+  carried-state bound of 1e-5, so the run is operator-consistent and its
+  ratio of 1.07 (1.06 against the time-varying value, within one block
+  SE) stands as a pilot-level check, while the strict mask, probed on its
+  own 126 rows, leaves modes unsensed and predicts about twice the
   measured value (ratio 0.53); at m9 the run is gate-active and
-  mask-variable (46 distinct operators, 74 % and 73 %), the measured
-  1772 +/- 190 nm^2 is 1.35 times the effective-rule prediction, and the
-  strict mask (92 rows) has no stationary limit at all. With the ci
+  mask-variable (55 distinct operators over the run, operator error
+  +3.9 % with 0.01 % carried in from burn-in), the measured
+  1772 +/- 190 nm^2 is 1.35 times the effective-rule prediction (1.30
+  times the time-varying one), and the strict mask (92 rows) has no
+  stationary limit at all. With the ci
   damping even the full mask leaves one almost unsensed mode (feedback
   4.6e-7, no leak) that accumulates noise through the run, so the
   stationary limit is about twice the 400-frame window value: the
-  finite-window prediction is the primary quantity for that reason, and a
-  mask that leaves modes unsensed (feedback below 1e-6, reported as a
-  count) makes the run "support-sensitive". The fixed-mask model does not
+  finite-window prediction is the primary quantity for that reason; the
+  count of modes a mask leaves unsensed (feedback below 1e-6) is reported
+  and no rule attaches to it. The fixed-mask model does not
   describe gate-active runs by construction; that gap is what P4 measures
   against it, not a parameter to tune. (iii) Before the series, pilot P2b evaluates the model at the S4
   A1 configuration (12 m build, governed): the feedback spectrum of `@3`,
-  the prediction from P2's realized covariance under both support rules and
-  from the flat model, and the pilot-level ratio at m8 seed 71. (iv) Band
-  for 12 m: fixed a priori at 10 % (not from the 2 m or ci dispersion), with
-  two predeclared exclusions from the closure test: a run whose mean
-  saturation fraction after burn-in exceeds 1e-3 in either arm, and a run
-  that is not gate-quiet under the data-driven rule of 1.5 (both reported
-  with their levels; neither is tuned away); a gate-quiet run whose two
-  support rules differ by more than 2 % in the prediction is flagged
-  "support-sensitive" and reported, and stays in the test under the
-  available rule. (v) Secondary hypothesis H_sat, predeclared: the 2 m
+  the prediction from P2's realized covariance under every rule and from
+  the flat model, the two operator error bounds of that run, and the
+  pilot-level ratio at m8 seed 71. (iv) Band
+  for 12 m: fixed a priori at 10 % (not from the 2 m or ci dispersion). The
+  closure test and the E0 test of 1.7 take the runs that pass **the three
+  predeclared exclusions, listed here once and referenced everywhere
+  else**: (a) **saturation**: a run whose mean saturation fraction after
+  burn-in exceeds 1e-3 in either arm; (b) **gate activity**: a run that is
+  not gate-quiet under the data-driven rule of 1.5 (mask disagreement below
+  0.1 % of row-frames after burn-in, no rejected reconstruction, no
+  recovery action in either arm); (c) **operator**: a run that is
+  mask-variable or carried-state-sensitive under the two error bounds
+  above (operator error above 2 %, or a burn-in frame the model does not
+  carry followed by a carried-state bound above 2 %), or whose operator
+  sequence the tool cannot assess (more distinct operators than its probe
+  budget, or an operator its reconstructor refuses). Each excluded run is
+  reported with its saturation level, gate activity or error bounds; none
+  is tuned away; the primary prediction of every admissible run is the
+  effective-rule, modal-operator value, and no other rule or label (the
+  telemetry-based rules, the count of unsensed modes, the match fractions)
+  decides anything. (v) Secondary hypothesis H_sat, predeclared: the 2 m
   deficit and its growth with magnitude are stroke clipping of the noise
   response. H_sat is supported if the 12 m ratio is "verified" (1.7) at
   m8-m10; if instead the 12 m ratio shows a deficit of the same size without
@@ -323,8 +379,8 @@ only if m10 shows gate activity, which is not expected.
 `rho = DeltaV / DeltaV_pred`, with `DeltaV_pred` the exact linear model's
 prediction (1.6) from that run's own realized noise covariance under the
 `effective` rule (the operator the loop used). Per magnitude, the
-admissible seeds are those not excluded by the saturation, gate-quiet and
-mask-variable rules of 1.6 and not refused; `n_adm` is their count, `rho_bar` their mean and `h` the half-width of the 95 % t interval
+admissible seeds are those that pass the three exclusions of 1.6 (iv) and
+are not refused; `n_adm` is their count, `rho_bar` their mean and `h` the half-width of the 95 % t interval
 with `n_adm - 1` degrees of freedom (`t_0.975` = 2.776 at `n_adm` = 5, 3.182
 at 4, 4.303 at 3; the quantile follows `n_adm`, never the planned five); the
 band is `[1 - b, 1 + b]` with `b = 0.10` fixed a priori. Exactly one of
@@ -342,7 +398,8 @@ applied again with the new `n_adm` (at most 10 seeds, 9 dof, `t_0.975` =
 2.262 when none is excluded) and are final for this stage; a persisting
 "not expressible" is reported as such and is never read as a departure or
 an agreement. The excluded runs are listed with their saturation level,
-gate activity or operator match fractions and do not enter `rho_bar`.
+gate activity or operator error bounds (1.6 (iv)) and do not enter
+`rho_bar`.
 
 **E0 test (the same semantics).** Per admissible run, `e = ` the
 propagation-weighted E0 ratio (realized centred variance over the model
@@ -657,9 +714,14 @@ traces.
   latency queue starts with `d` zeros), `L = R M` with `R` probed on the
   one fixed row set that carries `Sigma` (rows outside it invalid, not
   noiseless), that set being the operator the loop used in the plurality
-  of analysed frames (the sidecar's effective row masks) and the run
-  admissible only if both arms used it in at least 95 % of the analysed
-  frames; state `x_k = (dc_k, ..., dc_{k-d})`, `x_{k+1} = F x_k + [k >=
+  of analysed frames (the sidecar's effective row masks); the run is
+  admissible for the fixed-operator comparison only if the transient
+  propagated with the actual operator of every frame (burn-in included,
+  update `k` carrying the operator of frame `k - d`) differs from the
+  modal-operator value by at most 2 % and, when a burn-in frame had gate
+  activity or saturation above 1e-3, the window value restarted from a
+  zero state right after the last such frame removes at most 2 % of the
+  primary value (1.6 (iv)); state `x_k = (dc_k, ..., dc_{k-d})`, `x_{k+1} = F x_k + [k >=
   d] G n_{k-d}`; transient `P_{k+1} = F P_k F^T + [k >= d] G Sigma G^T` from
   `P_0 = 0` (identical initial commands), stationary `P = F P F^T + G Sigma
   G^T`; `DeltaV_pred = mean_k tr(Gram P_{k+1}[dc]) / N_pupil` over the

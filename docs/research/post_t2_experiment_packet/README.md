@@ -5,7 +5,8 @@ Prepared 2026-10-21 (UTC) in a cloud session on the published commit
 `75c4fe7c9d8a90ef5f26fc174187cf8f82bd4ba9`) for independent
 experimental-design review; revised 2026-10-22 for the eight findings of
 review round 1 (section 8), the seven findings of review round 2 (section
-9) and the five findings of review round 3 (section 10). This packet is a protocol-design and bounded
+9), the five findings of review round 3 (section 10) and the two findings
+of review round 4 (section 11). This packet is a protocol-design and bounded
 readiness deliverable. It authorizes nothing: no 12 m or 42 m job was run, no
 runtime code, profile, baseline or historical record was changed, and every
 pilot and study request below is `PREPARED_NOT_EXECUTED` until the protocol
@@ -213,9 +214,12 @@ directory; copies of the records are under `records/cloud_checks/`.
 
 | Round 3: model reruns with the effective operator and canonical validation (CHK-3a to CHK-3f) | the model's self-test; the model on the five pilot sidecars (`--pilot-record`) and the 32 series sidecars (`--record`); three negative checks (wrong units, permuted axes, wrong dtype); a fixed-physics pilot on an exposure key; the acceptance field-path audit | self-test passed (the unit-pole case returns no stationary limit); 37 of 37 genuine sidecars pass the canonical units/axes/meaning/dtype/shape check and the record or pilot-record digest check; the three corrupted sidecars are refused with nothing read; under the effective rule the 2 m gate-quiet ratios are 0.936, 0.892, 0.860 at m5-m7 (all 24 runs operator-consistent, arms under the modal operator in at least 99.3 % of the frames) and the ci runs with the 12 m damping 0.987 and 1.010 (operator-consistent), while the ci runs with the ci damping are mask-variable (arms under the modal operator in 93-94 % and 73-74 % of the frames) and descriptive; 42 acceptance field paths resolve in the matching tool records | EXECUTED_CURRENT |
 
+| Round 4: model reruns with the operator error bounds (CHK-4a to CHK-4e) | the model's self-test; the model on the five pilot sidecars (`--pilot-record`) and the 32 series sidecars (`--record`); three negative checks (wrong units, permuted axes, wrong dtype); the acceptance field-path audit | self-test passed (a constant operator sequence equals the modal transient to 1e-16, a silent burn-in equals the cold start, a stationary start stays stationary to 1e-15); 37 of 37 genuine sidecars validated and the three corrupted ones refused as in round 3; effective-rule ratios unchanged (2 m 0.936, 0.892, 0.860 at m5-m7; ci with the 12 m damping 0.987 and 1.010); operator error below 0.03 % on every 2 m run at m5-m7 and on the ci runs with the 12 m damping, 0.64 % on the ci m7 run with the ci damping (operator-consistent now, after round 3's threshold had excluded it), +3.9 % on the ci m9 run with the ci damping (mask-variable), 1.7-32 % at the 2 m m8 with up to 10.4 % carried in from the burn-in's operators; carried-state bound 2.44 % on the 2 m runs whose burn-in clipped actuators through its last frame (12 of 24 at m5-m7, every one of the 24 excluded by the saturation rule anyway) and at most 1.1 % otherwise; 50 acceptance field paths resolve in the matching tool records | EXECUTED_CURRENT |
+
 Details and tables: `records/cloud_checks/round1/SUMMARY.md`,
-`records/cloud_checks/round2/SUMMARY.md` and
-`records/cloud_checks/round3/SUMMARY.md`.
+`records/cloud_checks/round2/SUMMARY.md`,
+`records/cloud_checks/round3/SUMMARY.md` and
+`records/cloud_checks/round4/SUMMARY.md`.
 
 Speed anchor: the cloud host completes the same ci-scale work 2.7 to 2.9
 times slower than the desktop anchors (driver wall ratio 2.73, summed child
@@ -324,8 +328,9 @@ the round-2 reruns with the corrected tools are under
 Two further observations from the round-2 reruns entered the protocol: a
 fixed support mask that leaves DM modes unsensed has, with no leak, no
 stationary limit and a window prediction that grows with the run (the
-tool now reports the count of such modes and the run is
-"support-sensitive"), and the 2 m reconstructor's valid-fraction policy
+tool reports the count of such modes; the "support-sensitive" label of
+that revision carries no rule since revision 5, where PROTOCOL.md 1.6 (iv)
+is the only exclusion list), and the 2 m reconstructor's valid-fraction policy
 refuses the strict support mask of most gate-active 2 m runs (and the
 available mask of one), so the fixed-mask model is "not defined" for that
 rule exactly where the loop itself is gate-active.
@@ -355,3 +360,27 @@ gate-quiet by the 0.1 % disagreement rule and still change its operator
 over time (the ci m7 run with the ci damping used twelve distinct row sets
 and the modal one in 94 % of the frames), so the mask-variable exclusion is
 a rule of its own beside gate activity.
+
+## 11. Review round 4 (2026-10-22): findings and repairs
+
+Review round 4 on `acfc8b0` resolved four prior findings and left two P2
+findings (POST-T2-12 and POST-T2-19). Each repair and its evidence
+(`records/cloud_checks/round4/SUMMARY.md` for the numbers):
+
+| # | Finding | Repair | Evidence |
+| --- | --- | --- | --- |
+| 12 | The operator-match threshold lacks an error bound and misses state carried from burn-in, even with 100 % analysed-frame agreement | the 95 % match threshold is gone; two quantified error bounds decide whether the fixed operator describes a run (PROTOCOL.md 1.6, 1.6 (iv), 7): (1) the **operator error**, the relative difference between the transient propagated with the noisy arm's actual operator of every frame of the run, burn-in included (each distinct effective mask probed once; the increment released at update `k` carries the operator of frame `k - d`; `Sigma` restricted to each operator's rows), and the modal-operator prediction, reported with its burn-in-carried and in-window parts; (2) the **carried-state bound**: the window value is affine in the loop's state at any frame, so the modal-operator window is restarted from a zero state right after the last burn-in frame the linear model does not carry (a row of mask disagreement, a rejected reconstruction, a recovery action, saturation above 1e-3) and the fraction of the primary value this removes bounds the error a wrong carried state can cause; a run is operator-consistent when the operator error is within 2 % and, if such a burn-in frame exists, the carried-state bound is within 2 %; the match fractions over the analysed and the burn-in frames are diagnostics only; the share of the window value inherited from the whole burn-in and the window value under a stationary carried state are reported as sensitivities; the self-test checks the sequence propagation against the modal transient (constant sequence), a silent burn-in against the cold start and a stationary start against the stationary value; P2b's command carries the tolerances and the probe budget and its acceptance rules name the new fields | CHK-4a to CHK-4c: at the 2 m m8 the burn-in's operators carry up to 10.4 % into the window value and the operator error is 2.7-32 % on seven runs (one operator refused), which the frame count could not show; the ci m7 run with the ci damping that round 3's threshold excluded (modal operator in 94 % and 93 % of the frames) has an operator error of 0.64 % and a carried-state bound of 1e-5 and is operator-consistent; the ci m9 run with the ci damping is mask-variable at +3.9 %; the ci runs with the 12 m damping have errors below 0.03 % and quiet burn-ins; the 2 m runs at m5-m7 have operator errors below 0.03 % but clip actuators during loop closure, so 12 of 24 are carried-state-sensitive at 2.44 % (the share of their 150-frame window inherited from before it) beside the saturation rule that excludes all 24 |
+| 19 | The protocol retains conflicting exclusion lists and primary comparison rules | PROTOCOL.md 1.6 (iv) is the one list of the three predeclared exclusions (saturation after burn-in above 1e-3 in either arm; gate activity by the 1.5 rule; the operator rule of the two bounds, a run the tool cannot assess included) and states that the effective-rule modal-operator prediction is the only primary and that no other rule or label (the telemetry-based rules, the count of unsensed modes, the match fractions) decides anything; sections 0, 1.6 (iii), 1.7 and 7 refer to that list instead of restating it; the "support-sensitive" flag with its "stays in the test under the available rule" clause and the "both support rules" wording are removed, and the tool's unsensed-mode note says the count carries no rule; sections 8-10 of this README describe the earlier revisions as they were made and, where they differ from revision 5, PROTOCOL.md 1.6 (iv) rules | text; CHK-4e: 50 acceptance field paths resolve in the matching tool records |
+
+No runtime code, profile, baseline or historical record was changed; no
+governed run or 12 m or 42 m system build took place. The round-1 to
+round-3 records stay as the record of those revisions; the round-4 model
+reruns on the unchanged round-2 pilot sidecars and the series sidecars are
+under `records/cloud_checks/round4/` (`SUMMARY.md` there has the tables).
+
+One observation from the round-4 reruns entered the protocol: at the 2 m
+m8 the state the loop carries into the analysed window under the burn-in's
+operators changes the window value by up to 10 %, and a run can change its
+operator twelve times in the window with an operator error of 0.6 %, so
+neither a frame count over the analysed frames nor one over the burn-in
+measures what the fixed-operator comparison needs; the two bounds do.
