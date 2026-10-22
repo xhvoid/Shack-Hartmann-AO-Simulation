@@ -78,20 +78,25 @@ not a set inferred from telemetry validity (review round 3). Whether that
 fixed operator describes the run is decided by two error bounds (review
 round 4): the transient propagated with the operator of every frame,
 burn-in included (update `k` carrying the operator of frame `k - d`),
-against the modal one; and, because the window value is affine in the
-loop's state at any frame, a bound on what an unknown carried state can do
-to the window mean (review round 5): at most `gamma` times what it does to
-the first analysed 25-frame block, `gamma = max_x (x^T M_window x) /
-(x^T M_block x)` over the loop's companion states (the sensed ones when the
-operator injects nothing into its unsensed modes), with the first-block
-effect measured against the model's own transient and the run's block
-scatter as its uncertainty. The restart values of round 4 (the window from
-a zero state at the first analysed frame or after the last burn-in frame
-with gate activity or saturation) stay as sensitivities. The match
-fractions are diagnostics. A row outside the modal mask whose lenslet has
+against the modal one; and the carried state itself, measured
+(review round 6): the sidecar holds both arms' reference-subtracted
+centroids (`<arm>__telemetry__centroids_xy_px`, the reference cancelling in
+the difference) and the rows each arm's reconstructor used
+(`<arm>__measurement_row_masks`), and `controller.py` 142-175 gives the
+update (`c_{k+1} = (1 - l) c_k + g released`, the delay queue of `d`
+zeros), so `dc_{k+1} = (1 - l) dc_k + g (R_k^noisy m_k^noisy - R_k^twin
+m_k^twin)_{k-d}` is computed frame by frame with each frame's operator
+probed on its own effective mask, and checked against the sidecar's
+`delta_v_m2` (and against the state fitted from the residual maps where
+retained). Its state at the first analysed frame, propagated under the
+modal loop without noise, is the exact carried contribution `D`, and the
+prediction becomes `W_cold + D`. The all-state `gamma` bound of round 5
+(at most `gamma` times the first-block effect, `gamma = max_x (x^T
+M_window x) / (x^T M_block x)`) and the restart values of round 4 stay as
+diagnostics; the match fractions too. A lenslet outside the modal mask with
 fewer than 10 usable frames gets no covariance of its own but a bracket
-(zero to the realized envelope), and the operator error is taken at the
-worse end.
+from its own frames (97.5 % chi-square) and the sensor model at its spot
+(twice), and the operator error is taken at the worse end.
 
 **Transient and stationary covariance.** With `x_k = (dc_k, dc_{k-1}, ...,
 dc_{k-d})`, `x_{k+1} = F x_k + [k >= d] G n_{k-d}` with `F = [[(1-l) I, 0,
