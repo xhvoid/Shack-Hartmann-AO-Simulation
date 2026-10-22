@@ -1,0 +1,375 @@
+{
+ "schema": "post_t2_linear_loop_noise_model.v4",
+ "mode": "model",
+ "purpose": "analysis-only linear closed-loop noise model; no loop is run; no scientific claim by itself",
+ "configuration": "ci derivation of scripts/detector_level_convergence_study.py (eso_scao_smoke_5m_software@2 geometry with det_emccd_12m_medium_derived@3 physics), m_AB 7",
+ "diagnostic_alpha_override": null,
+ "config_hash": "1a8c21bc261c4bf1079df9a1df15070ae5d2b80aebbf09f677bc786e4c7f1724",
+ "root_seed": 71,
+ "n_steps_in_hash": 400,
+ "window_frames": [
+  100,
+  400
+ ],
+ "controller": {
+  "gain": 0.4,
+  "leak": 0.0,
+  "latency_frames": 2
+ },
+ "reconstructor": {
+  "kind": "sparse_lsmr_tikhonov",
+  "alpha": 0.001,
+  "rcond": null,
+  "min_valid_fraction": 0.5
+ },
+ "dimensions": {
+  "rows": 144,
+  "controlled_actuators": 96,
+  "pupil_samples": 10224,
+  "lyapunov_state": 288
+ },
+ "mask_rule": "the reconstructor is probed with exactly the rows that carry noise valid (one fixed mask per rule for L, the injection and Sigma); the primary rule takes the operator the loop used in the plurality of analysed frames; the series' all-valid propagation weights are kept for the first draft's scalar value",
+ "noise_covariance": {
+  "source": "sidecar_realized_residuals (c_noisy - c_expected on the noisy arm's lenslets, ddof 1, 2x2 per lenslet)",
+  "sidecar_schema": "post_t2_pilot_trace_sidecar.v1",
+  "label": "m7",
+  "root_seed": 71,
+  "config_hash": "1a8c21bc261c4bf1079df9a1df15070ae5d2b80aebbf09f677bc786e4c7f1724",
+  "analysed_frames": 300,
+  "operator": {
+   "definition": "the row set the noisy arm's reconstructor used in the plurality of analysed frames (<arm>__measurement_row_masks); the model's operator R is probed on exactly this set; whether the fixed operator describes the run is decided by the error bounds in prediction.operator_bounds, not by these fractions",
+   "rows_in_modal_mask": 144,
+   "rows_total": 144,
+   "distinct_effective_masks_noisy_analysed": 12,
+   "distinct_effective_masks_noisy_all_frames": 13,
+   "noisy_frames_under_modal_operator": 281,
+   "noisy_match_fraction": 0.9366666666666666,
+   "twin_frames_under_modal_operator": 278,
+   "twin_match_fraction": 0.9266666666666666,
+   "burn_in_match_fraction_noisy": 0.98,
+   "burn_in_match_fraction_twin": 0.99,
+   "rows_always_effective_noisy": 126,
+   "rows_ever_effective_noisy": 144,
+   "sigma_frames": "frames in which the noisy arm used the modal operator"
+  },
+  "burn_in": {
+   "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+   "frames": 100,
+   "mask_disagreement_row_frames_fraction": 0.0001388888888888889,
+   "frames_with_mask_disagreement": 1,
+   "rejected_frames": {
+    "noise_on": 0,
+    "operating_expectation": 0
+   },
+   "recovery_acted": {
+    "noise_on": false,
+    "operating_expectation": false
+   },
+   "saturation_fraction_mean": {
+    "noise_on": 0.0,
+    "operating_expectation": 0.0
+   },
+   "frames_with_saturation": 0,
+   "unmodelled_frames": 1,
+   "last_unmodelled_frame": 35,
+   "quiet": false
+  },
+  "support_rules": {
+   "effective": {
+    "definition": "rows of the modal effective mask (the operator the loop used); covariance over the frames in which the noisy arm used that operator",
+    "lenslet_fraction": 1.0,
+    "rows_with_noise": 144
+   },
+   "available": {
+    "definition": "lenslets valid, supported and finite in at least 0.9 of the analysed frames; covariance over each lenslet's own valid frames",
+    "min_fraction": 0.9,
+    "lenslet_fraction": 1.0,
+    "rows_with_noise": 144,
+    "mean_valid_fraction_of_included": 0.9984259259259258
+   },
+   "strict": {
+    "definition": "lenslets valid, supported and finite in every analysed frame (the E0 rule); covariance over all analysed frames",
+    "lenslet_fraction": 0.875,
+    "rows_with_noise": 126
+   }
+  },
+  "mean_realized_sigma_px_on_strict_support": 0.043946789759333804,
+  "measured_delta_v_mean_m2": 2.233925673384576e-16,
+  "measured_delta_v_block25_se_m2": 2.5946535976244533e-17,
+  "measured_mean_square_difference_mean_m2": -1.6162894142752483e-16,
+  "noisy_arm_saturation_fraction_mean": 0.0,
+  "noisy_arm_frames_with_saturation": 0,
+  "twin_arm_saturation_fraction_mean": 0.0,
+  "rejected_frames_after_burn_in": {
+   "noise_on": 0,
+   "operating_expectation": 0
+  },
+  "recovery_acted": {
+   "noise_on": false,
+   "operating_expectation": false
+  },
+  "gate_quiet_by_core_rule": true,
+  "mask_disagreement_row_frames_fraction": 0.000787037037037037,
+  "residual_map_pupil_samples": null,
+  "pupil_samples_equal_to_model": null,
+  "primary_rule": "effective",
+  "sidecar_validation": {
+   "structural": "passed (declared table against the runner's canonical units, axes, meanings, dtypes and axis-implied shapes; frame domains; two-arm layout; canonical rows; label)",
+   "arrays_checked": 61,
+   "schema": "post_t2_pilot_trace_sidecar.v1",
+   "pilot_record": {
+    "path": "/tmp/claude-0/-home-user-Shack-Hartmann-AO-Simulation/f1f3bff0-5382-5b19-9652-6c00a445942e/scratchpad/round2/ci_m7_default/pilot.json",
+    "digest_size_hash_frames_label_seed": "match"
+   }
+  }
+ },
+ "timing": {
+  "build_s": 6.426482589999978,
+  "full_probe_s": 0.9078082849998736,
+  "effective_s": {
+   "reconstructor_probe": 1.921400007631746e-05,
+   "lyapunov_two_solves": 0.2735932860000503,
+   "window_two_propagations": 0.7560843689998364
+  },
+  "available_s": {
+   "reconstructor_probe": 1.3595999917015433e-05,
+   "lyapunov_two_solves": 0.33942037999986496,
+   "window_two_propagations": 0.778396321999935
+  },
+  "strict_s": {
+   "reconstructor_probe": 0.8062573840002187,
+   "lyapunov_two_solves": 0.034971349999977974,
+   "window_two_propagations": 0.6038515990001088
+  }
+ },
+ "ru_maxrss_bytes": 141459456,
+ "host": {
+  "platform": "linux",
+  "machine": "x86_64",
+  "node": "vm",
+  "python": "3.11.17 (main, Oct  1 2026, 15:41:07) [GCC 13.3.0]",
+  "numpy": "2.4.6"
+ },
+ "enabled_by_user": null,
+ "feedback_spectrum": {
+  "definition": "eigenvalues of L = R_mask M on the controlled actuators (1 = unit feedback; below 1 = damped mode; the scalar model assumes all 1)",
+  "min": 4.6414677876288456e-07,
+  "percentile_10": 0.999993305377419,
+  "median": 0.999998971445875,
+  "max": 0.9999995893951841,
+  "fraction_below_0.9": 0.010416666666666666,
+  "fraction_below_0.5": 0.010416666666666666,
+  "count_below_1e-6": 1,
+  "unsensed_modes_note": "a mode with feedback below 1e-6 is left unsensed by this mask; with no leak it has a unit pole, no stationary limit exists and the finite-window prediction (the primary quantity) grows with the run length; the count is reported and no rule attaches to it",
+  "max_abs_imaginary": 7.981669615584543e-09,
+  "max_abs_deviation_of_L_from_identity": 0.01756216079304156
+ },
+ "stationarity": {
+  "spectral_radius_F": 0.9999998143412194,
+  "stationary_limit_exists": true,
+  "lyapunov_relative_residual": 4.9113924558337455e-11,
+  "window_end_over_stationary": 0.49595950252228954,
+  "note": null
+ },
+ "prediction": {
+  "primary_status": "defined",
+  "primary_rule": "effective",
+  "units": "m2 (piston-removed pupil mean square of the noise-driven correction difference; the sidecar's delta_v_m2 in expectation)",
+  "primary": "delta_v_exact_window_m2 (transient from identical initial commands with the noise entering after the latency, averaged over the analysed frames; noise covariance rule 'effective')",
+  "delta_v_exact_window_m2": 2.084313076320309e-16,
+  "delta_v_exact_window_diagonal_sigma_m2": 2.081323571335113e-16,
+  "delta_v_exact_stationary_m2": 4.2028243562480846e-16,
+  "delta_v_scalar_reduction_mask_m2": 2.0817286923239455e-16,
+  "delta_v_scalar_reduction_series_weights_m2": 2.0817286923239455e-16,
+  "delta_v_one_step_open_loop_m2": 2.9589504170640267e-16,
+  "scalar_kappa": 0.7045454545454547,
+  "window_over_stationary": 0.4959315211975696,
+  "exact_window_over_scalar_mask": 1.0012414605255204,
+  "exact_window_over_scalar_series_weights": 1.0012414605255204,
+  "exact_window_over_diagonal_sigma": 1.0014363480173716,
+  "propagation_weights_series_sum_m2_per_px2": 1.5096694998466646e-13,
+  "operator_bounds": {
+   "status": "evaluated",
+   "rule": "operator-consistent when the operator error is within --operator-tolerance and, if the burn-in had a frame the model does not carry, the inherited fraction from the last such frame is within --carried-state-tolerance; otherwise mask-variable (operator error) or carried-state-sensitive (inherited fraction)",
+   "operator_consistent": true,
+   "classification": "operator-consistent",
+   "reasons": [],
+   "time_varying": {
+    "status": "computed",
+    "definition": "the transient propagated with the noisy arm's actual operator of every frame of the run (burn-in included; the increment released at update k carries the operator of frame k - d; each distinct effective mask probed once; Sigma restricted to each operator's rows, the modal rows keeping the effective rule's blocks); the relative difference from the modal-operator prediction is the operator error, split into the part carried in from burn-in (actual operators before the window, the modal one inside it) and the part from operator changes inside the window",
+    "delta_v_window_m2": 2.097692875303303e-16,
+    "relative_difference_vs_modal": 0.006419284672250469,
+    "burn_in_carried_component": -3.483881710359687e-08,
+    "window_operator_component": 0.006419319511067572,
+    "distinct_masks_all_frames": 13,
+    "frames_not_under_modal_operator": 21,
+    "burn_in_frames_not_under_modal_operator": 2,
+    "rows_outside_modal_mask_without_noise_estimate": 0,
+    "probe_s": 10.492042996999999,
+    "tolerance": 0.02
+   },
+   "carried_state": {
+    "definition": "the window value is affine in the loop's state at any frame; the check re-runs the modal-operator window from a zero state (identical commands, an empty queue) right after the last burn-in frame the model does not carry, and the fraction of the primary value this removes (inherited_fraction_from_last_unmodelled_frame) is the largest relative error a wrong carried state can cause per unit of its own relative error; it is the carried-state error bound, required within tolerance whenever such a frame exists; the inherited fraction from the first analysed frame (the share of the window value carried in from the whole burn-in) and the window value under a stationary carried state are sensitivities",
+    "last_unmodelled_frame": 35,
+    "cold_start_after_last_unmodelled_frame_m2": 2.0842847534608811e-16,
+    "inherited_fraction_from_last_unmodelled_frame": 1.3588582132650787e-05,
+    "cold_start_at_first_analysed_frame_m2": 2.0496565972071082e-16,
+    "inherited_fraction": 0.01662729054810901,
+    "stationary_start_window_m2": 4.2028243562528276e-16,
+    "stationary_start_over_primary": 2.0164074217068118,
+    "tolerance": 0.02,
+    "burn_in_quiet": false,
+    "required": true
+   },
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 100,
+    "mask_disagreement_row_frames_fraction": 0.0001388888888888889,
+    "frames_with_mask_disagreement": 1,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.0,
+     "operating_expectation": 0.0
+    },
+    "frames_with_saturation": 0,
+    "unmodelled_frames": 1,
+    "last_unmodelled_frame": 35,
+    "quiet": false
+   }
+  },
+  "by_noise_covariance_rule": {
+   "effective": {
+    "status": "defined",
+    "rows_valid_in_mask": 144,
+    "rows_total": 144,
+    "feedback_spectrum": {
+     "definition": "eigenvalues of L = R_mask M on the controlled actuators (1 = unit feedback; below 1 = damped mode; the scalar model assumes all 1)",
+     "min": 4.6414677876288456e-07,
+     "percentile_10": 0.999993305377419,
+     "median": 0.999998971445875,
+     "max": 0.9999995893951841,
+     "fraction_below_0.9": 0.010416666666666666,
+     "fraction_below_0.5": 0.010416666666666666,
+     "count_below_1e-6": 1,
+     "unsensed_modes_note": "a mode with feedback below 1e-6 is left unsensed by this mask; with no leak it has a unit pole, no stationary limit exists and the finite-window prediction (the primary quantity) grows with the run length; the count is reported and no rule attaches to it",
+     "max_abs_imaginary": 7.981669615584543e-09,
+     "max_abs_deviation_of_L_from_identity": 0.01756216079304156
+    },
+    "stationarity": {
+     "spectral_radius_F": 0.9999998143412194,
+     "stationary_limit_exists": true,
+     "lyapunov_relative_residual": 4.9113924558337455e-11,
+     "window_end_over_stationary": 0.49595950252228954,
+     "note": null
+    },
+    "delta_v_exact_window_m2": 2.084313076320309e-16,
+    "delta_v_exact_window_diagonal_sigma_m2": 2.081323571335113e-16,
+    "delta_v_exact_stationary_m2": 4.2028243562480846e-16,
+    "delta_v_exact_stationary_diagonal_sigma_m2": 4.151499214554458e-16,
+    "delta_v_scalar_reduction_mask_m2": 2.0817286923239455e-16,
+    "delta_v_scalar_reduction_series_weights_m2": 2.0817286923239455e-16,
+    "delta_v_one_step_open_loop_m2": 2.9589504170640267e-16,
+    "window_over_stationary": 0.4959315211975696,
+    "exact_window_over_scalar_mask": 1.0012414605255204,
+    "exact_window_over_scalar_series_weights": 1.0012414605255204,
+    "exact_window_over_diagonal_sigma": 1.0014363480173716
+   },
+   "available": {
+    "status": "defined",
+    "rows_valid_in_mask": 144,
+    "rows_total": 144,
+    "feedback_spectrum": {
+     "definition": "eigenvalues of L = R_mask M on the controlled actuators (1 = unit feedback; below 1 = damped mode; the scalar model assumes all 1)",
+     "min": 4.6414677876288456e-07,
+     "percentile_10": 0.999993305377419,
+     "median": 0.999998971445875,
+     "max": 0.9999995893951841,
+     "fraction_below_0.9": 0.010416666666666666,
+     "fraction_below_0.5": 0.010416666666666666,
+     "count_below_1e-6": 1,
+     "unsensed_modes_note": "a mode with feedback below 1e-6 is left unsensed by this mask; with no leak it has a unit pole, no stationary limit exists and the finite-window prediction (the primary quantity) grows with the run length; the count is reported and no rule attaches to it",
+     "max_abs_imaginary": 7.981669615584543e-09,
+     "max_abs_deviation_of_L_from_identity": 0.01756216079304156
+    },
+    "stationarity": {
+     "spectral_radius_F": 0.9999998143412194,
+     "stationary_limit_exists": true,
+     "lyapunov_relative_residual": 4.5394140720904315e-11,
+     "window_end_over_stationary": 0.50130086258566,
+     "note": null
+    },
+    "delta_v_exact_window_m2": 2.1261472382676645e-16,
+    "delta_v_exact_window_diagonal_sigma_m2": 2.122952060299071e-16,
+    "delta_v_exact_stationary_m2": 4.2414941243769917e-16,
+    "delta_v_exact_stationary_diagonal_sigma_m2": 4.2066762223411357e-16,
+    "delta_v_scalar_reduction_mask_m2": 2.1233697459087232e-16,
+    "delta_v_scalar_reduction_series_weights_m2": 2.1233697459087232e-16,
+    "delta_v_one_step_open_loop_m2": 3.01834771498303e-16,
+    "window_over_stationary": 0.5012731777814172,
+    "exact_window_over_scalar_mask": 1.0013080587421446,
+    "exact_window_over_scalar_series_weights": 1.0013080587421446,
+    "exact_window_over_diagonal_sigma": 1.0015050636462055
+   },
+   "strict": {
+    "status": "defined",
+    "rows_valid_in_mask": 126,
+    "rows_total": 144,
+    "feedback_spectrum": {
+     "definition": "eigenvalues of L = R_mask M on the controlled actuators (1 = unit feedback; below 1 = damped mode; the scalar model assumes all 1)",
+     "min": 0.0,
+     "percentile_10": 0.9999880201284737,
+     "median": 0.9999986531636429,
+     "max": 0.9999995706528637,
+     "fraction_below_0.9": 0.041666666666666664,
+     "fraction_below_0.5": 0.041666666666666664,
+     "count_below_1e-6": 4,
+     "unsensed_modes_note": "a mode with feedback below 1e-6 is left unsensed by this mask; with no leak it has a unit pole, no stationary limit exists and the finite-window prediction (the primary quantity) grows with the run length; the count is reported and no rule attaches to it",
+     "max_abs_imaginary": 2.2471200772692933e-08,
+     "max_abs_deviation_of_L_from_identity": 1.0
+    },
+    "stationarity": {
+     "spectral_radius_F": 1.0,
+     "stationary_limit_exists": false,
+     "lyapunov_relative_residual": null,
+     "window_end_over_stationary": null,
+     "note": "a mode the mask leaves unsensed has a unit pole (no leak): no stationary covariance; the finite-window prediction is the primary quantity"
+    },
+    "delta_v_exact_window_m2": 4.186290630997136e-16,
+    "delta_v_exact_window_diagonal_sigma_m2": 4.20086553862848e-16,
+    "delta_v_exact_stationary_m2": null,
+    "delta_v_exact_stationary_diagonal_sigma_m2": null,
+    "delta_v_scalar_reduction_mask_m2": 4.2048366337471383e-16,
+    "delta_v_scalar_reduction_series_weights_m2": 1.7429132394241508e-16,
+    "delta_v_one_step_open_loop_m2": 5.947386029525868e-16,
+    "window_over_stationary": null,
+    "exact_window_over_scalar_mask": 0.9955893642570662,
+    "exact_window_over_scalar_series_weights": 2.401892725526753,
+    "exact_window_over_diagonal_sigma": 0.9965304988942582
+   }
+  }
+ },
+ "comparison": {
+  "status": "operator-consistent",
+  "operator_consistent": true,
+  "measured_delta_v_mean_m2": 2.233925673384576e-16,
+  "measured_delta_v_block25_se_m2": 2.5946535976244533e-17,
+  "measured_over_exact_window": 1.0717802899976987,
+  "measured_over_exact_stationary": 0.531529629608131,
+  "measured_over_scalar_mask": 1.0731108629197617,
+  "measured_over_scalar_series_weights": 1.0731108629197617,
+  "exact_window_within_2_block_se": true,
+  "measured_over_exact_window_by_rule": {
+   "effective": 1.0717802899976987,
+   "available": 1.0506918962041063,
+   "strict": 0.5336289021224682
+  },
+  "note": "a pilot-level consistency check of the model against one run; the protocol's acceptance rules, not this ratio, decide anything; a run that is not operator-consistent (mask-variable or carried-state-sensitive) has a descriptive comparison"
+ }
+}

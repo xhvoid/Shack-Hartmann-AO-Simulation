@@ -1,0 +1,1226 @@
+{
+ "scale": "medium",
+ "description": "det_emccd_12m_medium_derived@3",
+ "governed": true,
+ "axes": [
+  "pupil",
+  "detector",
+  "spectrum",
+  "exposure",
+  "science"
+ ],
+ "runs": {
+  "medium_baseline_plain_r0": {
+   "axis": "baseline",
+   "setting": "plain",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": null,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_baseline_plain_r1": {
+   "axis": "baseline",
+   "setting": "plain",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": null,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_baseline_plain_r2": {
+   "axis": "baseline",
+   "setting": "plain",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": null,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_pupil_common_s12_r0": {
+   "axis": "pupil",
+   "setting": "common_s12",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "common"
+   },
+   "refinement_parameter": 0.08333333333333333,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": 574,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_common_s12_r1": {
+   "axis": "pupil",
+   "setting": "common_s12",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "common"
+   },
+   "refinement_parameter": 0.08333333333333333,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": 574,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_common_s12_r2": {
+   "axis": "pupil",
+   "setting": "common_s12",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "common"
+   },
+   "refinement_parameter": 0.08333333333333333,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": 574,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_common_s16_r0": {
+   "axis": "pupil",
+   "setting": "common_s16",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 16,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "common"
+   },
+   "refinement_parameter": 0.0625,
+   "config_hash": "a32d4cc75dca952477daedac08b72fecf634879885049dc38eb8187767b24cbc",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": 574,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_common_s16_r1": {
+   "axis": "pupil",
+   "setting": "common_s16",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 16,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "common"
+   },
+   "refinement_parameter": 0.0625,
+   "config_hash": "a32d4cc75dca952477daedac08b72fecf634879885049dc38eb8187767b24cbc",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": 574,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_common_s16_r2": {
+   "axis": "pupil",
+   "setting": "common_s16",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 16,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "common"
+   },
+   "refinement_parameter": 0.0625,
+   "config_hash": "a32d4cc75dca952477daedac08b72fecf634879885049dc38eb8187767b24cbc",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": 574,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_common_s20_r0": {
+   "axis": "pupil",
+   "setting": "common_s20",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 20,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "common"
+   },
+   "refinement_parameter": 0.05,
+   "config_hash": "fd0520273afea45f64c63c92f481b141583ec3729f6779345252ecda1a93b612",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": 574,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_common_s20_r1": {
+   "axis": "pupil",
+   "setting": "common_s20",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 20,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "common"
+   },
+   "refinement_parameter": 0.05,
+   "config_hash": "fd0520273afea45f64c63c92f481b141583ec3729f6779345252ecda1a93b612",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": 574,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_common_s20_r2": {
+   "axis": "pupil",
+   "setting": "common_s20",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 20,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "common"
+   },
+   "refinement_parameter": 0.05,
+   "config_hash": "fd0520273afea45f64c63c92f481b141583ec3729f6779345252ecda1a93b612",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": 574,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_growing_s12_r0": {
+   "axis": "pupil",
+   "setting": "growing_s12",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "growing"
+   },
+   "refinement_parameter": 0.08333333333333333,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": null,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_growing_s12_r1": {
+   "axis": "pupil",
+   "setting": "growing_s12",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "growing"
+   },
+   "refinement_parameter": 0.08333333333333333,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": null,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_growing_s12_r2": {
+   "axis": "pupil",
+   "setting": "growing_s12",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "growing"
+   },
+   "refinement_parameter": 0.08333333333333333,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": null,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_growing_s16_r0": {
+   "axis": "pupil",
+   "setting": "growing_s16",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 16,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "growing"
+   },
+   "refinement_parameter": 0.0625,
+   "config_hash": "a32d4cc75dca952477daedac08b72fecf634879885049dc38eb8187767b24cbc",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": null,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_growing_s16_r1": {
+   "axis": "pupil",
+   "setting": "growing_s16",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 16,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "growing"
+   },
+   "refinement_parameter": 0.0625,
+   "config_hash": "a32d4cc75dca952477daedac08b72fecf634879885049dc38eb8187767b24cbc",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": null,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_growing_s16_r2": {
+   "axis": "pupil",
+   "setting": "growing_s16",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 16,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "growing"
+   },
+   "refinement_parameter": 0.0625,
+   "config_hash": "a32d4cc75dca952477daedac08b72fecf634879885049dc38eb8187767b24cbc",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": null,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_growing_s20_r0": {
+   "axis": "pupil",
+   "setting": "growing_s20",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 20,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "growing"
+   },
+   "refinement_parameter": 0.05,
+   "config_hash": "fd0520273afea45f64c63c92f481b141583ec3729f6779345252ecda1a93b612",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": null,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_growing_s20_r1": {
+   "axis": "pupil",
+   "setting": "growing_s20",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 20,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "growing"
+   },
+   "refinement_parameter": 0.05,
+   "config_hash": "fd0520273afea45f64c63c92f481b141583ec3729f6779345252ecda1a93b612",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": null,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_pupil_growing_s20_r2": {
+   "axis": "pupil",
+   "setting": "growing_s20",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 20,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": "growing"
+   },
+   "refinement_parameter": 0.05,
+   "config_hash": "fd0520273afea45f64c63c92f481b141583ec3729f6779345252ecda1a93b612",
+   "atmosphere_options": {
+    "band_draw_reference_screen_size": 958,
+    "band_limit_screen_size": null,
+    "screen_period_rule": "pupil_diameter"
+   },
+   "exposure_override": null
+  },
+  "medium_detector_k2_r0": {
+   "axis": "detector",
+   "setting": "k2",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 2,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.5,
+   "config_hash": "2f2a0056727954a4ea6d42dffc103d619e9b1ddf8e620ce9e2ba2ae1fd2cd440",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_detector_k2_r1": {
+   "axis": "detector",
+   "setting": "k2",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 2,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.5,
+   "config_hash": "2f2a0056727954a4ea6d42dffc103d619e9b1ddf8e620ce9e2ba2ae1fd2cd440",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_detector_k2_r2": {
+   "axis": "detector",
+   "setting": "k2",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 2,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.5,
+   "config_hash": "2f2a0056727954a4ea6d42dffc103d619e9b1ddf8e620ce9e2ba2ae1fd2cd440",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_detector_k8_r0": {
+   "axis": "detector",
+   "setting": "k8",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 8,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.125,
+   "config_hash": "8e22c01a591cca412a3facc1bb8a9528584fcde660666dea6718a5d1a5e1b9b6",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_detector_k8_r1": {
+   "axis": "detector",
+   "setting": "k8",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 8,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.125,
+   "config_hash": "8e22c01a591cca412a3facc1bb8a9528584fcde660666dea6718a5d1a5e1b9b6",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_detector_k8_r2": {
+   "axis": "detector",
+   "setting": "k8",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 8,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.125,
+   "config_hash": "8e22c01a591cca412a3facc1bb8a9528584fcde660666dea6718a5d1a5e1b9b6",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_spectrum_nodes5_r0": {
+   "axis": "spectrum",
+   "setting": "nodes5",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 5,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.2,
+   "config_hash": "1577c491164d7442ab2fa5aaa66538cbff5696de662bae58d81adcbba6e44ac5",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_spectrum_nodes5_r1": {
+   "axis": "spectrum",
+   "setting": "nodes5",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 5,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.2,
+   "config_hash": "1577c491164d7442ab2fa5aaa66538cbff5696de662bae58d81adcbba6e44ac5",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_spectrum_nodes5_r2": {
+   "axis": "spectrum",
+   "setting": "nodes5",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 5,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.2,
+   "config_hash": "1577c491164d7442ab2fa5aaa66538cbff5696de662bae58d81adcbba6e44ac5",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_spectrum_nodes7_r0": {
+   "axis": "spectrum",
+   "setting": "nodes7",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 7,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.14285714285714285,
+   "config_hash": "c37773efcaaf5ddebdea64fd85ec2d423e8fc10ce6552cbc5234d15c1bd6b0ab",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_spectrum_nodes7_r1": {
+   "axis": "spectrum",
+   "setting": "nodes7",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 7,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.14285714285714285,
+   "config_hash": "c37773efcaaf5ddebdea64fd85ec2d423e8fc10ce6552cbc5234d15c1bd6b0ab",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_spectrum_nodes7_r2": {
+   "axis": "spectrum",
+   "setting": "nodes7",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 7,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.14285714285714285,
+   "config_hash": "c37773efcaaf5ddebdea64fd85ec2d423e8fc10ce6552cbc5234d15c1bd6b0ab",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_exposure_mid_n1_r0": {
+   "axis": "exposure",
+   "setting": "mid_n1",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "midpoint",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 1.0,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": {
+    "subsamples": 1,
+    "sample_rule": "midpoint"
+   }
+  },
+  "medium_exposure_mid_n1_r1": {
+   "axis": "exposure",
+   "setting": "mid_n1",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "midpoint",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 1.0,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": {
+    "subsamples": 1,
+    "sample_rule": "midpoint"
+   }
+  },
+  "medium_exposure_mid_n1_r2": {
+   "axis": "exposure",
+   "setting": "mid_n1",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "midpoint",
+    "exposure_subsamples": 1,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 1.0,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": {
+    "subsamples": 1,
+    "sample_rule": "midpoint"
+   }
+  },
+  "medium_exposure_mid_n2_r0": {
+   "axis": "exposure",
+   "setting": "mid_n2",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "midpoint",
+    "exposure_subsamples": 2,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.5,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": {
+    "subsamples": 2,
+    "sample_rule": "midpoint"
+   }
+  },
+  "medium_exposure_mid_n2_r1": {
+   "axis": "exposure",
+   "setting": "mid_n2",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "midpoint",
+    "exposure_subsamples": 2,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.5,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": {
+    "subsamples": 2,
+    "sample_rule": "midpoint"
+   }
+  },
+  "medium_exposure_mid_n2_r2": {
+   "axis": "exposure",
+   "setting": "mid_n2",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "midpoint",
+    "exposure_subsamples": 2,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.5,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": {
+    "subsamples": 2,
+    "sample_rule": "midpoint"
+   }
+  },
+  "medium_exposure_mid_n4_r0": {
+   "axis": "exposure",
+   "setting": "mid_n4",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "midpoint",
+    "exposure_subsamples": 4,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.25,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": {
+    "subsamples": 4,
+    "sample_rule": "midpoint"
+   }
+  },
+  "medium_exposure_mid_n4_r1": {
+   "axis": "exposure",
+   "setting": "mid_n4",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "midpoint",
+    "exposure_subsamples": 4,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.25,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": {
+    "subsamples": 4,
+    "sample_rule": "midpoint"
+   }
+  },
+  "medium_exposure_mid_n4_r2": {
+   "axis": "exposure",
+   "setting": "mid_n4",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "midpoint",
+    "exposure_subsamples": 4,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.25,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": {
+    "subsamples": 4,
+    "sample_rule": "midpoint"
+   }
+  },
+  "medium_exposure_mid_n8_r0": {
+   "axis": "exposure",
+   "setting": "mid_n8",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "midpoint",
+    "exposure_subsamples": 8,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.125,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": {
+    "subsamples": 8,
+    "sample_rule": "midpoint"
+   }
+  },
+  "medium_exposure_mid_n8_r1": {
+   "axis": "exposure",
+   "setting": "mid_n8",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "midpoint",
+    "exposure_subsamples": 8,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.125,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": {
+    "subsamples": 8,
+    "sample_rule": "midpoint"
+   }
+  },
+  "medium_exposure_mid_n8_r2": {
+   "axis": "exposure",
+   "setting": "mid_n8",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "midpoint",
+    "exposure_subsamples": 8,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": 0.125,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": {
+    "subsamples": 8,
+    "sample_rule": "midpoint"
+   }
+  },
+  "medium_exposure_left_n2_r0": {
+   "axis": "exposure",
+   "setting": "left_n2",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 2,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": null,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": {
+    "subsamples": 2,
+    "sample_rule": "left_point"
+   }
+  },
+  "medium_exposure_left_n2_r1": {
+   "axis": "exposure",
+   "setting": "left_n2",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 2,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": null,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": {
+    "subsamples": 2,
+    "sample_rule": "left_point"
+   }
+  },
+  "medium_exposure_left_n2_r2": {
+   "axis": "exposure",
+   "setting": "left_n2",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 2,
+    "science_pad": 2,
+    "reading": null
+   },
+   "refinement_parameter": null,
+   "config_hash": "2a43f8f0c8a5098c8fa6755255ff04787e472d034e3a16ad5c3ab07607df90d2",
+   "atmosphere_options": null,
+   "exposure_override": {
+    "subsamples": 2,
+    "sample_rule": "left_point"
+   }
+  },
+  "medium_science_pad3_r0": {
+   "axis": "science",
+   "setting": "pad3",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 3,
+    "reading": null
+   },
+   "refinement_parameter": 0.3333333333333333,
+   "config_hash": "dbd1aa6806cc8eeaab8a4a514358c295f15acde2821227cf3b582d1efced0236",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_science_pad3_r1": {
+   "axis": "science",
+   "setting": "pad3",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 3,
+    "reading": null
+   },
+   "refinement_parameter": 0.3333333333333333,
+   "config_hash": "dbd1aa6806cc8eeaab8a4a514358c295f15acde2821227cf3b582d1efced0236",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_science_pad3_r2": {
+   "axis": "science",
+   "setting": "pad3",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 3,
+    "reading": null
+   },
+   "refinement_parameter": 0.3333333333333333,
+   "config_hash": "dbd1aa6806cc8eeaab8a4a514358c295f15acde2821227cf3b582d1efced0236",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_science_pad4_r0": {
+   "axis": "science",
+   "setting": "pad4",
+   "realization": 0,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 4,
+    "reading": null
+   },
+   "refinement_parameter": 0.25,
+   "config_hash": "980dd9b9d204b5e5db7ca1039c5d4ad7b4f82c5df7b401f974323eecc222f657",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_science_pad4_r1": {
+   "axis": "science",
+   "setting": "pad4",
+   "realization": 1,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 4,
+    "reading": null
+   },
+   "refinement_parameter": 0.25,
+   "config_hash": "980dd9b9d204b5e5db7ca1039c5d4ad7b4f82c5df7b401f974323eecc222f657",
+   "atmosphere_options": null,
+   "exposure_override": null
+  },
+  "medium_science_pad4_r2": {
+   "axis": "science",
+   "setting": "pad4",
+   "realization": 2,
+   "parameters": {
+    "samples_per_lenslet": 12,
+    "oversampling": 4,
+    "spectral_nodes": 3,
+    "exposure_rule": "left_point",
+    "exposure_subsamples": 1,
+    "science_pad": 4,
+    "reading": null
+   },
+   "refinement_parameter": 0.25,
+   "config_hash": "980dd9b9d204b5e5db7ca1039c5d4ad7b4f82c5df7b401f974323eecc222f657",
+   "atmosphere_options": null,
+   "exposure_override": null
+  }
+ },
+ "planned_protocol_digests": {
+  "medium_baseline_plain_r0": "46224bba7ae65511ae9629961bcc7d06ee728b39321ebd1d8a492634235a7ac1",
+  "medium_baseline_plain_r1": "e1d3c634df88619ff726eba7d50b24af797a9ff7103b0775925bdf1fffe5f800",
+  "medium_baseline_plain_r2": "af859e24e692bc7c873a08cceb618d6f5312d7652489aede17f4655f523835d7",
+  "medium_pupil_common_s12_r0": "ed4ddc14f7c9db9200d6f81ba186237032b7fd8086503eeb120fc7fbfd0191f5",
+  "medium_pupil_common_s12_r1": "72691deffcbaf8d5c99b877bfc8ef7ff008e5b712f2595e24555c73d386dab7a",
+  "medium_pupil_common_s12_r2": "a82f95dcb6ceadfc828dd222ccdab1540f13149cb51b97b1c8d540acfd0c5aa3",
+  "medium_pupil_common_s16_r0": "5003a1fe75e873294d94254a44a670e95e9f0717aefc9c0aedfd2ba5719ef78b",
+  "medium_pupil_common_s16_r1": "1e5e7c90f04aa81ead99965dbb70e2e005c27dd38aefeea13fcfcfba5f49e606",
+  "medium_pupil_common_s16_r2": "931081ca0e0c6f8e2f6cf97794f5ed00e67bd93457a4c57abbf7caf22aa16de3",
+  "medium_pupil_common_s20_r0": "b972fc66ad46635eb082f69ed3904d5a8ca15035f9b1b202b44efc73e622de1c",
+  "medium_pupil_common_s20_r1": "b888604f3b86fcddeba645713059835106a88a16d4232832446da097dfaa33d7",
+  "medium_pupil_common_s20_r2": "7cf22c4b0940b629fdfaa29b949511de8fd9706d18980d3a27bfa0af705a24a6",
+  "medium_pupil_growing_s12_r0": "238fab44d7241e2717380f97b434cd095fed057d9e16a6396d7f1dd83c3219b2",
+  "medium_pupil_growing_s12_r1": "89b0f49c0ff6fa7e2f5c1ea0122706866d5581482fd7c94da94be4bdc7722bb1",
+  "medium_pupil_growing_s12_r2": "69fec55070f4212b497af372b77e23a2398b0a3a22d98fb15bd0a19bae9676b0",
+  "medium_pupil_growing_s16_r0": "d4a61fcb5273dacc85d291b50629940ef44f90aac36be7c4ae044b6945bbd5b8",
+  "medium_pupil_growing_s16_r1": "bdb532181580e3ba8c3b3ee7420d2e5c18a48190d4436d8bed7f686e7c3255b5",
+  "medium_pupil_growing_s16_r2": "9bec78620bf0b25bbe81dfdd72c36f8f43f869722468f28cb433086f5b50223d",
+  "medium_pupil_growing_s20_r0": "f22002bd973e5abe7dab9768292d35997dbfea87ecd70c9664d61f81a7f77443",
+  "medium_pupil_growing_s20_r1": "fdbf79584c5eec96ce20bd133dd7227a39d833a5bb067aaf8a1a8f75552a7f79",
+  "medium_pupil_growing_s20_r2": "9f872fe3ce5d3e99c13d58b91e0e7f80d798f58698f0ff892fb2b5683c787fef",
+  "medium_detector_k2_r0": "aa2f6c43f0f4d7b81b3b2502e9734a9d0227ca89b214ce0457f860c07b27f8e3",
+  "medium_detector_k2_r1": "50344b9c22a8bfc5956f6bf2e19f0c06410847dfc2d30b74aa12a5855e521987",
+  "medium_detector_k2_r2": "694355dc809f736e9b61efadd9c4a063723f29e4b8c852d0bb1fc0e7f7b558e5",
+  "medium_detector_k8_r0": "76d23f19a750e03d3a233a548108e2e3097baac32af3b2ad8dee327d2d4e7e08",
+  "medium_detector_k8_r1": "f9e59e8bef6b151277c9c03f0768456c6cc3515c707ac11241c3d2d281438bd0",
+  "medium_detector_k8_r2": "e118da212848b4f0799ac38ff2b4ec2d9f5e23498e071c3b6bd2c37736e1d7c4",
+  "medium_spectrum_nodes5_r0": "5969fd9065c94510afae1cb6a80a02cd925d93b3d43d36c7759126b0eb0f8759",
+  "medium_spectrum_nodes5_r1": "e6dd691a4e2b943a872dced19f993dd8cb02ff2c146918dc327e2ddef57f3855",
+  "medium_spectrum_nodes5_r2": "21f69eb5c2b809cf7b439fecbb6748c0449e512244214be495bb45b581922e87",
+  "medium_spectrum_nodes7_r0": "0e8f0f2dda898bdf2034f86dd0193d73495070dd0bc06ecf7062d447e402a1c8",
+  "medium_spectrum_nodes7_r1": "1a1c425548f60eb8654a28fc81888d2a34498d265b9de13c3903d12ba26b6e95",
+  "medium_spectrum_nodes7_r2": "065ec593d12d55ce0583835c3e8368cb2acb81c72f864400398f6e0b526a20c8",
+  "medium_exposure_mid_n1_r0": "20f943c529981f3bfe165fced34d73c5a180bc6ce1443a41e961de16b32d42ef",
+  "medium_exposure_mid_n1_r1": "29eaea1320eecb674252a73df51ffc53d5a38334e5471bd4c484def1dd214041",
+  "medium_exposure_mid_n1_r2": "135451f0146423da5108a9bf5e53f5d26be51726ad877313866122acb1fae5ba",
+  "medium_exposure_mid_n2_r0": "d1f9b960c23814c8b10d29590397a9632ec0101347e250abc313229ce5bb2e9f",
+  "medium_exposure_mid_n2_r1": "5d2e5832e162b48ab7ea8f86552cf7b4d35d6a06e24cf3a8a018b0c81b183d82",
+  "medium_exposure_mid_n2_r2": "0c39003561d8c834fed9b44b2d6a1ffdbd2fc3a5da46a63d5bc1b65fbbbff8f1",
+  "medium_exposure_mid_n4_r0": "f2fa2597993657c17c396fdf0aa32d87bf4954e7bc15bc2513fcc3429b70df7e",
+  "medium_exposure_mid_n4_r1": "31c5e710af5fee51c67e7c8156c4978bdedd18b093153ff38c7ae411976b708b",
+  "medium_exposure_mid_n4_r2": "d2b48f057338c80e491c30f188f6933803abc1d633ece09db6860c0b4e3ff8b2",
+  "medium_exposure_mid_n8_r0": "f8fa8febcdcb7df125d84c4eb92dc3b84a59353ab20cb98882ba522688a12cc8",
+  "medium_exposure_mid_n8_r1": "9e1ca22ef9a7878b96d401434b123aa687a393aa6bbc0e878b00b8d2bbe8795f",
+  "medium_exposure_mid_n8_r2": "ab15a5019e38beabc9644ae9e52c92b3c793d9b6c0d0e28d6e0e2bccaeeb6b6a",
+  "medium_exposure_left_n2_r0": "623b1b62db4829611ead416da55b2be2aaa084b706f060600098e87dc2823afb",
+  "medium_exposure_left_n2_r1": "34af198215bfb32d45af7222161074ac1d0d8ba7a483bb43c7ddfc738aa12ee0",
+  "medium_exposure_left_n2_r2": "faeef5708281fa08d10539791c5ca9b76ae1329c763a5598347b00eaf73696d9",
+  "medium_science_pad3_r0": "5aebf9d41d83c235f49f09946acf1c6595ee089f21e57b237960ceb7d0e82328",
+  "medium_science_pad3_r1": "96e2e218bc6fe9215cc02c7c6d7c5e00cd6265af646d4f6f553fd8e2904f3100",
+  "medium_science_pad3_r2": "593f5fbd08bb3bdeca4a48e2df02d7f697077f5858f0980d0f21fbfdd99cc12c",
+  "medium_science_pad4_r0": "f20a8923279a6037fccd5004e3a9b037b5e7307aee92b89d3f8b0f41b140e26d",
+  "medium_science_pad4_r1": "e66635614a8c96b99ea9629fa8f8d011c1d1e3020d03bc9b2427cfa025f20547",
+  "medium_science_pad4_r2": "560295d34bc0fe0019cc2dbb273fb8171ce84683ac9444c2cd2f90f539e42e89"
+ },
+ "cost_estimate": {
+  "label": "ANALYTIC_ESTIMATE",
+  "anchor": {
+   "build_s": 1.3,
+   "frame_s": 0.033,
+   "label": "ci geometry, 12 m @3 physics, k = 4, 3 nodes, pad 2 (technical reference 9.2)"
+  },
+  "per_run_s": {
+   "medium_baseline_plain_r0": 119.8,
+   "medium_baseline_plain_r1": 119.8,
+   "medium_baseline_plain_r2": 119.8,
+   "medium_pupil_common_s12_r0": 119.8,
+   "medium_pupil_common_s12_r1": 119.8,
+   "medium_pupil_common_s12_r2": 119.8,
+   "medium_pupil_common_s16_r0": 211.8,
+   "medium_pupil_common_s16_r1": 211.8,
+   "medium_pupil_common_s16_r2": 211.8,
+   "medium_pupil_common_s20_r0": 330.1,
+   "medium_pupil_common_s20_r1": 330.1,
+   "medium_pupil_common_s20_r2": 330.1,
+   "medium_pupil_growing_s12_r0": 119.8,
+   "medium_pupil_growing_s12_r1": 119.8,
+   "medium_pupil_growing_s12_r2": 119.8,
+   "medium_pupil_growing_s16_r0": 211.8,
+   "medium_pupil_growing_s16_r1": 211.8,
+   "medium_pupil_growing_s16_r2": 211.8,
+   "medium_pupil_growing_s20_r0": 330.1,
+   "medium_pupil_growing_s20_r1": 330.1,
+   "medium_pupil_growing_s20_r2": 330.1,
+   "medium_detector_k2_r0": 75.3,
+   "medium_detector_k2_r1": 75.3,
+   "medium_detector_k2_r2": 75.3,
+   "medium_detector_k8_r0": 297.7,
+   "medium_detector_k8_r1": 297.7,
+   "medium_detector_k8_r2": 297.7,
+   "medium_spectrum_nodes5_r0": 152.8,
+   "medium_spectrum_nodes5_r1": 152.8,
+   "medium_spectrum_nodes5_r2": 152.8,
+   "medium_spectrum_nodes7_r0": 185.7,
+   "medium_spectrum_nodes7_r1": 185.7,
+   "medium_spectrum_nodes7_r2": 185.7,
+   "medium_exposure_mid_n1_r0": 179.1,
+   "medium_exposure_mid_n1_r1": 179.1,
+   "medium_exposure_mid_n1_r2": 179.1,
+   "medium_exposure_mid_n2_r0": 238.4,
+   "medium_exposure_mid_n2_r1": 238.4,
+   "medium_exposure_mid_n2_r2": 238.4,
+   "medium_exposure_mid_n4_r0": 357.0,
+   "medium_exposure_mid_n4_r1": 357.0,
+   "medium_exposure_mid_n4_r2": 357.0,
+   "medium_exposure_mid_n8_r0": 594.3,
+   "medium_exposure_mid_n8_r1": 594.3,
+   "medium_exposure_mid_n8_r2": 594.3,
+   "medium_exposure_left_n2_r0": 179.1,
+   "medium_exposure_left_n2_r1": 179.1,
+   "medium_exposure_left_n2_r2": 179.1,
+   "medium_science_pad3_r0": 129.7,
+   "medium_science_pad3_r1": 129.7,
+   "medium_science_pad3_r2": 129.7,
+   "medium_science_pad4_r0": 139.6,
+   "medium_science_pad4_r1": 139.6,
+   "medium_science_pad4_r2": 139.6
+  },
+  "total_s": 11916.3,
+  "note": "historical extrapolation for medium and full (not measured T2 results); the ci target of two minutes and about 0.2 GiB is an estimate, measured by the self-check"
+ },
+ "nothing_built": true
+}

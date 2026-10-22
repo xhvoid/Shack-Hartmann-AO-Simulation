@@ -1,0 +1,43 @@
+{
+  "variant": "operator-change-quiet",
+  "source": "/tmp/claude-0/-home-user-Shack-Hartmann-AO-Simulation/f1f3bff0-5382-5b19-9652-6c00a445942e/scratchpad/round2/ci_m7_alpha0p1/trace.npz",
+  "configuration": "ci derivation of scripts/detector_level_convergence_study.py (eso_scao_smoke_5m_software@2 geometry with det_emccd_12m_medium_derived@3 physics), m_AB 7, DIAGNOSTIC reconstructor alpha 0.1",
+  "root_seed": 71,
+  "lenslets_dropped_by_both_arms": [
+    "lenslet-r0001-c0002",
+    "lenslet-r0000-c0003",
+    "lenslet-r0001-c0003"
+  ],
+  "frames_dropped": "analysed frames from 60 on",
+  "noisy_only_dropped": {
+    "lenslets": [
+      "lenslet-r0005-c0006"
+    ],
+    "frames": [
+      200,
+      210,
+      220,
+      230,
+      240
+    ]
+  },
+  "noise_scale": 0.0001,
+  "kick": {
+    "frames": [
+      95,
+      96,
+      97,
+      98,
+      99
+    ],
+    "amplitude_px_peak": 0.44671940838558255,
+    "mode_unsensed_by_reduced_operator": true,
+    "full_operator_gain_on_mode": 0.9732154363412095
+  },
+  "window_mean_m2": 1.2636886276949595e-17,
+  "window_mean_without_kick_m2": 2.5273772553899145e-18,
+  "kick_share_of_window_mean": 0.8000000000000004,
+  "kick_state_window_mean_m2": 1.0109504491650793e-17,
+  "mask_disagreement_frames": 5,
+  "operators_probed": 4
+}

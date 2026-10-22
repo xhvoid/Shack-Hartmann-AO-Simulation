@@ -1,0 +1,740 @@
+{
+  "schema": "shwfs_ao.post_t2_experiment_packet.pilot_requests.v2",
+  "prepared_utc": "2026-10-21",
+  "revised_utc": "2026-10-22 (review round 1: acceptance evidence fields, pilot sidecar and P2b, E3 prerequisites, leftover and resume procedure; review round 2: corrected P1c and P2 checks, model options and record-based sidecar validation, E0 band and admissible-count degrees of freedom; review round 3: the operator the loop used as the model mask, canonical units/axes validation, P2b second command with its own supervisor record, field names audited against the tools' records; review round 4: operator eligibility by two quantified error bounds with the burn-in state included, one exclusion list; review round 5: the carried-state bound measured from the first analysed block with the loop's sensitivity as a systematic budget, the covariance bracket for rows without an estimate, the P2b memory inventory; review round 6: the carried state measured by reconstructing the command-difference trajectory from both arms' telemetry and checking it against the series, the conditional prediction, the per-lenslet bracket from the lenslet's own frames and the sensor model; review round 6 continued: the sensor's calibration reference subtracted in the reconstruction (it cancels only where both arms use the same operator), the reconstruction residual in every budget, the residual maps supplying the carried state where the reconstruction misses the series, a budget at or above the closure band as an exclusion, the sensor-model margin calibrated on the run's estimated lenslets, the map fit streamed; P2b with --closure-band 0.10 and schema v7; review round 7: the operator error defined on the conditional prediction, with the measured carried state and the noise propagated through the actual later operators and the arm-operator forcing included; the rows outside the modal mask given an admissible covariance set over which the operator error is extremized exactly (adjoint functional); P2b's acceptance fields for schema v8 and its memory inventory with the responses counted; review round 8: the exact per-lenslet extremes evaluated at the corners and edge vertices of the interval box only, every candidate inside both variance intervals (schema v9))",
+  "status": "PREPARED_NOT_EXECUTED: every pilot and stage below waits for protocol review and an approval of its exact request; only the entries under executed_checks ran, as bounded ungoverned checks (CHK-0a to CHK-0c in the first session, CHK-1a to CHK-1e in review round 1)",
+  "source": {
+    "commit": "55142852d8e01f0c6b2828480c64c5792e7d5302",
+    "tree": "75c4fe7c9d8a90ef5f26fc174187cf8f82bd4ba9",
+    "parent_with_final_t2_repairs": "2e73e18ca2024e05bbc8bf37cc686d87d9e0e9d1",
+    "ci_run": {"id": 39656946715, "workflow": "tests", "conclusion": "success", "completed_utc": "2026-10-21T19:13:23Z"},
+    "t2_acceptance_digest_supplied": "868eccff15c353d31acf46c75ff176676259001421197c3c7b7ba307e21c071b"
+  },
+  "execution_policy": {
+    "numerical_jobs": "one at a time, two native threads per process (OMP/OPENBLAS/MKL/VECLIB_MAXIMUM/NUMEXPR_NUM_THREADS=2), fresh process per run where the driver does so",
+    "guard": "shwfs_ao.runtime.resource_guard: policy budget min(2 GiB, 12.5 % physical, 25 % available), 2x margin on the audited raw peak, 64 MiB scratch ceiling, refusal on warn/critical memory pressure; an authorized budget above the policy only through tools/authorized_supervise.py with a written note",
+    "series_identity": "one producing host, one locked environment, one code identity per series; no resume across hosts, environments or code; historical records are never relabelled",
+    "enablement": "governed commands run only with --enabled-by-user '<YYYY-MM-DD: the user's wording>' supplied by the user for that concrete run; earlier instructions to ignore the guard are not inherited",
+    "cloud_session": "commands capped at 150 min each; stages run as chained background invocations with --timeout-s at most 8400 s and the drivers' resume; records pushed or copied out before the session ends"
+  },
+  "hosts": {
+    "cloud": {
+      "label": "MEASURED_CURRENT (this session)",
+      "platform": "linux x86_64, KVM guest, Intel Xeon 2.80 GHz, 4 CPUs",
+      "physical_bytes": 16874930176,
+      "available_bytes_at_snapshot": 16128307200,
+      "swap": "none",
+      "memory_pressure": "normal (/proc/pressure/memory avg10 0.00)",
+      "policy_budget_bytes": 2109366272,
+      "policy_budget_mib": 2011.6,
+      "admitted_raw_peak_mib_under_policy": 1005.8,
+      "disk_free_gb_at_start": 32,
+      "speed_relative_to_desktop_anchor": "2.7-2.9x slower at ci scale (driver wall 244.0 s vs 89.3 s; summed child wall 232.8 s vs 79.4 s)"
+    },
+    "desktop": {
+      "label": "SUPPLIED / MEASURED_HISTORICAL (technical reference 9.1-9.3)",
+      "platform": "Apple M1 Pro, 8 cores, 16 GiB, macOS; shared, background load 2.6-4.1 during the recorded measurements; refused the T2 self-check preflight three times on warn pressure",
+      "environment": "Python 3.14.3, NumPy 2.5.0: not the py314 lock (roadmap G6)"
+    }
+  },
+  "environment": {
+    "cloud_lock": {
+      "profile": "constraints/hcipy-py311.txt",
+      "sha256": "9334c9353680eac41423179465aeafb4909e165a4a78ac9aeb61d6ab0238ebd0",
+      "create": [
+        "uv venv --seed --python /usr/bin/python3.11 <venv>",
+        "PIP_CONSTRAINT=<checkout>/constraints/hcipy-py311.txt PYTHONPATH= <venv>/bin/python -m pip install -c constraints/hcipy-py311.txt -e \".[test,hcipy]\""
+      ],
+      "verify": [
+        "PYTHONPATH= <venv>/bin/python scripts/verify_environment_lock.py --constraints constraints/hcipy-py311.txt",
+        "PYTHONPATH= <venv>/bin/python -m pip check"
+      ],
+      "verified_in_session": "hcipy-py311.txt: 40 installed distributions all pinned exactly (70 pins cover this and other lanes); pip check clean",
+      "producer_environment": {"python": "3.11.17 (main, Oct  1 2026, 15:41:07) [GCC 13.3.0]", "numpy": "2.4.6", "scipy": "1.17.1", "machine": "x86_64"},
+      "native_libraries_recorded_not_bound": "scipy-openblas64 0.3.31.188.0 (DYNAMIC_ARCH)",
+      "code_identity": {"git_head": "55142852d8e01f0c6b2828480c64c5792e7d5302", "source_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "package_sha256_prefix": "4f4162237e2264d2"}
+    },
+    "other_locks": "py310 and py314 (Linux-x86-64) need interpreters that the cloud host lacks and cannot download under the current network policy (github.com denied); decision D6"
+  },
+  "hashed_inputs": {
+    "label": "SHA-256 of the exact tree's files; the packaged profiles match resource_manifest.json",
+    "constraints/hcipy-py311.txt": "9334c9353680eac41423179465aeafb4909e165a4a78ac9aeb61d6ab0238ebd0",
+    "constraints/py314.txt": "4be7f83af7f7bec854e1d7e21fd288ca176b8dc4c4a9b12e201ecc9ce82fb23b",
+    "constraints/py310.txt": "f250f5cb6c3f548a4109bba42a056a5f49d67d4ddeeb2eae4801c36a5dfd0460",
+    "scripts/detector_level_convergence_study.py": "fc08a7a99986d3429a16bb3929771f7333d19f273f439899dd7d71c6d08306ea",
+    "scripts/run_detector_level_evidence.py": "70d7637a08a0397d7db22a6968ddeb88e61dc17f63771cfe8c7e170961757c4d",
+    "scripts/analyze_noise_isolation_traces.py": "174acf5eb41470cd727a2f569e477bbdab6b2c86e1589584e7c5111df4f8ccf4",
+    "src/shwfs_ao/experiments/convergence_study.py": "8be9d8194cb7fdd1b1e72ac318e5dcd3f6bdd3674ee8eb81918bfc19a97f2612",
+    "src/shwfs_ao/experiments/detector_level.py": "d69524717bce251de685deb8ac8a921ec382a73ec948059c417cf4e2cdd33b93",
+    "src/shwfs_ao/validation/richardson.py": "a218e3e2aadb967e8c6ab4f9d2f9b423b544d86004c2ade8c0970e7f54ac2f0b",
+    "src/shwfs_ao/validation/atmosphere_pairing.py": "ad30c480b502ec3f1d6f637194e3320b6543b7d916bfa38e61f08ba875024fff",
+    "src/shwfs_ao/validation/encircled_energy.py": "fdb4ab91689ceebd7fc319213dea5d2134e08333226367f76365bf39cd6e6985",
+    "src/shwfs_ao/runtime/resource_guard.py": "2a7f76b5d2634480f7862147869df56fe4bba24f5be1603abdd5443444280efe",
+    "synthetic_presets/det_emccd_12m_medium_derived.v3.json": "03b2782958f834b776d2032a948d1b96f642a9946c58e54c3ac4ac4b4293d004",
+    "synthetic_presets/det_ccd_42m_r3band_derived.v1.json": "56d8a6bac412b56c995a359f56458eb4ad5383d6f5fe47b9fa60b58a3a6714ff",
+    "synthetic_presets/det_emccd_2m_synthetic.v1.json": "8ee39a63e9897539ef11b52b2409969a8dccb4a81e94b09598ab27269d9d801b",
+    "benchmarks/detector_camera_presets.v1.json": "6e85ad08244a866a8ea12a92ca5fa4e1b583d7c640476a4f09fc55f460fa658f",
+    "docs/refactor/detector_level_evidence/det09_noise_isolation_12m_v3.json": "3dd8d681bc22883c7eb21e0b697ac3a4d7dd5f94da637fbb9915ffbfc078ebf7",
+    "docs/refactor/detector_level_evidence/det09_noise_isolation_2m.json": "655528b64e087b3f1e29322f4f6ef857b9a45afd5fe9597e173e2ad6c30ee05d",
+    "planned_protocol_digests": "records/plan_medium.json and records/plan_full.json carry the driver's planned-protocol digest and config hash of every run of the exact tree (--plan builds nothing)"
+  },
+  "common_command_environment": {
+    "working_directory": "<checkout at 5514285, clean>",
+    "python": "<venv>/bin/python (the locked environment above)",
+    "env": {"PYTHONPATH": "", "PYTHONDONTWRITEBYTECODE": "1", "MPLBACKEND": "Agg"},
+    "output_root": "outputs/post_t2/<stage>/<series>/ (git-ignored; <series> = <YYYY-MM-DD>-<host>-5514285)",
+    "launcher_records": "every tools/ launcher writes one JSON record and refuses to overwrite it; the fields the acceptance rules below read are named by their JSON path in that record (timing_pilot_fixed_physics: plan_validation.passed, acceptance_evidence.*, study_row.*; timing_pilot_traced_run: historical_comparison.*, arm_telemetry.*, mask_disagreement.*, delta_v_series.*, trace_sidecar.*; linear_loop_noise_model: stationarity.*, feedback_spectrum.*, prediction.*, comparison.*)",
+    "interrupted_invocation": "after a supervisor stop (timeout, RESOURCE_LIMITED, pressure): read the supervisor record; list leftovers with tools/quarantine_leftovers.py --study <dir> or --record <dir>/<record>.json; move them aside with --apply (renamed into <dir>/leftovers/<UTC>/ with a manifest; nothing deleted); re-invoke the identical command (with --resume for the evidence runner); the driver validates every retained run first (README.md section 2.4)"
+  },
+  "executed_checks": [
+    {
+      "id": "CHK-0a",
+      "name": "T2 ci-scale self-check under the guard on the cloud host",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (MEASURED_CURRENT; machinery and timing evidence only, no scientific claim)",
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "t2_ci_selfcheck_cloud", "--estimate-mib", "307", "--timeout-s", "1800", "--threads", "2", "--log", "<out>/ci_selfcheck_supervisor.log", "--record", "<out>/ci_selfcheck_supervisor.json", "--", "<venv>/bin/python", "scripts/detector_level_convergence_study.py", "--scale", "ci", "--output-dir", "<out>/ci_selfcheck"],
+      "result": {"preflight": "accepted, 614 of 2011.6 MiB", "supervisor": "COMPLETED, exit 0, group peak 338944000 B, pressure normal", "driver_wall_s": 244.0, "summed_child_wall_s": 232.8, "per_paired_run_wall_s": "16.8-27.0", "child_ru_maxrss_mib": "177-232", "runs": 11, "pairing": "exact (dilation 0.0 rad) for both readings; open-loop digests shared on every non-pupil axis", "richardson": "NOT_ESTIMATED on every scan (two settings per axis at ci scale, by design)"},
+      "records": "records/cloud_checks/ci_selfcheck/"
+    },
+    {
+      "id": "CHK-0b",
+      "name": "2 m traced replay against the committed untraced record",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (MEASURED_CURRENT; no scientific claim)",
+      "result": {"supervisor": "COMPLETED, exit 0, wall 931.9 s, group peak 122 MiB, pressure normal", "runs": 32, "refused": 0, "replay_vs_committed": "every config hash equal; 0 of 32 bit-identical; largest relative difference 2.5e-9 (variance quantities), 3.0e-13 (residual RMS), 4.1e-16 (model column)", "delta_v_nm2_per_magnitude": "4.27 +/- 0.08, 10.40 +/- 0.32, 25.81 +/- 0.44, 200.67 +/- 105.01 (the committed values)", "kappa_meas_over_kappa_theory_m5_m6_m7": "0.937 +/- 0.058, 0.895 +/- 0.075, 0.862 +/- 0.048 (t, 8 seeds)", "saturation": "both arms clip 1.5-15 % of actuators per frame (stroke 1 um)", "records": "records/cloud_checks/ni2m_traced/, records/cloud_checks/ni2m_analysis/, records/cloud_checks/SUMMARY.md"},
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "noise_isolation_2m_traced_cloud", "--estimate-mib", "250", "--timeout-s", "3600", "--threads", "2", "--log", "<out>/ni2m_supervisor.log", "--record", "<out>/ni2m_supervisor.json", "--", "<venv>/bin/python", "scripts/run_detector_level_evidence.py", "--output-dir", "<out>/ni2m_traced", "noise-isolation-2m-traced"],
+      "analysis": ["<venv>/bin/python", "scripts/analyze_noise_isolation_traces.py", "<out>/ni2m_traced/det09_noise_isolation_2m_traced.json", "--output-dir", "<out>/ni2m_analysis", "--historical", "docs/refactor/detector_level_evidence/det09_noise_isolation_2m.json", "--gate-quiet-labels", "m5,m6,m7"],
+      "predicts": "cross-host agreement level of the paired-noise instrument (roundoff, not bitwise, expected); the 2 m kappa verification of PROTOCOL.md 1.6; the cloud wall time of a 2 m paired run"
+    },
+    {
+      "id": "CHK-0c",
+      "name": "targeted fast tests of the reviewed interfaces",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION: 318 passed, 1 failed (root-user artifact, README.md E-3), 2 skipped, 1 deselected (slow), 59.7 s",
+      "records": "records/cloud_checks/pytest_targeted.log"
+    },
+    {
+      "id": "CHK-1a",
+      "name": "review round 1: repaired fixed-physics timing pilot at ci scale",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; MEASURED_CURRENT; machinery evidence, no scientific claim)",
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "round1_p1_ci", "--estimate-mib", "400", "--timeout-s", "1800", "--threads", "2", "--log", "<out>/guard.log", "--record", "<out>/guard.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_fixed_physics.py", "--scale", "ci", "--key", "ci_baseline_plain_r0", "--output", "<out>/pilot.json", "--scratch-dir", "<out>/scratch"],
+      "result": {"plan_validation.passed": true, "bit_identical_to_t2_ci_selfcheck_row": "every scalar, open-loop digest, DeltaV value and science metric; protocol hash differs in code/git_head only", "wall_s": [27.2, 26.7], "t2_selfcheck_child_wall_s_2026_10_21": 17.6, "ru_maxrss_mib": [159, 160], "group_peak_mib": [149, 131]},
+      "records": "records/cloud_checks/round1/p1_ci/, records/cloud_checks/round1/p1_ci_alone/"
+    },
+    {
+      "id": "CHK-1b",
+      "name": "review round 1: traced timing pilot on the 2 m profile with historical comparison and pilot sidecar",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; MEASURED_CURRENT; no scientific claim)",
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "round1_ni2m_m5s61", "--estimate-mib", "600", "--timeout-s", "1800", "--threads", "2", "--log", "<out>/guard.log", "--record", "<out>/guard.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_traced_run.py", "--profile", "det_emccd_2m_synthetic", "--profile-version", "1", "--magnitude", "5", "--root-seed", "61", "--frames", "200", "--burn-in", "50", "--historical", "docs/refactor/detector_level_evidence/det09_noise_isolation_2m.json", "--trace-sidecar", "<out>/trace.npz", "--output", "<out>/pilot.json"],
+      "result": {"wall_s": 39.9, "ru_maxrss_mib": 104, "historical_max_abs_relative_difference": 8.3e-10, "config_hash_equal": true, "gate_quiet": true, "e0_weighted_ratio": 1.027, "saturation_fraction_max_after_burn_in": 0.31, "trace_uncompressed_mb": 1.0, "sidecar_mb": 0.78},
+      "records": "records/cloud_checks/round1/ni2m_m5s61/ (the trace archive by digest only)"
+    },
+    {
+      "id": "CHK-1c",
+      "name": "review round 1: exact linear loop model, self-test and the 33 two-metre sidecars",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; implementation evidence, no scientific claim)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--profile", "det_emccd_2m_synthetic", "--profile-version", "1", "--magnitude", "<5-8>", "--sigma", "sidecar", "--sidecar", "<sidecar>", "--output", "<out>/<label>__seed<s>.json"],
+      "result": {"self_test_passed": true, "L_minus_identity_max": 3.6e-15, "exact_over_scalar": "0.9962-1.0012 (x/y correlation term)", "measured_over_predicted_available_rule_t_8_seeds": {"m5": "0.936 +/- 0.060", "m6": "0.892 +/- 0.076", "m7": "0.860 +/- 0.050", "m8": "gate-active, not fitted"}, "measured_over_predicted_strict_rule": {"m5": "0.939 +/- 0.058", "m6": "0.896 +/- 0.075", "m7": "0.862 +/- 0.048"}, "interpretation": "the first session's 2 m deficit under actuator clipping stands for the whole linear model; the model is not verified at 2 m"},
+      "records": "records/cloud_checks/round1/model_self_test.json, records/cloud_checks/round1/ni2m_models/"
+    },
+    {
+      "id": "CHK-1d",
+      "name": "review round 1: traced pilots and the model on the ci geometry (12 m physics on the 5 m smoke geometry), with the ci damping and with the 12 m damping as a diagnostic override",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; implementation evidence, no scientific claim; --alpha 0.1 is a diagnostic configuration, not a profile)",
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "round1_ci_m<7|9>_<default|alpha0p1>", "--estimate-mib", "800", "--timeout-s", "3600", "--threads", "2", "--log", "<out>/guard.log", "--record", "<out>/guard.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_traced_run.py", "--ci-geometry", "--magnitude", "<7|9>", "--root-seed", "71", "--frames", "400", "--burn-in", "100", "[--alpha 0.1]", "--trace-sidecar", "<out>/trace.npz", "--output", "<out>/pilot.json"],
+      "result": {"wall_s": "120-131", "ru_maxrss_mib": 238, "feedback_eigenvalues_below_0.9_with_12m_damping": "7.3 % (2.1 % below 0.5)", "gate_quiet_runs_measured_over_predicted": {"m7_alpha0.1": 0.987, "m9_alpha0.1": 1.011, "m7_ci_damping": "1.051 available rule, 1.282 strict rule (15 flicker frames)"}, "gate_active_run_m9_ci_damping": "1.276 available rule, 2.257 strict rule (71 of 300 frames, 0.58 % row-frames)", "window_over_stationary_with_ci_damping": "0.48-0.50 (one almost unsensed mode, no leak)", "e0_weighted_ratios": "0.992-1.008"},
+      "records": "records/cloud_checks/round1/ci_m7_default/, ci_m7_alpha0p1/, ci_m9_default/, ci_m9_alpha0p1/"
+    },
+    {
+      "id": "CHK-1e",
+      "name": "review round 1: leftover quarantine on synthetic interrupted directories",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/quarantine_leftovers.py", "--study|--record", "<dir or record>", "[--apply]"],
+      "result": {"listed": "exactly the leftovers (runs/*.tmp-*, scratch twin record, orphan sidecar, *.npz.tmp-*) with sizes and SHA-256", "moved": "into leftovers/<UTC>/ with a manifest; planned run, record and referenced sidecar untouched; second pass empty", "deleted": 0},
+      "records": "records/cloud_checks/round1/quarantine_demo/"
+    },
+    {
+      "id": "CHK-2a",
+      "name": "review round 2: model self-test with the delayed injection and the structured propagation",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--self-test", "--output", "<out>/model_self_test.json"],
+      "result": {"passed": true, "kappa_limit": "Lyapunov variance equals kappa to 1e-15 for five (g, l, d) cases", "delayed_injection": "for d = 0, 1, 2 the first d post-update covariances are exactly zero and the next equals g^2 R Sigma R^T", "structured_propagation_max_error": 2.6e-17},
+      "records": "records/cloud_checks/round2/model_self_test.json"
+    },
+    {
+      "id": "CHK-2b",
+      "name": "review round 2: traced pilots rerun with the core-consistent telemetry (2 m m5 seed 61; ci geometry m7 and m9 with the ci damping and with the 12 m damping as a diagnostic override)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; MEASURED_CURRENT; no scientific claim)",
+      "command": ["<as CHK-1b and CHK-1d>"],
+      "result": {"arm_telemetry": "repeats trace_summary.arms (rejected_frames_after_burn_in 0 and recovery_acted false on every arm of every run; recovery null for these profiles, which carry no recovery policy); the recount from the trace arrays equalled the core's count on every run (the tool refuses otherwise)", "wall_s": {"2m": 37.0, "ci": "120.6-127.4"}, "ru_maxrss_mib": {"2m": 103, "ci": 238}, "historical_max_abs_relative_difference_2m": 8.3e-10, "gate_quiet": {"2m_m5": true, "ci_m7_default": true, "ci_m7_alpha0.1": true, "ci_m9_default": false, "ci_m9_alpha0.1": true}},
+      "records": "records/cloud_checks/round2/ni2m_m5s61/, ci_m7_default/, ci_m7_alpha0p1/, ci_m9_default/, ci_m9_alpha0p1/"
+    },
+    {
+      "id": "CHK-2c",
+      "name": "review round 2: the model on the 32 series sidecars with --record (digest, size and the runner's validate_trace_payload) and the single-mask probe",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; implementation evidence, no scientific claim)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--profile", "det_emccd_2m_synthetic", "--profile-version", "1", "--magnitude", "<5-8>", "--sigma", "sidecar", "--sidecar", "<sidecar>", "--record", "<series record>", "--output", "<out>/<label>__seed<s>.json"],
+      "result": {"validation": "32 of 32 sidecars accepted: declared table, frame domains, layout, canonical rows, label, seed, configuration hash, record digest and size, runner validate_trace_payload", "measured_over_predicted_available_rule_t_7dof": {"m5": "0.936 +/- 0.060", "m6": "0.892 +/- 0.076", "m7": "0.860 +/- 0.050", "m8": "gate-active, not fitted; the available rule is defined on 7 of 8 runs (ratios 0.10-1.23) and the strict rule on 2 of 8: the reconstructor's valid-fraction policy (0.75) refuses the other masks, so the fixed-mask model is not defined for them"}, "measured_over_predicted_strict_rule": {"m5": "0.933 +/- 0.063", "m6": "0.890 +/- 0.077", "m7": "0.857 +/- 0.052"}, "L_minus_identity_max_full_mask": 3.6e-15, "interpretation": "unchanged from round 1: the 2 m deficit under clipping stands for the whole linear model"},
+      "records": "records/cloud_checks/round2/ni2m_models/"
+    },
+    {
+      "id": "CHK-2d",
+      "name": "review round 2: the model on the ci-geometry pilot sidecars with --pilot-record",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; implementation evidence, no scientific claim; --alpha 0.1 is a diagnostic configuration)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--ci-geometry", "--magnitude", "<7|9>", "[--alpha 0.1]", "--sigma", "sidecar", "--sidecar", "<out>/trace.npz", "--pilot-record", "<out>/pilot.json", "--output", "<out>/model_sidecar.json"],
+      "result": {"validation": "4 of 4 pilot sidecars accepted against their pilot records (digest, size, frame counts, label, seed, hash)", "available_rule_measured_over_predicted": {"m7_alpha0.1": 0.987, "m9_alpha0.1": 1.011, "m7_ci_damping": 1.051, "m9_ci_damping_gate_active": 1.276}, "strict_rule_on_its_own_rows": {"m9_alpha0.1 (138 of 144 rows)": 0.979, "m7_ci_damping (126 rows)": "0.53: the mask leaves modes unsensed and the prediction doubles", "m9_ci_damping (92 rows)": "no stationary limit; window prediction dominated by the unsensed modes' random walk"}, "delayed_injection_effect_on_window_values": "below 0.1 % on these runs", "unsensed_mode_count_full_mask_ci_damping": 1},
+      "records": "records/cloud_checks/round2/ci_m7_default/, ci_m7_alpha0p1/, ci_m9_default/, ci_m9_alpha0p1/"
+    },
+    {
+      "id": "CHK-2e",
+      "name": "review round 2: negative checks of the sidecar validation",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<the model with (a) a magnitude that is not the sidecar's, (b) a series sidecar renamed to another run's file name against the record, (c) a sidecar whose delta_v_m2 series is one frame short of its declared shape>"],
+      "result": {"a": "refused: the built configuration hash is not the sidecar's; nothing read", "b": "refused: the record's sidecar reference (file name, digest, size) does not match the file", "c": "refused: array delta_v_m2 has shape (149,), declared [150]", "records_written": 0},
+      "records": "records/cloud_checks/round2/negative/"
+    },
+    {
+      "id": "CHK-3a",
+      "name": "review round 3: model self-test with the unit-pole case",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--self-test", "--output", "<out>/model_self_test.json"],
+      "result": {"passed": true, "unit_pole": "an unsensed mode with no leak returns no stationary limit (spectral radius 1.0) instead of a refusal"},
+      "records": "records/cloud_checks/round3/model_self_test.json"
+    },
+    {
+      "id": "CHK-3b",
+      "name": "review round 3: the model on the five round-2 pilot sidecars with --pilot-record, effective operator primary",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; implementation evidence, no scientific claim)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "<configuration>", "--sigma", "sidecar", "--sidecar", "<round-2 pilot sidecar>", "--pilot-record", "<round-2 pilot record>", "--output", "<out>/model_sidecar.json"],
+      "result": {"validation": "5 of 5 accepted (61 arrays each checked against the canonical units, axes, meanings, dtypes and shapes; pilot-record digest, size, frame counts, label, seed, hash)", "operator_consistent": {"2m_m5": "0.993 / 0.993 (noisy / twin match)", "ci_m7_alpha0.1": "1.000 / 1.000", "ci_m9_alpha0.1": "0.980 / 0.983", "ci_m7_ci_damping": "0.937 / 0.927: mask-variable although gate-quiet", "ci_m9_ci_damping": "0.743 / 0.730: mask-variable, gate-active"}, "measured_over_effective_prediction": {"2m_m5": 0.878, "ci_m7_alpha0.1": 0.987, "ci_m9_alpha0.1": 1.010, "ci_m7_ci_damping (descriptive)": 1.072, "ci_m9_ci_damping (descriptive)": 1.349}},
+      "records": "records/cloud_checks/round3/ni2m_m5s61/, ci_m7_default/, ci_m7_alpha0p1/, ci_m9_default/, ci_m9_alpha0p1/"
+    },
+    {
+      "id": "CHK-3c",
+      "name": "review round 3: the model on the 32 series sidecars with --record, effective operator primary",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; implementation evidence, no scientific claim)",
+      "command": ["<as CHK-2c>"],
+      "result": {"validation": "32 of 32 accepted (64 arrays each; record digest and size; runner validate_trace_payload)", "operator_consistent": "24 of 24 gate-quiet runs (m5-m7; arms under the modal operator in at least 99.3 % of the frames); 0 of 8 at the gate-active m8 (13-93 %)", "measured_over_effective_prediction_t_7dof": {"m5": "0.936 +/- 0.060", "m6": "0.892 +/- 0.076", "m7": "0.860 +/- 0.050", "m8": "mask-variable, descriptive: eight ratios from 0.1 to 9"}, "sensitivities": "available 0.936, 0.892, 0.860; strict 0.933, 0.890, 0.857"},
+      "records": "records/cloud_checks/round3/ni2m_models/"
+    },
+    {
+      "id": "CHK-3d",
+      "name": "review round 3: negative checks of the canonical-layout validation",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<the model on a copy of the 2 m pilot sidecar with (a) delta_v_m2 declared in nm2, (b) the centroid telemetry axes permuted, (c) saturation_fraction stored and declared as float32>"],
+      "result": {"a": "refused: declared units 'nm2', the canonical layout is 'm2'", "b": "refused: declared axes [frame, xy, lenslet], the canonical layout is [frame, lenslet, xy]", "c": "refused: dtype float32, the canonical layout requires float64", "records_written": 0},
+      "records": "records/cloud_checks/round3/negative/"
+    },
+    {
+      "id": "CHK-3e",
+      "name": "review round 3: fixed-physics pilot on an exposure key (sample for the P1b field audit)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22; MEASURED_CURRENT)",
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "round3_p1_ci_exposure", "--estimate-mib", "400", "--timeout-s", "1800", "--threads", "2", "--log", "<out>/guard.log", "--record", "<out>/guard.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_fixed_physics.py", "--scale", "ci", "--key", "ci_exposure_mid_n1_r0", "--output", "<out>/pilot.json", "--scratch-dir", "<out>/scratch"],
+      "result": {"check_run": "passed", "acceptance_evidence.wfs_exposure": "populated for both arms (scheme midpoint_uniform_held_dm.v1, one centred offset); exposure_override {subsamples 1, sample_rule midpoint}"},
+      "records": "records/cloud_checks/round3/p1_ci_exposure/"
+    },
+    {
+      "id": "CHK-3f",
+      "name": "review round 3: audit of every acceptance field path against the tools' current records",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "-I", "records/cloud_checks/round3/audit_fields.py"],
+      "result": {"paths_checked": 42, "missing": [], "samples": "fixed-physics pilot records (P1a, P1c, P3: baseline key; P1b: exposure key), the 2 m traced pilot record (P2), a round-3 model record (P2b)"},
+      "records": "records/cloud_checks/round3/audit_fields.py, records/cloud_checks/round3/audit_fields.out"
+    },
+    {
+      "id": "CHK-4a",
+      "name": "review round 4: model self-test with the operator-sequence propagation and the carried-state restarts",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--self-test", "--output", "<out>/model_self_test.json"],
+      "result": {"passed": true, "operator_sequence_and_carried_state": {"constant_sequence_equals_modal": 0.0, "silent_burn_in_equals_cold_start": 0.0, "stationary_start_window_over_stationary": "1 + 4e-16", "cold_start_window_over_modal": 0.952}},
+      "records": "records/cloud_checks/round4/model_self_test.json"
+    },
+    {
+      "id": "CHK-4b",
+      "name": "review round 4: the model with the two operator error bounds on the five pilot sidecars (round-2 pilots, unchanged)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "<configuration of the pilot>", "--sigma", "sidecar", "--sidecar", "<pilot>/trace.npz", "--pilot-record", "<pilot>/pilot.json", "--output", "<out>/model_sidecar.json"],
+      "result": {"validation": "5 of 5 accepted (61 arrays each)", "operator_error": {"2m_m5": "+0.02 % (2 operators over the run)", "ci_m7_alpha0.1": "0.00 % (2)", "ci_m9_alpha0.1": "+0.03 % (5)", "ci_m7_ci_damping": "+0.64 % (13; burn-in part under 1e-7)", "ci_m9_ci_damping": "+3.86 % (55; burn-in part +0.01 %)"}, "carried_state_bound": {"2m_m5": "2.44 % after the last clipped burn-in frame 49 (41 of 50 burn-in frames clipped)", "ci_m7_alpha0.1": "quiet burn-in (none)", "ci_m9_alpha0.1": "quiet burn-in (none)", "ci_m7_ci_damping": "1e-5 after the one disagreeing burn-in frame 35", "ci_m9_ci_damping": "0.04 % after burn-in frame 84 (16 disagreeing frames)"}, "classification": {"2m_m5": "carried-state-sensitive (and excluded by saturation: 15 % of the actuators clipped after burn-in)", "ci_m7_alpha0.1": "operator-consistent", "ci_m9_alpha0.1": "operator-consistent", "ci_m7_ci_damping": "operator-consistent (round 3's 95 % threshold had excluded it at 94 % / 93 %)", "ci_m9_ci_damping": "mask-variable"}, "measured_over_effective_prediction": {"2m_m5": 0.878, "ci_m7_alpha0.1": 0.987, "ci_m9_alpha0.1": 1.010, "ci_m7_ci_damping": "1.072 (1.065 against the time-varying value)", "ci_m9_ci_damping (descriptive)": "1.349 (1.299 against the time-varying value)"}, "probe_s_for_the_operator_sequence": {"2m": 0.01, "ci 2-5 operators": "0.7-2.8", "ci 13 operators": 10.5, "ci 55 operators": 50.6}},
+      "records": "records/cloud_checks/round4/{ni2m_m5s61,ci_m7_default,ci_m7_alpha0p1,ci_m9_default,ci_m9_alpha0p1}/"
+    },
+    {
+      "id": "CHK-4c",
+      "name": "review round 4: the model with the two operator error bounds on the 32 series sidecars (--record)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--profile", "det_emccd_2m_synthetic", "--profile-version", "1", "--magnitude", "<m>", "--sigma", "sidecar", "--sidecar", "<series sidecar>", "--record", "<series record>", "--output", "<out>/<label>__seed<seed>.json"],
+      "result": {"validation": "32 of 32 accepted (64 arrays each; record digest and size; runner validate_trace_payload)", "effective_rule_ratios_unchanged_t_7dof": {"m5": "0.936 +/- 0.060", "m6": "0.892 +/- 0.076", "m7": "0.860 +/- 0.050", "m8": "descriptive: 0.9 to 12"}, "operator_error": {"m5-m7": "0.00-0.02 % on every run (1-2 operators over a run)", "m8": "1.7-32 % on seven runs (9-40 operators over a run; burn-in part up to 10.4 %), one run not assessable (an operator the reconstructor refuses)"}, "carried_state_bound": {"m5-m7": "every burn-in but one clips actuators during loop closure; 12 of 24 runs clip through burn-in frame 49 and are carried-state-sensitive at 2.44 % (the share of the 150-frame window inherited from before it); the other 12 restart at frames 18-37 or need no restart and are operator-consistent (bound at most 2e-5)", "m8": "2.44 % on six runs, 1.1 % and 1e-4 on the other two"}, "classification": {"m5-m7": "12 operator-consistent, 12 carried-state-sensitive per the two rules above; all 24 excluded by the saturation rule (1.5-15 % of the actuators clipped after burn-in)", "m8": "1 operator-consistent (gate-active), 6 mask-variable, 1 not assessable"}},
+      "records": "records/cloud_checks/round4/ni2m_models/ (summary.json has the per-run table)"
+    },
+    {
+      "id": "CHK-4d",
+      "name": "review round 4: negative checks repeated with the round-4 tool (wrong units, permuted axes, wrong dtype)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<the model on a copy of the 2 m pilot sidecar with (a) delta_v_m2 declared in nm2, (b) the centroid telemetry axes permuted, (c) saturation_fraction stored and declared as float32>"],
+      "result": {"a": "refused", "b": "refused", "c": "refused", "records_written": 0},
+      "records": "records/cloud_checks/round4/negative/"
+    },
+    {
+      "id": "CHK-4e",
+      "name": "review round 4: audit of every acceptance field path against the tools' current records (P2b sample: a round-4 model record, schema v4)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "-I", "records/cloud_checks/round4/audit_fields.py"],
+      "result": {"paths_checked": 50, "missing": [], "samples": "fixed-physics pilot records (P1a, P1c, P3: baseline key; P1b: exposure key, round 3), the 2 m traced pilot record (P2), a round-4 model record (P2b)"},
+      "records": "records/cloud_checks/round4/audit_fields.py, records/cloud_checks/round4/audit_fields.out"
+    },
+    {
+      "id": "CHK-5a",
+      "name": "review round 5: model self-test with the carried-state sensitivity checks",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--self-test", "--output", "<out>/model_self_test.json"],
+      "result": {"passed": true, "carried_state_sensitivity": {"recurrence_vs_explicit_powers": 1.1e-15, "gamma_all_unsensed_mode_persists": 1.0, "gamma_sensed_unit_feedback_300_of_25": 0.0833, "gamma_sensed_equals_direct_simulation_of_maximizer": -1.2e-15, "unsensed_injection_of_matching_reconstructor": 0.0}},
+      "records": "records/cloud_checks/round5/model_self_test.json"
+    },
+    {
+      "id": "CHK-5b",
+      "name": "review round 5: the model with the measured carried-state bound and the memory inventory on the five pilot sidecars (round-2 pilots, unchanged)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "<configuration of the pilot>", "--sigma", "sidecar", "--sidecar", "<pilot>/trace.npz", "--pilot-record", "<pilot>/pilot.json", "--output", "<out>/model_sidecar.json"],
+      "result": {"validation": "5 of 5 accepted (61 arrays each)", "operator_error": {"2m_m5": "+0.02 %", "ci_m7_alpha0.1": "0.00 %", "ci_m9_alpha0.1": "+0.03 %", "ci_m7_ci_damping": "+0.64 %", "ci_m9_ci_damping": "+3.86 % (mask-variable)"}, "unsensed_mode_injection": {"2m_m5": "no unsensed mode", "ci alpha 0.1": "1.9e-5 (gamma over the sensed states, 0.091)", "ci damping": "2.3e-2 (gamma over every state, 1.02)"}, "first_block_excess_and_block_scatter": {"2m_m5": "-18.9 %, 26.1 % (6 blocks)", "ci_m7_alpha0.1": "-2.4 %, 10.1 % (12 blocks)", "ci_m9_alpha0.1": "-2.8 %, 9.0 %", "ci_m7_ci_damping": "-10.2 %, 43.1 %", "ci_m9_ci_damping": "+39.3 %, 50.0 %"}, "carried_state_bound": {"2m_m5": "11.9 %", "ci_m7_alpha0.1": "2.1 % (23 % had the unsensed mode carried state)", "ci_m9_alpha0.1": "1.9 % (21 %)", "ci_m7_ci_damping": "99 %", "ci_m9_ci_damping": "142 %"}, "systematic_budget_u": {"2m_m5": "11.9 %", "ci_m7_alpha0.1": "2.1 %", "ci_m9_alpha0.1": "1.9 %", "ci_m7_ci_damping": "99 %", "ci_m9_ci_damping": "146 %"}, "rows_bracketed": "0 on every pilot", "memory": "retained arrays 1.1-20.9 MiB (dense pupil response 0.2-7.5 MiB freed after the Gram), peak 103-130 MiB", "gamma_time_s": "0.0-0.3 (states 39 and 288)"},
+      "records": "records/cloud_checks/round5/{ni2m_m5s61,ci_m7_default,ci_m7_alpha0p1,ci_m9_default,ci_m9_alpha0p1}/"
+    },
+    {
+      "id": "CHK-5c",
+      "name": "review round 5: the model with the measured carried-state bound on the 32 series sidecars (--record)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--profile", "det_emccd_2m_synthetic", "--profile-version", "1", "--magnitude", "<m>", "--sigma", "sidecar", "--sidecar", "<series sidecar>", "--record", "<series record>", "--output", "<out>/<label>__seed<seed>.json"],
+      "result": {"validation": "32 of 32 accepted (64 arrays each; record digest and size; runner validate_trace_payload)", "effective_rule_ratios_unchanged_t_7dof": {"m5": "0.936 +/- 0.060", "m6": "0.892 +/- 0.076", "m7": "0.860 +/- 0.050", "m8": "descriptive: 0.9 to 12"}, "classification": {"m5-m7": "24 of 24 operator-consistent (operator error 0.00-0.02 %)", "m8": "6 mask-variable (2.7-32 %, burn-in part up to 10.4 %), 1 not assessable (an operator the reconstructor refuses), 1 operator-consistent (1.7 %, gate-active)"}, "carried_state_bound": {"gamma": "0.167 on every run (every mode at unit feedback: a state's whole effect lies inside the first block of the 150-frame window)", "first_block_excess": "-37 % to +44 %", "block_scatter": "6-33 % over six blocks", "bound": "2.3-16.7 % at m5-m7; 6.9-839 % at m8 (block scatters up to 2518 %)"}, "systematic_budget_u_mean_over_operator_consistent": {"m5": "8.5 %", "m6": "9.5 %", "m7": "6.9 %"}, "reading": "the 2 m window (150 analysed frames, six blocks) cannot express a 10 % closure test by budget, beside the saturation rule that excludes all 24 gate-quiet runs", "rows_bracketed": "0 on every run (every row outside a modal mask had at least 10 usable frames or none)", "memory": "retained at most 3.5 MiB, peak at most 105 MiB"},
+      "records": "records/cloud_checks/round5/ni2m_models/ (summary.json has the per-run table)"
+    },
+    {
+      "id": "CHK-5d",
+      "name": "review round 5: negative checks repeated with the round-5 tool (wrong units, permuted axes, wrong dtype)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<the model on a copy of the 2 m pilot sidecar with (a) delta_v_m2 declared in nm2, (b) the centroid telemetry axes permuted, (c) saturation_fraction stored and declared as float32>"],
+      "result": {"a": "refused", "b": "refused", "c": "refused", "records_written": 0},
+      "records": "records/cloud_checks/round5/negative/"
+    },
+    {
+      "id": "CHK-5e",
+      "name": "review round 5: audit of every acceptance field path against the tools' current records (P2b sample: a round-5 model record, schema v5)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "-I", "records/cloud_checks/round5/audit_fields.py"],
+      "result": {"paths_checked": 48, "missing": [], "samples": "fixed-physics pilot records (P1a, P1c, P3: baseline key; P1b: exposure key, round 3), the 2 m traced pilot record (P2), a round-5 model record (P2b)"},
+      "records": "records/cloud_checks/round5/audit_fields.py, records/cloud_checks/round5/audit_fields.out"
+    },
+    {
+      "id": "CHK-5f",
+      "name": "review round 5: covariance-bracket fixture (a 2 m pilot sidecar with one lenslet dropped from the noisy arm's effective mask and sensor validity in all analysed frames but five)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--profile", "det_emccd_2m_synthetic", "--profile-version", "1", "--magnitude", "5", "--sigma", "sidecar", "--sidecar", "<out>/bracket_fixture/fixture.npz", "--output", "<out>/bracket_fixture/model.json"],
+      "result": {"rows_outside_modal_mask_bracketed": 2, "lenslets_bracketed": ["lenslet-r0000-c0001"], "envelope_px2": 0.0030, "estimated_lenslets": 20, "modal_operator_rows": "40 of 42 (3 distinct operators over the run)", "operator_error_lower_end": "-0.38 % (the rows' covariance at zero)", "operator_error_upper_end": "-0.12 % (at the envelope)", "operator_error_taken": "-0.38 % (the worse end)", "bracket_width_over_modal": "0.26 % (below the 2 % tolerance: the error is determined)", "classification": "operator-consistent", "note": "a fixture, not a run: it shows the bracket in the record; the structural validation accepts it because the declared table, shapes and hash are the pilot's, and no --record or --pilot-record digest check was requested"},
+      "records": "records/cloud_checks/round5/bracket_fixture/"
+    },
+    {
+      "id": "CHK-6a",
+      "name": "review round 6: model self-test (schema v7)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--self-test", "--output", "<out>/model_self_test.json"],
+      "result": {"passed": true, "schema": "post_t2_linear_loop_noise_model.v7", "state_recovered_from_map_difference": "4.4e-16", "range_basis_of_rank_one_operators": 1},
+      "records": "records/cloud_checks/round6/model_self_test.json"
+    },
+    {
+      "id": "CHK-6b",
+      "name": "review round 6: three traced ci pilots with the residual maps retained (ungoverned ci geometry, seed 71, 400 frames, burn-in 100)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "round6_ci_m<m>_<variant>_maps", "--estimate-mib", "800", "--timeout-s", "3600", "--threads", "2", "--log", "<out>/guard.log", "--record", "<out>/guard.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_traced_run.py", "--ci-geometry", "--magnitude", "<7|9>", "--root-seed", "71", "--frames", "400", "--burn-in", "100", "[--alpha 0.1]", "--retain-maps", "--trace-sidecar", "<out>/trace.npz", "--output", "<out>/pilot.json"],
+      "result": {"runs": "ci m7 with the 12 m damping, ci m7 with the ci damping, ci m9 with the 12 m damping", "guard": "3 of 3 COMPLETED", "wall_s": "62.3-62.7", "ru_maxrss_mib": "237-238", "sidecar_bytes": "27.7-27.9 MB (the round-2 sidecars without maps: about 7 MB)", "delta_v": "identical to the round-2 pilots of the same configuration and seed"},
+      "records": "records/cloud_checks/round6/pilots_maps/<run>/pilot.json, guard.json"
+    },
+    {
+      "id": "CHK-6c",
+      "name": "review round 6: the model with the measured carried state on the five round-2 pilot sidecars (no maps)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "<configuration of the pilot>", "--sigma", "sidecar", "--sidecar", "<pilot>/trace.npz", "--pilot-record", "<pilot>/pilot.json", "--output", "<out>/model_sidecar.json"],
+      "result": {"validation": "5 of 5 accepted", "ci_alpha0.1": {"reconstruction_relative_rms": "1.6e-5 (m7), 6.8e-6 (m9; one frame with the arms on different operators)", "carried_contribution": "1.2 % and 1.4 % (model 1.6 %)", "measured_over_conditional": "0.991 and 1.012", "budget_u": "0.002 % and 0.026 %", "classification": "operator-consistent"}, "ci_m7_ci_damping": "not assessable without maps: reconstruction 2.8e-3 (LSMR at damping 0.001)", "ci_m9_ci_damping": "not assessable: 55 + 27 operators exceed the probe budget of 64", "2m_m5": "not assessable: reconstruction 368 % (clipping)", "margin_calibration_upper_max": "0.81-1.34", "fallback_gamma_bound_all_states": "34-36 % on the ci runs with the 12 m damping (diagnostic)"},
+      "records": "records/cloud_checks/round6/<run>/model_sidecar.json"
+    },
+    {
+      "id": "CHK-6d",
+      "name": "review round 6: the model on the three round-6 pilot sidecars with retained maps",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "<configuration of the pilot>", "--sigma", "sidecar", "--sidecar", "<pilot>/trace.npz", "--pilot-record", "<pilot>/pilot.json", "--output", "<out>/model_sidecar.json"],
+      "result": {"validation": "3 of 3 accepted (64 arrays each)", "map_fit_residual": "2.7e-13 to 3.9e-13", "maps_vs_telemetry_state": "2.0e-5 and 9.4e-6 (12 m damping), 2.1e-2 (ci damping)", "ci_m7_ci_damping": {"carried_state_source": "residual maps", "carried_contribution": "2.0 % (model 1.7 %)", "measured_over_conditional": "1.072", "budget_u": "0.92 % (operator 0.64 %, reconstruction 0.28 %)", "classification": "operator-consistent"}, "ci_alpha0.1": "as CHK-6c (source: telemetry reconstruction)", "memory": "retained 53-55 MiB, peak 189-195 MiB (map fit streamed over 25-frame blocks; 268-274 MiB with the unstreamed fit)"},
+      "records": "records/cloud_checks/round6/pilots_maps/<run>/model_sidecar.json"
+    },
+    {
+      "id": "CHK-6e",
+      "name": "review round 6: the model on the 32 series sidecars (--record)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--profile", "det_emccd_2m_synthetic", "--profile-version", "1", "--magnitude", "<m>", "--sigma", "sidecar", "--sidecar", "<series sidecar>", "--record", "<series record>", "--output", "<out>/<label>__seed<seed>.json"],
+      "result": {"validation": "32 of 32 accepted", "effective_rule_ratios_unchanged_t_7dof": {"m5": "0.936 +/- 0.060", "m6": "0.892 +/- 0.076", "m7": "0.860 +/- 0.050", "m8": "descriptive: 0.9 to 12"}, "classification": "32 of 32 not assessable", "why": "54-193 of 200 frames clip actuators in either arm, so the reconstruction misses every series by 21-427 % relative rms; the four seeds with retained maps take their state from the maps but carry budgets of 77-368 %, at or above the band", "operator_error": "below 0.03 % at m5-m7; 1.5-26 % at m8 (one not computed)", "margin_calibration_upper_max": "1.12-1.47"},
+      "records": "records/cloud_checks/round6/ni2m_models/"
+    },
+    {
+      "id": "CHK-6f",
+      "name": "review round 6: fixtures (a carried state that adds 25 % to the window variance through the loop; a series scaled by 1.25 without telemetry support; the round-5 covariance-bracket fixture)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "records/cloud_checks/round6/fixtures/make_carried_fixture.py", "<round-2 ci m7 alpha 0.1 sidecar>", "<out>/carried_fixture.npz", "<out>/carried_fixture_summary.json", "; then the model on each fixture without --record or --pilot-record (structural validation only)"],
+      "result": {"carried_fixture": {"kick": "frames 95-99, 0.090 px peak along the slowest sensed mode's measurement signature (eigenvalue 0.120 of R M)", "window_increase": "25.0 % (first block +303 %)", "reconstruction_relative_rms": "1.3e-5", "carried_contribution": "26.7 % (model 1.6 %)", "measured_over_conditional": "0.986", "measured_over_unconditional": "1.234", "budget_u": "1.3e-5", "fallback_gamma_bound": "501 % (diagnostic)"}, "series_scaled_fixture": {"reconstruction_relative_rms": "0.21", "carried_state_source": "residual maps", "measured_over_conditional": "1.238", "budget_u": "21.2 %", "classification": "not assessable (budget at or above the band)"}, "bracket_fixture": {"rows_bracketed": 2, "chi_square_factor": "8.26 (five frames)", "bracket_width": "0.76 %", "upper_rests_on_model": false, "classification": "not assessable (its edited masks are not the loop's: reconstruction 3.3e4)"}},
+      "records": "records/cloud_checks/round6/fixtures/"
+    },
+    {
+      "id": "CHK-6g",
+      "name": "review round 6: two logged replays of traced ci pilots (every reconstruct() input and output and every controller update recorded) and the replay check",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "records/cloud_checks/round6/replay/replay_log.py", "<log>.npz", "--ci-geometry", "--magnitude", "<9 --alpha 0.1 | 7>", "; then", "records/cloud_checks/round6/replay/replay_check.py"],
+      "result": {"delta_v_replay_vs_sidecar": "0.0 (both)", "reconstructor_input_minus_centroid_minus_reference_px": "0.0 in both arms of both runs (the reference is about 7 px)", "probed_operator_vs_actual_estimate": {"damping_0.1": "median 4.8e-7, max 1.3e-6", "damping_0.001": "median 1.0e-2, max 4.7e-2"}, "solver": "LSMR, atol = btol = 1e-8, at most 5000 iterations"},
+      "records": "records/cloud_checks/round6/replay/replay_check.json (the logs themselves stay outside the repository)"
+    },
+    {
+      "id": "CHK-6h",
+      "name": "review round 6: negative checks repeated with the v7 tool (wrong units, permuted axes, wrong dtype)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<the model on the round-5 corrupted copies of the 2 m pilot sidecar>"],
+      "result": {"a": "refused", "b": "refused", "c": "refused", "records_written": 0},
+      "records": "records/cloud_checks/round6/negative/"
+    },
+    {
+      "id": "CHK-6i",
+      "name": "review round 6: audit of every acceptance field path against the tools' current records (P2b sample: the v7 model record of the ci m9 pilot with the 12 m damping and retained maps)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "-I", "records/cloud_checks/round6/audit_fields.py"],
+      "result": {"paths_checked": 57, "missing": []},
+      "records": "records/cloud_checks/round6/audit_fields.py, records/cloud_checks/round6/audit_fields.out"
+    },
+    {
+      "id": "CHK-7a",
+      "name": "review round 7: model self-test (schema v8)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--self-test", "--output", "<out>/model_self_test.json"],
+      "result": {"passed": true, "adjoint_functional_vs_forward_relative": "2.7e-16", "box_extremes_beyond_dense_grid": "1.8e-15", "admissible_samples_outside_exact_extremes": "0 of 4000", "indefinite_functional": {"exact_extremes": "-3.58 to -0.93", "variance_corners": "-2.56 to -1.67 (the corners miss the extremes)"}, "constant_sequence_cold_equals_modal_cold": "2.8e-16", "carried_mode_unsensed_by_modal_operator": "window ratio actual over modal 0.034"},
+      "records": "records/cloud_checks/round7/model_self_test.json"
+    },
+    {
+      "id": "CHK-7b",
+      "name": "review round 7: the model on the five round-2 pilot sidecars and the three round-6 pilot sidecars with retained maps",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "<configuration of the pilot>", "--sigma", "sidecar", "--sidecar", "<pilot>/trace.npz", "--pilot-record", "<pilot>/pilot.json", "--output", "<out>/model_sidecar.json"],
+      "result": {"validation": "8 of 8 accepted", "ci_alpha0.1": {"operator_error": "0.00 % (m7), +0.39 % (m9: one arm-disagreement frame raises the carried contribution from 1.4 % to 1.8 %)", "budget_u": "0.002 % and 0.39 %", "measured_over_conditional": "0.991 and 1.012 (1.008 against the actual-operator prediction at m9)", "classification": "operator-consistent", "adjoint_vs_forward": "2.7e-16 and 3.3e-16"}, "ci_m7_ci_damping_with_maps": {"operator_error": "+18.6 % (15 arm-disagreement frames; carried and forced contribution 19.9 % against 2.0 % under the modal operator)", "classification": "not assessable (mask-variable, budget above the band)"}, "ci_m7_ci_damping_without_maps": "not assessable (reconstruction 2.8e-3)", "ci_m9_ci_damping": "not assessable (82 operators exceed 64)", "2m_m5": "not assessable (reconstruction 368 %)", "peak_mib": "126-154 without maps, 190-195 with maps"},
+      "records": "records/cloud_checks/round7/<run>/model_sidecar.json, records/cloud_checks/round7/pilots_maps/<run>/model_sidecar.json"
+    },
+    {
+      "id": "CHK-7c",
+      "name": "review round 7: linear re-synthesis fixtures (an operator change after the first analysed frame with a burn-in kick along the actuator the reduced operator does not sense, with the run's noise and with the noise scaled by 1e-4 plus five arm-disagreement frames; two sparse lenslets), each with the v8 tool and the round-6 (v7) tool",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "records/cloud_checks/round7/fixtures/make_linear_fixture.py", "<operator-change | operator-change-quiet | sparse-lenslets>", "<round-2 ci m7 alpha 0.1 sidecar>", "<out>/<variant>.npz", "<out>/<variant>.summary.json", "; then the model (v8 and v7) on each fixture without --record or --pilot-record"],
+      "result": {"operator_change": {"round6_tool": "operator-consistent, operator error -0.8 %, budget 0.8 %, measured over conditional prediction 0.050 (prediction 20 times the measured value)", "v8": "operator error -94.8 % (extremes -94.8 % to -94.7 %), not assessable; carried contribution 95.9 % under the modal operator against 1.1 % under the actual ones; measured over actual-operator prediction 0.943-0.962"}, "operator_change_quiet": {"round6_tool": "operator-consistent, budget 0.8 %", "v8": "operator error -98.6 %; arm-operator forcing on 5 frames; measured over actual-operator prediction 1 - 2.1e-5"}, "sparse_lenslets": {"round6_tool": "bracket ends -0.12 % and +0.24 %", "v8": "exact extremes -0.12 % and +0.10 %, operator-consistent"}, "reconstruction_relative_rms": "2e-14 to 4e-14 on all three"},
+      "records": "records/cloud_checks/round7/fixtures/"
+    },
+    {
+      "id": "CHK-7d",
+      "name": "review round 7: the round-6 carried-state and scaled-series fixtures and the round-5 bracket fixture with the v8 tool",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<the model on each fixture without --record or --pilot-record>"],
+      "result": {"carried_state_fixture": "operator error 0.00 %, measured over conditional 0.986, budget 1.3e-5 (as in round 6)", "scaled_series_fixture": "not assessable (budget 21 %)", "round5_bracket_fixture": "not assessable (its edited masks are not the loop's: reconstruction 3.3e4)"},
+      "records": "records/cloud_checks/round7/fixtures/"
+    },
+    {
+      "id": "CHK-7e",
+      "name": "review round 7: the model on the 32 series sidecars (--record)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--profile", "det_emccd_2m_synthetic", "--profile-version", "1", "--magnitude", "<m>", "--sigma", "sidecar", "--sidecar", "<series sidecar>", "--record", "<series record>", "--output", "<out>/<label>__seed<seed>.json"],
+      "result": {"validation": "32 of 32 accepted", "classification": "32 of 32 not assessable (clipping, as in round 6)", "operator_error_on_the_map_seeds": "below 0.02 % at m5-m7; +1320 % at m8 (29 operators)"},
+      "records": "records/cloud_checks/round7/ni2m_models/"
+    },
+    {
+      "id": "CHK-7f",
+      "name": "review round 7: negative checks repeated with the v8 tool (wrong units, permuted axes, wrong dtype)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<the model on the round-5 corrupted copies of the 2 m pilot sidecar>"],
+      "result": {"a": "refused", "b": "refused", "c": "refused", "records_written": 0},
+      "records": "records/cloud_checks/round7/negative/"
+    },
+    {
+      "id": "CHK-7g",
+      "name": "review round 7: forward sampling of the admissible covariance on the sparse-lenslet fixture (--admissible-samples 200)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--ci-geometry", "--magnitude", "7", "--alpha", "0.1", "--sigma", "sidecar", "--sidecar", "<out>/sparse-lenslets.npz", "--admissible-samples", "200", "--output", "<out>/sparse-lenslets__model_v8.json"],
+      "result": {"samples": 200, "outside_exact_extremes": 0, "operator_error_sampled_range": "-0.090 % to +0.064 % (exact extremes -0.123 % to +0.097 %)", "time_s": "about 136 (three forward propagations per sample at ci scale)"},
+      "records": "records/cloud_checks/round7/fixtures/sparse-lenslets__model_v8.json"
+    },
+    {
+      "id": "CHK-7h",
+      "name": "review round 7: audit of every acceptance field path against the tools' current records, relative paths and dotted keys now resolved (P2b sample: the v8 record of the ci m9 pilot with the 12 m damping and retained maps)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "-I", "records/cloud_checks/round7/audit_fields.py"],
+      "result": {"absolute_paths": 66, "relative_paths": 28, "missing": [], "negative_test": "two planted wrong paths flagged"},
+      "records": "records/cloud_checks/round7/audit_fields.py, records/cloud_checks/round7/audit_fields.out"
+    },
+    {
+      "id": "CHK-8a",
+      "name": "review round 8: model self-test (schema v9) with singular forms on positive and fixed intervals",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--self-test", "--output", "<out>/model_self_test.json"],
+      "result": {"passed": true, "singular_form_cases": 48, "largest_deviation_from_a_401_x_401_grid_of_the_box": "4.4e-16", "per_axis_case_unused_x_fixed_y": "extremes 0.6 and 0.6 (zero width)", "earlier_checks": "unchanged (adjoint 2.7e-16, 0 of 4000 admissible samples outside)"},
+      "records": "records/cloud_checks/round8/model_self_test.json"
+    },
+    {
+      "id": "CHK-8b",
+      "name": "review round 8: the round-7 (v8) and round-8 (v9) box-extreme routines on the 48 singular cases",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "records/cloud_checks/round8/old_routine_check.py", "<round-7 tool>", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py"],
+      "result": {"round7_routine": "9 of 48 cases wrong, each with a returned point outside an interval (largest deviation 0.98 on a form whose true value is 0.98 everywhere)", "round8_routine": "0 of 48 wrong, no point outside an interval"},
+      "records": "records/cloud_checks/round8/old_routine_check.py, records/cloud_checks/round8/old_routine_check.out"
+    },
+    {
+      "id": "CHK-8c",
+      "name": "review round 8: per-axis fixture (the x row of one lenslet dropped by both arms in every frame while the lenslet stays valid; identical operators throughout), with the v9 and the round-7 (v8) tool",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "records/cloud_checks/round8/fixtures/make_linear_fixture.py", "per-axis", "<round-2 ci m7 alpha 0.1 sidecar>", "<out>/per-axis.npz", "<out>/per-axis.summary.json", "; then the model (v9 with --admissible-samples 50, and v8) on it"],
+      "result": {"admissible_lenslet": "x variance in its two-sided 95 % interval (positive), y fixed at the effective estimate", "round7_tool": "operator error -0.39 %, false extreme range 0.39 %", "v9": "operator error 1.3e-16, range 0, operator-consistent; 50 sampled admissible covariances all at the same value"},
+      "records": "records/cloud_checks/round8/fixtures/"
+    },
+    {
+      "id": "CHK-8d",
+      "name": "review round 8: the v9 tool on every other sidecar and fixture of round 7",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<the round-7 batch with the v9 tool: 5 round-2 pilots, 3 round-6 pilots with maps, 32 series sidecars, the three round-7 linear fixtures with the round-7 tool for comparison, the round-6 and round-5 fixtures>"],
+      "result": {"outcome": "every classification, operator error, extreme range, budget and ratio equal to round 7 (the null-ray candidate changed only the per-axis case)", "validation": "40 of 40 genuine sidecars accepted", "sampling_sparse_fixture": "0 of 200 outside the exact extremes"},
+      "records": "records/cloud_checks/round8/"
+    },
+    {
+      "id": "CHK-8e",
+      "name": "review round 8: negative checks repeated with the v9 tool (wrong units, permuted axes, wrong dtype)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<the model on the round-5 corrupted copies of the 2 m pilot sidecar>"],
+      "result": {"a": "refused", "b": "refused", "c": "refused", "records_written": 0},
+      "records": "records/cloud_checks/round8/negative/"
+    },
+    {
+      "id": "CHK-8f",
+      "name": "review round 8: audit of every acceptance field path, absolute and relative (P2b sample: the v9 record of the ci m9 pilot with the 12 m damping and retained maps)",
+      "governed": false,
+      "status": "EXECUTED_IN_SESSION (2026-10-22)",
+      "command": ["<venv>/bin/python", "-I", "records/cloud_checks/round8/audit_fields.py"],
+      "result": {"absolute_paths": 66, "relative_paths": 28, "missing": []},
+      "records": "records/cloud_checks/round8/audit_fields.py, records/cloud_checks/round8/audit_fields.out"
+    }
+  ],
+  "pilots": [
+    {
+      "id": "P1a",
+      "stage": "E2",
+      "purpose": "timing pilot of the baseline paired setting at 12 m; predicts the per-paired-run cost and child peak of every 12-sample setting",
+      "governed": true,
+      "host": "cloud (D1)",
+      "launcher": "tools/timing_pilot_fixed_physics.py in a fresh process under the guard CLI (policy budget)",
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "p1a_medium_baseline", "--estimate-mib", "800", "--timeout-s", "1800", "--threads", "2", "--log", "outputs/post_t2/p1/<series>/p1a.log", "--record", "outputs/post_t2/p1/<series>/p1a_supervisor.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_fixed_physics.py", "--scale", "medium", "--key", "medium_baseline_plain_r0", "--scratch-dir", "outputs/post_t2/p1/<series>/scratch", "--output", "outputs/post_t2/p1/<series>/p1a.json", "--enabled-by-user", "<note>"],
+      "estimates": {"wall_s": {"desktop_anchor": 120, "cloud": "330-350", "label": "ANALYTIC_ESTIMATE (driver) / EXTRAPOLATED"}, "raw_peak_mib": {"value": "500-700", "label": "EXTRAPOLATED from S3 12 m runs and the E3 process peaks"}, "disk_mib": {"twin_record": 36, "record": "<1"}},
+      "guard": {"estimate_mib": 800, "margin": 2.0, "required_mib": 1600, "policy_budget_mib": 2011.6, "authorized_budget_mib": null, "timeout_s": 1800, "threads": 2},
+      "acceptance": ["supervisor status COMPLETED and launcher exit 0 (exit 2 means the driver's check_run rejected the row: report, do not retry)", "plan_validation.passed true: the launcher composed the row as a study child would and scripts/detector_level_convergence_study.py check_run accepted it against planned_protocol(medium, medium_baseline_plain_r0) (config hash 2a43f8f0..., arms, atmosphere options, exposure override, execution options, science wavelength, open-loop digests, science metrics, paired DeltaV)", "acceptance_evidence.arms_in_order == [\"operating_expectation\", \"noise_on\"] and acceptance_evidence.open_loop_rms_series_shared_by_arms true", "acceptance_evidence.paired_delta_v.status \"available\", series_length 150 and finite_values 150; twin_record.bytes recorded", "acceptance_evidence.saturation_fraction[arm].max 0 and reconstruction_usable_fraction[arm] 1.0 for both arms (a non-zero value is reported with the row, not tuned)", "acceptance_evidence.fourier_reference_status[arm] \"available\" for both arms", "ru_maxrss_bytes at most 800 MiB (else the E2 estimates are revised before any stage request)", "wall_s at most 2x the cloud estimate", "the record's study_row is kept with the pilot and is never copied into a study's runs/ directory"],
+      "abort": ["supervisor RESOURCE_LIMITED, timeout or pressure stop", "a refused configuration (ScaoConstructionError and kin): report, do not retry"],
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "P1b",
+      "stage": "E2",
+      "purpose": "timing pilot of the most expensive planned setting (midpoint n = 8); bounds the exposure-axis cost",
+      "governed": true,
+      "host": "cloud (D1)",
+      "launcher": "as P1a",
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "p1b_medium_mid_n8", "--estimate-mib", "800", "--timeout-s", "3600", "--threads", "2", "--log", "outputs/post_t2/p1/<series>/p1b.log", "--record", "outputs/post_t2/p1/<series>/p1b_supervisor.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_fixed_physics.py", "--scale", "medium", "--key", "medium_exposure_mid_n8_r0", "--scratch-dir", "outputs/post_t2/p1/<series>/scratch", "--output", "outputs/post_t2/p1/<series>/p1b.json", "--enabled-by-user", "<note>"],
+      "estimates": {"wall_s": {"desktop_anchor": 594, "cloud": "1600-1750", "label": "ANALYTIC_ESTIMATE (driver) / EXTRAPOLATED"}, "raw_peak_mib": {"value": "500-700", "label": "EXTRAPOLATED (sub-samples add time, not proportional memory)"}},
+      "guard": {"estimate_mib": 800, "margin": 2.0, "required_mib": 1600, "policy_budget_mib": 2011.6, "authorized_budget_mib": null, "timeout_s": 3600, "threads": 2},
+      "acceptance": ["as P1a with key medium_exposure_mid_n8_r0", "acceptance_evidence.exposure_override == {\"subsamples\": 8, \"sample_rule\": \"midpoint\"} and acceptance_evidence.wfs_exposure[arm].scheme \"midpoint_uniform_held_dm.v1\" with subsamples 8 and duration_s 0.002 for both arms (check_run enforces the override and the exposure keywords against the plan)"],
+      "abort": ["as P1a"],
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "P1c",
+      "stage": "E2",
+      "purpose": "timing and memory pilot of the largest planned grid (20 samples per lenslet, common band); decides whether E2c fits the policy budget",
+      "governed": true,
+      "host": "cloud (D1)",
+      "launcher": "as P1a",
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "p1c_medium_common_s20", "--estimate-mib", "1000", "--timeout-s", "2700", "--threads", "2", "--log", "outputs/post_t2/p1/<series>/p1c.log", "--record", "outputs/post_t2/p1/<series>/p1c_supervisor.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_fixed_physics.py", "--scale", "medium", "--key", "medium_pupil_common_s20_r0", "--scratch-dir", "outputs/post_t2/p1/<series>/scratch", "--output", "outputs/post_t2/p1/<series>/p1c.json", "--enabled-by-user", "<note>"],
+      "estimates": {"wall_s": {"desktop_anchor": 330, "cloud": "900-960", "label": "ANALYTIC_ESTIMATE (driver) / EXTRAPOLATED"}, "raw_peak_mib": {"value": "800-1000", "label": "EXTRAPOLATED (materialized bands 16 L S^2 at S = 958: 147 MB, plus FFT scratch and the 480-sample science grid)"}},
+      "guard": {"estimate_mib": 1000, "margin": 2.0, "required_mib": 2000, "policy_budget_mib": 2011.6, "authorized_budget_mib": null, "timeout_s": 2700, "threads": 2, "note": "admitted with 12 MiB to spare on this host; a lower available-memory reading would refuse it, in which case run it under tools/authorized_supervise.py with 2500 MiB and a note"},
+      "acceptance": ["as P1a with key medium_pupil_common_s20_r0", "acceptance_evidence.atmosphere_options == {\"band_draw_reference_screen_size\": 958, \"band_limit_screen_size\": 574, \"screen_period_rule\": \"pupil_diameter\"} (enforced by check_run) and acceptance_evidence.atmosphere[arm].pairing_active true for both arms", "acceptance_evidence.geometry[arm].pupil_shape == [480, 480] (24 lenslets x 20 samples) for both arms; geometry[arm].pupil_samples (the illuminated sample count, not a per-lenslet number), retained_lenslet_count and illuminated_area_fraction recorded and compared with the baseline's 12-sample values in the P1 note", "group peak (child plus the study driver's parent, about 100-150 MiB) at most 1005 MiB raw, else E2c needs an authorized budget (D2)"],
+      "abort": ["as P1a"],
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "P2",
+      "stage": "S4-A1",
+      "purpose": "timing and memory pilot of one traced paired run with residual maps retained (the series' worst case); fixes the audited estimate and the authorized budget of S4-A1",
+      "governed": true,
+      "host": "cloud (D1)",
+      "launcher": "tools/timing_pilot_traced_run.py in a fresh process under tools/authorized_supervise.py",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/authorized_supervise.py", "--label", "p2_s4a1_traced_m8_seed71", "--estimate-mib", "1400", "--authorized-budget-mib", "2800", "--authorization-note", "<note>", "--timeout-s", "1800", "--threads", "2", "--log", "outputs/post_t2/p2/<series>/p2.log", "--record", "outputs/post_t2/p2/<series>/p2_supervisor.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_traced_run.py", "--profile", "det_emccd_12m_medium_derived", "--profile-version", "3", "--magnitude", "8", "--root-seed", "71", "--frames", "400", "--burn-in", "100", "--retain-maps", "--historical", "docs/refactor/detector_level_evidence/det09_noise_isolation_12m_v3.json", "--trace-sidecar", "outputs/post_t2/p2/<series>/p2_trace.npz", "--output", "outputs/post_t2/p2/<series>/p2.json", "--enabled-by-user", "<note>"],
+      "estimates": {"wall_s": {"desktop_anchor": 132, "cloud": "360-400", "label": "MEASURED_HISTORICAL (2638 s / 20 untraced runs) / EXTRAPOLATED"}, "raw_peak_mib": {"value": "1300-1400", "label": "EXTRAPOLATED (1.11 GiB historical untraced process peak plus trace telemetry, payload copies and the compressed sidecar buffer)"}, "trace_uncompressed_mib": "about 190 with maps, about 45 without"},
+      "guard": {"estimate_mib": 1400, "margin": 2.0, "required_mib": 2800, "policy_budget_mib": 2011.6, "authorized_budget_mib": 2800, "timeout_s": 1800, "threads": 2},
+      "acceptance": ["authorization accepted (pressure normal; available at least 1400 MiB + 1 GiB) and supervisor COMPLETED, launcher exit 0", "historical_comparison.available true, config_hash_equal true and max_abs_relative_difference at most 1e-3 over the seven recorded quantities against run m8 seed 71 of det09_noise_isolation_12m_v3.json (cross-host roundoff expected; a larger difference is reported, not tuned)", "ru_maxrss_bytes at most 1400 MiB (it includes the in-memory sidecar archive), else the S4-A1 estimate and budget are revised before the stage request", "trace_summary.arms[arm].rejected_frames_after_burn_in 0 and trace_summary.arms[arm].recovery_acted false for both arms (the core's own counts; arm_telemetry repeats them; the 12 m profile carries a recovery policy, so trace_summary.arms[arm].recovery is a record whose counters must all be zero, never null), trace_summary.arms[arm].max_saturation_fraction_after_burn_in 0; mask_disagreement.frames_with_disagreement_after_burn_in 0 and trace_summary.gate_quiet true (m8 is expected gate-quiet; a non-zero value is reported and makes P2b's comparison descriptive)", "trace_sidecar.bytes and trace_uncompressed_bytes recorded (disk budget of S4-A1: 20 x the sidecar size)", "operating_state.available true with propagation_weighted.ratio_variance_over_model recorded (the E0 ratio at m8)"],
+      "abort": ["supervisor RESOURCE_LIMITED, timeout or pressure stop", "any refusal of the authorization"],
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "P2b",
+      "stage": "S4-A1",
+      "purpose": "the exact linear closed-loop noise model at the S4 A1 configuration (PROTOCOL.md 1.6): the feedback spectrum of L = R M, the prediction from P2's realized noise covariance and from the flat-wavefront model, and the pilot-level comparison with P2's measured DeltaV; analysis only, no loop is run, but a 12 m system build is governed",
+      "governed": true,
+      "host": "cloud (D1)",
+      "launcher": "tools/linear_loop_noise_model.py in a fresh process under tools/authorized_supervise.py (the dense pupil response is about 65,000 x 500 doubles; the system build dominates the peak)",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/authorized_supervise.py", "--label", "p2b_s4a1_linear_model_m8", "--estimate-mib", "2000", "--authorized-budget-mib", "4000", "--authorization-note", "<note>", "--timeout-s", "5400", "--threads", "2", "--log", "outputs/post_t2/p2/<series>/p2b.log", "--record", "outputs/post_t2/p2/<series>/p2b_supervisor.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--profile", "det_emccd_12m_medium_derived", "--profile-version", "3", "--magnitude", "8", "--sigma", "sidecar", "--support", "effective", "--closure-band", "0.10", "--operator-tolerance", "0.02", "--max-unsensed-injection", "0.001", "--outside-estimate-min-frames", "10", "--model-variance-margin", "2.0", "--max-distinct-masks", "64", "--support-min-fraction", "0.9", "--sidecar", "outputs/post_t2/p2/<series>/p2_trace.npz", "--pilot-record", "outputs/post_t2/p2/<series>/p2.json", "--output", "outputs/post_t2/p2/<series>/p2b_sidecar.json", "--enabled-by-user", "<note>"],
+      "second_command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/authorized_supervise.py", "--label", "p2b_s4a1_linear_model_m8_flat", "--estimate-mib", "2000", "--authorized-budget-mib", "4000", "--authorization-note", "<note>", "--timeout-s", "5400", "--threads", "2", "--log", "outputs/post_t2/p2/<series>/p2b_flat.log", "--record", "outputs/post_t2/p2/<series>/p2b_flat_supervisor.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/linear_loop_noise_model.py", "--profile", "det_emccd_12m_medium_derived", "--profile-version", "3", "--magnitude", "8", "--sigma", "flat", "--root-seed", "71", "--n-steps", "400", "--burn-in", "100", "--output", "outputs/post_t2/p2/<series>/p2b_flat.json", "--enabled-by-user", "<note>"],
+      "second_command_note": "a separate supervisor label, log and record: the launcher refuses an existing --record path, so the two commands never share one (review round 3)",
+      "estimates": {"wall_s": {"cloud": "600-1200 plus one masked reconstructor probe of about 900 rows per distinct operator the run used and about 60-120 s for the carried-state sensitivity (300 leading-block-row steps of a state of about 1500: one c x c x c and one c x c x size product and one size x size x c update each) (one 12 m build; one all-valid and up to two masked probes per rule; two Lyapunov solves and two 400-frame propagations of a state of about 1500 per rule; the operators of both arms are probed once per distinct effective mask, at most --max-distinct-masks 64 together; the operator error adds one 300-frame adjoint pass, one 300-frame forward check and two noise-free 300-frame propagations of the carried state, and the unconditional diagnostic two 400-frame propagations; the number of distinct operators at m8 is a pilot reading, 13 and 55 on the ci geometry at m7 and m9 with the ci damping, 2-5 with the 12 m damping)", "label": "ANALYTIC_ESTIMATE"}, "raw_peak_mib": {"value": "1300-1920; estimate 2000 with headroom", "label": "ANALYTIC_INVENTORY plus allowances (review round 5)", "retained_arrays_mib_at_12m": {"assumptions": "rows 900, controlled actuators c 500, pupil samples 60000, frames 400, lenslets 450, latency 2 (state 1500), float64; the tool records the same inventory for the actual dimensions in memory.retained_arrays_bytes", "sidecar_arrays": "61 (telemetry and history of both arms; plus 2 x 300 x 60000 x 4 B = 137 if the P2 sidecar retains residual maps)", "interaction_matrix_M": 3.4, "gram": 1.9, "response_full": 3.4, "responses_and_loops_per_rule": 16.0, "lyapunov_working_set_estimate": 68.7, "window_propagation_state": 34.3, "time_varying_operators": "16 operators: 154; 64 operators (the cap): 614 (per operator the c x c loop, the c x rows response, the c x c injection block at the worse admissible covariance and, during the adjoint pass, a c x c sum; the round-6 inventory left the responses out)", "carried_state_quadratic_forms": 40.1, "retained_total": "383 (16 operators) to 844 (64 operators), 981 with retained residual maps", "pupil_response_transient": "229 (60000 x 500 x 8 B), freed once the Gram matrix is formed", "not_inventoried": "the 12 m system build (interaction matrix, DM influence on the 288 x 288 grid if dense: up to 415), the interpreter and the libraries: about 110 at the ci geometry (peak 128-165 against a 13-15 inventory plus a 7.5 transient)", "estimate": "retained 850 + the pupil response kept for the map fit 230 (P2 retains residual maps) + the maps in the sidecar 137 + build allowance 500 + baseline 120 = 1837, plus the reconstruction arrays (3), the operator-error arrays (the adjoint state and the admissible covariances: about 30) and the map fit, streamed over 25-frame blocks (the coefficients and four block arrays: about 50): about 1920 at the probe cap, --estimate-mib 2000; the pilot record's memory.ru_maxrss_bytes and memory.retained_arrays_bytes fix the S4 A1 analysis estimate"}}},
+      "guard": {"estimate_mib": 2000, "margin": 2.0, "required_mib": 4000, "policy_budget_mib": 2011.6, "authorized_budget_mib": 4000, "timeout_s": 5400, "threads": 2, "host_physical_mib": 16093},
+      "acceptance": ["authorization accepted and supervisor COMPLETED, launcher exit 0 for both commands", "the sidecar command accepted P2's sidecar: noise_covariance.sidecar_validation.structural passed (declared table against the runner's canonical units, axes, meanings, dtypes and shapes) and noise_covariance.sidecar_validation.pilot_record matched (digest, size, frame counts, label, seed, configuration hash); otherwise the tool refuses and nothing is compared", "prediction.primary_status \"defined\" and prediction.primary_rule \"effective\"; prediction.operator_bounds.status \"evaluated\" with the quantities of PROTOCOL.md 1.6 recorded: prediction.operator_bounds.operator_error.value with .extremes, .width_over_prediction, .carried_window_over_prediction, .arm_operator_forcing and .adjoint_vs_forward_relative (the conditional prediction under the noisy arm's actual operators against the modal one, extremized exactly over the admissible covariance of the rows outside the modal mask; noise_covariance.bracket.rows_outside_modal_mask, .lenslets_admissible, .lenslets_sparse and .details, the intervals of those lenslets); prediction.operator_bounds.time_varying.window_operator_component, .relative_difference_vs_modal and .burn_in_carried_component (the unconditional diagnostic) and .distinct_masks_all_frames, the m8 reading that fixes the probe budget of the S4 A1 analysis; noise_covariance.bracket.margin_calibration.ratio_upper_97_5_max, .faintest_quarter_ratio_upper_97_5_max and .margin_covers (the sensor-model margin of 2 checked on the run's own estimated lenslets); prediction.operator_bounds.reconstruction.consistent with .relative_rms_vs_measured_series (the command difference reconstructed from both arms' centroids minus the sensor's calibration reference and the operators through the controller law, against the measured series: the first 12 m reading of the linearity of the loop's reconstructor at damping 0.1), .reference, .carried_state.window_contribution_over_primary against .carried_state.modelled_window_contribution_over_primary, and .content_outside_modal_operator_range.window_fraction; prediction.operator_bounds.direct_state_measurement.maps_vs_telemetry_state_relative_rms and .fit_residual_fraction (P2 retains residual maps: the state fitted from the maps against the reconstructed one) and prediction.operator_bounds.map_based_carried_state.window_contribution_over_primary; prediction.operator_bounds.carried_state_source and prediction.operator_bounds.delta_v_conditional_window_m2 (the conditional prediction); prediction.operator_bounds.systematic.total with .reconstruction_residual and .at_or_above_band (the run's budget u that PROTOCOL.md 1.7 subtracts from the band; a budget at or above 0.10 makes the run not assessable) and prediction.operator_bounds.carried_state.bound_all_states (the fallback bound, a diagnostic); comparison.measured_over_conditional_prediction (the ratio PROTOCOL.md 1.7 tests) beside comparison.measured_over_exact_window; prediction.operator_bounds.classification \"operator-consistent\" expected at m8 (otherwise prediction.operator_bounds.reasons are recorded and the comparison is descriptive); noise_covariance.operator.noisy_match_fraction, twin_match_fraction and burn_in_match_fraction_noisy recorded as diagnostics", "prediction.by_noise_covariance_rule.effective, .available and .strict each with status and rows_valid_in_mask (one fixed mask per rule)", "stationarity.spectral_radius_F and stationarity.stationary_limit_exists recorded; where the limit exists, stationarity.lyapunov_relative_residual below 1e-8; feedback_spectrum.count_below_1e-6 recorded (unsensed modes of the operator)", "feedback_spectrum.min, .median, .fraction_below_0.9 and .fraction_below_0.5 recorded: the size of the effect the scalar factor omitted at 12 m", "prediction.delta_v_exact_window_m2 (primary), prediction.delta_v_exact_stationary_m2 (null when no limit exists), prediction.delta_v_scalar_reduction_mask_m2, prediction.delta_v_scalar_reduction_series_weights_m2 and comparison.measured_over_exact_window_by_rule recorded; the ratios are pilot-level observations that decide nothing (PROTOCOL.md 1.7 decides on the admissible-seed interval)", "noise_covariance.support_rules.effective.lenslet_fraction, .available.lenslet_fraction and .strict.lenslet_fraction recorded (how many lenslets flicker at m8)", "memory.ru_maxrss_bytes below the authorized budget (4000 MiB) and memory.retained_arrays_bytes with memory.retained_total_bytes recorded (the inventory that fixes the S4 A1 analysis estimate; memory.pupil_response_bytes and memory.pupil_response_kept say whether the pupil response stayed for the map fit)", "every field named here exists in the tool's current record schema (post_t2_linear_loop_noise_model.v9), audited in CHK-8f"],
+      "abort": ["supervisor RESOURCE_LIMITED, timeout or pressure stop", "any refusal of the authorization", "the tool's own refusals (dense response or state above its limits): report; a run with more distinct operators than --max-distinct-masks or an operator the reconstructor refuses is recorded as not assessable (prediction.operator_bounds.time_varying.status \"not computed\" with its reason), which is a pilot reading, not an abort"],
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "P3",
+      "stage": "E3",
+      "purpose": "refreshed full-scale pilot: one twin-only 42 m baseline run (200 frames); fixes the E3 per-run cost and the authorized budget; optionally repeated for full_detector_k4_r0",
+      "governed": true,
+      "host": "cloud (D1)",
+      "launcher": "tools/timing_pilot_fixed_physics.py in a fresh process under tools/authorized_supervise.py",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/authorized_supervise.py", "--label", "p3_full_baseline_twin", "--estimate-mib", "1800", "--authorized-budget-mib", "4096", "--authorization-note", "<note>", "--timeout-s", "5400", "--threads", "2", "--log", "outputs/post_t2/p3/<series>/p3.log", "--record", "outputs/post_t2/p3/<series>/p3_supervisor.json", "--", "<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/timing_pilot_fixed_physics.py", "--scale", "full", "--key", "full_baseline_plain_r0", "--scratch-dir", "outputs/post_t2/p3/<series>/scratch", "--output", "outputs/post_t2/p3/<series>/p3.json", "--enabled-by-user", "<note>"],
+      "estimates": {"wall_s": {"desktop_driver_estimate": 726, "desktop_anchor_based": "about 390 (27 s build + 200 x 1.8 s)", "cloud": "1100-2100", "label": "ANALYTIC_ESTIMATE / MEASURED_HISTORICAL per-frame / EXTRAPOLATED"}, "raw_peak_mib": {"value": "1500-2000", "label": "MEASURED_HISTORICAL range of the S2 and S3 42 m runs (1.57-2.0 GiB), 200-frame histories smaller"}},
+      "guard": {"estimate_mib": 1800, "margin": 2.0, "required_mib": 3600, "policy_budget_mib": 2011.6, "authorized_budget_mib": 4096, "timeout_s": 5400, "threads": 2},
+      "acceptance": ["authorization accepted and supervisor COMPLETED, launcher exit 0", "plan_validation.passed true against planned_protocol(full, full_baseline_plain_r0): acceptance_evidence.arms_in_order == [\"operating_expectation\"], paired_delta_v.status \"unavailable\" by plan, execution.atmosphere_band_storage \"regenerate\"", "ru_maxrss_bytes at most 2000 MiB, else the E3 budget is revised", "acceptance_evidence.post_update_rms_m, science_production.peak_strehl and reconstruction_usable_fraction of the twin in the range of the recorded 42 m runs (about 173 nm, 0.75-0.78, every frame usable) or the difference is reported", "acceptance_evidence.fourier_reference_status \"available\""],
+      "abort": ["supervisor RESOURCE_LIMITED, timeout or pressure stop", "any refusal of the authorization"],
+      "status": "PREPARED_NOT_EXECUTED"
+    }
+  ],
+  "stages": [
+    {
+      "id": "S4-A1",
+      "protocol": "PROTOCOL.md section 1",
+      "governed": true,
+      "prerequisites": ["protocol review passed", "P2 accepted and its measured peak used as --estimate-mib", "P2b recorded: the exact linear model's 12 m feedback spectrum and predictions exist before the series' analysis is read (PROTOCOL.md 1.6-1.7)", "the ungoverned implementation checks of the model (records/cloud_checks/round1/) are on file"],
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/authorized_supervise.py", "--label", "s4_a1_12m_traced", "--estimate-mib", "<P2 measured raw peak, default 1400>", "--authorized-budget-mib", "<2x that, default 2800>", "--authorization-note", "<note>", "--timeout-s", "8400", "--threads", "2", "--log", "outputs/post_t2/s4_a1/<series>/supervisor_<n>.log", "--record", "outputs/post_t2/s4_a1/<series>/supervisor_<n>.json", "--", "<venv>/bin/python", "scripts/run_detector_level_evidence.py", "--output-dir", "outputs/post_t2/s4_a1/<series>", "noise-isolation-12m-traced", "--enabled-by-user", "<note>"],
+      "resume": "after a supervisor stop: read its record; tools/quarantine_leftovers.py --record outputs/post_t2/s4_a1/<series>/det09_noise_isolation_12m_traced.json (list, then --apply) moves aside a temporary or orphan sidecar of an interrupted publication (nothing deleted); then re-invoke the same command with --resume inserted before noise-isolation-12m-traced until all 20 runs are recorded; each invocation validates every saved run and sidecar first and refuses anything it cannot account for",
+      "analysis": ["<venv>/bin/python", "scripts/analyze_noise_isolation_traces.py", "outputs/post_t2/s4_a1/<series>/det09_noise_isolation_12m_traced.json", "--output-dir", "outputs/post_t2/s4_a1/<series>/analysis", "--historical", "docs/refactor/detector_level_evidence/det09_noise_isolation_12m_v3.json", "--gate-quiet-labels", "m8,m9,m10"],
+      "runs": 20,
+      "estimates": {"wall": {"desktop": "45 min (2638 s historical untraced)", "cloud": "2.0-2.2 h (EXTRAPOLATED); two invocations"}, "raw_peak_mib": "1300-1400 (EXTRAPOLATED until P2)", "disk": "0.8-1.2 GB of sidecars plus a record under 1 MB"},
+      "outputs": {"record": "det09_noise_isolation_12m_traced.json", "sidecars": "det09_noise_isolation_12m_traced__m<k>__seed<s>.npz (20)", "analysis": "analysis.json, ANALYSIS_NOTE.md"},
+      "acceptance": ["20 runs recorded under one producer; a nothing-to-run re-invocation validates every sidecar and changes no byte", "analysis completes with the seven-quantity comparison against the committed record", "tools/linear_loop_noise_model.py --sigma sidecar --record <record> accepts every sidecar (runner validation and digest) and records its prediction per run before the closure test of PROTOCOL.md 1.7 is read"],
+      "abort": ["a contract violation of PROTOCOL.md section 0", "supervisor stop (resume after the cause is recorded)"],
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "A2",
+      "protocol": "PROTOCOL.md section 1.7",
+      "governed": true,
+      "status": "CONDITIONAL_NOT_REQUESTED: requested only if the A1 decision rule fires",
+      "command": ["<as S4-A1 with>", "noise-isolation-12m-masklocked", "--enabled-by-user", "<note>"],
+      "runs": 10
+    },
+    {
+      "id": "E2a",
+      "protocol": "PROTOCOL.md section 2, axes detector and spectrum",
+      "governed": true,
+      "prerequisites": ["protocol review passed", "P1a-P1c accepted"],
+      "command": ["<venv>/bin/python", "-m", "shwfs_ao.runtime.resource_guard", "--label", "e2a_medium_detector_spectrum", "--estimate-mib", "<P1 measured child peak plus 150, default 900>", "--timeout-s", "8400", "--threads", "2", "--log", "outputs/post_t2/e2a/<series>/supervisor_<n>.log", "--record", "outputs/post_t2/e2a/<series>/supervisor_<n>.json", "--", "<venv>/bin/python", "scripts/detector_level_convergence_study.py", "--scale", "medium", "--axes", "detector,spectrum", "--output-dir", "outputs/post_t2/e2a/<series>", "--enabled-by-user", "<note>"],
+      "resume": "after a supervisor stop: read its record; tools/quarantine_leftovers.py --study outputs/post_t2/e2a/<series> (list, then --apply) moves aside a runs/*.tmp-* file of an interrupted publication and a stale scratch/twin_pupil_samples_*.npy (nothing deleted); then re-invoke the identical command until convergence_medium.json is written; the driver validates every saved row against the plan and reuses planned runs of the same producer only",
+      "runs": 15,
+      "estimates": {"wall": {"desktop": "0.69 h (2494 s, driver)", "cloud": "1.9 h (EXTRAPOLATED); one or two invocations"}, "raw_peak_mib": "500-700 per child plus the parent"},
+      "outputs": {"summary": "convergence_medium.json (axes detector, spectrum, baseline)", "runs": "runs/<key>.json (15)"},
+      "acceptance": ["summary written once; every pairing check true; each axis classified under PROTOCOL.md 2.4 or marked not expressible with its extension decision"],
+      "abort": ["a contract violation", "two or more refused settings"],
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "E2b",
+      "protocol": "PROTOCOL.md section 2, axes exposure and science",
+      "governed": true,
+      "prerequisites": ["E2a gate passed (PROTOCOL.md 2.6)"],
+      "resume": "as E2a with --study outputs/post_t2/e2b/<series>",
+      "command": ["<as E2a with>", "--axes", "exposure,science", "--output-dir", "outputs/post_t2/e2b/<series>"],
+      "runs": 24,
+      "estimates": {"wall": {"desktop": "1.61 h (5811 s, driver)", "cloud": "4.5 h (EXTRAPOLATED); two or three invocations"}},
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "E2c",
+      "protocol": "PROTOCOL.md section 2, axis pupil",
+      "governed": true,
+      "prerequisites": ["E2a gate passed", "P1c group peak decides policy versus authorized budget"],
+      "resume": "as E2a with --study outputs/post_t2/e2c/<series>",
+      "command": ["<as E2a with>", "--axes", "pupil", "--output-dir", "outputs/post_t2/e2c/<series>", "(under tools/authorized_supervise.py with 2500 MiB if P1c requires it)"],
+      "runs": 18,
+      "estimates": {"wall": {"desktop": "1.10 h (3970 s, driver)", "cloud": "3.1 h (EXTRAPOLATED); two invocations"}, "raw_peak_mib": "up to about 1000 per child at 20 samples plus the parent"},
+      "status": "PREPARED_NOT_EXECUTED"
+    },
+    {
+      "id": "E3",
+      "protocol": "PROTOCOL.md section 3",
+      "governed": true,
+      "prerequisites": ["E2a and E2b both interpreted under PROTOCOL.md 2.4 (E2b because three of the five E3 settings are exposure settings whose 12 m prior scale and rule comparison come from E2b; PROTOCOL.md 3.3)", "P3 accepted and its measured peak used"],
+      "resume": "as E2a with --study outputs/post_t2/e3/<series>",
+      "command": ["<venv>/bin/python", "docs/research/post_t2_experiment_packet/tools/authorized_supervise.py", "--label", "e3_full_twin_only", "--estimate-mib", "<P3 measured raw peak plus 150, default 2000>", "--authorized-budget-mib", "4096", "--authorization-note", "<note>", "--timeout-s", "8400", "--threads", "2", "--log", "outputs/post_t2/e3/<series>/supervisor_<n>.log", "--record", "outputs/post_t2/e3/<series>/supervisor_<n>.json", "--", "<venv>/bin/python", "scripts/detector_level_convergence_study.py", "--scale", "full", "--output-dir", "outputs/post_t2/e3/<series>", "--enabled-by-user", "<note>"],
+      "runs": 5,
+      "estimates": {"wall": {"desktop": "1.71 h (6173 s, driver)", "cloud": "4.6-5.0 h (EXTRAPOLATED); three invocations"}, "raw_peak_mib": "1500-2000 per child"},
+      "outputs": {"summary": "convergence_full.json", "runs": "runs/<key>.json (5)"},
+      "acceptance": ["five runs under one producer; summary written once; the change tables of PROTOCOL.md 3.2 reported without any order estimate"],
+      "status": "PREPARED_NOT_EXECUTED"
+    }
+  ],
+  "decision_gates": [
+    "after P1a-P1c: revise every E2 estimate with measured values; decide E2c's budget (policy or authorized)",
+    "after P2: fix the S4-A1 estimate and authorized budget; confirm the cross-host agreement level at m8",
+    "done in the first session: the 2 m kappa verification (CHK-0b) did not confirm the scalar model under actuator clipping; the 12 m band is fixed a priori at 10 % with the saturation exclusion and the clipping hypothesis H_sat (PROTOCOL.md 1.6)",
+    "done in review round 1: the scalar factor was replaced by the exact linear model with the reconstructed spatial feedback (PROTOCOL.md 1.6; tools/linear_loop_noise_model.py), checked on ungoverned data (CHK-1c, CHK-1d); its 12 m evaluation is pilot P2b; closure uses whole-interval (equivalence) semantics (PROTOCOL.md 1.7)",
+    "after P2 and P2b: fix the S4-A1 estimate and budget; record the 12 m feedback spectrum and the pilot-level ratio before the series",
+    "after S4-A1 analysis: A2 per PROTOCOL.md 1.7; seed extension per 1.7 (mechanism D3)",
+    "after E2a: expansion per PROTOCOL.md 2.6; extension per 2.5 (mechanism D3)",
+    "after E2a and E2b interpretation and P3: E3"
+  ],
+  "what_a_pilot_is_not": "a timing pilot measures cost and admission on the producing host; its record is not a study run, enters no study directory and supports no scientific sentence of PROTOCOL.md section 5"
+}
