@@ -33,7 +33,13 @@ where the reconstruction misses the series, the prediction made
 conditional on the measured state; the covariance of a barely used
 lenslet bracketed from its own frames and the sensor model only, with the
 model's margin calibrated on the run's estimated lenslets); `README.md`
-section 13.
+section 13. Revision 8 (2026-10-22, before approval, review round 7):
+sections 1.6, 1.6 (iv) and 7 (the operator error defined on the
+conditional prediction, with the measured carried state and the noise
+propagated through the actual later operators and the arm-operator
+forcing included; the rows outside the modal mask given an admissible
+covariance set over which the operator error is extremized exactly);
+`README.md` section 14.
 
 ## 0. Rules common to every stage
 
@@ -214,41 +220,55 @@ feedback included.
   sidecar's per-frame effective row masks), probes `R` on exactly that set,
   and takes `Sigma` as the realized covariance of `c_noisy - c_expected`
   per lenslet (2 x 2 blocks, x/y correlation kept, `ddof = 1`) over the
-  frames in which that operator was in use. Two quantities bound the error of
-  taking that operator as fixed, and no frame-count threshold does (review
-  rounds 4 and 5): (1) the **operator error**: the same transient
-  propagated with the noisy arm's actual operator of every frame of the
-  run, burn-in included (each distinct effective mask probed once; the
-  increment released at update `k` carries the operator of frame `k - d`),
-  so the state the loop carried into the analysed window under whatever
-  operators the burn-in used is accounted for; its relative difference
-  from the modal-operator prediction is the operator error, reported with
-  its two parts (carried in from burn-in; operator changes inside the
-  window). A row outside the modal mask whose lenslet has fewer than 10
-  usable analysed frames has no covariance estimate of its own: its
-  lenslet's block is bracketed between zero and an upper bound built from that lenslet's own
-  data and the sensor model only, per axis the larger of the 97.5 %
-  chi-square upper confidence bound of its realized variance over its usable
-  frames (two or more) and twice the sensor model's variance at its own spot
-  (`centroid_sigma_xy_px`, which carries that spot's own flux, background
-  and read noise) in the frames its rows were effective, the block bounded
-  in the positive-semidefinite order by `diag(u_x + sqrt(u_x u_y), u_y +
-  sqrt(u_x u_y))`, which dominates any cross term. The factor two is
-  calibrated on the same run, not assumed: every lenslet with an estimate of
-  its own gives the ratio of its realized variance to the largest model
-  variance at its spot, with the 97.5 % chi-square upper bound of that
-  ratio, and an upper end that rests on the model term needs the largest of
-  those upper bounds at or below two (the faintest quarter of the spots,
-  those nearest to dropping out, is reported apart). The transient is
-  propagated with both ends, the operator error is the worse of the two, a
-  bracket wider than the tolerance leaves the error undetermined, and a
-  lenslet with neither bound, or with a model term the calibration does not
-  support, does too; a lenslet whose rows no operator of the run used enters
-  no transient and is skipped. Nothing that contributes is ever set to zero,
-  and no other lenslet's variance stands in for an unobserved one: other
-  lenslets calibrate the model's margin, the bound is the lenslet's own
-  model variance. (2) the **carried state, measured**: the sidecar holds
-  both arms' centroids and the rows each arm's reconstructor used in every
+  frames in which that operator was in use. Two quantities settle the error
+  of taking that operator as fixed, and no frame-count threshold does
+  (review rounds 4 to 7): (1) the **operator error**: the conditional
+  prediction of (2) below, recomputed with the noisy arm's actual operator
+  of every frame from the first new increment on (each distinct effective
+  mask probed once; update `k` releases the increment of frame `k - d` with
+  that frame's operator), against the same prediction under the modal
+  operator, which is the one the comparison uses. Both parts of the
+  prediction change. The measured carried state is propagated without noise
+  through the actual operators, together with the deterministic forcing
+  `(R^noisy - R^twin)(m^twin - m_ref)` of every frame on which the two arms'
+  operators differ (a mask disagreement acts on the whole residual signal,
+  not only on the noise). The noise part, started cold, is propagated with
+  the actual operators. That noise part is linear in the measurement
+  covariance: one adjoint pass of the companion dynamics gives it as `tr(A
+  Sigma)`. The rows outside the modal mask have no single covariance; they
+  have an **admissible set**. Per lenslet whose rows some operator of the
+  run used, each axis variance lies in an interval and the 2 x 2 block is
+  any positive-semidefinite completion (cross term within `|c| <= sqrt(s_x
+  s_y)`). A lenslet with at least 10 usable analysed frames takes the
+  two-sided 95 % chi-square interval of its own realized variance. A lenslet
+  with fewer takes zero up to the larger of its 97.5 % chi-square upper
+  bound (two or more frames) and twice the sensor model's variance at its
+  own spot in the frames its rows were effective (`centroid_sigma_xy_px`,
+  which carries that spot's own flux, background and read noise). The factor
+  two is calibrated on the same run: every lenslet with an estimate of its
+  own gives the ratio of its realized variance to the largest model variance
+  at its spot, with its 97.5 % chi-square upper bound, and the model term is
+  used only when the largest of those bounds is at or below two (the
+  faintest quarter of the spots is reported apart). Lenslets are independent
+  (separate pixels, independent photon and read noise), so the set is a
+  product of per-lenslet sets. The operator error is extremized exactly over
+  it: per lenslet the contribution is a 2 x 2 quadratic form in `(sqrt(s_x),
+  sqrt(s_y))` over a box, whose extremes lie at a corner, at an edge vertex
+  or on a null ray, and the per-lenslet extremes add. The bracket ends of
+  round 6 were not the extremes of that round's error, which was the
+  difference of two transients with an indefinite dependence on the
+  covariance; the exact extremes cover every admissible case by
+  construction, and a forward-propagation sampling of random admissible
+  covariances checks them. The extreme of larger magnitude is the operator
+  error; an extreme range wider than the tolerance leaves it undetermined. A
+  lenslet without an interval does too, while a lenslet whose rows no
+  operator of the run used enters no transient and is skipped. Nothing that
+  contributes is ever set to zero, and no other lenslet's variance stands in
+  for an unobserved one: other lenslets calibrate the model's margin, the
+  bound is the lenslet's own model variance. The unconditional transient of
+  rounds 4 to 6 is kept as a diagnostic. (2) the **carried state,
+  measured**: the sidecar holds both arms' centroids and the rows each arm's
+  reconstructor used in every
   frame; the built system holds the sensor's calibration reference (the
   reconstructor reads the centroid minus that reference, which cancels
   between the arms only on frames where both use the same operator, so it is
@@ -277,7 +297,8 @@ feedback included.
   released next, fitted by least squares on the pupil response, which
   explains the map difference to 1e-13); otherwise the run is **not
   assessable**. The measured state is propagated under the modal loop with
-  no further noise; its window mean `D` is the exact contribution of the
+  no further noise (the operator error (1) repeats this with the actual
+  operators); its window mean `D` is the exact contribution of the
   carried state, and the **conditional prediction** `DeltaV_pred = W_cold +
   D` replaces the unconditional one, `W_cold` being the model's window value
   for the noise not yet in that state (a cold start), the only part the
@@ -293,13 +314,14 @@ feedback included.
   budget is 1.3e-5. The content of the measured state in directions the
   modal operator cannot produce is reported (zero without clipping or
   operator changes). A run is **operator-consistent** when its operator
-  error (the part of the time-varying difference from operator changes
-  inside the window, at the worse end of the bracket) is within the
-  predeclared 2 %; **mask-variable** when it is not; **not assessable** when
-  the time-varying prediction cannot be computed (more distinct operators
-  than the tool's probe budget, an operator its reconstructor refuses, a
-  bracketed lenslet without a supported bound), the bracket is wider than
-  2 %, no measured carried state exists (the reconstruction misses the
+  error (1), at the worse admissible covariance, is within the predeclared
+  2 %; **mask-variable** when it is not; **not assessable** when the run's
+  operators cannot all be probed (more distinct operators than the tool's
+  probe budget, an operator its reconstructor refuses), a lenslet outside
+  the modal mask has no admissible interval, the admissible covariance
+  moves the operator error over more than 2 %, the arm-operator forcing is
+  undetermined (a row the noisy arm used that the twin did not measure),
+  no measured carried state exists (the reconstruction misses the
   series by more than 1e-3 and the sidecar retains no residual maps), or
   the run's **systematic budget** `u = |operator error| + r + f` (`f` the
   unexplained share of the map difference when the maps supply the state)
@@ -345,52 +367,60 @@ feedback included.
   dof; effective rule; available rule 0.936, 0.892, 0.860; strict rule
   0.933, 0.890, 0.857) at m5, m6, m7, with the E0 ratio at unity
   (0.996-1.010) and 1.5-15 % of the actuators clipped per frame in both arms
-  (stroke 1 um). Every one of those 24 runs has an operator error below 0.03
-  %, and none of them can be assessed: 56-192 of its 200 frames clip
-  actuators in either arm, so the command difference rebuilt from its
-  telemetry misses its series by 23-370 % relative rms, and the one seed per
-  magnitude whose sidecar retains residual maps gets its carried state from
-  the maps but a budget of 77-368 %, at or above the band; with the
-  saturation rule of (iv) (a) excluding all 24 anyway, the model is **not
-  verified at 2 m** and the 2 m record cannot settle it either way. At the
-  gate-active m8 the operator error (the in-window part) is 1.5 %, 2.5 %,
-  8.7 %, 11.3 %, 14.3 %, 21.6 % and 25.9 % on seven runs (9-40 distinct
-  operators over a run) and not computed on the eighth (an operator the
-  reconstructor refuses), every run is not assessable for the same clipping,
-  the eight effective-rule ratios scatter from 0.9 to 12 and are descriptive
-  only, and the reconstructor's own valid-fraction policy (0.75) refuses the
-  strict mask on six of eight runs and the available mask on one. On the
+  (stroke 1 um). None of those 24 runs can be assessed: 56-192 of its 200
+  frames clip actuators in either arm, so the command difference rebuilt
+  from its telemetry misses its series by 23-370 % relative rms, and the one
+  seed per magnitude whose sidecar retains residual maps gets its carried
+  state from the maps (operator error below 0.02 %) but a budget of 77-368
+  %, at or above the band; with the saturation rule of (iv) (a) excluding
+  all 24 anyway, the model is **not verified at 2 m** and the 2 m record
+  cannot settle it either way. At the gate-active m8 every run is not
+  assessable for the same clipping (the map seed's operator error is +1320
+  %, 29 distinct operators), the eight effective-rule ratios scatter from
+  0.9 to 12 and are descriptive only, and the reconstructor's own
+  valid-fraction policy (0.75) refuses the strict mask on six of eight runs
+  and the available mask on one. On the
   convergence driver's ci geometry (the 12 m `@3` detector physics on the 5
   m smoke geometry, 96 controlled actuators, gain 0.4, latency 2, stroke 100
   um, no clipping) with the 12 m damping applied as a diagnostic override
   (`--alpha 0.1`), two 400-frame runs at seed 71 are gate-quiet: 7.3 % of
   the feedback eigenvalues are below 0.9 and 2.1 % below 0.5, the exact
-  prediction is 3.2-3.7 % below the scalar reduction, and both runs are
-  operator-consistent (operator error below 0.03 %, quiet burn-ins). The
-  command difference rebuilt from their telemetry reproduces the measured
-  series to 1.6e-5 and 6.8e-6 relative rms; the m9 run has one frame on
-  which the two arms used different operators, reproduced exactly once the
-  calibration reference is subtracted. Where the sidecar retains residual
-  maps (round-6 pilots of the same configuration and seed) the state fitted
-  from them agrees with the rebuilt one to 2.0e-5 and 9.4e-6. The measured
-  carried state contributes 1.2 % and 1.4 % of the window value against the
-  model's 1.6 %, and the measured `DeltaV` over the conditional prediction
+  prediction is 3.2-3.7 % below the scalar reduction, and both runs have
+  quiet burn-ins. The command difference rebuilt from their telemetry
+  reproduces the measured series to 1.6e-5 and 6.8e-6 relative rms; the m9
+  run has one frame on which the two arms used different operators,
+  reproduced exactly once the calibration reference is subtracted. Where the
+  sidecar retains residual maps (round-6 pilots of the same configuration
+  and seed) the state fitted from them agrees with the rebuilt one to 2.0e-5
+  and 9.4e-6. The measured carried state contributes 1.2 % and 1.4 % of the
+  window value against the model's 1.6 %. Under the actual operators the m7
+  run is unchanged (operator error 0.00 %), while the m9 run's one frame
+  with differing operators adds a deterministic forcing that raises the
+  carried contribution to 1.8 % (operator error +0.39 %); both runs are
+  operator-consistent. The measured `DeltaV` over the conditional prediction
   is 0.991 at m7 (92.9 +/- 2.8 nm^2 measured) and 1.012 at m9 (614.6 +/-
-  15.9 nm^2), with budgets of 0.002 % and 0.026 %; these are two runs and a
-  pilot-level consistency check, not a verification. The round-5 bound, now
-  a diagnostic taken over every state, would have given 36 % and 34 % on the
-  same runs. The same geometry with its own damping (0.001) shows what the
+  15.9 nm^2; 1.008 against the actual-operator prediction), with budgets of
+  0.002 % and 0.39 %; these are two runs and a pilot-level consistency
+  check, not a verification. The round-5 bound, now a diagnostic taken over
+  every state, would have given 36 % and 34 % on the same runs. The same
+  geometry with its own damping (0.001) shows what the
   measurement adds. At m7 the run is gate-quiet by the 0.1 % rule and
   changed its operator twelve times in the window (the arms used the modal
   one in 94 % and 93 % of the frames), which a frame-count threshold would
   have excluded, yet the transient propagated with the actual operator of
   every frame differs from the modal one by 0.64 % (the burn-in's operators
-  carry in under 1e-7 of it), so the run is operator-consistent. Its
-  telemetry reconstruction misses the series by 2.8e-3, because the LSMR
-  solve is not one linear operator at that damping, so without maps the run
-  is not assessable; with the residual maps retained, the measured carried
-  state contributes 2.0 % against the model's 1.7 %, the ratio to the
-  conditional prediction is 1.072 and the budget 0.92 %. The strict mask,
+  carry in under 1e-7 of it). Its telemetry reconstruction misses the series
+  by 2.8e-3, because the LSMR solve is not one linear operator at that
+  damping, so without maps the run is not assessable. With the residual maps
+  retained, the operator error decides: on the 15 frames on which the two
+  arms used different operators, the mask disagreement acts on the whole
+  residual signal, and through the almost unsensed mode that forcing
+  persists, so the carried and forced contribution is 19.9 % under the
+  actual operators against 2.0 % under the modal one. The operator error is
+  +18.6 % and the run is mask-variable, with a budget above the band. That
+  run is gate-quiet by the 0.1 % rule (0.07 % of row-frames): the gate rule
+  alone does not make mask disagreement negligible, and the operator error
+  now measures what it leaves. The strict mask,
   probed on its own 126 rows, leaves modes unsensed and predicts about twice
   the measured value (ratio 0.53). At m9 the run is gate-active and not
   assessable (55 distinct operators of the noisy arm and 27 more of the twin
@@ -425,11 +455,12 @@ feedback included.
   not gate-quiet under the data-driven rule of 1.5 (mask disagreement below
   0.1 % of row-frames after burn-in, no rejected reconstruction, no
   recovery action in either arm); (c) **operator**: a run that is
-  mask-variable (operator error above 2 % at the worse end of the
-  covariance bracket) or not assessable (more distinct operators than the
-  tool's probe budget, an operator its reconstructor refuses, a bracketed
-  lenslet without a supported bound, a covariance bracket wider than 2 %,
-  no measured carried state (a command-difference trajectory reconstructed
+  mask-variable (operator error of 1.6 (1) above 2 % at the worse
+  admissible covariance) or not assessable (more distinct operators than
+  the tool's probe budget, an operator its reconstructor refuses, a lenslet
+  outside the modal mask without an admissible interval, an operator error
+  whose admissible range is wider than 2 %, an undetermined arm-operator
+  forcing, no measured carried state (a command-difference trajectory reconstructed
   from the telemetry that misses the measured series by more than 1e-3
   relative rms on a run whose sidecar retains no residual maps), or a
   systematic budget `u` at or above the band `b`).
@@ -438,7 +469,8 @@ feedback included.
   admissible run is the effective-rule, modal-operator value with its
   systematic budget `u` (1.6, 1.7), and no other rule or label (the
   telemetry-based rules, the count of unsensed modes, the match fractions,
-  the restart sensitivities) decides anything. (v) Secondary hypothesis H_sat, predeclared: the 2 m
+  the restart sensitivities) decides anything. (v) Secondary hypothesis
+  H_sat, predeclared: the 2 m
   deficit and its growth with magnitude are stroke clipping of the noise
   response. H_sat is supported if the 12 m ratio is "verified" (1.7) at
   m8-m10; if instead the 12 m ratio shows a deficit of the same size without
@@ -779,7 +811,8 @@ cloud 4.6-5.0 h (EXTRAPOLATED), chunked into resumed invocations.
   P1-P6 descriptively and the outcomes by magnitude, and the localization
   is "the loop", "the sensor model" or "both" only where the corresponding
   test is **rejected**, and "undetermined" where a test is "not
-  expressible" after the extension (1.6 "Use"). LIM-18's recorded verdict is unchanged in any case; AR-006 is
+  expressible" after the extension (1.6 "Use"). LIM-18's recorded verdict is
+  unchanged in any case; AR-006 is
   closed only if the departure is explained or bounded by this sentence and
   the m10 dip is reproduced and attributed.
 - E2: per axis, "converged at the quoted precision", "unconverged" or "not
@@ -828,12 +861,18 @@ traces.
   latency queue starts with `d` zeros), `L = R M` with `R` probed on the
   one fixed row set that carries `Sigma` (rows outside it invalid, not
   noiseless), that set being the operator the loop used in the plurality
-  of analysed frames (the sidecar's effective row masks); the run is
-  admissible for the fixed-operator comparison only if the part of the
-  time-varying difference due to operator changes inside the window
-  (update `k` carrying the operator of frame `k - d`; rows outside the
-  modal mask at the worse end of their covariance bracket) is at most 2 %
-  of the modal value (1.6 (iv)). Reconstructed trajectory: `inc_k =
+  of analysed frames (the sidecar's effective row masks). Operator error:
+  `(W_cold^act(Sigma) + D^act - W_cold - D) / (W_cold + D)` with `D^act`
+  the carried state propagated by `inc_k = -L_k dc_k + (R_k^noisy -
+  R_k^twin)(m_k^twin - m_ref)` (`L_k = R_k^noisy M` of frame `k`) and
+  `W_cold^act(Sigma) = tr(A Sigma)`, `A = g^2 sum_op R_op^T S_op R_op`,
+  `S_op` the sum over the updates injecting through `op` of `H_k[dc, dc]`
+  from the backward pass `H_k = w Gram_dc + F_{k+1}^T H_{k+1} F_{k+1}`;
+  extremes over the admissible `Sigma` per lenslet from `max/min a p^2 + b
+  q^2 +- 2 |h| p q` over `p in [sqrt(l_x), sqrt(u_x)]`, `q in [sqrt(l_y),
+  sqrt(u_y)]`; the run is admissible for the fixed-operator comparison
+  only if the larger magnitude is at most 2 % (1.6 (iv)). Reconstructed
+  trajectory: `inc_k =
   R_k^noisy (m_k^noisy - m_ref) - R_k^twin (m_k^twin - m_ref)` (each arm's
   centroids minus the sensor's calibration reference `m_ref`, in the rows
   its operator used), `dc_{k+1} = (1 - l) dc_k + g
@@ -852,7 +891,8 @@ traces.
   `f` the map-fit residual share when the maps supply the state, entering
   1.7. Sensor-model margin: `max` over lenslets with their own estimate of
   `var / max sigma_model^2` times `(n - 1) / chi2_0.025(n - 1)`, at most 2
-  where a bracket rests on the model term; state `x_k = (dc_k, ..., dc_{k-d})`, `x_{k+1} = F x_k + [k >=
+  where a sparse lenslet's interval rests on the model term; state `x_k =
+  (dc_k, ..., dc_{k-d})`, `x_{k+1} = F x_k + [k >=
   d] G n_{k-d}`; transient `P_{k+1} = F P_k F^T + [k >= d] G Sigma G^T` from
   `P_0 = 0` (identical initial commands), stationary `P = F P F^T + G Sigma
   G^T`; `DeltaV_pred = mean_k tr(Gram P_{k+1}[dc]) / N_pupil` over the

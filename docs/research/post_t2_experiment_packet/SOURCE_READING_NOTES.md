@@ -109,13 +109,25 @@ propagated under the modal loop without noise it is the exact carried
 contribution `D`, and the prediction becomes `W_cold + D`. The all-state
 `gamma` bound of round 5 (at most `gamma` times the first-block effect,
 `gamma = max_x (x^T M_window x) / (x^T M_block x)`) and the restart values
-of round 4 stay as diagnostics; the match fractions too. A lenslet outside
-the modal mask with fewer than 10 usable frames gets no covariance of its
-own but a bracket from its own frames (97.5 % chi-square) and the sensor
-model's variance at its spot (`centroid_sigma_xy_px`, twice), the margin
-of two being checked on the same run against every lenslet with an
-estimate of its own (realized over model variance, 97.5 % upper bound),
-and the operator error is taken at the worse end.
+of round 4 stay as diagnostics; the match fractions too. Review round 7
+moved the operator error onto the conditional prediction: the measured
+carried state is propagated through the noisy arm's actual later operators
+(`L_k = R_k^noisy M`), with the forcing `(R_k^noisy - R_k^twin)(m_k^twin -
+m_ref)` of every frame on which the arms' masks differ (the linear
+decomposition `m^noisy - m^twin = -M dc + n` holds on the recorded run:
+the noise it extracts matches the recorded centroid residuals at
+correlation 0.999), and the cold noise part with those operators is the
+linear functional `tr(A Sigma)` from one adjoint pass of the companion
+dynamics (`F^T H F` with the same structure as `propagate`). The rows
+outside the modal mask get an admissible set (per lenslet a variance
+interval, from its own frames or, for a sparse lenslet, from zero to the
+larger of its 97.5 % chi-square bound and twice the sensor model's
+variance at its spot, `centroid_sigma_xy_px`, the margin of two checked on
+the same run against every lenslet with an estimate of its own, and every
+positive-semidefinite completion), over which the operator error is
+extremized exactly: with `p = sqrt(s_x)`, `q = sqrt(s_y)` and the cross
+term at its PSD limit, each lenslet contributes a 2 x 2 quadratic form
+over a box.
 
 **Transient and stationary covariance.** With `x_k = (dc_k, dc_{k-1}, ...,
 dc_{k-d})`, `x_{k+1} = F x_k + [k >= d] G n_{k-d}` with `F = [[(1-l) I, 0,
