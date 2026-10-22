@@ -1038,7 +1038,7 @@ def git_identity(repo: Path) -> dict[str, Any]:
         "head": run("rev-parse", "HEAD"),
         "branch": run("rev-parse", "--abbrev-ref", "HEAD"),
         "status_porcelain_excluding_this_directory": [
-            line for line in (run("status", "--porcelain") or "").splitlines() if "docs/research/s4_noise_law" not in line
+            line for line in (run("status", "--porcelain") or "").splitlines() if "docs/research/detector_noise_law" not in line
         ],
     }
 
