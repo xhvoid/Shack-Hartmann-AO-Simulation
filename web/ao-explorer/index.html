@@ -7,7 +7,7 @@
 <meta name="description" content="Precomputed native 2 m Shack-Hartmann SCAO experiment and the main results of the AO simulation project, with their evidence and limits.">
 <link rel="icon" href="data:,">
 <!-- Code and style come from the content-addressed build directory; see scripts/ao_explorer/site_build.py. -->
-<link rel="stylesheet" href="code-0a8f8bdbb4d9aea8/styles.css">
+<link rel="stylesheet" href="code-720a6b68c5ce6a84/styles.css">
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script type="module" src="code-0a8f8bdbb4d9aea8/app.js" onerror="aoCodeUnavailable()"></script>
+<script type="module" src="code-720a6b68c5ce6a84/app.js" onerror="aoCodeUnavailable()"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -131,6 +131,10 @@ function aoCodeUnavailable() {
         <p class="cbar-note" id="cbar-galaxy-note"></p>
       </div>
     </div>
+    <div id="galaxy-rms-readout" class="rms-readout" role="group" aria-label="RMS values alongside the galaxy observation" aria-describedby="galaxy-rms-mode-note">
+      <p class="rms-head">RMS values load with the selected case.</p>
+    </div>
+    <p class="hint" id="galaxy-rms-mode-note"></p>
     <p class="mode-note" id="galaxy-mode-note" hidden></p>
 
     <div class="transport" role="group" aria-label="Galaxy playback">
