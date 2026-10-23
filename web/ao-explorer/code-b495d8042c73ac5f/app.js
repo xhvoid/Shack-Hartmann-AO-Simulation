@@ -22,7 +22,7 @@
 import { BundleError, fetchVerified, fetchVerifiedImage, fetchVerifiedJson, isFiniteOrNull, require } from "./integrity.js";
 import { PALETTE, lineChart, redrawWhenResized } from "./charts.js";
 import { renderResults, renderProjectEvidence } from "./results.js";
-import { initReplay42 } from "./replay42.js";
+import { initReplay42, initApertureComparison } from "./replay42.js";
 import { initGalaxy, showGalaxyCase } from "./galaxy.js";
 import * as playback from "./playback.js";
 
@@ -861,6 +861,7 @@ async function start() {
     const { manifest, manifestUrl, entry, entryUrl: galaxyEntryUrl } = await loadEntry();
     state.manifest = manifest; state.manifestUrl = manifestUrl;
     initReplay42(entry, galaxyEntryUrl);
+    initApertureComparison(entry, galaxyEntryUrl);
     const [display, scene, diagnostics, blocks] = await Promise.all([
       fetchVerifiedJson(manifest.display, manifestUrl),
       fetchVerifiedJson(manifest.scene, manifestUrl),
@@ -899,7 +900,7 @@ async function start() {
     }
     if (wantsResults()) await loadResults();
     // Restore a direct section link after the asynchronous 2 m tables settle.
-    if (location.hash === initialHash && ["#project", "#replay42", "#appendix", "#results"].includes(initialHash)) {
+    if (location.hash === initialHash && ["#project", "#replay42", "#aperture-comparison", "#appendix", "#results"].includes(initialHash)) {
       document.getElementById(initialHash.slice(1))?.scrollIntoView({ behavior: "instant", block: "start" });
     }
   } catch (error) {

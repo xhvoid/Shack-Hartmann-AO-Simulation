@@ -1,6 +1,6 @@
 # AO Simulation Explorer
 
-A static, buildless site with four sections:
+A static, buildless site with five sections:
 
 - **Explore 2 m** — a precomputed native 2 m Shack-Hartmann SCAO experiment
   (`det_emccd_2m_synthetic@1`, seed 1) in eight recorded cases. The active
@@ -29,6 +29,11 @@ A static, buildless site with four sections:
   share a timeline independent of the 2 m controls. Means use all 400 frames
   in the predeclared 100–499 analysis window. This is a historical 42 m
   DRM-derived configuration, not a current 39 m ELT instrument prediction.
+- **Reading the two recordings** — observations, a fixed 2 m crop from the
+  existing 42 m wavefronts, matched color/time comparisons and differences,
+  and a conditional explanation of Strehl stability. Includes a control-parameter
+  comparison and explicitly labels the comparable-control-efficiency premise
+  as a naive assumption. No simulation is performed for this section.
 - **Appendix** — collapsed records for the 12 m detector studies, analytical
   MCAO, historical 42 m runs and other experiments. All eight original groups
   (R1–R8), evidence downloads and deep links are retained. Full methods and
@@ -180,3 +185,17 @@ independent publication checker `scripts/ao_explorer/portfolio_validate.py`.
 It verifies this integration against the completed local recording and the
 pre-integration site, without running the simulation or CI. The 17.1 GB raw
 archive remains local; only the 66.5 MB browser recording is published.
+
+## Matched aperture comparison
+
+The `apertureComparison` entry binds an immutable derivative by manifest size
+and SHA-256. Images and statistics load on demand below the 42 m replay.
+Three buttons select existing 8, 100 and 500 ms map pairs with a shared OPD
+scale; an optional animation replays the same saved samples. Downloads retain
+matched arrays, time series, numerical methods, source identities and a
+configuration comparison. The source recordings remain unchanged.
+
+`scripts/ao_explorer/aperture_comparison_bundle.py` packages the completed
+postprocessing and losslessly converts its GIF to WebP. It checks all 99 decoded
+frames against the original. It never runs an AO simulation. See
+`docs/research/ao_aperture_comparison/README.md` for the evidence and limits.
