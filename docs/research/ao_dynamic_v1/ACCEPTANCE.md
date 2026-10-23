@@ -39,16 +39,18 @@ site and other evidence are those the reviewer accepted.
 | R3-F01 (P3) the round-3 row pointed at missing content | Recorded above. |
 | R3-F02 (P3) a tool-named branch in a public document | Reworded (R1-F10 row). |
 | R3-F03 (P3) pressing Connect with an invalid address while connected stops following the current job | Declared, not changed after acceptance: the previous service stays usable and reconnecting to a valid address re-attaches the job of this session. |
+| CI-1 (requested CI run on `58527f5`) the lint job's rule against `sys.path.insert` outside the tests failed on the three script entry points | The scripts load the reused explorer modules by file (`explorer_modules.py`) and import siblings from their own directory (`3384b18`). The loader joined the producer identity, so the planned runs were repeated once more (attempt 3, byte-identical). The CI rule, ruff and the worker command line were checked locally; the full suites run in the follow-up CI. |
 
 ## Resources
 
-Cumulative feature ledger (`evidence/ledger.jsonl`, 36 entries): **1082.7 s**
-of the 1200 s numerical/processing ceiling and **189.5 MB** of the 512 MiB
+Cumulative feature ledger (`evidence/ledger.jsonl`, 43 entries): **1148.1 s**
+of the 1200 s numerical/processing ceiling and **284.3 MB** of the 512 MiB
 raw-evidence ceiling (`outputs/ao_dynamic_validation/fv1`). By kind:
 development probes 46.3 s (four rounded-up estimates), fixture test sessions
 592.4 s, browser sessions 269.6 s (whole session wall time), planned runs
-62.9 s, repeated planned runs 62.6 s, evaluation and structural processing
-9.8 s, review processing 39.0 s. Failed and diagnosed attempts are included.
+62.9 s, repeated planned runs (two repeats) 126.1 s, evaluation and
+structural processing 11.8 s, review processing 39.0 s. Remote CI time is not
+part of this ledger. Failed and diagnosed attempts are included.
 The frozen explorer series and its ledger were not used or changed.
 
 ## Declared limits
@@ -64,5 +66,7 @@ The frozen explorer series and its ledger were not used or changed.
   lease abandons it; R3-F03 above.
 - Commit identity and the environment-created remote branch are the
   maintainer's decision.
-- The maintainer asked for one CI run after acceptance; its result is
-  reported with the pull request.
+- The maintainer asked for one CI run after acceptance; its first run found
+  CI-1 above, and the follow-up run's result is reported with the pull
+  request. The planned runs were repeated twice in total because repairs
+  changed producer files; every repeat is byte-identical.

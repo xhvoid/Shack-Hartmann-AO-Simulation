@@ -30,12 +30,18 @@ travel 45.645 px of 52 px for the 180-frame runs).
   rerun, while its producer matches. **Every attempt-2 result is
   byte-identical to attempt 1**: loop-history digest, every per-frame value,
   summary, `frames.bin`, `final.bin`, calibration and atmosphere identities
-  (control: history digest). The evaluation uses attempt 2.
+  (control: history digest).
+- **Attempt 3** (producer `32a4e216…`, commit `3384b18`): the requested CI run
+  found `sys.path.insert` in the scripts, which the repository's lint job
+  forbids; the scripts now load the reused explorer modules by file
+  (`explorer_modules.py`, part of the producer identity). The planned runs were
+  repeated once more and are again byte-identical to attempts 1 and 2. The
+  evaluation uses attempt 3.
 
 Measured wall time of the observed 180-frame runs was 11.2–12.9 s (build
 0.8–1.0 s, loop 9.6–10.9 s, peak 125–179 MiB; stride 3 keeps fewer frames in
-memory); the observer-disabled control took 9.2 and 9.9 s (loop 7.7 and
-8.2 s); the pilot 5.0 and 5.3 s.
+memory); the observer-disabled control took 9.2–10.2 s (loop 7.7–8.2 s);
+the pilot about 5 s.
 
 The ledger (`evidence/ledger.jsonl`) records every development probe,
 fixture/browser test session, review processing and planned run, failures
@@ -49,7 +55,7 @@ numerical/processing wall time and 512 MiB raw evidence.
 
 | Required evidence | Result |
 | --- | --- |
-| Same-seed/configuration replay | `replay` equals `baseline`: loop-history digest, every per-frame value and digest, the summary, `final.bin` and the full-precision mean PSFs and final observations; all 61 frames kept by stride 3 are byte-identical to the baseline's, running averages included; same calibration identity. Attempts 1 and 2 (two producer revisions) are byte-identical too. |
+| Same-seed/configuration replay | `replay` equals `baseline`: loop-history digest, every per-frame value and digest, the summary, `final.bin` and the full-precision mean PSFs and final observations; all 61 frames kept by stride 3 are byte-identical to the baseline's, running averages included; same calibration identity. Attempts 1–3 (three producer revisions) are byte-identical too. |
 | Different seed | all 180 atmosphere samples differ; small-scale structure (pixel-to-pixel OPD differences) correlates at mean \|r\| 0.053, max 0.118, i.e. unrelated; the raw single-frame correlation (0.62, or 0.50 with tip/tilt removed) is dominated by the few large-scale modes of a 2 m pupil with a 25 m outer scale; calibration identity differs; classed as a different realization, not paired. |
 | Continuous frozen flow | one realization translated 0.255 px per frame: consecutive frames correlate ≥ 0.9986 (≥ 0.998 with tip/tilt removed, ≥ 0.960 in small-scale structure); after 45.6 px of travel the first and last frames correlate at −0.28 (tip/tilt removed) and −0.05 (small-scale structure); all frame digests distinct; runtime travel equals the admitted value. Fixture test: four 0.25 px frames reproduce the frame-0 screen shifted one sample towards +x to 1e-9 of its RMS. |
 | Full-horizon admission and over-horizon refusal | fixture tests: 204 frames admitted and 205 refused at 10 m/s (refused request 204, no slack); at 10.03 m/s frame starts fit but left-point n = 2, 4 and midpoint n = 1, 3 requests are refused with their exact request counts; the screen model itself refuses at the same request with memory enforcement off; the service answers 422 `not_admitted` with the record. |
