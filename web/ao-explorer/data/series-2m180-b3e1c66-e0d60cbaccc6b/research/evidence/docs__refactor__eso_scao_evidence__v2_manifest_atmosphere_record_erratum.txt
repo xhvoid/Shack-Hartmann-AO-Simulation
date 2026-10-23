@@ -1,0 +1,22 @@
+Erratum: the 'atmosphere' block of five version-2 manifests
+
+medium_tier_v2, medium_tier_v2_reused, medium_gate_tier_v2, full_tier_v2 and
+reference_tier_v2 were written by a run_tier that read the atmosphere's travel
+record after the one-frame component-timing probe, which resets the atmosphere.
+Their 'max_travel_m' therefore reads 0.0 and 'periodic_band_repeated' false.
+Nothing else in those manifests depends on it (the probe runs after the loop,
+the science result and the solver statistics). run_tier now captures the record
+before the probe; the regenerated ci_tier_v2 manifest has the correct value and
+is otherwise identical (telemetry, science, configuration, system and calibration
+hashes) to the run before the fix. The same five manifests also carry the old
+capability-gate note ('20 frames do not establish settled AO performance'),
+which is wrong for the 2000-frame reference run; the note now states what the
+gate checks.
+
+The travel is deterministic: fastest layer speed x (n_steps - 1) / frame rate.
+Correct values (version-1 manifests, recorded before the probe existed, agree):
+  ci_tier_v2 (regenerated)   n_steps    32  max_travel_m    2.0894  screen_period_m  10.0840  periodic_band_repeated False
+  medium_tier_v2             n_steps   200  max_travel_m   13.4126  screen_period_m  24.0836  periodic_band_repeated False
+  medium_gate_tier_v2        n_steps   120  max_travel_m    8.0206  screen_period_m  24.0836  periodic_band_repeated False
+  full_tier_v2               n_steps    20  max_travel_m    1.2806  screen_period_m  84.0834  periodic_band_repeated False
+  reference_tier_v2          n_steps  2000  max_travel_m  134.7326  screen_period_m  84.0834  periodic_band_repeated True

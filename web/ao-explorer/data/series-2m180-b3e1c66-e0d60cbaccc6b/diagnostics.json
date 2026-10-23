@@ -1,0 +1,55 @@
+{
+ "schema": "ao-explorer.diagnostics.v1",
+ "passivity": {
+  "observed_job": "case-baseline",
+  "control_job": "control-baseline-no-observer",
+  "history_digest_observed": "3d1965703caafa703805b64965beb0852c358ba585015bf2bd448176533fb5ff",
+  "history_digest_control": "3d1965703caafa703805b64965beb0852c358ba585015bf2bd448176533fb5ff",
+  "identical": true,
+  "members_compared": [
+   "applied_command_history_opd_m",
+   "command_norm_m",
+   "config_hash",
+   "delta_command_norm_m",
+   "measurement_row_masks",
+   "metadata",
+   "open_loop_opd_rms_m",
+   "post_update_residual_opd_rms_m",
+   "pre_update_residual_opd_rms_m",
+   "reconstruction_usable",
+   "released_delta_norm_m",
+   "requested_command_history_opd_m",
+   "saturation_fraction",
+   "time_s",
+   "valid_measurement_fraction",
+   "valid_subaperture_fraction"
+  ]
+ },
+ "seed2_sensitivity": {
+  "job": "sensitivity-baseline-seed2",
+  "root_seed": 2,
+  "summary": {
+   "window": [
+    40,
+    180
+   ],
+   "sample_count": 140,
+   "mean_atmosphere_rms_nm": 287.19376384596404,
+   "mean_residual_rms_nm": 226.37255531385503,
+   "root_mean_square_residual_nm": 230.64083420810198,
+   "mean_instantaneous_peak_strehl_uncorrected": 0.4558184980910041,
+   "mean_instantaneous_peak_strehl_corrected": 0.6313950775516128,
+   "average_psf_peak_strehl_uncorrected": 0.3431298572830135,
+   "average_psf_peak_strehl_corrected": 0.48410623547651094,
+   "average_psf_on_axis_strehl_corrected": 0.47690706566429913,
+   "average_psf_fwhm_lambda_over_d_corrected": 1.2042434302949339,
+   "average_psf_fwhm_lambda_over_d_uncorrected": 1.2933482280131743,
+   "mean_valid_measurement_fraction": 1.0,
+   "min_valid_measurement_fraction": 1.0,
+   "reconstruction_usable_fraction": 1.0,
+   "mean_dm_saturation_fraction": 0.02252747252747253,
+   "max_dm_saturation_fraction": 0.07692307692307693
+  },
+  "note": "One additional seed of the baseline only: a sensitivity check, not an ensemble, confidence interval or parameter scan."
+ }
+}
