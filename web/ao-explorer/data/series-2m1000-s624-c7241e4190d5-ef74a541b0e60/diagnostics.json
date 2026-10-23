@@ -1,0 +1,21 @@
+{
+ "schema": "ao-explorer.diagnostics.v2",
+ "passivity": {
+  "status": "not_run_for_this_dataset",
+  "note": "No observer-disabled control trajectory was run for the 1000-frame dataset (outside its scope). The same ExplorerObserver class was shown passive in the historical 180-frame series; that is evidence about the observer, not a check of this dataset.",
+  "historical": {
+   "dataset_id": "series-2m180-b3e1c66-e0d60cbaccc6b",
+   "series_id": "series-2m180-b3e1c66",
+   "diagnostics": {
+    "href": "../series-2m180-b3e1c66-e0d60cbaccc6b/diagnostics.json",
+    "bytes": 1974,
+    "sha256": "771cf7f77328e6f6f220d2816e931c303022804e269a9031ba69515108b99946",
+    "media_type": "application/json"
+   }
+  }
+ },
+ "seed2_sensitivity": {
+  "status": "not_run_for_this_dataset",
+  "note": "No seed-sensitivity trajectory was run for the 1000-frame dataset (outside its scope). The historical 180-frame seed-2 check belongs to the previous dataset and its 156 x 156 screen."
+ }
+}
