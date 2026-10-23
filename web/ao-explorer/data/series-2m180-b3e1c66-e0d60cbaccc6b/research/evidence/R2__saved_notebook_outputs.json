@@ -1,0 +1,400 @@
+{
+ "schema": "ao-explorer.notebook-output-extract.v1",
+ "group": "R2",
+ "source_sha": "8053d25216ac180e327bf0b53afd93d1fc08d4ca",
+ "repository": "https://github.com/xhvoid/Shack-Hartmann-AO-Simulation",
+ "extraction": "Saved outputs and configuration lines copied verbatim from the notebooks committed at source_sha; the notebooks were parsed, never executed. text_sha256 is the SHA-256 of the UTF-8 output text (stored lines joined without separators); notebook_sha256 is the SHA-256 of the whole notebook file. Figures are bound by file and output digest only.",
+ "outputs": [
+  {
+   "notebook": "notebooks/tutorials/03_tsvd_regularization.ipynb",
+   "notebook_sha256": "52ba81d0d2ab66a5ad672e4585dacf72197744b46f4f5b1b1a358d07caf2e945",
+   "cell_id": "cc250317",
+   "cell_index": 7,
+   "execution_count": 5,
+   "output_index": 1,
+   "output_type": "execute_result",
+   "mime": "text/html",
+   "text": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>rcond</th>\n      <th>kept modes</th>\n      <th>command RMS error (nm)</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>0.800</td>\n      <td>12</td>\n      <td>62.941932</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>0.500</td>\n      <td>24</td>\n      <td>43.222211</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>0.350</td>\n      <td>27</td>\n      <td>17.661750</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>0.300</td>\n      <td>29</td>\n      <td>8.578094</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>0.100</td>\n      <td>29</td>\n      <td>8.578094</td>\n    </tr>\n    <tr>\n      <th>5</th>\n      <td>0.030</td>\n      <td>29</td>\n      <td>8.578094</td>\n    </tr>\n    <tr>\n      <th>6</th>\n      <td>0.010</td>\n      <td>29</td>\n      <td>8.578094</td>\n    </tr>\n    <tr>\n      <th>7</th>\n      <td>0.003</td>\n      <td>29</td>\n      <td>8.578094</td>\n    </tr>\n    <tr>\n      <th>8</th>\n      <td>0.001</td>\n      <td>29</td>\n      <td>8.578094</td>\n    </tr>\n  </tbody>\n</table>\n</div>",
+   "text_sha256": "ed453f7184a9428b97c614e4272d9293b9e101dd3c9090a57a67dcdc7447c05f",
+   "used_for": [
+    "table r2-tsvd",
+    "key value: TSVD minimum command error"
+   ],
+   "parsed_table": {
+    "header": [
+     "",
+     "rcond",
+     "kept modes",
+     "command RMS error (nm)"
+    ],
+    "rows": [
+     [
+      "0",
+      "0.800",
+      "12",
+      "62.941932"
+     ],
+     [
+      "1",
+      "0.500",
+      "24",
+      "43.222211"
+     ],
+     [
+      "2",
+      "0.350",
+      "27",
+      "17.661750"
+     ],
+     [
+      "3",
+      "0.300",
+      "29",
+      "8.578094"
+     ],
+     [
+      "4",
+      "0.100",
+      "29",
+      "8.578094"
+     ],
+     [
+      "5",
+      "0.030",
+      "29",
+      "8.578094"
+     ],
+     [
+      "6",
+      "0.010",
+      "29",
+      "8.578094"
+     ],
+     [
+      "7",
+      "0.003",
+      "29",
+      "8.578094"
+     ],
+     [
+      "8",
+      "0.001",
+      "29",
+      "8.578094"
+     ]
+    ],
+    "parser": "HTML <tr>/<td>/<th> text, stripped; values are the stored display strings"
+   }
+  },
+  {
+   "notebook": "notebooks/tutorials/04_closed_loop_control.ipynb",
+   "notebook_sha256": "b4691b3f4a561423a04effed4f29f174794b60bb3924edbd6ef27ac7a5356ad4",
+   "cell_id": "7711ca5c",
+   "cell_index": 7,
+   "execution_count": 4,
+   "output_index": 0,
+   "output_type": "execute_result",
+   "mime": "text/html",
+   "text": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>quantity</th>\n      <th>value</th>\n      <th>units</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>Open-loop RMS (final half)</td>\n      <td>148.582748</td>\n      <td>nm</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>Closed-loop RMS (final half)</td>\n      <td>84.449774</td>\n      <td>nm</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>Residual fraction</td>\n      <td>0.568369</td>\n      <td>-</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>Loop backend</td>\n      <td>native</td>\n      <td></td>\n    </tr>\n  </tbody>\n</table>\n</div>",
+   "text_sha256": "7f0e15b05a024668b6554cbd0dc8cc3861e4bd1e9ec68c4872ffab49481f077f",
+   "used_for": [
+    "key value and takeaway: tutorial 04 open loop -> closed loop"
+   ],
+   "parsed_table": {
+    "header": [
+     "",
+     "quantity",
+     "value",
+     "units"
+    ],
+    "rows": [
+     [
+      "0",
+      "Open-loop RMS (final half)",
+      "148.582748",
+      "nm"
+     ],
+     [
+      "1",
+      "Closed-loop RMS (final half)",
+      "84.449774",
+      "nm"
+     ],
+     [
+      "2",
+      "Residual fraction",
+      "0.568369",
+      "-"
+     ],
+     [
+      "3",
+      "Loop backend",
+      "native",
+      ""
+     ]
+    ],
+    "parser": "HTML <tr>/<td>/<th> text, stripped; values are the stored display strings"
+   }
+  },
+  {
+   "notebook": "notebooks/studies/noise_latency_gain.ipynb",
+   "notebook_sha256": "a77a8964aa3d6587c1963a30898f45ccfce878b149799d6ef4a8881ee73fac5d",
+   "cell_id": "73818237",
+   "cell_index": 9,
+   "execution_count": 6,
+   "output_index": 1,
+   "output_type": "execute_result",
+   "mime": "text/html",
+   "text": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>gain 0.2</th>\n      <th>gain 0.4</th>\n      <th>gain 0.6</th>\n      <th>gain 0.8</th>\n      <th>gain 1.0</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>latency 0 frame(s)</th>\n      <td>0.738826</td>\n      <td>0.722991</td>\n      <td>0.721275</td>\n      <td>0.720565</td>\n      <td>0.720116</td>\n    </tr>\n    <tr>\n      <th>latency 1 frame(s)</th>\n      <td>0.733538</td>\n      <td>0.724776</td>\n      <td>0.721885</td>\n      <td>0.714225</td>\n      <td>0.739445</td>\n    </tr>\n    <tr>\n      <th>latency 2 frame(s)</th>\n      <td>0.723440</td>\n      <td>0.745765</td>\n      <td>0.802188</td>\n      <td>1.064477</td>\n      <td>1.745736</td>\n    </tr>\n  </tbody>\n</table>\n</div>",
+   "text_sha256": "6ec3eb3288cae04d85032511506f009de6be79b05da1742bcaf249a073bde3cc",
+   "used_for": [
+    "table r2-gain-latency",
+    "chart r2-gain-latency-chart",
+    "key value: two-frame delay RMS ratio"
+   ],
+   "parsed_table": {
+    "header": [
+     "",
+     "gain 0.2",
+     "gain 0.4",
+     "gain 0.6",
+     "gain 0.8",
+     "gain 1.0"
+    ],
+    "rows": [
+     [
+      "latency 0 frame(s)",
+      "0.738826",
+      "0.722991",
+      "0.721275",
+      "0.720565",
+      "0.720116"
+     ],
+     [
+      "latency 1 frame(s)",
+      "0.733538",
+      "0.724776",
+      "0.721885",
+      "0.714225",
+      "0.739445"
+     ],
+     [
+      "latency 2 frame(s)",
+      "0.723440",
+      "0.745765",
+      "0.802188",
+      "1.064477",
+      "1.745736"
+     ]
+    ],
+    "parser": "HTML <tr>/<td>/<th> text, stripped; values are the stored display strings"
+   }
+  },
+  {
+   "notebook": "notebooks/studies/noise_latency_gain.ipynb",
+   "notebook_sha256": "a77a8964aa3d6587c1963a30898f45ccfce878b149799d6ef4a8881ee73fac5d",
+   "cell_id": "73818237",
+   "cell_index": 9,
+   "execution_count": 6,
+   "output_index": 0,
+   "output_type": "stream",
+   "mime": "stream:stdout",
+   "text": "open-loop RMS over final half: 117.6 nm (matched-window mean RMS ratios; noise disabled)\n",
+   "text_sha256": "dc9b5c43be6174778ef66367a5902dc8536173686a83e5623486bce1e70594cb",
+   "used_for": [
+    "table r2-gain-latency notes"
+   ]
+  },
+  {
+   "notebook": "notebooks/studies/high_order_scao.ipynb",
+   "notebook_sha256": "699c6f7b340400e154d43a58e9326ab1f2f3a3ff4202c9cabad8a51683558a8b",
+   "cell_id": "59b3a84e",
+   "cell_index": 9,
+   "execution_count": 6,
+   "output_index": 0,
+   "output_type": "execute_result",
+   "mime": "text/html",
+   "text": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>actuators across</th>\n      <th>active actuators</th>\n      <th>open-loop RMS, final half (nm)</th>\n      <th>closed-loop RMS, final half (nm)</th>\n      <th>H-band Maréchal estimate (RMS includes tilt)</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>5</td>\n      <td>13</td>\n      <td>256.292136</td>\n      <td>246.741812</td>\n      <td>0.413611</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>7</td>\n      <td>29</td>\n      <td>256.292136</td>\n      <td>229.561964</td>\n      <td>0.465719</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>9</td>\n      <td>49</td>\n      <td>256.292136</td>\n      <td>227.477198</td>\n      <td>0.472198</td>\n    </tr>\n  </tbody>\n</table>\n</div>",
+   "text_sha256": "b90a7a2f388c5c072733670838ec9a546642757479db916c77acfb20abab64e3",
+   "used_for": [
+    "table r2-order",
+    "takeaway: correction order"
+   ],
+   "parsed_table": {
+    "header": [
+     "",
+     "actuators across",
+     "active actuators",
+     "open-loop RMS, final half (nm)",
+     "closed-loop RMS, final half (nm)",
+     "H-band Maréchal estimate (RMS includes tilt)"
+    ],
+    "rows": [
+     [
+      "0",
+      "5",
+      "13",
+      "256.292136",
+      "246.741812",
+      "0.413611"
+     ],
+     [
+      "1",
+      "7",
+      "29",
+      "256.292136",
+      "229.561964",
+      "0.465719"
+     ],
+     [
+      "2",
+      "9",
+      "49",
+      "256.292136",
+      "227.477198",
+      "0.472198"
+     ]
+    ],
+    "parser": "HTML <tr>/<td>/<th> text, stripped; values are the stored display strings"
+   }
+  }
+ ],
+ "configuration": [
+  {
+   "path": "notebooks/tutorials/03_tsvd_regularization.ipynb",
+   "sha256": "52ba81d0d2ab66a5ad672e4585dacf72197744b46f4f5b1b1a358d07caf2e945",
+   "cell_id": "e83ec727",
+   "cell_index": 1,
+   "source_line": 22,
+   "text": "TELESCOPE_DIAMETER_M = 1.0",
+   "name": "TELESCOPE_DIAMETER_M",
+   "value": 1.0
+  },
+  {
+   "path": "notebooks/tutorials/03_tsvd_regularization.ipynb",
+   "sha256": "52ba81d0d2ab66a5ad672e4585dacf72197744b46f4f5b1b1a358d07caf2e945",
+   "cell_id": "e83ec727",
+   "cell_index": 1,
+   "source_line": 23,
+   "text": "WFS_WAVELENGTH_M = 700e-9",
+   "name": "WFS_WAVELENGTH_M",
+   "value": 7e-07
+  },
+  {
+   "path": "notebooks/tutorials/04_closed_loop_control.ipynb",
+   "sha256": "b4691b3f4a561423a04effed4f29f174794b60bb3924edbd6ef27ac7a5356ad4",
+   "cell_id": "164f45d8",
+   "cell_index": 1,
+   "source_line": 32,
+   "text": "TELESCOPE_DIAMETER_M = 1.0",
+   "name": "TELESCOPE_DIAMETER_M",
+   "value": 1.0
+  },
+  {
+   "path": "notebooks/tutorials/04_closed_loop_control.ipynb",
+   "sha256": "b4691b3f4a561423a04effed4f29f174794b60bb3924edbd6ef27ac7a5356ad4",
+   "cell_id": "164f45d8",
+   "cell_index": 1,
+   "source_line": 33,
+   "text": "WFS_WAVELENGTH_M = 700e-9",
+   "name": "WFS_WAVELENGTH_M",
+   "value": 7e-07
+  },
+  {
+   "path": "notebooks/studies/noise_latency_gain.ipynb",
+   "sha256": "a77a8964aa3d6587c1963a30898f45ccfce878b149799d6ef4a8881ee73fac5d",
+   "cell_id": "e440722e",
+   "cell_index": 3,
+   "source_line": 2,
+   "text": "TELESCOPE_DIAMETER_M = 1.0",
+   "name": "TELESCOPE_DIAMETER_M",
+   "value": 1.0
+  },
+  {
+   "path": "notebooks/studies/noise_latency_gain.ipynb",
+   "sha256": "a77a8964aa3d6587c1963a30898f45ccfce878b149799d6ef4a8881ee73fac5d",
+   "cell_id": "e440722e",
+   "cell_index": 3,
+   "source_line": 3,
+   "text": "WFS_WAVELENGTH_M = 700e-9",
+   "name": "WFS_WAVELENGTH_M",
+   "value": 7e-07
+  },
+  {
+   "path": "notebooks/studies/high_order_scao.ipynb",
+   "sha256": "699c6f7b340400e154d43a58e9326ab1f2f3a3ff4202c9cabad8a51683558a8b",
+   "cell_id": "cc8585d2",
+   "cell_index": 3,
+   "source_line": 2,
+   "text": "TELESCOPE_DIAMETER_M = 1.5",
+   "name": "TELESCOPE_DIAMETER_M",
+   "value": 1.5
+  },
+  {
+   "path": "notebooks/studies/high_order_scao.ipynb",
+   "sha256": "699c6f7b340400e154d43a58e9326ab1f2f3a3ff4202c9cabad8a51683558a8b",
+   "cell_id": "cc8585d2",
+   "cell_index": 3,
+   "source_line": 3,
+   "text": "WFS_WAVELENGTH_M = 700e-9",
+   "name": "WFS_WAVELENGTH_M",
+   "value": 7e-07
+  },
+  {
+   "path": "notebooks/studies/high_order_scao.ipynb",
+   "sha256": "699c6f7b340400e154d43a58e9326ab1f2f3a3ff4202c9cabad8a51683558a8b",
+   "cell_id": "cc8585d2",
+   "cell_index": 3,
+   "source_line": 4,
+   "text": "SCIENCE_WAVELENGTH_M = 1.65e-6",
+   "name": "SCIENCE_WAVELENGTH_M",
+   "value": 1.65e-06
+  }
+ ],
+ "figures": [
+  {
+   "figure": "figures/canonical_tsvd_regularization.png",
+   "figure_sha256": "ecc04e038ef6fce54bbf1f5857a23a7511003a255b30fd24315f04281be23bfe",
+   "notebook_output": {
+    "path": "notebooks/tutorials/03_tsvd_regularization.ipynb",
+    "sha256": "52ba81d0d2ab66a5ad672e4585dacf72197744b46f4f5b1b1a358d07caf2e945",
+    "locator": "cell 8489efca (index 9) output 0 image/png"
+   },
+   "output_png_sha256": "ecc04e038ef6fce54bbf1f5857a23a7511003a255b30fd24315f04281be23bfe",
+   "byte_identical_to_notebook_output": true
+  },
+  {
+   "figure": "figures/canonical_closed_loop_control.png",
+   "figure_sha256": "cb284f8ed6d67b8fe99764fb3a1bff21ff075c47f6b7c98b5aad05a8a817cdc5",
+   "notebook_output": {
+    "path": "notebooks/tutorials/04_closed_loop_control.ipynb",
+    "sha256": "b4691b3f4a561423a04effed4f29f174794b60bb3924edbd6ef27ac7a5356ad4",
+    "locator": "cell f3661b4a (index 9) output 0 image/png"
+   },
+   "output_png_sha256": "cb284f8ed6d67b8fe99764fb3a1bff21ff075c47f6b7c98b5aad05a8a817cdc5",
+   "byte_identical_to_notebook_output": true
+  },
+  {
+   "figure": "figures/canonical_gain_latency.png",
+   "figure_sha256": "422d849a76dc2c269a5b55ea3c0beaff115cdb58e16b9d10f8e39575515b0470",
+   "notebook_output": {
+    "path": "notebooks/studies/noise_latency_gain.ipynb",
+    "sha256": "a77a8964aa3d6587c1963a30898f45ccfce878b149799d6ef4a8881ee73fac5d",
+    "locator": "cell 5f7971a4 (index 11) output 0 image/png"
+   },
+   "output_png_sha256": "422d849a76dc2c269a5b55ea3c0beaff115cdb58e16b9d10f8e39575515b0470",
+   "byte_identical_to_notebook_output": true
+  },
+  {
+   "figure": "figures/canonical_correction_order.png",
+   "figure_sha256": "e875977eee0e338ca3a24b8b308045fa543d487ab8e7ef2aa31dbcae22ddf6af",
+   "notebook_output": {
+    "path": "notebooks/studies/high_order_scao.ipynb",
+    "sha256": "699c6f7b340400e154d43a58e9326ab1f2f3a3ff4202c9cabad8a51683558a8b",
+    "locator": "cell 2e99ae6f (index 11) output 0 image/png"
+   },
+   "output_png_sha256": "e875977eee0e338ca3a24b8b308045fa543d487ab8e7ef2aa31dbcae22ddf6af",
+   "byte_identical_to_notebook_output": true
+  }
+ ]
+}

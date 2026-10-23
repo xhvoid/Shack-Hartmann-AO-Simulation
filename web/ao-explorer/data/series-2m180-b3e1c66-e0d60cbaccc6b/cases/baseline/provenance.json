@@ -1,0 +1,494 @@
+{
+ "schema": "ao-explorer.provenance.v1",
+ "case_id": "baseline",
+ "series_id": "series-2m180-b3e1c66",
+ "job_id": "case-baseline",
+ "attempt": "attempt-01",
+ "runtime_source": {
+  "package": "shwfs_ao",
+  "package_directory_relative": "src/shwfs_ao",
+  "imported_from_task_checkout": true,
+  "package_sha256": "1970b340c57904135d1ccc2b89d1be14ebac0a966122f398f8668fad9c1a8b79",
+  "version": "0.1.0",
+  "git": {
+   "git_head": "b3e1c663a162abb1cebeb5ccecb2640346daa50a",
+   "path": "src",
+   "tracked_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "tracked_changes_empty": true,
+   "untracked_files": [],
+   "untracked_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+ },
+ "producer_exporter": {
+  "directory": "scripts/ao_explorer",
+  "sha256": "fb24f607d03db6a40de4fe1990c07eeb4749fad2b06db071322182fc273ff6ce",
+  "files": {
+   "protocol.py": "d13021ab0c4662c94f06f2cf0b81a115a82b118695f0cf58d7a54ce2aa4199f7",
+   "identity.py": "20d172aa5b13c4e3703114b228367491c8a8046aacc7d707aa958de4378b53ed",
+   "admission.py": "cdffe1561c30789f9732ee766853660cf749f83f35cc13fc3e8d8eb1fa8eb53c",
+   "observer.py": "a21842e29027cff234e6e722830e65f8d954f36644f9f038cdc107ee3a6cf1ca",
+   "producer.py": "da70744370b59af33c24e4030ca0f584c5a9ea0ed2d19669e67550b29725ef61",
+   "run_job.py": "8ef4cc61664283aa313d30f718534c66788e5eb42e006ec3568826e5532740d8"
+  },
+  "git": {
+   "git_head": "b3e1c663a162abb1cebeb5ccecb2640346daa50a",
+   "path": "scripts/ao_explorer",
+   "tracked_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "tracked_changes_empty": true,
+   "untracked_files": [],
+   "untracked_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+ },
+ "environment": {
+  "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+  "implementation": "CPython",
+  "numpy": "2.5.0",
+  "scipy": "1.18.0",
+  "machine": "arm64",
+  "platform": "macOS-26.5-arm64-arm-64bit-Mach-O"
+ },
+ "lock": {
+  "lock": "constraints/hcipy-py314.txt",
+  "lock_sha256": "09d0dc5d6910b4bb2a43e9d5b6d0ed7ba88fe10eada1372d4e79588341d522fc",
+  "installed_count": 23,
+  "verified": true,
+  "violations": []
+ },
+ "host": {
+  "system": "Darwin",
+  "release": "25.5.0",
+  "machine": "arm64",
+  "cpu": "Apple M1 Pro",
+  "logical_cpus": "8",
+  "physical_memory_bytes": "17179869184"
+ },
+ "run": {
+  "config_hash": "cb4a1068f08f6841162906d758f762b0285f73b7f97203697c2d8b1c5091f13f",
+  "history_config_hash": "982e61e7695f26389e2399111df66951857cd94483d980b503bb362bf2b3b2da",
+  "component_hashes": {
+   "loop_config": "636ccb5b044cd178eb97a28411ddad9d33a2e05ef566cdede970984aa3e088a5",
+   "atmosphere": "5216abf3f212130d2d907d2467e047cd6ce1ef663de081e7486792bb8775c224",
+   "wfs": "076db1e21176acd7b00f08807fe253147d05ac23a125842aaaff73495d236d2b",
+   "dm": "5372a153a872fbd64d58930d1facbae66f5eee7e6e769f49629346cda757114c",
+   "interaction_matrix": "85f2c79faf5ea3f31290627ee3bc9154e5bdc2f4e106ec4e3d253a212beeadfa",
+   "reconstructor": "5b96d2c258551b3033a53ade9107e7f8322ac61105a0d139eb6fb29b4fe110c0",
+   "command_projector": "ddd19cbb907278d73e673c2b306b3f0c8427a894176823597838fa8e91f49e23",
+   "controller": "7e07c490e4bb61920fff1844572f7eeb8def43e9325ec4068aa2bd8d80c99fa1"
+  },
+  "science_propagator_config_hash": "a013e8551405b93a469b56b6eb2d3cd15321913593a60858c13f4086e4f5d57d",
+  "history_digest": "3d1965703caafa703805b64965beb0852c358ba585015bf2bd448176533fb5ff",
+  "admission_sha256": "365cfc0c8c41e8c668ab7dcb2cd965b13c07b1b2e2717b905d9a6303357e38d9",
+  "horizon_runtime_check": {
+   "atmosphere_travelled_px": 45.64500000000003,
+   "admitted_max_travel_px": 45.64500000000003,
+   "equal": true,
+   "exceeded_travel_budget": false
+  },
+  "build_s": 0.527000124566257,
+  "loop_s": 4.619639167562127,
+  "child_peak_rss_bytes": 170491904
+ },
+ "raw_evidence": {
+  "location": "outputs/ao_explorer_v1/series-2m180-b3e1c66/jobs/case-baseline/attempt-01/ (caller-owned, not in the web bundle)",
+  "files": {
+   "history.npz": {
+    "bytes": 63474,
+    "sha256": "5b8a9c9a361e37d4ef45e8a255bac368e51336f66c0577370319927090570f5e"
+   },
+   "mean_psfs.npz": {
+    "bytes": 982150,
+    "sha256": "ef33920327cd941463d8ba990fa4d3c30bcc5997456a9039c9948005cecc0da8"
+   },
+   "movie.npz": {
+    "bytes": 18179332,
+    "sha256": "5b09d821ec7f9bc5b32d2c7e70cf0843f7f1d6ddc8493d0739a42649b2d565ab"
+   }
+  },
+  "job_record_sha256": "5f879a220f6794f57eeebfff213e0343be0c83504fb888993f23d80db729e83c"
+ },
+ "derived_export": {
+  "export_code_identity": {
+   "sha256": "cfe18ed1b347d84f9e5b2c5ced1566e50395cbc4117bbbafb661fb73ba1aaef7",
+   "files": {
+    "binary_scene.py": "b96eeb7f61f5aefa5d92ec4cdf7b0aace9fd581087b99f61846e8617b2f3bb49",
+    "render.py": "5f43ac87fb6ffd7ab5f3f69fd443214a72f7530f5802bd384719cec737a64a31",
+    "research.py": "3e538bc61548e55a254fa0b0dd23fee9902e3744fdc910207ed978db3b8fe1b4"
+   },
+   "git": {
+    "git_head": "4756cc9590f7bce64e4523b3377553cfc090b20f",
+    "path": "scripts/ao_explorer",
+    "tracked_changes_sha256": "1da2eece2734c39506fd81d63dcd135811d057042831c9166c23da02e5b0d89f",
+    "tracked_changes_empty": false,
+    "untracked_files": [],
+    "untracked_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  },
+  "observation_code_identity": {
+   "sha256": "828368f90772bf845074836bcc2724d591faa8b8dd3a7ead2b35237031c8d6f0",
+   "files": {
+    "binary_scene.py": "b96eeb7f61f5aefa5d92ec4cdf7b0aace9fd581087b99f61846e8617b2f3bb49",
+    "render.py": "5f43ac87fb6ffd7ab5f3f69fd443214a72f7530f5802bd384719cec737a64a31"
+   },
+   "git": {
+    "git_head": "f49cee695ed24ce8fccdb1df1b28f8f11509b41e",
+    "path": "scripts/ao_explorer",
+    "tracked_changes_sha256": "307d8ea6e0bd8cecfc27b1e5d2ea8e08b117cd63bce922426071f22e9cbe7ff2",
+    "tracked_changes_empty": false,
+    "untracked_files": [],
+    "untracked_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  },
+  "observations_dir": "observations-828368f90772",
+  "display_revision": "ao-explorer.display.v1",
+  "dataset_id": "series-2m180-b3e1c66-e0d60cbaccc6b"
+ },
+ "atmosphere_pairing": {
+  "status": "reference",
+  "matching_frames": 180
+ },
+ "atmosphere_repetition": {
+  "unique_frame_digests": 180,
+  "frames": 180,
+  "repeated": false
+ },
+ "checks": {
+  "atmosphere_rms_matches_history": true,
+  "residual_rms_matches_history": true,
+  "times_match_history": true,
+  "usable_matches_history": true,
+  "saturation_matches_history": true,
+  "display_frame_independent_reductions": [
+   {
+    "frame": 0,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 5,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 5.293955920339377e-23,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 9,
+    "atmosphere_rms_abs_error_m": 5.293955920339377e-23,
+    "residual_rms_abs_error_m": 5.293955920339377e-23,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 2.220446049250313e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 14,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 1.6653345369377348e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 18,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 5.293955920339377e-23,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 1.6653345369377348e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 23,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 28,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 5.293955920339377e-23,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 2.220446049250313e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 32,
+    "atmosphere_rms_abs_error_m": 1.0587911840678754e-22,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 1.6653345369377348e-16,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 37,
+    "atmosphere_rms_abs_error_m": 5.293955920339377e-23,
+    "residual_rms_abs_error_m": 5.293955920339377e-23,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 1.6653345369377348e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 40,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 46,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 5.293955920339377e-23,
+    "uncorrected_strehl_abs_error": 5.551115123125783e-17,
+    "corrected_strehl_abs_error": 5.551115123125783e-17,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 50,
+    "atmosphere_rms_abs_error_m": 5.293955920339377e-23,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 0.0,
+    "corrected_strehl_abs_error": 0.0,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 55,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 0.0,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 60,
+    "atmosphere_rms_abs_error_m": 5.293955920339377e-23,
+    "residual_rms_abs_error_m": 5.293955920339377e-23,
+    "uncorrected_strehl_abs_error": 5.551115123125783e-17,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 64,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 69,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 5.551115123125783e-17,
+    "corrected_strehl_abs_error": 0.0,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 73,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 0.0,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 78,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 5.551115123125783e-17,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 83,
+    "atmosphere_rms_abs_error_m": 1.0587911840678754e-22,
+    "residual_rms_abs_error_m": 5.293955920339377e-23,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 87,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 5.293955920339377e-23,
+    "uncorrected_strehl_abs_error": 5.551115123125783e-17,
+    "corrected_strehl_abs_error": 5.551115123125783e-17,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 92,
+    "atmosphere_rms_abs_error_m": 2.117582368135751e-22,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 5.551115123125783e-17,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 96,
+    "atmosphere_rms_abs_error_m": 1.0587911840678754e-22,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 5.551115123125783e-17,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 101,
+    "atmosphere_rms_abs_error_m": 1.0587911840678754e-22,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 5.551115123125783e-17,
+    "corrected_strehl_abs_error": 5.551115123125783e-17,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 106,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 110,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 5.551115123125783e-17,
+    "corrected_strehl_abs_error": 5.551115123125783e-17,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 115,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 119,
+    "atmosphere_rms_abs_error_m": 1.0587911840678754e-22,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 5.551115123125783e-17,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 124,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 5.293955920339377e-23,
+    "uncorrected_strehl_abs_error": 1.1102230246251565e-16,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 129,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 8.326672684688674e-17,
+    "corrected_strehl_abs_error": 1.6653345369377348e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 133,
+    "atmosphere_rms_abs_error_m": 0.0,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 8.326672684688674e-17,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 138,
+    "atmosphere_rms_abs_error_m": 5.293955920339377e-23,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 8.326672684688674e-17,
+    "corrected_strehl_abs_error": 2.220446049250313e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 142,
+    "atmosphere_rms_abs_error_m": 5.293955920339377e-23,
+    "residual_rms_abs_error_m": 2.6469779601696886e-23,
+    "uncorrected_strehl_abs_error": 5.551115123125783e-17,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 147,
+    "atmosphere_rms_abs_error_m": 5.293955920339377e-23,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 5.551115123125783e-17,
+    "corrected_strehl_abs_error": 5.551115123125783e-17,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 151,
+    "atmosphere_rms_abs_error_m": 5.293955920339377e-23,
+    "residual_rms_abs_error_m": 5.293955920339377e-23,
+    "uncorrected_strehl_abs_error": 0.0,
+    "corrected_strehl_abs_error": 5.551115123125783e-17,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 156,
+    "atmosphere_rms_abs_error_m": 5.293955920339377e-23,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 0.0,
+    "corrected_strehl_abs_error": 5.551115123125783e-17,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 161,
+    "atmosphere_rms_abs_error_m": 5.293955920339377e-23,
+    "residual_rms_abs_error_m": 5.293955920339377e-23,
+    "uncorrected_strehl_abs_error": 0.0,
+    "corrected_strehl_abs_error": 5.551115123125783e-17,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 165,
+    "atmosphere_rms_abs_error_m": 5.293955920339377e-23,
+    "residual_rms_abs_error_m": 5.293955920339377e-23,
+    "uncorrected_strehl_abs_error": 0.0,
+    "corrected_strehl_abs_error": 5.551115123125783e-17,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 170,
+    "atmosphere_rms_abs_error_m": 5.293955920339377e-23,
+    "residual_rms_abs_error_m": 5.293955920339377e-23,
+    "uncorrected_strehl_abs_error": 0.0,
+    "corrected_strehl_abs_error": 5.551115123125783e-17,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 174,
+    "atmosphere_rms_abs_error_m": 5.293955920339377e-23,
+    "residual_rms_abs_error_m": 0.0,
+    "uncorrected_strehl_abs_error": 0.0,
+    "corrected_strehl_abs_error": 1.1102230246251565e-16,
+    "held_correction_identity_max_abs_m": 0.0
+   },
+   {
+    "frame": 179,
+    "atmosphere_rms_abs_error_m": 5.293955920339377e-23,
+    "residual_rms_abs_error_m": 2.6469779601696886e-23,
+    "uncorrected_strehl_abs_error": 0.0,
+    "corrected_strehl_abs_error": 0.0,
+    "held_correction_identity_max_abs_m": 0.0
+   }
+  ],
+  "display_frame_reductions_within_tolerance": true,
+  "streaming_max_abs_difference": {
+   "uncorrected": 0.0,
+   "corrected": 0.0
+  },
+  "streaming_within_tolerance": true,
+  "instantaneous_unit_flux": true,
+  "mean_unit_flux": {
+   "uncorrected": 1.0,
+   "corrected": 1.0
+  }
+ }
+}

@@ -1,0 +1,1561 @@
+{
+  "command": "noise-isolation-2m",
+  "argv": [
+    "scripts/run_detector_level_evidence.py",
+    "noise-isolation-2m"
+  ],
+  "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+  "numpy": "2.5.0",
+  "scipy": "1.18.0",
+  "machine": "arm64",
+  "started_unix_s": 1792174855.060508,
+  "enabled_by_user": "not gated: 2 m tier (prompt section 2.5)",
+  "n_steps": 200,
+  "burn_in_frames": 50,
+  "series_protocol_version": 2,
+  "code_identity": {
+    "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+    "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+  },
+  "runs": [
+    {
+      "config_hash": "594bbeb045acb88a0b23b675f3e4631fbb4216dfd9722fbdf5da2d6cdc970f64",
+      "root_seed": 61,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.5570927296407147e-07,
+          "post_update_mean_square_m2": 1.3072289905316214e-13,
+          "open_loop_rms_m": 5.715076668976418e-07,
+          "valid_measurement_fraction": 0.9996825396825397,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.558511452239188e-07,
+          "post_update_mean_square_m2": 1.308013391887137e-13,
+          "open_loop_rms_m": 5.715076668976418e-07,
+          "valid_measurement_fraction": 0.9996825396825397,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.0016716244184631847,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 13001.376206488027,
+      "noise_variance_m2": 4.165567126994347e-18,
+      "noise_variance_standard_error_m2": 5.055525576216498e-19,
+      "mean_square_difference_m2": -7.844013555158028e-17,
+      "mean_square_difference_standard_error_m2": 8.225647020359045e-17,
+      "wall_s": 9.031657833606005,
+      "label": "m5",
+      "protocol_hash": "db13fd78f5c907ed6398f1cfe5d22542dd92263f34da53416443869070d140c8",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m5",
+        "root_seed": 61,
+        "config_hash": "594bbeb045acb88a0b23b675f3e4631fbb4216dfd9722fbdf5da2d6cdc970f64",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "0830eefffb76d210d993ad2fcb94d1e39b668808320340933f2b00f33f545efc",
+      "root_seed": 62,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 2.1644320906455912e-07,
+          "post_update_mean_square_m2": 4.978986266284461e-14,
+          "open_loop_rms_m": 3.3271659745877895e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 2.1636028422410727e-07,
+          "post_update_mean_square_m2": 4.9726116397081213e-14,
+          "open_loop_rms_m": 3.3271659745877895e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.0016747278571576033,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 13001.376206488027,
+      "noise_variance_m2": 4.411009736266952e-18,
+      "noise_variance_standard_error_m2": 4.726527187791953e-19,
+      "mean_square_difference_m2": 6.374626576339719e-17,
+      "mean_square_difference_standard_error_m2": 7.814479967933534e-17,
+      "wall_s": 9.060647750273347,
+      "label": "m5",
+      "protocol_hash": "58ad58d3c2f81674e997fc205b090cf121d7c30555838f3b65d5273f9345e18e",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m5",
+        "root_seed": 62,
+        "config_hash": "0830eefffb76d210d993ad2fcb94d1e39b668808320340933f2b00f33f545efc",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "47517b3e610284ecff7d87e15b3f38a4864cad34d8cb1a55110509e42608949e",
+      "root_seed": 63,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 2.80412969070619e-07,
+          "post_update_mean_square_m2": 7.915900779229026e-14,
+          "open_loop_rms_m": 5.29579310336265e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 2.8042884385694383e-07,
+          "post_update_mean_square_m2": 7.9168819568139e-14,
+          "open_loop_rms_m": 5.29579310336265e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.0016737234731731554,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 13001.376206488027,
+      "noise_variance_m2": 4.125326672653721e-18,
+      "noise_variance_standard_error_m2": 2.270425435917655e-19,
+      "mean_square_difference_m2": -9.811775848726537e-18,
+      "mean_square_difference_standard_error_m2": 4.071248183536015e-17,
+      "wall_s": 8.880248792469501,
+      "label": "m5",
+      "protocol_hash": "5380a40c0a24ec52c077003554f7910ee945343955c2fbb5ed8817371215ca08",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m5",
+        "root_seed": 63,
+        "config_hash": "47517b3e610284ecff7d87e15b3f38a4864cad34d8cb1a55110509e42608949e",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "3b90d4dd3cb0e445f83110942cf6b870365000c8afddb0c452fe75f7e8a86b25",
+      "root_seed": 64,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 1.9284434455256828e-07,
+          "post_update_mean_square_m2": 3.7790007176583195e-14,
+          "open_loop_rms_m": 3.332228197273187e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 1.9279305204814498e-07,
+          "post_update_mean_square_m2": 3.7776204596880124e-14,
+          "open_loop_rms_m": 3.332228197273187e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.0016714569274834767,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 13001.376206488027,
+      "noise_variance_m2": 3.955015042463618e-18,
+      "noise_variance_standard_error_m2": 2.5629953146297027e-19,
+      "mean_square_difference_m2": 1.380257970306508e-17,
+      "mean_square_difference_standard_error_m2": 2.579046933630289e-17,
+      "wall_s": 8.949631958268583,
+      "label": "m5",
+      "protocol_hash": "fa5f083543524947ae2ebee85f7885b5dd33db781231fa03dfd920660612347e",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m5",
+        "root_seed": 64,
+        "config_hash": "3b90d4dd3cb0e445f83110942cf6b870365000c8afddb0c452fe75f7e8a86b25",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "cc8df0dd367e8f076c34290d21a7c26057039f3876cef1cc54417ca1b2803b66",
+      "root_seed": 65,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.1555581903149335e-07,
+          "post_update_mean_square_m2": 1.0116401937528683e-13,
+          "open_loop_rms_m": 4.862315088581841e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.155989352897585e-07,
+          "post_update_mean_square_m2": 1.0119793020647508e-13,
+          "open_loop_rms_m": 4.862315088581841e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.001673780292966726,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 13001.376206488027,
+      "noise_variance_m2": 4.626014733635329e-18,
+      "noise_variance_standard_error_m2": 3.8418176220208334e-19,
+      "mean_square_difference_m2": -3.391083118826067e-17,
+      "mean_square_difference_standard_error_m2": 7.848077592173247e-17,
+      "wall_s": 8.767485332675278,
+      "label": "m5",
+      "protocol_hash": "27735d24216b5bcde98b38dd086efd80f1ec09ecff315371097da5633fc4908f",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m5",
+        "root_seed": 65,
+        "config_hash": "cc8df0dd367e8f076c34290d21a7c26057039f3876cef1cc54417ca1b2803b66",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "48caca75e3462f57948faf1fb8ec514b0204e808887a7f873aa1e1e2772450e7",
+      "root_seed": 66,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 4.6434455190645144e-07,
+          "post_update_mean_square_m2": 2.26452207901628e-13,
+          "open_loop_rms_m": 6.786851754144761e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 4.6452626638812876e-07,
+          "post_update_mean_square_m2": 2.2662759463683467e-13,
+          "open_loop_rms_m": 6.786851754144761e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.0016716740855019286,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 13001.376206488027,
+      "noise_variance_m2": 4.467318165167275e-18,
+      "noise_variance_standard_error_m2": 1.2223351874860463e-19,
+      "mean_square_difference_m2": -1.7538673520669292e-16,
+      "mean_square_difference_standard_error_m2": 4.7644470874497216e-17,
+      "wall_s": 8.761345040984452,
+      "label": "m5",
+      "protocol_hash": "19d9d808955d572441066b0189f52b9e98789f811d51f1ff235f6de1b81062d8",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m5",
+        "root_seed": 66,
+        "config_hash": "48caca75e3462f57948faf1fb8ec514b0204e808887a7f873aa1e1e2772450e7",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "d11115fa067464dd8e787741c5c2fdd437717a7222e2e8d2d7cb0ce76a22fbaa",
+      "root_seed": 67,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.0289258422966624e-07,
+          "post_update_mean_square_m2": 9.265717838400207e-14,
+          "open_loop_rms_m": 4.897913588638648e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.0284700914469074e-07,
+          "post_update_mean_square_m2": 9.262506709270093e-14,
+          "open_loop_rms_m": 4.897913588638648e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.0016720556546560167,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 13001.376206488027,
+      "noise_variance_m2": 4.30524594431163e-18,
+      "noise_variance_standard_error_m2": 2.040903644375108e-19,
+      "mean_square_difference_m2": 3.2111291301136855e-17,
+      "mean_square_difference_standard_error_m2": 7.389768672374647e-17,
+      "wall_s": 8.767827457748353,
+      "label": "m5",
+      "protocol_hash": "596467402acbb8ae855564b53cee46aef8b744c79cd656ddd97ca60ce583a04f",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m5",
+        "root_seed": 67,
+        "config_hash": "d11115fa067464dd8e787741c5c2fdd437717a7222e2e8d2d7cb0ce76a22fbaa",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "42a9c79ea99d5277d67fa871d8ff9ec1be256873d67401c4ed19720b3f192f64",
+      "root_seed": 68,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.604535690610939e-07,
+          "post_update_mean_square_m2": 1.3518610755818518e-13,
+          "open_loop_rms_m": 5.487170219702239e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.6061616616333725e-07,
+          "post_update_mean_square_m2": 1.3530667762128314e-13,
+          "open_loop_rms_m": 5.487170219702239e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.0016716219066097127,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 13001.376206488027,
+      "noise_variance_m2": 4.10473395632752e-18,
+      "noise_variance_standard_error_m2": 2.039635455102631e-19,
+      "mean_square_difference_m2": -1.2057006309795824e-16,
+      "mean_square_difference_standard_error_m2": 5.519337064778811e-17,
+      "wall_s": 8.93357287440449,
+      "label": "m5",
+      "protocol_hash": "1ef59c9ce30e22a4ca66297d31498ebd0759dfba14e38d71d231d73a0f11f46d",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m5",
+        "root_seed": 68,
+        "config_hash": "42a9c79ea99d5277d67fa871d8ff9ec1be256873d67401c4ed19720b3f192f64",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "b426338cef9186285d53d5c56ac128d0a2748c8197bb7d9b76b20083818f1a3c",
+      "root_seed": 61,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.5587788756147585e-07,
+          "post_update_mean_square_m2": 1.3084566229647496e-13,
+          "open_loop_rms_m": 5.715076668976418e-07,
+          "valid_measurement_fraction": 0.9996825396825397,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.558520930854108e-07,
+          "post_update_mean_square_m2": 1.3080209201653794e-13,
+          "open_loop_rms_m": 5.715076668976418e-07,
+          "valid_measurement_fraction": 0.9996825396825397,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.0042651869105221766,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 5175.941094866506,
+      "noise_variance_m2": 9.820321925187714e-18,
+      "noise_variance_standard_error_m2": 9.064978428939041e-19,
+      "mean_square_difference_m2": 4.3570279937011106e-17,
+      "mean_square_difference_standard_error_m2": 1.986299133588905e-16,
+      "wall_s": 8.790245625190437,
+      "label": "m6",
+      "protocol_hash": "b1dce8e98cd17143fe1fedc6fefebe7455e8f1d919ca073b9d861a05139b426b",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m6",
+        "root_seed": 61,
+        "config_hash": "b426338cef9186285d53d5c56ac128d0a2748c8197bb7d9b76b20083818f1a3c",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "0214ed08c16ce395716d22583aa82fed078e4f9f62eaf9a98b74bee5220d8059",
+      "root_seed": 62,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 2.1643789587802412e-07,
+          "post_update_mean_square_m2": 4.975390957212361e-14,
+          "open_loop_rms_m": 3.3271659745877895e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 2.1635532022169955e-07,
+          "post_update_mean_square_m2": 4.9723673961216957e-14,
+          "open_loop_rms_m": 3.3271659745877895e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.00427308511597204,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 5175.941094866506,
+      "noise_variance_m2": 1.0396420128989977e-17,
+      "noise_variance_standard_error_m2": 7.246081580598084e-19,
+      "mean_square_difference_m2": 3.0235610906656846e-17,
+      "mean_square_difference_standard_error_m2": 4.3356014135831105e-17,
+      "wall_s": 8.951197458431125,
+      "label": "m6",
+      "protocol_hash": "08d839ef4446edc115bd6233340361f969190edeca17b6a5f11126175aabef9d",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m6",
+        "root_seed": 62,
+        "config_hash": "0214ed08c16ce395716d22583aa82fed078e4f9f62eaf9a98b74bee5220d8059",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "cf128990361b87130b3b53d5b3eb10ed26b0b0c5b88e926712c215c123f398c4",
+      "root_seed": 63,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 2.801672436741741e-07,
+          "post_update_mean_square_m2": 7.902133003151787e-14,
+          "open_loop_rms_m": 5.29579310336265e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 2.804343551957232e-07,
+          "post_update_mean_square_m2": 7.91720319474259e-14,
+          "open_loop_rms_m": 5.29579310336265e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.004270863943972941,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 5175.941094866506,
+      "noise_variance_m2": 9.4862633063397e-18,
+      "noise_variance_standard_error_m2": 6.471915748151981e-19,
+      "mean_square_difference_m2": -1.5070191590803793e-16,
+      "mean_square_difference_standard_error_m2": 8.022583610348782e-17,
+      "wall_s": 8.861217832192779,
+      "label": "m6",
+      "protocol_hash": "ff9601c6369770f55880943b738313377a86563516b8a692268b52b336ab6804",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m6",
+        "root_seed": 63,
+        "config_hash": "cf128990361b87130b3b53d5b3eb10ed26b0b0c5b88e926712c215c123f398c4",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "90258fe0793adfea38771f9d068e522eafea9465f89f847381de59c10375eb72",
+      "root_seed": 64,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 1.9282607708552248e-07,
+          "post_update_mean_square_m2": 3.7789069535321243e-14,
+          "open_loop_rms_m": 3.332228197273187e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 1.9279565670434037e-07,
+          "post_update_mean_square_m2": 3.7777288625397844e-14,
+          "open_loop_rms_m": 3.332228197273187e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.004264981651471293,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 5175.941094866506,
+      "noise_variance_m2": 1.1457500498528657e-17,
+      "noise_variance_standard_error_m2": 1.0856245202212916e-18,
+      "mean_square_difference_m2": 1.1780909923408546e-17,
+      "mean_square_difference_standard_error_m2": 6.19561449299766e-17,
+      "wall_s": 8.797290625050664,
+      "label": "m6",
+      "protocol_hash": "ef32dcd6282f1cc288a71965698c300bb708bfe431326dddd60cd32a68acd3cb",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m6",
+        "root_seed": 64,
+        "config_hash": "90258fe0793adfea38771f9d068e522eafea9465f89f847381de59c10375eb72",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "4890fcae2cc33d7fef92bf064690b845a9477a18a819439c06728825449f3a62",
+      "root_seed": 65,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.156867717173298e-07,
+          "post_update_mean_square_m2": 1.0123604678017873e-13,
+          "open_loop_rms_m": 4.862315088581841e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.15602950489162e-07,
+          "post_update_mean_square_m2": 1.0120038465681066e-13,
+          "open_loop_rms_m": 4.862315088581841e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.0042713177370574795,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 5175.941094866506,
+      "noise_variance_m2": 1.1557398633051755e-17,
+      "noise_variance_standard_error_m2": 6.384475052379788e-19,
+      "mean_square_difference_m2": 3.56621233680588e-17,
+      "mean_square_difference_standard_error_m2": 6.765272052046803e-17,
+      "wall_s": 8.797277334146202,
+      "label": "m6",
+      "protocol_hash": "79e4e6a65957f06de36ecd138c4e738996e46467f93d099ba1b1791ba806bd6e",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m6",
+        "root_seed": 65,
+        "config_hash": "4890fcae2cc33d7fef92bf064690b845a9477a18a819439c06728825449f3a62",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "be39f06c297a5a3a2709574018bd2a812d69fa7578fc4e143a534982d547b861",
+      "root_seed": 66,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 4.643077500542841e-07,
+          "post_update_mean_square_m2": 2.2643410995070973e-13,
+          "open_loop_rms_m": 6.786851754144761e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 4.645385269290678e-07,
+          "post_update_mean_square_m2": 2.2663955372588247e-13,
+          "open_loop_rms_m": 6.786851754144761e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.004265686458808598,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 5175.941094866506,
+      "noise_variance_m2": 9.796147663294259e-18,
+      "noise_variance_standard_error_m2": 3.3129466894668977e-19,
+      "mean_square_difference_m2": -2.0544377517271422e-16,
+      "mean_square_difference_standard_error_m2": 1.7547758996951268e-16,
+      "wall_s": 8.86342604085803,
+      "label": "m6",
+      "protocol_hash": "e5ecdacb13f026d1d9a65f497ed850842e6bc5f478b1b486d75ecdc583882912",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m6",
+        "root_seed": 66,
+        "config_hash": "be39f06c297a5a3a2709574018bd2a812d69fa7578fc4e143a534982d547b861",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "34c279847478c54f1d5bbe9ad4cd33f4832d2d95df2cff3efe80afef37ee68f3",
+      "root_seed": 67,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.026646357951454e-07,
+          "post_update_mean_square_m2": 9.251721609445601e-14,
+          "open_loop_rms_m": 4.897913588638648e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.028517808736675e-07,
+          "post_update_mean_square_m2": 9.262785657761274e-14,
+          "open_loop_rms_m": 4.897913588638648e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.004266271277283009,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 5175.941094866506,
+      "noise_variance_m2": 9.453751545019156e-18,
+      "noise_variance_standard_error_m2": 7.395745492646713e-19,
+      "mean_square_difference_m2": -1.1064048315673491e-16,
+      "mean_square_difference_standard_error_m2": 7.640237131601854e-17,
+      "wall_s": 8.855408458039165,
+      "label": "m6",
+      "protocol_hash": "a6cc089c80832ea8858621159a1816682c2eda3cb5cc818be8c97bf090e5666b",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m6",
+        "root_seed": 67,
+        "config_hash": "34c279847478c54f1d5bbe9ad4cd33f4832d2d95df2cff3efe80afef37ee68f3",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "70e4e9144f34650458fc63d2a87102d46530e306d6c0555ff2d3e6283dd15cfc",
+      "root_seed": 68,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.6042570332285035e-07,
+          "post_update_mean_square_m2": 1.3517635096319452e-13,
+          "open_loop_rms_m": 5.487170219702239e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.6061447580658864e-07,
+          "post_update_mean_square_m2": 1.3530555921066898e-13,
+          "open_loop_rms_m": 5.487170219702239e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.004264829067336916,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 5175.941094866506,
+      "noise_variance_m2": 1.1248893817909267e-17,
+      "noise_variance_standard_error_m2": 1.583863480234769e-18,
+      "mean_square_difference_m2": -1.2920824747447084e-16,
+      "mean_square_difference_standard_error_m2": 1.682085055795341e-16,
+      "wall_s": 9.409695957787335,
+      "label": "m6",
+      "protocol_hash": "d49d9c93f3029857a030458edaf01e884d50bf7e1f81687a2c5e42827e2768c9",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m6",
+        "root_seed": 68,
+        "config_hash": "70e4e9144f34650458fc63d2a87102d46530e306d6c0555ff2d3e6283dd15cfc",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "771d875810a5c6b1a428d9a794fd9aaee21264d47d74533ac45e8eb88d0e80ff",
+      "root_seed": 61,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.5624964916848187e-07,
+          "post_update_mean_square_m2": 1.3110986681331574e-13,
+          "open_loop_rms_m": 5.715076668976418e-07,
+          "valid_measurement_fraction": 0.9996825396825397,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.558545402522735e-07,
+          "post_update_mean_square_m2": 1.3080403225074063e-13,
+          "open_loop_rms_m": 5.715076668976418e-07,
+          "valid_measurement_fraction": 0.9996825396825397,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.01113170109711284,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 2060.579264228876,
+      "noise_variance_m2": 2.467183329918503e-17,
+      "noise_variance_standard_error_m2": 1.3477749048089725e-18,
+      "mean_square_difference_m2": 3.058345625751402e-16,
+      "mean_square_difference_standard_error_m2": 1.3617469555922882e-16,
+      "wall_s": 9.148834667168558,
+      "label": "m7",
+      "protocol_hash": "4b2595c9e4ff3803a89a4081e312c532a4417ffd0cb6fbe3149468ddc7973dab",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m7",
+        "root_seed": 61,
+        "config_hash": "771d875810a5c6b1a428d9a794fd9aaee21264d47d74533ac45e8eb88d0e80ff",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "1260452acb21b59fc3eba4940c6ceb995efc4e26c86765f8b4d856404bf8c707",
+      "root_seed": 62,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 2.1637885333592972e-07,
+          "post_update_mean_square_m2": 4.969066890735588e-14,
+          "open_loop_rms_m": 3.3271659745877895e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 2.1634287675300207e-07,
+          "post_update_mean_square_m2": 4.97175519878733e-14,
+          "open_loop_rms_m": 3.3271659745877895e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.011152141822401746,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 2060.579264228876,
+      "noise_variance_m2": 2.5119974651638806e-17,
+      "noise_variance_standard_error_m2": 9.500900886215155e-19,
+      "mean_square_difference_m2": -2.6883080517427783e-17,
+      "mean_square_difference_standard_error_m2": 1.4934904573478008e-16,
+      "wall_s": 9.602391292341053,
+      "label": "m7",
+      "protocol_hash": "dc4d419c636812048fb384fdd83ba910ad3721d3b210cf6b3543a3acf7f6741c",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m7",
+        "root_seed": 62,
+        "config_hash": "1260452acb21b59fc3eba4940c6ceb995efc4e26c86765f8b4d856404bf8c707",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "cc760584a9f16c0b33509bc83526c0c8457cafef2a121a4e7664bbb760539f6d",
+      "root_seed": 63,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 2.8065462077042696e-07,
+          "post_update_mean_square_m2": 7.929259816632599e-14,
+          "open_loop_rms_m": 5.29579310336265e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 2.80448214960288e-07,
+          "post_update_mean_square_m2": 7.91801105997913e-14,
+          "open_loop_rms_m": 5.29579310336265e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.011148611406725193,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 2060.579264228876,
+      "noise_variance_m2": 2.5209925637486887e-17,
+      "noise_variance_standard_error_m2": 1.990258065095289e-18,
+      "mean_square_difference_m2": 1.1248756653468434e-16,
+      "mean_square_difference_standard_error_m2": 1.030816628425623e-16,
+      "wall_s": 9.211542916484177,
+      "label": "m7",
+      "protocol_hash": "257f11dbd46e0e66268f59e7d5deadc519c50cadc0ea76faf8490a923cd76d5d",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m7",
+        "root_seed": 63,
+        "config_hash": "cc760584a9f16c0b33509bc83526c0c8457cafef2a121a4e7664bbb760539f6d",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "8cfee2e21314627afbbdf1182642de7ab0edc027e0d3eac8fe893440df98fb09",
+      "root_seed": 64,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 1.9275745319460821e-07,
+          "post_update_mean_square_m2": 3.776309967185378e-14,
+          "open_loop_rms_m": 3.332228197273187e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 1.928022032132438e-07,
+          "post_update_mean_square_m2": 3.778001338827257e-14,
+          "open_loop_rms_m": 3.332228197273187e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.011132590264445635,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 2060.579264228876,
+      "noise_variance_m2": 2.803490363897124e-17,
+      "noise_variance_standard_error_m2": 1.1064868288754642e-18,
+      "mean_square_difference_m2": -1.691371641878922e-17,
+      "mean_square_difference_standard_error_m2": 4.997856821422093e-17,
+      "wall_s": 9.17054000031203,
+      "label": "m7",
+      "protocol_hash": "af3ac55b99d6d497878d5143c6dc86950b3d18bea90e357cbc6401eef6cf544b",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m7",
+        "root_seed": 64,
+        "config_hash": "8cfee2e21314627afbbdf1182642de7ab0edc027e0d3eac8fe893440df98fb09",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "1988414a551fb6dc145726e63e20f30f0a6520a628d75637966941e16992651c",
+      "root_seed": 65,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.1565335547378305e-07,
+          "post_update_mean_square_m2": 1.0124235461707228e-13,
+          "open_loop_rms_m": 4.862315088581841e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.156130563070076e-07,
+          "post_update_mean_square_m2": 1.0120656276672165e-13,
+          "open_loop_rms_m": 4.862315088581841e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.011151817252232908,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 2060.579264228876,
+      "noise_variance_m2": 2.6956440988878577e-17,
+      "noise_variance_standard_error_m2": 2.2827504201945628e-18,
+      "mean_square_difference_m2": 3.579185035059976e-17,
+      "mean_square_difference_standard_error_m2": 1.4672245429685692e-16,
+      "wall_s": 9.44941258430481,
+      "label": "m7",
+      "protocol_hash": "ec4bfd8ab990b5cbbf1f5841cf058f1e7c2642eb5acf023736a01905677a50c7",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m7",
+        "root_seed": 65,
+        "config_hash": "1988414a551fb6dc145726e63e20f30f0a6520a628d75637966941e16992651c",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "5632699ac2e72f48e1a37500ab8d71791af5f8aff670665bf435296d72a098bc",
+      "root_seed": 66,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 4.644218852045034e-07,
+          "post_update_mean_square_m2": 2.2653058878585123e-13,
+          "open_loop_rms_m": 6.786851754144761e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 4.6456932091138866e-07,
+          "post_update_mean_square_m2": 2.2666958950719243e-13,
+          "open_loop_rms_m": 6.786851754144761e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.011135460240501317,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 2060.579264228876,
+      "noise_variance_m2": 2.442175817220137e-17,
+      "noise_variance_standard_error_m2": 1.5988429661365428e-18,
+      "mean_square_difference_m2": -1.3900072134117917e-16,
+      "mean_square_difference_standard_error_m2": 2.983786378553955e-16,
+      "wall_s": 9.076751917600632,
+      "label": "m7",
+      "protocol_hash": "b34cf56089fcbfecbc95aa221ee8398ecef97d42fc4d4243c0520a75bd09716e",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m7",
+        "root_seed": 66,
+        "config_hash": "5632699ac2e72f48e1a37500ab8d71791af5f8aff670665bf435296d72a098bc",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "25cbf1457b1ff40889e98a830ccdb5c06b91411ed0b875583dd662ae14dc9b9a",
+      "root_seed": 67,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.0296555394046024e-07,
+          "post_update_mean_square_m2": 9.268869469720387e-14,
+          "open_loop_rms_m": 4.897913588638648e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.0286377758863283e-07,
+          "post_update_mean_square_m2": 9.263487005206864e-14,
+          "open_loop_rms_m": 4.897913588638648e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.011134427386641818,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 2060.579264228876,
+      "noise_variance_m2": 2.643398820547067e-17,
+      "noise_variance_standard_error_m2": 3.36485414296565e-18,
+      "mean_square_difference_m2": 5.382464513524031e-17,
+      "mean_square_difference_standard_error_m2": 1.2180032833189358e-16,
+      "wall_s": 9.284134124405682,
+      "label": "m7",
+      "protocol_hash": "0c9fffdd9e5db342a546b25277c97ad53702b977992056f1fc3a55ffa10f7fde",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m7",
+        "root_seed": 67,
+        "config_hash": "25cbf1457b1ff40889e98a830ccdb5c06b91411ed0b875583dd662ae14dc9b9a",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "2683b47d4362a25de71003ee1209f238c6d92d8eb4825d608f4314688587e8a0",
+      "root_seed": 68,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.607682123875041e-07,
+          "post_update_mean_square_m2": 1.3544165115164485e-13,
+          "open_loop_rms_m": 5.487170219702239e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.606102437896175e-07,
+          "post_update_mean_square_m2": 1.3530276157431405e-13,
+          "open_loop_rms_m": 5.487170219702239e-07,
+          "valid_measurement_fraction": 1.0,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.011128457298536268,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 2060.579264228876,
+      "noise_variance_m2": 2.5617850439564392e-17,
+      "noise_variance_standard_error_m2": 2.0676227861597435e-18,
+      "mean_square_difference_m2": 1.3888957733080472e-16,
+      "mean_square_difference_standard_error_m2": 1.7430558949157113e-16,
+      "wall_s": 9.24250154197216,
+      "label": "m7",
+      "protocol_hash": "1f5a1e9a80b48a261b900915207ed2540a3070aa87d22a70b5e51613100a2eb7",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m7",
+        "root_seed": 68,
+        "config_hash": "2683b47d4362a25de71003ee1209f238c6d92d8eb4825d608f4314688587e8a0",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "be0284315c39d7a1980a9b70244a04d6f07608432c52aaf06bdbefe79d39c7da",
+      "root_seed": 61,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.5935943191930514e-07,
+          "post_update_mean_square_m2": 1.3348047919607596e-13,
+          "open_loop_rms_m": 5.715076668976418e-07,
+          "valid_measurement_fraction": 0.9501587301587301,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.580182306766709e-07,
+          "post_update_mean_square_m2": 1.3248608605713702e-13,
+          "open_loop_rms_m": 5.715076668976418e-07,
+          "valid_measurement_fraction": 0.9507936507936509,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.030599018258851727,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 820.3313805833651,
+      "noise_variance_m2": 9.321021844022373e-17,
+      "noise_variance_standard_error_m2": 1.1130801820944681e-17,
+      "mean_square_difference_m2": 9.943931389390052e-16,
+      "mean_square_difference_standard_error_m2": 5.339431609629392e-16,
+      "wall_s": 9.304244874976575,
+      "label": "m8",
+      "protocol_hash": "5d0454609337019dd69236d9c17ecf7f64c8aeb43d7ab69bcc7b2bce6079cc5b",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m8",
+        "root_seed": 61,
+        "config_hash": "be0284315c39d7a1980a9b70244a04d6f07608432c52aaf06bdbefe79d39c7da",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "bcf83d7700134cc48fac521da78d8aa714f7e00ec5f4155f894612b1c4ede765",
+      "root_seed": 62,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 2.155973085922169e-07,
+          "post_update_mean_square_m2": 4.9245597721026714e-14,
+          "open_loop_rms_m": 3.3271659745877895e-07,
+          "valid_measurement_fraction": 0.9939682539682541,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 2.1568176617922546e-07,
+          "post_update_mean_square_m2": 4.9302745813797657e-14,
+          "open_loop_rms_m": 3.3271659745877895e-07,
+          "valid_measurement_fraction": 0.9933333333333333,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.030653409912871736,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 820.3313805833651,
+      "noise_variance_m2": 9.513838495514177e-17,
+      "noise_variance_standard_error_m2": 7.765159738638784e-18,
+      "mean_square_difference_m2": -5.714809277095135e-17,
+      "mean_square_difference_standard_error_m2": 1.8859302909566972e-16,
+      "wall_s": 9.158647540956736,
+      "label": "m8",
+      "protocol_hash": "9a3b8dd9cb9fe4204b84250ea2225c641efa6887e5cccad00cce5ab3647f4ef0",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m8",
+        "root_seed": 62,
+        "config_hash": "bcf83d7700134cc48fac521da78d8aa714f7e00ec5f4155f894612b1c4ede765",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "7dd7c5ad8f0b342160e4249c48cf6715e783e882b951bddafad4cfaa6995ddd1",
+      "root_seed": 63,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 2.776626400348105e-07,
+          "post_update_mean_square_m2": 7.77084931242946e-14,
+          "open_loop_rms_m": 5.29579310336265e-07,
+          "valid_measurement_fraction": 0.932380952380952,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 2.7787874245814253e-07,
+          "post_update_mean_square_m2": 7.778321100511035e-14,
+          "open_loop_rms_m": 5.29579310336265e-07,
+          "valid_measurement_fraction": 0.9317460317460315,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.03065976978699433,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 820.3313805833651,
+      "noise_variance_m2": 7.873770894925852e-17,
+      "noise_variance_standard_error_m2": 9.71645396578227e-18,
+      "mean_square_difference_m2": -7.471788081574682e-17,
+      "mean_square_difference_standard_error_m2": 3.8478464642636836e-16,
+      "wall_s": 9.219492500647902,
+      "label": "m8",
+      "protocol_hash": "e9ce563824d8536101a442de04c5a90dfe0251506102e2f618dd3c63562417c3",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m8",
+        "root_seed": 63,
+        "config_hash": "7dd7c5ad8f0b342160e4249c48cf6715e783e882b951bddafad4cfaa6995ddd1",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "fa7288251cd3a96ac0bf19402426fccd828dc82a09865825d2eb33629208b34b",
+      "root_seed": 64,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 1.9511623576702456e-07,
+          "post_update_mean_square_m2": 3.8606054989437855e-14,
+          "open_loop_rms_m": 3.332228197273187e-07,
+          "valid_measurement_fraction": 0.9850793650793651,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 1.9461366902298087e-07,
+          "post_update_mean_square_m2": 3.83979892031247e-14,
+          "open_loop_rms_m": 3.332228197273187e-07,
+          "valid_measurement_fraction": 0.9860317460317461,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.030610826913557914,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 820.3313805833651,
+      "noise_variance_m2": 7.168528202932482e-17,
+      "noise_variance_standard_error_m2": 8.798574798267068e-18,
+      "mean_square_difference_m2": 2.0806578631315373e-16,
+      "mean_square_difference_standard_error_m2": 1.0174497879870828e-16,
+      "wall_s": 9.141272500157356,
+      "label": "m8",
+      "protocol_hash": "57379d1a38c9d63170d1b590914090fd1e53206448305c545def38cc87790377",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m8",
+        "root_seed": 64,
+        "config_hash": "fa7288251cd3a96ac0bf19402426fccd828dc82a09865825d2eb33629208b34b",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "0c1d49adc44c2a987f101e4fe6ec1d6c361a6d3e3f2eaf86c1b19eb054d0f25c",
+      "root_seed": 65,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.101171385609255e-07,
+          "post_update_mean_square_m2": 9.742637516572315e-14,
+          "open_loop_rms_m": 4.862315088581841e-07,
+          "valid_measurement_fraction": 0.9288888888888888,
+          "reconstruction_usable_fraction": 0.9933333333333333,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.092897258146995e-07,
+          "post_update_mean_square_m2": 9.694133103180033e-14,
+          "open_loop_rms_m": 4.862315088581841e-07,
+          "valid_measurement_fraction": 0.9292063492063491,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.03068249995443789,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 820.3313805833651,
+      "noise_variance_m2": 1.4804470837698816e-16,
+      "noise_variance_standard_error_m2": 5.24510402175285e-17,
+      "mean_square_difference_m2": 4.850441339228237e-16,
+      "mean_square_difference_standard_error_m2": 2.1644274762785566e-16,
+      "wall_s": 9.111692999489605,
+      "label": "m8",
+      "protocol_hash": "5b424a8ec3d88b32a2bc9ec2e77d07403e3466afdbc2681b9f87ddcf74cfd138",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m8",
+        "root_seed": 65,
+        "config_hash": "0c1d49adc44c2a987f101e4fe6ec1d6c361a6d3e3f2eaf86c1b19eb054d0f25c",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "655b38b828ba2f6865cb110a8b46aefb981ce69701bc1078d151d4878706b936",
+      "root_seed": 66,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 4.488038848446768e-07,
+          "post_update_mean_square_m2": 2.1373226200486294e-13,
+          "open_loop_rms_m": 6.786851754144761e-07,
+          "valid_measurement_fraction": 0.9187301587301584,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 4.498088920780744e-07,
+          "post_update_mean_square_m2": 2.1460828624257097e-13,
+          "open_loop_rms_m": 6.786851754144761e-07,
+          "valid_measurement_fraction": 0.9187301587301584,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.030626475148809246,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 820.3313805833651,
+      "noise_variance_m2": 1.198070480410619e-16,
+      "noise_variance_standard_error_m2": 2.2676211520161315e-17,
+      "mean_square_difference_m2": -8.760242377079822e-16,
+      "mean_square_difference_standard_error_m2": 4.818667706170832e-16,
+      "wall_s": 8.871709208004177,
+      "label": "m8",
+      "protocol_hash": "7cd765ca9ef2ad89ad18d33d3872f8197851c93109b645311ec6965ab3392127",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m8",
+        "root_seed": 66,
+        "config_hash": "655b38b828ba2f6865cb110a8b46aefb981ce69701bc1078d151d4878706b936",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "0915342515d10e0fb8b9edf95faf627a5d692b8b00862c965ae3c339556250e5",
+      "root_seed": 67,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.0160953786407274e-07,
+          "post_update_mean_square_m2": 9.160286934325481e-14,
+          "open_loop_rms_m": 4.897913588638648e-07,
+          "valid_measurement_fraction": 0.9653968253968253,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.0104972268368784e-07,
+          "post_update_mean_square_m2": 9.123272481188165e-14,
+          "open_loop_rms_m": 4.897913588638648e-07,
+          "valid_measurement_fraction": 0.9657142857142855,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.03060579528546031,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 820.3313805833651,
+      "noise_variance_m2": 6.601792706489811e-17,
+      "noise_variance_standard_error_m2": 4.40295243016025e-18,
+      "mean_square_difference_m2": 3.7014453137317334e-16,
+      "mean_square_difference_standard_error_m2": 4.632263439330499e-16,
+      "wall_s": 8.947629500180483,
+      "label": "m8",
+      "protocol_hash": "294438d129e7a1aa4e26df777d4922fc06df7245c862fbb0d9e0e076b134dca1",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m8",
+        "root_seed": 67,
+        "config_hash": "0915342515d10e0fb8b9edf95faf627a5d692b8b00862c965ae3c339556250e5",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    },
+    {
+      "config_hash": "ce75f231463e7104352b06930841dccd3744f7e7a5417f61a47a06e9883b15bf",
+      "root_seed": 68,
+      "n_steps": 200,
+      "burn_in_frames": 50,
+      "block_frames": 25,
+      "arms": {
+        "noise_on": {
+          "post_update_rms_m": 3.4824718137049306e-07,
+          "post_update_mean_square_m2": 1.2588478750166565e-13,
+          "open_loop_rms_m": 5.487170219702239e-07,
+          "valid_measurement_fraction": 0.9168253968253967,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        },
+        "operating_expectation": {
+          "post_update_rms_m": 3.504236847223082e-07,
+          "post_update_mean_square_m2": 1.2743129554972682e-13,
+          "open_loop_rms_m": 5.487170219702239e-07,
+          "valid_measurement_fraction": 0.913015873015873,
+          "reconstruction_usable_fraction": 1.0,
+          "lost_lock": false
+        }
+      },
+      "predicted_centroid_variance_px2": 0.03057405609744613,
+      "supported_lenslet_fraction": 1.0,
+      "detected_e_full_subap": 820.3313805833651,
+      "noise_variance_m2": 9.327491024279433e-16,
+      "noise_variance_standard_error_m2": 8.071971108547051e-16,
+      "mean_square_difference_m2": -1.54650804806116e-15,
+      "mean_square_difference_standard_error_m2": 1.6488887461343633e-15,
+      "wall_s": 9.047714000567794,
+      "label": "m8",
+      "protocol_hash": "0ba98548bdc9262a0a2f4f3e3b0e28b2bfee6124e7d70c4379130a3422866205",
+      "protocol": {
+        "series_protocol_version": 2,
+        "label": "m8",
+        "root_seed": 68,
+        "config_hash": "ce75f231463e7104352b06930841dccd3744f7e7a5417f61a47a06e9883b15bf",
+        "n_steps": 200,
+        "burn_in_frames": 50,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='materialized', telemetry_level='summary')",
+        "code": {
+          "git_head": "663df161d893d536a02244ea78bb8948167c854b",
+          "source_changes_sha256": "f94ccee947ed8a1f77d5011310da43fb374e91625e5afa3ca9f9c159656fd6d1"
+        }
+      }
+    }
+  ],
+  "summary": {},
+  "refused": [],
+  "wall_s": 289.5185809135437
+}
