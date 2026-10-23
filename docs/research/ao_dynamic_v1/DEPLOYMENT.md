@@ -84,8 +84,13 @@ do not repeat its successful runs.
      --allowed-host <public host name>
    ```
    The origin is `https://xhvoid.github.io` (no path); `--allowed-host` is the
-   name the proxy forwards in the `Host` header. Never pass
-   `--enable-test-faults` in production.
+   name the proxy forwards in the `Host` header. A proxy that rewrites `Host`
+   to the upstream address (for example nginx's default `$proxy_host`) makes
+   pages served by the proxy's own origin cross-origin for the service: list
+   that origin with `--allow-origin` too, or forward the original `Host`. A
+   service bound to `0.0.0.0` answers a LAN address only when it is given as
+   `--allowed-host <ip>:<port>`. Never pass `--enable-test-faults` in
+   production.
 3. **TLS reverse proxy.** The page is served over HTTPS, so browsers block an
    `http://` service (mixed content). Terminate HTTPS at a proxy for a host name
    you own, forward to `127.0.0.1:8765`, preserve the `Origin` header, cap

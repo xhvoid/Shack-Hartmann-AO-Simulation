@@ -78,8 +78,12 @@ async function fetchJson(url, { method = "GET", body, signal, timeoutMs = 15000 
 }
 
 export async function connect(address) {
+  if (g.submitting) return; // the pending submission must be answered first
   const generation = ++g.connectGeneration;
   stopPolling();
+  // A job of the previous connection is no longer followed (it keeps running on
+  // its own service, as after Disconnect); only reattach() may adopt one.
+  g.jobGeneration += 1;
   let base;
   try { base = serviceBase(address); } catch (error) { setConnection(`Not connected: ${error.message}.`); return; }
   setConnection(`Connecting to ${base.origin}…`);
@@ -247,7 +251,9 @@ async function submitTo(base, kind, params, policy, reference) {
   } catch (error) {
     if (generation !== g.jobGeneration) return;
     g.job.state = "failed";
-    renderJobText(`The request could not be sent: ${error.message}. Nothing was started.`);
+    renderJobText(error.name === "TimeoutError"
+      ? "The service did not answer in time; a job may or may not have been started. Check the runs available on this service before starting another."
+      : `The request could not be sent: ${error.message}. Nothing was started.`);
     return;
   }
   if (generation !== g.jobGeneration) {
@@ -306,7 +312,7 @@ async function poll(generation) {
   if (!job || generation !== g.jobGeneration || !g.base) return;
   let status;
   try {
-    const answer = await fetchJson(new URL(`runs/${job.runId}`, g.base), { timeoutMs: 10000 });
+    const answer = await fetchJson(new URL(`runs/${job.runId}`, job.base || g.base), { timeoutMs: 10000 });
     if (!answer.ok) throw new Error(answer.value?.message || `HTTP ${answer.status}`);
     status = answer.value;
     const problems = C.validateStatus(status, { runId: job.runId });
@@ -502,6 +508,8 @@ function install(data, { reference, origin }) {
 
 function updateRunButtons() {
   const ready = !!g.base && !g.submitting;
+  $("gen-connect").disabled = g.submitting;
+  $("gen-disconnect").disabled = g.submitting;
   $("gen-run").disabled = !ready;
   $("gen-new").disabled = !ready;
   $("gen-reproduce").disabled = !ready || !g.installed;

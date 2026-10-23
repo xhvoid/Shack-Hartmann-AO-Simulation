@@ -78,6 +78,9 @@ MAX_BODY_BYTES = 64 * 1024
 MAX_JOB_RECORDS = 500
 MAX_REMEMBERED_SEEDS = 100_000
 REQUEST_TIMEOUT_S = 30.0
+# Responses are written in chunks so the socket timeout bounds each chunk (a
+# stalled client), not a whole 25 MB download over a slow link (review R2-F01).
+WRITE_CHUNK_BYTES = 256 * 1024
 CANCEL_REASONS = {
     "requested": "cancelled by request",
     "visitor": "cancelled by the visitor",
@@ -661,7 +664,8 @@ def build_info(manager: JobManager, instance_id: str, started_utc: str, allowed_
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "ao-dynamic/1"
-    # Socket timeout per connection: a slow or idle client cannot hold a thread.
+    # Socket timeout per blocking operation: an idle or stalled client cannot
+    # hold a thread; a slow but progressing download continues (chunked writes).
     timeout = REQUEST_TIMEOUT_S
     manager: JobManager
     info: Dict[str, Any]
@@ -689,8 +693,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self._cors()
         self.end_headers()
+        self._response_started = True
         if self.command != "HEAD":
-            self.wfile.write(body)
+            view = memoryview(body)
+            for offset in range(0, len(view), WRITE_CHUNK_BYTES):
+                self.wfile.write(view[offset:offset + WRITE_CHUNK_BYTES])
 
     def _json(self, status: int, value: Any) -> None:
         self._send(status, (json.dumps(value, allow_nan=False) + "\n").encode("utf-8"), "application/json")
@@ -751,6 +758,7 @@ class Handler(BaseHTTPRequestHandler):
         self._dispatch("POST")
 
     def _dispatch(self, method: str) -> None:
+        self._response_started = False
         path = urlsplit(self.path).path
         try:
             self._check_request(method)
@@ -760,10 +768,15 @@ class Handler(BaseHTTPRequestHandler):
                 self._static(path)
             else:
                 raise ServiceError(HTTPStatus.NOT_FOUND, "not_found", f"{path} is not served")
-        except ServiceError as exc:
-            self._error(exc)
         except Exception as exc:  # noqa: BLE001 - every failure becomes a readable error
-            self._error(ServiceError(HTTPStatus.INTERNAL_SERVER_ERROR, "internal", f"{type(exc).__name__}: {exc}"))
+            if getattr(self, "_response_started", False):
+                # A response is already on the wire (e.g. a client stalled mid-body):
+                # never append a second one; drop the connection instead.
+                self.close_connection = True
+                return
+            if not isinstance(exc, ServiceError):
+                exc = ServiceError(HTTPStatus.INTERNAL_SERVER_ERROR, "internal", f"{type(exc).__name__}: {exc}")
+            self._error(exc)
 
     def _api(self, method: str, path: str) -> None:
         parts = path.rstrip("/").split("/")[1:]

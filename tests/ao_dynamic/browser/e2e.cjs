@@ -320,8 +320,8 @@ async function scenario(name, body) {
     await page.unroute(/\/files\/run\.json$/);
   });
 
-  await scenario("disconnect keeps the displayed run, cancels an untracked new job and disables computation", async () => {
-    // Disconnect while the service is still creating a job: the page cancels that job instead of leaving it untracked.
+  await scenario("connection changes wait for a pending submission; disconnect keeps the displayed run", async () => {
+    // While the service is creating a job, Connect and Disconnect wait: no job can be left untracked.
     await page.route(`${serviceBase}/api/v1/runs`, async (route) => {
       if (route.request().method() !== "POST") return route.continue();
       const body = JSON.parse(route.request().postData());
@@ -331,13 +331,16 @@ async function scenario(name, body) {
     });
     const before = new Set((await (await fetch(`${serviceBase}/api/v1/runs`)).json()).runs.map((r) => r.run_id));
     await page.click("#gen-run");
+    assert.equal(await page.isDisabled("#gen-disconnect"), true);
+    assert.equal(await page.isDisabled("#gen-connect"), true);
+    await waitText(page, "#gen-job-state", (t) => t.startsWith("Computing") || t.startsWith("Queued"));
     await page.click("#gen-disconnect");
-    await sleep(2500);
     const created = (await (await fetch(`${serviceBase}/api/v1/runs`)).json()).runs.filter((r) => !before.has(r.run_id));
     assert.equal(created.length, 1);
-    const orphan = await serviceStatus(created[0].run_id);
-    assert.equal(orphan.state, "cancelled", JSON.stringify(orphan));
-    assert.match(orphan.reason, /superseded/);
+    // As documented, a tracked job keeps running on its service after Disconnect; end it here.
+    assert.ok(["running", "queued"].includes((await serviceStatus(created[0].run_id)).state));
+    const ended = await (await fetch(`${serviceBase}/api/v1/runs/${created[0].run_id}/cancel`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })).json();
+    assert.equal(ended.state, "cancelled");
     await page.unroute(`${serviceBase}/api/v1/runs`);
     assert.match(await text(page, "#gen-conn-state"), /^Disconnected\. The displayed run stays/);
     for (const id of ["gen-run", "gen-new", "gen-reproduce", "gen-compare"]) assert.equal(await page.isDisabled(`#${id}`), true, id);

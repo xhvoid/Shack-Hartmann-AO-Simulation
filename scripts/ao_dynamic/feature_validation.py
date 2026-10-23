@@ -232,8 +232,9 @@ def launch(directory: Path, role: str, *, projected_wall_s: float, projected_byt
     current = current_producer()
     if any(producer_of(attempt) == current for attempt in attempts):
         raise ValidationRefusal(f"{role} already completed with the current producer; matching-identity runs are reused, not rerun")
-    if role != "pilot" and completed(directory, "pilot") is None:
-        raise ValidationRefusal("the pilot must complete before any 180-frame run")
+    pilot_attempt = completed(directory, "pilot")
+    if role != "pilot" and (pilot_attempt is None or producer_of(pilot_attempt) != current):
+        raise ValidationRefusal("the pilot must complete with the current producer before any 180-frame run")
     repeat_reason = None
     if attempts:
         # A completed attempt exists but was produced by other worker code (a
@@ -392,6 +393,11 @@ def evaluate(directory: Path, out: Path) -> Dict[str, Any]:
     import numpy as np
 
     plan = load_plan(directory)
+    current = current_producer()
+    stale = [run["role"] for run in plan["runs"] if completed(directory, run["role"]) is None
+             or producer_of(completed(directory, run["role"])) != current]
+    if stale:
+        raise ValidationRefusal(f"roles {stale} have no completed attempt with the current producer {current}")
     items = {run["role"]: _load(directory, run["role"]) for run in plan["runs"]}
     for role, item in items.items():
         if "run" in item:
@@ -565,7 +571,7 @@ def evaluate(directory: Path, out: Path) -> Dict[str, Any]:
                 }
         attempts_record[role] = {"attempts": record_list, "first_vs_latest": comparison}
     result["attempts"] = attempts_record
-    result["evaluated_producer_sha256"] = current_producer()
+    result["evaluated_producer_sha256"] = current
     result["consumption"] = consumption(directory)
     out.mkdir(parents=True, exist_ok=True)
     write_json(out / "evaluation.json", result)

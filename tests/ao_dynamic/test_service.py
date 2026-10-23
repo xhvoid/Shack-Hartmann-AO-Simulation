@@ -329,3 +329,47 @@ def test_a_worker_exits_when_its_supervisor_dies(tmp_path):
     if alive:
         os.kill(worker_pid, 9)
     assert not alive, "the worker kept running after its supervisor was killed"
+
+
+def test_a_slow_but_steady_client_receives_a_whole_file(tmp_path, monkeypatch):
+    """The socket timeout bounds stalls, not a whole download (review R2-F01)."""
+
+    import socket
+    from urllib.parse import urlsplit
+
+    monkeypatch.setattr(service.Handler, "timeout", 1.0)
+    original_setup = service.Handler.setup
+
+    def small_send_buffer(self):
+        # Small kernel buffers, so the transfer is paced by the reader as on a slow link.
+        self.request.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 16 * 1024)
+        original_setup(self)
+
+    monkeypatch.setattr(service.Handler, "setup", small_send_buffer)
+    with running_service(tmp_path) as (base, _manager, _storage):
+        _s, job = jcall(base, "/api/v1/runs", request())
+        done = wait_state(base, job["run_id"], ("completed", "failed"))
+        assert done["state"] == "completed"
+        expected = done["files"]["frames.bin"]
+        assert expected["bytes"] > 2_000_000
+        parts = urlsplit(base)
+        started = time.monotonic()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 16 * 1024)
+            sock.settimeout(10)
+            sock.connect((parts.hostname, parts.port))
+            sock.sendall(f"GET /api/v1/runs/{job['run_id']}/files/frames.bin HTTP/1.1\r\nHost: {parts.netloc}\r\n\r\n".encode())
+            received = bytearray()
+            while True:
+                chunk = sock.recv(16 * 1024)
+                if not chunk:
+                    break
+                received += chunk
+                time.sleep(0.015)  # at most about 1 MB/s: the whole file takes longer than the timeout
+        elapsed = time.monotonic() - started
+        header, _, body = bytes(received).partition(b"\r\n\r\n")
+        assert header.startswith(b"HTTP/1.0 200") or header.startswith(b"HTTP/1.1 200")
+        assert elapsed > 1.0, f"the transfer took {elapsed:.2f} s; the test needs one longer than the timeout"
+        assert len(body) == expected["bytes"] and contract.sha256_bytes(body) == expected["sha256"]
+        # A response interrupted mid-body is never followed by a second (error) response.
+        assert b"ao-dynamic.error.v1" not in body
