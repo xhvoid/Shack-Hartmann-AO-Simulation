@@ -63,13 +63,14 @@ import time
 from typing import Any, Deque, Dict, List, Optional
 from urllib.parse import urlsplit
 
-HERE = Path(__file__).resolve().parent
-EXPLORER = HERE.parent / "ao_explorer"
-for _path in (str(HERE), str(EXPLORER)):
-    if _path not in sys.path:
-        sys.path.insert(0, _path)
-
+# Sibling modules resolve from this script's directory (Python's sys.path[0]
+# when the script runs); the reused explorer modules are loaded by file.
 import contract  # noqa: E402
+import explorer_modules  # noqa: E402
+
+HERE = Path(__file__).resolve().parent
+EXPLORER = explorer_modules.EXPLORER
+explorer_modules.load()
 import worker  # noqa: E402
 
 SERVICE_FILES = ("service.py",)
