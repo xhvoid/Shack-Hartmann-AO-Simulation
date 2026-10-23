@@ -182,14 +182,39 @@ def consumption(directory: Path) -> Dict[str, Any]:
     }
 
 
-def completed(directory: Path, role: str) -> Optional[Path]:
+def completed_attempts(directory: Path, role: str) -> List[Path]:
     root = directory / "runs" / role
     if not root.exists():
-        return None
-    for attempt in sorted(root.iterdir()):
-        if (attempt / "status.json").exists() and read_json(attempt / "status.json").get("status") == "COMPLETED":
-            return attempt
+        return []
+    return [attempt for attempt in sorted(root.iterdir())
+            if (attempt / "status.json").exists() and read_json(attempt / "status.json").get("status") == "COMPLETED"]
+
+
+def producer_of(attempt: Path) -> Optional[str]:
+    """The worker-code digest a completed attempt was produced with."""
+
+    if (attempt / "run.json").exists():
+        return read_json(attempt / "run.json")["identities"]["producer"]["worker"]["sha256"]
+    if (attempt / "control.json").exists():
+        return read_json(attempt / "control.json")["identities"]["worker"]["sha256"]
     return None
+
+
+def current_producer() -> str:
+    import worker
+
+    return worker.dynamic_identity()["worker"]["sha256"]
+
+
+def completed(directory: Path, role: str) -> Optional[Path]:
+    """The latest completed attempt produced by the current worker code, else the latest one."""
+
+    attempts = completed_attempts(directory, role)
+    if not attempts:
+        return None
+    current = current_producer()
+    matching = [attempt for attempt in attempts if producer_of(attempt) == current]
+    return (matching or attempts)[-1]
 
 
 # ---------------------------------------------------------------------------
@@ -203,14 +228,24 @@ def launch(directory: Path, role: str, *, projected_wall_s: float, projected_byt
     spec = next((run for run in plan["runs"] if run["role"] == role), None)
     if spec is None:
         raise ValidationRefusal(f"{role} is not a planned run")
-    existing = completed(directory, role)
-    if existing is not None:
-        raise ValidationRefusal(f"{role} already completed in {existing.relative_to(directory)}; matching-identity runs are reused, not rerun")
+    attempts = completed_attempts(directory, role)
+    current = current_producer()
+    if any(producer_of(attempt) == current for attempt in attempts):
+        raise ValidationRefusal(f"{role} already completed with the current producer; matching-identity runs are reused, not rerun")
     if role != "pilot" and completed(directory, "pilot") is None:
         raise ValidationRefusal("the pilot must complete before any 180-frame run")
+    repeat_reason = None
+    if attempts:
+        # A completed attempt exists but was produced by other worker code (a
+        # repair changed producer files): one new attempt binds the evidence
+        # to the delivered producer; the evaluation compares the two.
+        repeat_reason = f"producer identity changed from {producer_of(attempts[-1])} to {current}"
     used = consumption(directory)
-    entry: Dict[str, Any] = {"utc": utc_now(), "label": role, "kind": "planned_run", "launched": False, "wall_s": 0.0,
-                             "consumption_before": used, "projected_wall_s": projected_wall_s, "projected_bytes": projected_bytes}
+    entry: Dict[str, Any] = {"utc": utc_now(), "label": role, "kind": "planned_run" if repeat_reason is None else "planned_run_repeat",
+                             "launched": False, "wall_s": 0.0, "consumption_before": used, "projected_wall_s": projected_wall_s,
+                             "projected_bytes": projected_bytes, "producer_sha256": current}
+    if repeat_reason is not None:
+        entry["repeat_reason"] = repeat_reason
     if used["wall_s"] + projected_wall_s > WALL_CEILING_S or used["raw_bytes"] + projected_bytes > RAW_CEILING_BYTES:
         entry.update(status="REFUSED_CEILING", reason="the projected cost would exceed a ceiling")
         append(directory, entry)
@@ -505,6 +540,32 @@ def evaluate(directory: Path, out: Path) -> Dict[str, Any]:
                             for role in ("pilot", "baseline", "replay", "different-seed", "same-atmosphere")}
     result["identities"]["control"] = {"history_sha256": control["history_digest"]["sha256"], "producer_sha256": control["identities"]["worker"]["sha256"]}
     result["resources"] = {role: items[role]["run"]["resources"] for role in ("pilot", "baseline", "replay", "different-seed", "same-atmosphere")}
+    # Attempts across producer revisions: the numerical results must not move.
+    attempts_record: Dict[str, Any] = {}
+    for run in plan["runs"]:
+        role = run["role"]
+        attempts = completed_attempts(directory, role)
+        record_list = [{"attempt": a.name, "producer_sha256": producer_of(a)} for a in attempts]
+        comparison = None
+        if len(attempts) >= 2:
+            first, last = attempts[0], attempts[-1]
+            if role == "control":
+                a, b = read_json(first / "control.json"), read_json(last / "control.json")
+                comparison = {"history_digest_equal": a["history_digest"] == b["history_digest"]}
+            else:
+                a, b = read_json(first / "run.json"), read_json(last / "run.json")
+                comparison = {
+                    "history_digest_equal": a["identities"]["history_digest"] == b["identities"]["history_digest"],
+                    "per_frame_equal": a["per_frame"] == b["per_frame"],
+                    "summary_equal": a["summary"] == b["summary"],
+                    "frames_bin_equal": (first / "frames.bin").read_bytes() == (last / "frames.bin").read_bytes(),
+                    "final_bin_equal": (first / "final.bin").read_bytes() == (last / "final.bin").read_bytes(),
+                    "calibration_identity_equal": a["identities"]["calibration"] == b["identities"]["calibration"],
+                    "atmosphere_identity_equal": a["identities"]["atmosphere"] == b["identities"]["atmosphere"],
+                }
+        attempts_record[role] = {"attempts": record_list, "first_vs_latest": comparison}
+    result["attempts"] = attempts_record
+    result["evaluated_producer_sha256"] = current_producer()
     result["consumption"] = consumption(directory)
     out.mkdir(parents=True, exist_ok=True)
     write_json(out / "evaluation.json", result)

@@ -100,7 +100,14 @@ extension and is implemented in `scripts/ao_dynamic/` and the
   both refuse records that break these semantics, independently of digests.
 - Generated runs have their own identities and storage namespace; they never
   change the frozen dataset. The published static site needs no service and
-  makes no new request unless a visitor connects one explicitly.
+  makes no new request unless a visitor presses Connect (a `?backend=` link
+  only fills in the address). Every value from a service is treated as data
+  (escaped markup, validated identifiers and file references), and each
+  displayed run names the service origin that computed it.
+- The service answers only its own Host names, refuses cross-origin writes
+  from unlisted origins, bounds request bodies and its job history, times out
+  idle connections, and its workers exit if the supervising service
+  disappears.
 - The page installs a run atomically after size, SHA-256 and semantic checks;
   generation tokens make A→B→A selection, cancellation, supersession, late
   responses and reconnects unable to mix runs. Downloads are the verified

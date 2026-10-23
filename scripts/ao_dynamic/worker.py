@@ -617,11 +617,28 @@ def run(job_dir: Path, *, observer_enabled: bool = True) -> Dict[str, Any]:
     return record
 
 
+def watch_parent(interval_s: float = 0.5) -> None:
+    """Exit if the supervising process disappears (re-parenting), so no worker runs unowned."""
+
+    import threading
+
+    parent = os.getppid()
+
+    def watch() -> None:
+        while True:
+            time.sleep(interval_s)
+            if os.getppid() != parent:
+                os._exit(70)
+
+    threading.Thread(target=watch, name="parent-watch", daemon=True).start()
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--job-dir", type=Path, required=True)
     parser.add_argument("--no-observer", action="store_true", help="passivity control: run without any observer")
     arguments = parser.parse_args(argv)
+    watch_parent()
     try:
         run(arguments.job_dir, observer_enabled=not arguments.no_observer)
     except WorkerRefusal as exc:

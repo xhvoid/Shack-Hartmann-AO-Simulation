@@ -110,6 +110,9 @@ def test_comparison_classes_separate_atmosphere_realization_and_ao_changes():
     assert contract.comparison_class(base, change(seed=7))["kind"] == "different_realization"
     assert contract.comparison_class(base, change(n_frames=100))["kind"] == "different_time_grid"
     assert contract.comparison_class(base, change(display_stride=3))["kind"] == "identical_configuration"
+    window = contract.comparison_class(base, change(burn_in=20))
+    assert window["kind"] == "different_analysis_window" and "summaries cover different frames" in window["text"]
+    assert contract.comparison_class(base, change(burn_in=20, controller_gain=0.3))["kind"] == "different_analysis_window"
 
 
 def test_physical_identity_ignores_only_display_sampling():

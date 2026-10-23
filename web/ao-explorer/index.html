@@ -7,7 +7,7 @@
 <meta name="description" content="Precomputed native 2 m Shack-Hartmann SCAO experiment and the main results of the AO simulation project, with their evidence and limits.">
 <link rel="icon" href="data:,">
 <!-- Code and style come from the content-addressed build directory; see scripts/ao_explorer/site_build.py. -->
-<link rel="stylesheet" href="code-cf56ae56d020f85c/styles.css">
+<link rel="stylesheet" href="code-a479e1099516c286/styles.css">
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script type="module" src="code-cf56ae56d020f85c/app.js" onerror="aoCodeUnavailable()"></script>
+<script type="module" src="code-a479e1099516c286/app.js" onerror="aoCodeUnavailable()"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -174,7 +174,7 @@ function aoCodeUnavailable() {
       <button type="submit" id="gen-connect">Connect</button>
       <button type="button" id="gen-disconnect" hidden>Disconnect</button>
     </form>
-    <p class="hint">Connecting sends requests only to the address you enter (or to the one given as <code>?backend=</code> in this page's address). Nothing is contacted before that. See Methods &amp; Limits for running a service yourself.</p>
+    <p class="hint">Connecting sends requests only to the address in the field, and only after you press Connect; an address given as <code>?backend=</code> in this page's address just fills in the field. A connected service computes the runs this section shows; check that you trust it. See Methods &amp; Limits for running a service yourself.</p>
     <div id="gen-error" class="error" role="alert" hidden></div>
   </section>
 
@@ -332,7 +332,7 @@ function aoCodeUnavailable() {
       <li><strong>Comparisons</strong>: changing gain, guide magnitude or delay keeps the atmosphere of the same seed; a comparison is labelled paired only when the time grids and every per-frame atmosphere digest match. Changing r0 or wind changes the physical atmosphere; a new seed is a new realization. Calibration is rebuilt for every run and its identity follows the seed and guide magnitude.</li>
       <li><strong>Images</strong>: instantaneous PSFs of each frame's atmosphere (zero DM) and pre-update residual; synthetic observations convolve the fixed binary with those numerical PSFs; running and completed-window averages use every eligible frame, independently of how many frames are kept for replay.</li>
       <li><strong>Computation</strong>: the service runs one job at a time in its own worker process with two native threads and a time limit; cancelling stops that process. A run is computed in full before it is replayed; it does not keep pace with the 1 kHz loop. Generated runs have their own identities and storage and never change the precomputed dataset.</li>
-      <li><strong>Running a service</strong>: from a checkout with the package installed, <code>python scripts/ao_dynamic/service.py --port 8765 --web-dir web</code> serves this site and the API at <code>http://127.0.0.1:8765/ao-explorer/?backend=/</code>. A service on another origin must list this page's origin with <code>--allow-origin</code>; an HTTPS page needs an HTTPS service. This published site has no service of its own.</li>
+      <li><strong>Running a service</strong>: from a checkout with the package installed, <code>python scripts/ao_dynamic/service.py --port 8765 --web-dir web</code> serves this site and the API; open <code>http://127.0.0.1:8765/ao-explorer/?backend=/</code> and press Connect. A service on another origin must list this page's origin with <code>--allow-origin</code>; an HTTPS page needs an HTTPS service. This published site has no service of its own.</li>
     </ul>
 
     <h2>Observable definitions</h2>

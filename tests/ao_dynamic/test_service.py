@@ -222,3 +222,110 @@ def test_faults_are_ignored_unless_enabled(tmp_path):
     with running_service(tmp_path, enable_test_faults=False) as (base, _manager, _storage):
         _s, job = jcall(base, "/api/v1/runs", request(token="test-fault:fail_at:start"))
         assert wait_state(base, job["run_id"], ("completed", "failed"))["state"] == "completed"
+
+
+def raw_request(base, data: bytes) -> bytes:
+    """Send bytes over a plain socket (for malformed headers urllib refuses to send)."""
+
+    import socket
+    from urllib.parse import urlsplit
+
+    parts = urlsplit(base)
+    with socket.create_connection((parts.hostname, parts.port), timeout=10) as sock:
+        # The service may answer and close before reading a refused body.
+        try:
+            sock.sendall(data)
+            sock.shutdown(socket.SHUT_WR)
+        except OSError:
+            pass
+        chunks = []
+        try:
+            while True:
+                chunk = sock.recv(65536)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+        except OSError:
+            pass
+    return b"".join(chunks)
+
+
+def test_request_bounds_hosts_and_origins_are_enforced(tmp_path):
+    with running_service(tmp_path) as (base, manager, _storage):
+        host = base.split("//")[1]
+        body = b'{"pad": "' + b"x" * (3 * 1024 * 1024) + b'"}'
+        answer = raw_request(base, b"POST /api/v1/runs HTTP/1.1\r\nHost: " + host.encode() + b"\r\nContent-Type: application/json\r\nContent-Length: -1\r\n\r\n" + body)
+        assert answer.startswith(b"HTTP/1.0 411") or answer.startswith(b"HTTP/1.1 411"), answer[:80]
+        answer = raw_request(base, b"POST /api/v1/runs HTTP/1.1\r\nHost: " + host.encode() + b"\r\nContent-Type: application/json\r\n\r\n{}")
+        assert b" 411 " in answer.split(b"\r\n")[0]
+        answer = raw_request(base, b"POST /api/v1/runs HTTP/1.1\r\nHost: " + host.encode() + b"\r\nContent-Type: application/json\r\nContent-Length: 70000\r\n\r\n{}")
+        assert b" 413 " in answer.split(b"\r\n")[0]
+        # DNS rebinding: a foreign Host name is not answered.
+        assert call(base, "/api/v1/info", headers={"Host": "attacker.example"})[0] == 421
+        # Writes from an unlisted origin are refused, even as a "simple" request.
+        _s, job = jcall(base, "/api/v1/runs", request(token="test-fault:sleep_at:start"))
+        assert call(base, f"/api/v1/runs/{job['run_id']}/cancel", raw=b"", headers={"Content-Type": "text/plain"})[0] == 415
+        assert call(base, f"/api/v1/runs/{job['run_id']}/cancel", {}, headers={"Origin": "https://evil.example"})[0] == 403
+        assert call(base, "/api/v1/runs", request(), headers={"Origin": "https://evil.example"})[0] == 403
+        status, cancelled = jcall(base, f"/api/v1/runs/{job['run_id']}/cancel", {"reason": "visitor"}, headers={"Origin": "https://pages.example"})
+        assert status == 200 and cancelled["state"] == "cancelled"
+        assert call(base, f"/api/v1/runs/{job['run_id']}/cancel", {"reason": "<script>"})[0] == 422
+        # Same-origin pages served by the service may write.
+        _s, other = jcall(base, "/api/v1/runs", request(token="test-fault:sleep_at:start"), headers={"Origin": base})
+        assert jcall(base, f"/api/v1/runs/{other['run_id']}/cancel", {}, headers={"Origin": base})[0] == 200
+
+
+def test_job_history_is_bounded(tmp_path, monkeypatch):
+    monkeypatch.setattr(service, "MAX_JOB_RECORDS", 2)
+    with running_service(tmp_path) as (base, manager, _storage):
+        ids = []
+        for _ in range(4):
+            _s, job = jcall(base, "/api/v1/runs", request(token="test-fault:fail_at:start"))
+            ids.append(job["run_id"])
+            wait_state(base, job["run_id"], ("failed",))
+        assert len(manager.jobs) <= 3 and ids[-1] in manager.jobs and ids[0] not in manager.jobs
+        assert call(base, f"/api/v1/runs/{ids[0]}")[0] == 404
+
+
+def test_a_worker_exits_when_its_supervisor_dies(tmp_path):
+    """A hard-killed supervisor leaves no worker running unowned."""
+
+    import signal
+    import subprocess
+    import sys
+
+    if not Path("/proc/self/stat").is_file():
+        pytest.skip("process states are read from /proc")
+    worker_path = Path(service.__file__).with_name("worker.py")
+    job = tmp_path / "job"
+    job.mkdir()
+    (job / "request.json").write_text(json.dumps({"run_id": "orphan", "parameters": contract.effective_parameters(request()["parameters"])}))
+    parent_code = (
+        "import os, subprocess, sys, time\n"
+        f"p = subprocess.Popen([sys.executable, {str(worker_path)!r}, '--job-dir', {str(job)!r}], "
+        "env={**os.environ, 'AO_DYNAMIC_TEST_FAULT': 'sleep_at:start'}, start_new_session=True, stdout=subprocess.PIPE)\n"
+        "print(p.pid, flush=True)\n"
+        "p.stdout.readline()\n"
+        "print('started', flush=True)\n"
+        "time.sleep(600)\n"
+    )
+    parent = subprocess.Popen([sys.executable, "-c", parent_code], stdout=subprocess.PIPE, text=True)
+    worker_pid = int(parent.stdout.readline())
+    assert parent.stdout.readline().strip() == "started"
+    parent.send_signal(signal.SIGKILL)
+    parent.wait()
+
+    def running(pid):
+        try:
+            state = Path(f"/proc/{pid}/stat").read_text().split(")")[-1].split()[0]
+        except OSError:
+            return False
+        return state not in ("Z", "X")
+
+    deadline = time.monotonic() + 10
+    while running(worker_pid) and time.monotonic() < deadline:
+        time.sleep(0.1)
+    alive = running(worker_pid)
+    if alive:
+        os.kill(worker_pid, 9)
+    assert not alive, "the worker kept running after its supervisor was killed"

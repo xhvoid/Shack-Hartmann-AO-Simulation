@@ -19,9 +19,13 @@ wavelength, residual field, window, layout or scene is refused.
 | `GET /api/v1/runs/<run-id>/files/<name>` | `run.json`, `frames.bin`, `final.bin`, `metrics.csv`, `evidence.npz` of a completed run (409 if not completed, 410 if evicted) |
 
 Errors use `ao-dynamic.error.v1` (`error`, `message`, optional `reasons`,
-`admission`). Requests must be `application/json`, at most 64 KiB, without
+`admission`). Every POST (cancel included) must be `application/json` with a
+decimal `Content-Length` of at most 64 KiB (411/413 otherwise), without
 NaN/Infinity. Cross-origin access is granted only to origins listed with
-`--allow-origin`; credentials are never used.
+`--allow-origin`; a POST carrying another origin (other than the service's own)
+is refused with 403; credentials are never used. Requests for Host names other
+than the bound address, `localhost`/`127.0.0.1` and `--allowed-host` names are
+refused with 421.
 
 ## Request (`ao-dynamic.request.v1`)
 
@@ -53,8 +57,8 @@ the effective parameters (with the derived `wind_m_per_s`), `seed`,
 `computation_wall_s`, an admission summary and its digest, `reason` for
 cancelled/failed jobs, `worker` (process id, thread limits, cleanup record:
 signals sent, return code, whether the process group outlived it, whether
-partial outputs were removed) and `files` (size and SHA-256 of each run file)
-once completed.
+partial outputs were removed) and `files` (for each of the five run files:
+`href` exactly `files/<name>`, size and SHA-256) once completed.
 
 Progress counts computed frames and the physical time reached. It is
 unrelated to the page's replay speed.
@@ -95,6 +99,10 @@ observations on the full native grid, scene, replay indices and loop history.
 ## Compatibility
 
 A client must refuse an `info` or run record whose `api`/`schema` differ, or
-whose fixed scope, parameter names, layouts or conventions differ from the
-version it implements. Incompatible changes require a new API version and
-a new page build.
+whose fixed scope, parameter table (names, kinds, ranges, defaults), layouts or
+conventions differ from the version it implements; the page also recomputes
+`physical_identity` from the recorded parameters (canonical JSON with Python
+float formatting) and refuses a mismatch. Everything a service returns is
+treated as data: the page builds markup only through an escaping template and
+accepts identifiers only from a conservative character set. Incompatible
+changes require a new API version and a new page build.

@@ -16,6 +16,24 @@ import { lineChart, redrawWhenResized } from "./charts.js";
 import * as C from "./generate-contract.js";
 
 const $ = (id) => document.getElementById(id);
+
+// Every value from the service is data.  Markup is built only through the html
+// tag below, which escapes every interpolated value unless it is itself the
+// result of html (review R1-F01); innerHTML is assigned only via setHtml.
+class SafeHtml { constructor(text) { this.text = text; } }
+const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]));
+const renderValue = (value) => (value instanceof SafeHtml ? value.text : Array.isArray(value) ? value.map(renderValue).join("")
+  : value === null || value === undefined || value === false ? "" : escapeHtml(value));
+function html(strings, ...values) {
+  let out = strings[0];
+  values.forEach((value, index) => { out += renderValue(value) + strings[index + 1]; });
+  return new SafeHtml(out);
+}
+function setHtml(element, safe) {
+  if (!(safe instanceof SafeHtml)) throw new TypeError("markup must be built with html``");
+  element.innerHTML = safe.text;
+}
+
 const STORAGE_KEY = "ao-dynamic-active-job";
 const CACHE_LIMIT = 3;
 const POLL_MS = 500;
@@ -28,7 +46,7 @@ const g = {
   installed: null, reference: null, cache: new Map(), loadGeneration: 0, loadController: null,
   job: null, jobGeneration: 0, pollTimer: null, failures: 0,
   position: 0, playing: false, timer: null, nextAt: null, quantity: "opd", obsMode: "instantaneous",
-  objectUrls: [], luts: null, offscreen: new Map(),
+  objectUrls: [], luts: null, offscreen: new Map(), submitting: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -112,7 +130,7 @@ function disconnected(message) {
 function setConnection(text) { $("gen-conn-state").textContent = text; }
 
 function setComputeEnabled(enabled) {
-  for (const id of ["gen-run", "gen-new", "gen-check", "gen-runs-refresh"]) $(id).disabled = !enabled;
+  for (const id of ["gen-check", "gen-runs-refresh"]) $(id).disabled = !enabled;
   updateRunButtons();
 }
 
@@ -122,17 +140,18 @@ function setComputeEnabled(enabled) {
 function buildForm() {
   const form = $("gen-form");
   const previous = g.installed ? paramsOf(g.installed.run) : null;
-  form.innerHTML = "";
+  form.replaceChildren();
   for (const spec of g.info.parameters) {
+    // Names, kinds, ranges and defaults were checked against API v1 (validateInfo).
     const id = `gen-p-${spec.name}`;
     const row = document.createElement("div");
     row.className = "gen-field";
     const fixed = spec.minimum === spec.maximum;
-    const step = spec.kind === "integer" ? "1" : "any";
     const value = previous ? previous[spec.name] : spec.default;
-    row.innerHTML = `<label for="${id}">${escapeHtml(spec.label)}${spec.unit ? ` <span class="unit">(${escapeHtml(spec.unit)})</span>` : ""}</label>
-<input id="${id}" name="${spec.name}" type="number" step="${step}" min="${spec.minimum}" max="${spec.maximum}" value="${value}" ${fixed ? "readonly" : ""} aria-describedby="${id}-note">
-<small id="${id}-note">${fixed ? "" : `Supported ${spec.minimum}–${spec.maximum}. `}${escapeHtml(spec.note)}</small>`;
+    setHtml(row, html`<label for="${id}">${spec.label}${spec.unit ? html` <span class="unit">(${spec.unit})</span>` : ""}</label>
+<input id="${id}" name="${spec.name}" type="number" step="${spec.kind === "integer" ? "1" : "any"}" min="${spec.minimum}" max="${spec.maximum}" value="${value}" aria-describedby="${id}-note">
+<small id="${id}-note">${fixed ? "" : `Supported ${spec.minimum}–${spec.maximum}. `}${spec.note}</small>`);
+    if (fixed) row.querySelector("input").readOnly = true;
     form.append(row);
   }
   updatePending();
@@ -185,7 +204,7 @@ function requestBody(params, policy) {
 }
 
 async function submit(kind) {
-  if (!g.base) return;
+  if (!g.base || g.submitting) return;
   hideError();
   let params = readForm();
   let policy = "specified";
@@ -203,22 +222,42 @@ async function submit(kind) {
     $("gen-compare-note").hidden = false;
     $("gen-compare-note").textContent = `Comparison request: ${C.SAME_ATMOSPHERE_CHANGES.map((n) => `${n} ${params[n]}`).join(", ")}; seed, r0, wind, frames and burn-in are taken from the displayed run (${reference.run.run_id}).`;
   }
-  if (g.job && !C.TERMINAL_STATES.has(g.job.state) && g.job.runId) {
-    await cancelJob("superseded");
+  // One submission at a time: the start buttons stay disabled until the
+  // service has answered, so no job can be created that the page does not track
+  // (review R1-F02).
+  g.submitting = true;
+  updateRunButtons();
+  const base = g.base;
+  try {
+    if (g.job && !C.TERMINAL_STATES.has(g.job.state) && g.job.runId) await cancelJob("superseded");
+    await submitTo(base, kind, params, policy, reference);
+  } finally {
+    g.submitting = false;
+    updateRunButtons();
   }
+}
+
+async function submitTo(base, kind, params, policy, reference) {
   const generation = ++g.jobGeneration;
-  g.job = { generation, kind, runId: null, state: "submitting", requested: params, policy, reference, referenceId: reference?.run.run_id ?? null };
+  g.job = { generation, kind, runId: null, state: "submitting", requested: params, policy, reference, referenceId: reference?.run.run_id ?? null, base };
   renderJobText(`Submitting ${describeKind(kind)}…`);
   let answer;
   try {
-    answer = await fetchJson(new URL("runs", g.base), { method: "POST", body: requestBody(params, policy) });
+    answer = await fetchJson(new URL("runs", base), { method: "POST", body: requestBody(params, policy) });
   } catch (error) {
     if (generation !== g.jobGeneration) return;
     g.job.state = "failed";
     renderJobText(`The request could not be sent: ${error.message}. Nothing was started.`);
     return;
   }
-  if (generation !== g.jobGeneration) return;
+  if (generation !== g.jobGeneration) {
+    // The page moved on (disconnect) while the service was creating this job:
+    // cancel it rather than leave an untracked job holding the worker.
+    if (answer.ok && typeof answer.value?.run_id === "string" && C.SERVICE_RUN_ID.test(answer.value.run_id)) {
+      fetchJson(new URL(`runs/${answer.value.run_id}/cancel`, base), { method: "POST", body: { reason: "superseded" } }).catch(() => {});
+    }
+    return;
+  }
   if (answer.status === 422 || answer.status === 429 || !answer.ok) {
     g.job.state = "failed";
     const v = answer.value || {};
@@ -234,7 +273,7 @@ async function submit(kind) {
   g.job.state = answer.value.state;
   g.job.allocatedSeed = answer.value.seed;
   g.job.seedSource = answer.value.seed_source;
-  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ base: g.base.href, runId: g.job.runId, kind, referenceId: g.job.referenceId })); } catch (error) { /* storage is optional */ }
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ base: base.href, runId: g.job.runId, kind, referenceId: g.job.referenceId })); } catch (error) { /* storage is optional */ }
   renderStatus(answer.value);
   schedulePoll(generation, 0);
 }
@@ -248,7 +287,7 @@ async function cancelJob(reason) {
   if (!job || !job.runId || !g.base) return;
   renderJobText(`Cancelling ${job.runId} (${reason === "superseded" ? "superseded by a newer request" : "requested"})…`);
   try {
-    const { value } = await fetchJson(new URL(`runs/${job.runId}/cancel`, g.base), { method: "POST", body: { reason }, timeoutMs: 20000 });
+    const { value } = await fetchJson(new URL(`runs/${job.runId}/cancel`, job.base || g.base), { method: "POST", body: { reason }, timeoutMs: 20000 });
     if (!C.validateStatus(value, { runId: job.runId }).length) { job.state = value.state; if (job === g.job) renderStatus(value); }
   } catch (error) {
     renderJobText(`Cancelling ${job.runId} failed (${error.message}); the service will abandon it if no page asks about it.`);
@@ -285,14 +324,16 @@ async function poll(generation) {
   job.state = status.state;
   renderStatus(status);
   if (status.state === "completed") {
-    clearStoredJob(job.runId);
     const expected = { ...job.requested };
     if (job.policy === "allocate") {
       if (status.seed_source !== "allocated_by_service" || status.seed !== job.allocatedSeed) { showError("The service changed the allocated seed", [`expected ${job.allocatedSeed}, status names ${status.seed}`]); return; }
       expected.seed = job.allocatedSeed;
     }
     const reference = job.kind === "compare" ? job.reference || g.cache.get(job.referenceId) || null : null;
-    await loadRun(status.run_id, { expected, status, reference, origin: job.kind });
+    const outcome = await loadRun(status.run_id, { expected, status, reference, origin: job.kind });
+    // Keep the session's record while the result could still be fetched after
+    // a reconnect; drop it once the run was installed or refused by the checks.
+    if (outcome === "installed" || outcome === "refused") clearStoredJob(job.runId);
     return;
   }
   if (C.TERMINAL_STATES.has(status.state)) { clearStoredJob(job.runId); return; }
@@ -308,12 +349,11 @@ async function reattach() {
   try { stored = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null"); } catch (error) { stored = null; }
   if (!stored || stored.base !== g.base.href || !/^run-[0-9TZ-]+[0-9a-f]{8}$/.test(stored.runId || "")) return;
   const generation = ++g.jobGeneration;
-  g.job = { generation, kind: "reattach", runId: stored.runId, state: "unknown", requested: {}, policy: "specified", referenceId: stored.referenceId };
+  g.job = { generation, kind: "reattach", runId: stored.runId, state: "unknown", requested: {}, policy: "specified", referenceId: stored.referenceId, base: g.base };
   try {
     const { ok, value } = await fetchJson(new URL(`runs/${stored.runId}`, g.base));
     if (!ok || C.validateStatus(value, { runId: stored.runId }).length) { clearStoredJob(stored.runId); g.job = null; return; }
-    g.job.requested = { ...value.parameters };
-    delete g.job.requested.wind_m_per_s;
+    g.job.requested = Object.fromEntries(C.PARAMETER_NAMES.map((name) => [name, value.parameters[name]]));
     g.job.allocatedSeed = value.seed;
     renderJobText(`Reattached to ${stored.runId} from this browser session.`);
     schedulePoll(generation, 0);
@@ -362,12 +402,15 @@ async function loadRun(runId, { expected = null, status = null, reference = null
   pause();
   if (g.cache.has(runId) && !expected) {
     install(g.cache.get(runId), { reference: g.reference, origin });
-    return;
+    return "installed";
   }
+  const base = g.base;
+  const connection = g.connectGeneration;
+  if (!base) return "aborted";
   try {
     let current = status;
     if (!current) {
-      const answer = await fetchJson(new URL(`runs/${runId}`, g.base), { signal: controller.signal });
+      const answer = await fetchJson(new URL(`runs/${runId}`, base), { signal: controller.signal });
       if (!answer.ok) throw new Error(answer.value?.message || `HTTP ${answer.status}`);
       current = answer.value;
     }
@@ -375,15 +418,19 @@ async function loadRun(runId, { expected = null, status = null, reference = null
     if (statusProblems.length) throw new Error(statusProblems.join("; "));
     if (current.state !== "completed" || !current.files) throw new Error(`run ${runId} is ${current.state}${current.evicted ? " and was evicted from the service's storage" : ""}`);
     const files = current.files;
-    const runUrl = new URL(`runs/${runId}/`, g.base);
+    const runUrl = new URL(`runs/${runId}/`, base);
     const runBuffer = await fetchVerifiedBytes(new URL(files["run.json"].href, runUrl), files["run.json"], controller.signal);
     const run = JSON.parse(new TextDecoder().decode(runBuffer));
     // A run started here must have the requested parameters; a run loaded from
     // the list must have the parameters its own status names.
     const problems = C.validateRun(run, { expectedParameters: expected || current.parameters, runId });
+    if (!problems.length && (await C.physicalIdentity(run.effective.parameters)) !== run.effective.physical_identity) {
+      problems.push("the physical identity does not follow from the recorded parameters");
+    }
     if (problems.length) {
       const error = new Error("the run's metadata is not supported by this page");
       error.details = problems;
+      error.refused = true;
       throw error;
     }
     const refs = { "frames.bin": run.arrays.frames, "final.bin": run.arrays.final, "metrics.csv": run.arrays.metrics_csv };
@@ -394,15 +441,23 @@ async function loadRun(runId, { expected = null, status = null, reference = null
     const data = {
       id: runId, run, runBuffer, csvBuffer, framesBuffer, finalBuffer,
       frames: C.frameViews(framesBuffer, run), final: C.finalViews(finalBuffer),
-      evidenceUrl: new URL(files["evidence.npz"].href, runUrl).href, base: g.base.href,
+      evidenceUrl: new URL(files["evidence.npz"].href, runUrl).href, base: base.href, serviceOrigin: base.origin,
     };
-    if (generation !== g.loadGeneration) return; // a newer selection or run won
+    if (generation !== g.loadGeneration) return "superseded"; // a newer selection or run won
+    if (connection !== g.connectGeneration) return "aborted"; // disconnected meanwhile
     remember(runId, data);
     install(data, { reference: origin === "compare" ? reference : g.reference, origin });
+    return "installed";
   } catch (error) {
-    if (error.name === "AbortError" || generation !== g.loadGeneration) return;
-    if (origin !== "list") renderJobText(`The completed run ${runId} was refused by this page's checks; nothing was installed and the displayed run is unchanged.`);
+    if (error.name === "AbortError" || generation !== g.loadGeneration) return "superseded";
+    if (connection !== g.connectGeneration) return "aborted";
+    if (origin !== "list") {
+      renderJobText(error.refused
+        ? `The completed run ${runId} was refused by this page's checks; nothing was installed and the displayed run is unchanged.`
+        : `The completed run ${runId} could not be fetched (${error.message}); the displayed run is unchanged.`);
+    }
     showError(`Run ${runId} was not installed: ${error.message}.`, [...(error.details || []), g.installed ? `Still showing ${g.installed.id}.` : "No generated run is displayed."]);
+    return error.refused ? "refused" : "failed";
   }
 }
 
@@ -446,9 +501,11 @@ function install(data, { reference, origin }) {
 }
 
 function updateRunButtons() {
-  const connected = !!g.base;
-  $("gen-reproduce").disabled = !connected || !g.installed;
-  $("gen-compare").disabled = !connected || !g.installed;
+  const ready = !!g.base && !g.submitting;
+  $("gen-run").disabled = !ready;
+  $("gen-new").disabled = !ready;
+  $("gen-reproduce").disabled = !ready || !g.installed;
+  $("gen-compare").disabled = !ready || !g.installed;
   $("gen-set-reference").disabled = !g.installed || g.reference?.id === g.installed?.id;
   $("gen-clear-reference").disabled = !g.reference;
 }
@@ -462,7 +519,7 @@ const nm = (m) => (m == null ? null : m * 1e9);
 function renderRunHeader(origin) {
   const run = g.installed.run; const p = run.effective.parameters;
   const seed = run.seed_source === "allocated_by_service" ? `seed ${p.seed} (new realization allocated by the service)` : `seed ${p.seed}`;
-  $("gen-run-id").innerHTML = `<strong>${escapeHtml(run.run_id)}</strong> · ${seed} · r0 ${p.r0_m} m at ${p.r0_reference_wavelength_m * 1e9} nm · wind ${p.wind_speed_m_per_s} m/s towards ${p.wind_direction_deg}° from +x · guide AB ${p.guide_ab_magnitude} · gain ${p.controller_gain} · queued delay ${p.queued_latency_frames} frames (seen by the WFS ${p.queued_latency_frames + 1} frames later) · ${p.n_frames} frames, burn-in ${p.burn_in} · computed ${escapeHtml(run.completed_utc)} · physical identity <code>${run.effective.physical_identity.slice(0, 12)}</code> · calibration <code>${run.identities.calibration.interaction_matrix_hash.slice(0, 12)}</code>${origin === "compare" ? " · comparison run" : ""}`;
+  setHtml($("gen-run-id"), html`<strong>${run.run_id}</strong> · ${seed} · r0 ${p.r0_m} m at ${p.r0_reference_wavelength_m * 1e9} nm · wind ${p.wind_speed_m_per_s} m/s towards ${p.wind_direction_deg}° from +x · guide AB ${p.guide_ab_magnitude} · gain ${p.controller_gain} · queued delay ${p.queued_latency_frames} frames (seen by the WFS ${p.queued_latency_frames + 1} frames later) · ${p.n_frames} frames, burn-in ${p.burn_in} · computed ${run.completed_utc} by the service at ${g.installed.serviceOrigin} · physical identity <code>${run.effective.physical_identity.slice(0, 12)}</code> · calibration <code>${run.identities.calibration.interaction_matrix_hash.slice(0, 12)}</code>${origin === "compare" ? " · comparison run" : ""}`);
 }
 
 function renderWarnings() {
@@ -473,7 +530,7 @@ function renderWarnings() {
   if (s.min_valid_measurement_fraction < 1) items.push(`Some WFS measurements were invalid (minimum valid fraction ${fmt(s.min_valid_measurement_fraction, 3)}).`);
   if (s.frames_with_unusable_reconstruction) items.push(`${s.frames_with_unusable_reconstruction} frames had no usable reconstruction.`);
   if (s.frames_corrected_strehl_below_uncorrected) items.push(`In ${s.frames_corrected_strehl_below_uncorrected} frames the AO-corrected instantaneous Strehl is below the uncorrected one; correction is not guaranteed to improve every frame.`);
-  $("gen-warnings").innerHTML = items.map((t) => `<li>${escapeHtml(t)}</li>`).join("");
+  setHtml($("gen-warnings"), html`${items.map((t) => html`<li>${t}</li>`)}`);
 }
 
 function quantity() {
@@ -493,10 +550,10 @@ function renderColorbars() {
   }
   const top = q.limit * q.scale;
   const digits = q.unit === "nm" ? 0 : 2;
-  $("gen-cbar-opd-labels").innerHTML = [top, top / 2, 0, -top / 2, -top].map((v, i) => `<span style="top:${i * 25}%">${v > 0 ? "+" : ""}${v.toFixed(digits)} ${q.unit}</span>`).join("");
+  setHtml($("gen-cbar-opd-labels"), html`${[top, top / 2, 0, -top / 2, -top].map((v, i) => html`<span style="top:${i * 25}%">${v > 0 ? "+" : ""}${v.toFixed(digits)} ${q.unit}</span>`)}`);
   const phaseNote = q.wavelength ? ` Phase = 2π × OPD / ${(q.wavelength * 1e6).toFixed(2)} µm, unwrapped (never reduced modulo 2π); ${q.wavelength === C.SCIENCE_WAVELENGTH_M ? "the science wavelength" : "the WFS wavelength, not the science wavelength"}.` : "";
   $("gen-cbar-opd-note").textContent = `One limit (±${(run.display.opd_limit_m * 1e9).toFixed(0)} nm OPD) for all frames and all three maps of this run; beyond it values are clipped to the end colours. Grey = outside the pupil.${phaseNote}`;
-  $("gen-cbar-psf-labels").innerHTML = [0, -1, -2, -3, -4].map((v, i) => `<span style="top:${i * 25}%">10^${v}</span>`).join("");
+  setHtml($("gen-cbar-psf-labels"), html`${[0, -1, -2, -3, -4].map((v, i) => html`<span style="top:${i * 25}%">10^${v}</span>`)}`);
   $("gen-cbar-psf-note").textContent = "Relative to the ideal (zero-OPD) peak cell flux, log scale; common to every PSF, observation and the scene of this run.";
   for (const [key] of MAP_KEYS) {
     $(`gen-unit-${key}`).textContent = {
@@ -584,7 +641,8 @@ function renderObservations(frame, k, tMs) {
   const peak = run.display.ideal_peak_cell_flux; const decades = run.display.psf_log_decades;
   const intensity = (v) => C.intensityCode(v, peak, decades);
   const sc = run.scene;
-  $("gen-scene-caption").textContent = `primary at 0, secondary +${sc.separation_mas.toFixed(1)} mas in x (${sc.separation_lambda_over_d.toFixed(2)} λ/D, ${sc.separation_native_x_cells} native cells); weights 2/3 and 1/3; total flux 1; identical for every run and guide magnitude`;
+  const peakFlux = run.display.ideal_peak_cell_flux;
+  $("gen-scene-caption").textContent = `primary at 0, secondary +${sc.separation_mas.toFixed(1)} mas in x (${sc.separation_lambda_over_d.toFixed(2)} λ/D, ${sc.separation_native_x_cells} native cells); weights 2/3 and 1/3 (flux ratio 2:1); total flux 1; identical for every run and guide magnitude. On the shared scale both scene cells exceed the ideal PSF peak cell flux (${peakFlux.toFixed(4)}) and are clipped to the top colour, so the 2:1 ratio is stated here, not shown.`;
   const pct = (x) => `${(x * 100).toFixed(2)} %`;
   let unc; let ao; let title; let caption; let flux;
   if (g.obsMode === "instantaneous") {
@@ -677,13 +735,14 @@ function renderSummary() {
     ["Maximum DM saturation of issued commands (whole run)", "max_dm_saturation_fraction_issued", "", 3, 1],
     ["Controller largest pole modulus (linear model)", "controller_max_pole_modulus", "", 3, 1],
   ];
-  const head = `<tr><th>Quantity</th><th>${escapeHtml(run.run_id)}</th>${ref ? `<th>Reference ${escapeHtml(ref.run_id)}</th><th>Difference</th>` : ""}<th>Unit</th></tr>`;
+  const head = html`<tr><th>Quantity</th><th>${run.run_id}</th>${ref ? html`<th>Reference ${ref.run_id}</th><th>Difference</th>` : ""}<th>Unit</th></tr>`;
   const body = rows.map(([label, key, unit, d, scale]) => {
     const a = s[key] * scale; const b = r ? r[key] * scale : null;
-    return `<tr><th scope="row">${label}</th><td class="num">${fmt(a, d)}</td>${ref ? `<td class="num">${fmt(b, d)}</td><td class="num">${a - b >= 0 ? "+" : ""}${fmt(a - b, d)}</td>` : ""}<td>${unit}</td></tr>`;
-  }).join("");
-  $("gen-summary-table-title").textContent = `Frames ${p.burn_in}–${p.n_frames - 1}, ${p.n_frames - p.burn_in} equal-weight samples of one realization (no confidence intervals)`;
-  $("gen-summary-table").innerHTML = `<table aria-labelledby="gen-summary-table-title"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+    return html`<tr><th scope="row">${label}</th><td class="num">${fmt(a, d)}</td>${ref ? html`<td class="num">${fmt(b, d)}</td><td class="num">${a - b >= 0 ? "+" : ""}${fmt(a - b, d)}</td>` : ""}<td>${unit}</td></tr>`;
+  });
+  const windows = ref && ref.effective.parameters.burn_in !== p.burn_in ? ` The reference's window is frames ${ref.effective.parameters.burn_in}–${ref.effective.parameters.n_frames - 1}; the two summaries cover different frames.` : "";
+  $("gen-summary-table-title").textContent = `Frames ${p.burn_in}–${p.n_frames - 1}, ${p.n_frames - p.burn_in} equal-weight samples of one realization (no confidence intervals).${windows}`;
+  setHtml($("gen-summary-table"), html`<table aria-labelledby="gen-summary-table-title"><thead>${head}</thead><tbody>${body}</tbody></table>`);
   if (!ref) { $("gen-pairing").textContent = "No comparison reference. Use “Compare using the same turbulence” or set the displayed run as the reference before loading another run."; return; }
   const v = C.pairingVerdict(ref, run);
   const calibration = v.expected.calibrationRebuilt
@@ -706,20 +765,20 @@ function renderDownloads() {
     [objectUrl(data.finalBuffer, "application/octet-stream"), `${id}-final.bin`, "final.bin (completed-window averages)"],
   ];
   const evidence = data.run.arrays.evidence_npz;
-  $("gen-downloads").innerHTML = `<p>Verified files of <strong>${escapeHtml(id)}</strong>: ${links.map(([url, name, label]) => `<a href="${url}" download="${name}">${label}</a>`).join(" ")}</p>
-<p class="hint">Full-precision numeric evidence (evidence.npz, ${(evidence.bytes / 1048576).toFixed(1)} MiB, SHA-256 ${evidence.sha256.slice(0, 16)}… recorded in run.json) is served by the computation service: <a href="${escapeHtml(data.evidenceUrl)}" download="${id}-evidence.npz">evidence.npz</a>. It is available while the service keeps this run.</p>`;
+  setHtml($("gen-downloads"), html`<p>Verified files of <strong>${id}</strong>: ${links.map(([url, name, label]) => html`<a href="${url}" download="${name}">${label}</a> `)}</p>
+<p class="hint">Full-precision numeric evidence (evidence.npz, ${(evidence.bytes / 1048576).toFixed(1)} MiB, SHA-256 ${String(evidence.sha256).slice(0, 16)}… recorded in run.json) is served by the computation service at ${data.serviceOrigin}: <a href="${data.evidenceUrl}" download="${id}-evidence.npz">evidence.npz</a>. It is not verified by this page and is available while the service keeps this run.</p>`);
 }
 
 function renderModelNotes() {
   const run = g.installed.run; const p = run.effective.parameters;
-  $("gen-model-notes").innerHTML = `<ul>
-<li>One seeded realization (seed ${p.seed}) of the ${escapeHtml(run.effective.fixed.atmosphere_model)} atmosphere is generated at t = 0 and evolved by frozen flow at ${p.wind_speed_m_per_s} m/s; it is never redrawn, wrapped, reset or blended. Before computing, every atmosphere request time was admitted against the finite screen (maximum travel ${fmt(run.admission.max_travel_px, 3)} px of ${run.admission.travel_budget_px} px). The run ends normally at its last frame.</li>
+  setHtml($("gen-model-notes"), html`<ul>
+<li>One seeded realization (seed ${p.seed}) of the ${run.effective.fixed.atmosphere_model} atmosphere is generated at t = 0 and evolved by frozen flow at ${p.wind_speed_m_per_s} m/s; it is never redrawn, wrapped, reset or blended. Before computing, every atmosphere request time was admitted against the finite screen (maximum travel ${fmt(run.admission.max_travel_px, 3)} px of ${run.admission.travel_budget_px} px). The run ends normally at its last frame.</li>
 <li>Each frame samples the atmosphere once, at its start (t = k ms). The residual is the pre-update residual the WFS measured; the held correction is atmosphere minus that residual (OPD-equivalent, not mirror surface height).</li>
 <li>The uncorrected PSF propagates the frame's atmosphere with zero DM; the AO-corrected PSF propagates its pre-update residual. Both use the canonical native propagator at 1.65 µm, unit total flux on the uncropped ${run.grids.psf.shape_yx.join(" × ")} grid, shown cropped to ${C.CROP[0]} × ${C.CROP[1]} cells (${run.grids.psf.cell_mas.toFixed(1)} mas each) about exact zero angle. Tilt is kept and nothing is recentred.</li>
 <li>Instantaneous Strehl is per frame; the mean instantaneous Strehl and the Strehl of the averaged intensity are different quantities. Averages are equal-weight means of intensities of every frame in the window (never of OPD or phase), of frame-start snapshots rather than a finite-shutter exposure.</li>
 <li>Queued delay ${p.queued_latency_frames} frames: a reconstruction from frame k is released at the update of frame k + ${p.queued_latency_frames} and first seen by the WFS at frame k + ${p.queued_latency_frames + 1}. WFS detector noise is part of the loop.</li>
 <li>Calibration is rebuilt for every run; its identity depends on the seed and the guide magnitude, not on gain, delay, r0 or wind.</li>
-</ul>`;
+</ul>`);
 }
 
 // ---------------------------------------------------------------------------
@@ -777,7 +836,9 @@ async function refreshRuns() {
     const { ok, value } = await fetchJson(new URL("runs", g.base));
     if (!ok || !Array.isArray(value.runs)) return;
     const select = $("gen-runs");
-    select.innerHTML = `<option value="">—</option>${value.runs.filter((r) => r.state === "completed" && !r.evicted).map((r) => `<option value="${escapeHtml(r.run_id)}">${escapeHtml(r.run_id)} · seed ${r.seed} · ${r.parameters.n_frames} frames · gain ${r.parameters.controller_gain} · AB ${r.parameters.guide_ab_magnitude}</option>`).join("")}`;
+    // Only well-formed entries are offered; everything shown is escaped.
+    const runs = value.runs.filter((r) => C.validRunListEntry(r) && r.state === "completed" && r.evicted === false);
+    setHtml(select, html`<option value="">—</option>${runs.map((r) => html`<option value="${r.run_id}">${r.run_id} · seed ${r.seed} · ${r.parameters.n_frames} frames · gain ${r.parameters.controller_gain} · AB ${r.parameters.guide_ab_magnitude}</option>`)}`);
   } catch (error) { /* the list is a convenience */ }
 }
 
@@ -822,7 +883,6 @@ function bindControls() {
 function showError(message, details = []) {
   const box = $("gen-error");
   box.hidden = false;
-  box.innerHTML = `<strong>${escapeHtml(message)}</strong>${details.length ? `<ul>${details.map((d) => `<li>${escapeHtml(d)}</li>`).join("")}</ul>` : ""}`;
+  setHtml(box, html`<strong>${message}</strong>${details.length ? html`<ul>${details.map((d) => html`<li>${d}</li>`)}</ul>` : ""}`);
 }
 function hideError() { $("gen-error").hidden = true; $("gen-error").textContent = ""; }
-function escapeHtml(text) { return String(text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[c])); }

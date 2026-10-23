@@ -24,6 +24,21 @@ def _code_dir() -> Path:
     return dirs[0]
 
 
+def _status(run):
+    """A completed status as the service would report it for this record."""
+
+    return {
+        "schema": contract.STATUS_SCHEMA, "api": contract.API_VERSION, "run_id": "run-20261023T120000Z-0123abcd",
+        "state": "completed", "seed": run["effective"]["parameters"]["seed"], "seed_source": "specified",
+        "parameters": run["effective"]["parameters"], "physical_identity": run["effective"]["physical_identity"],
+        "client_token": None, "created_utc": "x", "started_utc": "x", "finished_utc": "x", "queue_position": None,
+        "progress": {"frames_done": 16, "n_frames": 16, "physical_time_s": 0.015, "stage": "completed", "fraction": 1.0},
+        "computation_wall_s": 2.0, "admission": {}, "admission_sha256": "0" * 64, "cancel_requested": False, "reason": None,
+        "files": {name: {"href": f"files/{name}", "bytes": 1, "sha256": "a" * 64} for name in contract.RUN_FILES},
+        "evicted": False, "worker": {},
+    }
+
+
 def test_page_contract_matches_python_rules(fixture_runs, tmp_path):
     node = shutil.which("node")
     if node is None:
@@ -50,13 +65,21 @@ def test_page_contract_matches_python_rules(fixture_runs, tmp_path):
         "phase": [[opd, lam, 2 * math.pi * opd / lam] for opd in (1e-7, -3.3e-7, 0.0) for lam in contract.PHASE_DISPLAY_WAVELENGTHS_M],
         "opd_codes": [[v, limit, c] for v, c in zip(opd_values, opd_codes)],
         "psf_codes": [[v, peak, c] for v, c in zip(psf_values, psf_codes)],
+        "floats": [[v, json.dumps(v)] for v in [0.0, 0.06, 0.3, 5e-07, 0.0001, 1e-05, 10.0, 7.0, 8.5, 0.2, 0.1263371938263465, 29.99, 123456.789, 1e16, 1.5e17, 0.000123, 2.5e-320, 1e-300, 3.0000000000000004]],
+        "identities": [[p, contract.physical_identity(p)] for p in (
+            contract.effective_parameters(contract.default_parameters()),
+            contract.effective_parameters({**contract.default_parameters(), "r0_m": 0.06, "wind_speed_m_per_s": 7.25, "wind_direction_deg": 30,
+                                           "guide_ab_magnitude": 8.5, "controller_gain": 0.0, "queued_latency_frames": 0, "seed": 2147483647}),
+            contract.effective_parameters({**contract.default_parameters(), "wind_speed_m_per_s": 0.0001, "controller_gain": 1.0, "r0_m": 0.3}),
+        )],
+        "status": _status(fixture_runs["stride1"]),
     }
     path = tmp_path / "fixture.json"
     path.write_text(json.dumps(fixture))
     completed = subprocess.run([node, str(Path(__file__).parent / "browser" / "contract_check.mjs"), str(_code_dir()), str(path)],
                                capture_output=True, text=True, timeout=120)
     assert completed.returncode == 0, completed.stderr[-3000:]
-    assert json.loads(completed.stdout.strip().splitlines()[-1])["refused_mutations"] == 18
+    assert json.loads(completed.stdout.strip().splitlines()[-1])["refused_mutations"] == 18, completed.stdout[-2000:]
 
 
 def test_generation_code_is_part_of_the_content_addressed_build():

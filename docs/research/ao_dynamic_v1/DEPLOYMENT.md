@@ -24,7 +24,7 @@ Same origin (the service also serves the site):
 
 ```bash
 python scripts/ao_dynamic/service.py --port 8765 --web-dir web
-# open http://127.0.0.1:8765/ao-explorer/?backend=/
+# open http://127.0.0.1:8765/ao-explorer/?backend=/ and press Connect
 ```
 
 Separate origins (as with a published page):
@@ -32,11 +32,14 @@ Separate origins (as with a published page):
 ```bash
 python3 -m http.server 8000 --bind 127.0.0.1 --directory web
 python scripts/ao_dynamic/service.py --port 8765 --allow-origin http://127.0.0.1:8000
-# open http://127.0.0.1:8000/ao-explorer/?backend=http://127.0.0.1:8765
+# open http://127.0.0.1:8000/ao-explorer/?backend=http://127.0.0.1:8765 and press Connect
 ```
 
-Instead of `?backend=`, enter the address in the section's *Service address*
-field and press *Connect*. Options: `--storage-dir` (default
+`?backend=` only fills in the *Service address* field; the page contacts a
+service only after *Connect* is pressed. The service answers only Host names
+of its bound address, `localhost`/`127.0.0.1` and names given with
+`--allowed-host`, refuses POSTs that carry an unlisted origin, and requires
+JSON bodies with a decimal `Content-Length` of at most 64 KiB. Options: `--storage-dir` (default
 `outputs/ao_dynamic_service`; each service start uses its own
 `<storage-dir>/<instance-id>/` namespace), `--job-timeout-s` (240),
 `--abandon-after-s` (300), `--max-queue` (3 waiting jobs besides the running
@@ -69,15 +72,19 @@ do not repeat its successful runs.
 ## Remaining steps for public generation (not done in this assignment)
 
 1. **Host.** Provision a Linux host or container you control (2 vCPU, ≥ 1 GiB
-   RAM: the measured worker peak is 127 MiB per job plus the service; disk for
-   `--max-runs-kept` × about 26 MB). Install as above from the merged commit.
+   RAM: the measured worker peak was 127 MiB for 64 frames and 179 MiB for
+   180 frames with every frame kept for replay; 400-frame runs were not
+   measured; disk for `--max-runs-kept` × about 26 MB). Install as above from
+   the merged commit.
 2. **Run the service** as an unprivileged, supervised process bound to
    localhost, with persistent storage and the published origin:
    ```bash
    python scripts/ao_dynamic/service.py --host 127.0.0.1 --port 8765 \
-     --storage-dir /var/lib/ao-dynamic --allow-origin https://xhvoid.github.io
+     --storage-dir /var/lib/ao-dynamic --allow-origin https://xhvoid.github.io \
+     --allowed-host <public host name>
    ```
-   The origin is `https://xhvoid.github.io` (no path). Never pass
+   The origin is `https://xhvoid.github.io` (no path); `--allowed-host` is the
+   name the proxy forwards in the `Host` header. Never pass
    `--enable-test-faults` in production.
 3. **TLS reverse proxy.** The page is served over HTTPS, so browsers block an
    `http://` service (mixed content). Terminate HTTPS at a proxy for a host name
@@ -92,7 +99,7 @@ do not repeat its successful runs.
 5. **Connect the site.** After this branch is merged and the Pages workflow
    has published it, open
    `https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/?backend=https://<host>`
-   (or enter the address in the page) and perform a browser check: connect,
+   (or enter the address in the page), press Connect and perform a browser check: connect,
    run, replay, compare, cancel, downloads, 375 px. Configuring a default
    service in the page would change static-mode requests and needs a separate
    decision and page build.

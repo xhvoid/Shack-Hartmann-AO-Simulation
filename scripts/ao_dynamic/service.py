@@ -34,7 +34,12 @@ Endpoints (JSON unless noted)::
 
 With ``--web-dir`` the static site is also served (``/ao-explorer/``) for a
 same-origin local preview.  Cross-origin pages must be listed with
-``--allow-origin``; no other origin receives CORS headers.
+``--allow-origin``; no other origin receives CORS headers, and a POST carrying
+another origin is refused.  Only the bound address, localhost and names given
+with ``--allowed-host`` are answered (a guard against DNS rebinding).  Every
+POST must be ``application/json`` with a decimal ``Content-Length`` of at most
+64 KiB.  A worker the service can no longer supervise exits by itself (the
+worker watches its parent).
 """
 
 from __future__ import annotations
@@ -70,6 +75,9 @@ import worker  # noqa: E402
 SERVICE_FILES = ("service.py",)
 RUN_ID = re.compile(r"^run-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{8}$")
 MAX_BODY_BYTES = 64 * 1024
+MAX_JOB_RECORDS = 500
+MAX_REMEMBERED_SEEDS = 100_000
+REQUEST_TIMEOUT_S = 30.0
 CANCEL_REASONS = {
     "requested": "cancelled by request",
     "visitor": "cancelled by the visitor",
@@ -178,7 +186,8 @@ class JobManager:
         self.threads = threads
         self.jobs: "collections.OrderedDict[str, Job]" = collections.OrderedDict()
         self.queue: Deque[str] = collections.deque()
-        self.used_seeds: set = set()
+        # Seeds already used by this instance (bounded; allocation avoids them).
+        self.used_seeds: "collections.OrderedDict[int, None]" = collections.OrderedDict()
         self.lock = threading.Condition()
         self.stopping = False
         self.runner = threading.Thread(target=self._run_forever, name="numerical-runner", daemon=True)
@@ -236,11 +245,24 @@ class JobManager:
                                    f"{active} jobs are queued or running; the service accepts at most {self.max_queue + 1}")
             run_id = f"run-{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{secrets.token_hex(4)}"
             job = Job(run_id, evaluation["parameters"], evaluation["seed_source"], evaluation["admission"], request.get("client_token"))
-            self.used_seeds.add(job.parameters["seed"])
+            self.used_seeds[job.parameters["seed"]] = None
+            while len(self.used_seeds) > MAX_REMEMBERED_SEEDS:
+                self.used_seeds.popitem(last=False)
             self.jobs[run_id] = job
+            self._prune_records()
             self.queue.append(run_id)
             self.lock.notify_all()
             return job
+
+    def _prune_records(self) -> None:
+        """Bound the job history: forget the oldest records that hold no files."""
+
+        for run_id in list(self.jobs):
+            if len(self.jobs) <= MAX_JOB_RECORDS:
+                return
+            job = self.jobs[run_id]
+            if job.state in ("cancelled", "failed") or (job.state == "completed" and job.evicted):
+                del self.jobs[run_id]
 
     # ---------------------------------------------------------------- queries
 
@@ -639,9 +661,12 @@ def build_info(manager: JobManager, instance_id: str, started_utc: str, allowed_
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "ao-dynamic/1"
+    # Socket timeout per connection: a slow or idle client cannot hold a thread.
+    timeout = REQUEST_TIMEOUT_S
     manager: JobManager
     info: Dict[str, Any]
     allowed_origins: List[str]
+    allowed_hosts: frozenset
     web_dir: Optional[Path]
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A002 - BaseHTTPRequestHandler API
@@ -674,16 +699,33 @@ class Handler(BaseHTTPRequestHandler):
         payload = {"schema": contract.ERROR_SCHEMA, "api": contract.API_VERSION, "error": exc.code, "message": str(exc), **exc.extra}
         self._json(exc.status, payload)
 
-    def _body(self) -> Any:
-        length = int(self.headers.get("Content-Length") or 0)
-        if length > MAX_BODY_BYTES:
-            raise ServiceError(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "too_large", "request body too large")
+    def _body(self, *, empty: Any = None) -> Any:
+        """The JSON body of a POST: application/json, a plain decimal length of at most 64 KiB."""
+
         if (self.headers.get("Content-Type") or "").split(";")[0].strip() != "application/json":
             raise ServiceError(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, "media_type", "requests must be application/json")
+        declared = self.headers.get("Content-Length")
+        if declared is None or not re.fullmatch(r"[0-9]{1,9}", declared.strip()):
+            raise ServiceError(HTTPStatus.LENGTH_REQUIRED, "length_required", "a decimal Content-Length is required")
+        length = int(declared)
+        if length > MAX_BODY_BYTES:
+            raise ServiceError(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "too_large", "request body too large")
+        if length == 0 and empty is not None:
+            return empty
         try:
             return json.loads(self.rfile.read(length).decode("utf-8"), parse_constant=_reject_constant)
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
             raise ServiceError(HTTPStatus.BAD_REQUEST, "bad_json", f"request body is not valid JSON: {exc}")
+
+    def _check_request(self, method: str) -> None:
+        """Refuse foreign Host names (DNS rebinding) and cross-origin writes from unlisted origins."""
+
+        host = (self.headers.get("Host") or "").strip().lower()
+        if host not in self.allowed_hosts:
+            raise ServiceError(HTTPStatus.MISDIRECTED_REQUEST, "unknown_host", "this service does not answer for that host name")
+        origin = self.headers.get("Origin")
+        if method == "POST" and origin is not None and origin not in self.allowed_origins and urlsplit(origin).netloc.lower() != host:
+            raise ServiceError(HTTPStatus.FORBIDDEN, "origin_not_allowed", "this origin may not submit or cancel jobs")
 
     # Routing -----------------------------------------------------------
 
@@ -711,6 +753,7 @@ class Handler(BaseHTTPRequestHandler):
     def _dispatch(self, method: str) -> None:
         path = urlsplit(self.path).path
         try:
+            self._check_request(method)
             if path.startswith("/api/"):
                 self._api(method, path)
             elif method == "GET" and self.web_dir is not None:
@@ -744,7 +787,7 @@ class Handler(BaseHTTPRequestHandler):
             if method == "GET" and len(rest) == 2:
                 return self._json(HTTPStatus.OK, manager.status(run_id))
             if method == "POST" and rest[2:] == ["cancel"]:
-                body = self._body() if int(self.headers.get("Content-Length") or 0) else {}
+                body = self._body(empty={})
                 code = body.get("reason", "requested") if isinstance(body, dict) else None
                 if code not in CANCEL_REASONS:
                     raise ServiceError(HTTPStatus.UNPROCESSABLE_ENTITY, "invalid_request", f"cancel reason must be one of {sorted(CANCEL_REASONS)}")
@@ -752,7 +795,11 @@ class Handler(BaseHTTPRequestHandler):
             if method == "GET" and len(rest) == 4 and rest[2] == "files":
                 path = manager.file_path(run_id, rest[3])
                 content_type = CONTENT_TYPES.get(Path(rest[3]).suffix, "application/octet-stream")
-                return self._send(HTTPStatus.OK, path.read_bytes(), content_type, cache="private, max-age=86400, immutable")
+                try:
+                    data = path.read_bytes()
+                except FileNotFoundError:  # evicted between the check and the read
+                    raise ServiceError(HTTPStatus.GONE, "evicted", f"run {run_id} was evicted from this service's bounded storage")
+                return self._send(HTTPStatus.OK, data, content_type, cache="private, max-age=86400, immutable")
         raise ServiceError(HTTPStatus.NOT_FOUND, "not_found", f"{method} {path} is not part of API v1")
 
     def _static(self, path: str) -> None:
@@ -778,7 +825,7 @@ def _reject_constant(value: str) -> Any:
 
 def make_server(host: str, port: int, *, storage_root: Path, web_dir: Optional[Path], allowed_origins: List[str],
                 max_queue: int = 3, job_timeout_s: float = 240.0, abandon_after_s: float = 300.0,
-                max_runs_kept: int = 8, enable_test_faults: bool = False) -> tuple:
+                max_runs_kept: int = 8, enable_test_faults: bool = False, allowed_hosts: tuple = ()) -> tuple:
     instance_id = f"{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{secrets.token_hex(3)}"
     storage = Path(storage_root) / instance_id
     manager = JobManager(storage, max_queue=max_queue, job_timeout_s=job_timeout_s, abandon_after_s=abandon_after_s,
@@ -792,6 +839,9 @@ def make_server(host: str, port: int, *, storage_root: Path, web_dir: Optional[P
     })
     server = ThreadingHTTPServer((host, port), handler)
     server.daemon_threads = True
+    bound = server.server_address[1]
+    names = {host, "127.0.0.1", "localhost", "[::1]"}
+    handler.allowed_hosts = frozenset({f"{name}:{bound}".lower() for name in names} | {name.lower() for name in allowed_hosts})
     return server, manager, storage
 
 
@@ -802,6 +852,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--storage-dir", type=Path, default=Path("outputs/ao_dynamic_service"))
     parser.add_argument("--web-dir", type=Path, default=None, help="also serve this directory (e.g. web) for a same-origin preview")
     parser.add_argument("--allow-origin", action="append", default=[], help="exact origin allowed to call the API cross-origin (repeatable)")
+    parser.add_argument("--allowed-host", action="append", default=[],
+                        help="extra Host header value to answer, e.g. the public name behind a TLS proxy (repeatable; the bound address and localhost are always allowed)")
     parser.add_argument("--max-queue", type=int, default=3)
     parser.add_argument("--job-timeout-s", type=float, default=240.0)
     parser.add_argument("--abandon-after-s", type=float, default=300.0)
@@ -816,7 +868,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         arguments.host, arguments.port, storage_root=arguments.storage_dir, web_dir=arguments.web_dir,
         allowed_origins=arguments.allow_origin, max_queue=arguments.max_queue, job_timeout_s=arguments.job_timeout_s,
         abandon_after_s=arguments.abandon_after_s, max_runs_kept=arguments.max_runs_kept,
-        enable_test_faults=arguments.enable_test_faults,
+        enable_test_faults=arguments.enable_test_faults, allowed_hosts=tuple(arguments.allowed_host),
     )
     host, port = server.server_address[:2]
     print(json.dumps({"event": "listening", "url": f"http://{host}:{port}", "api": contract.API_VERSION,

@@ -33,6 +33,8 @@ async function waitText(page, selector, predicate, timeout = 60000) {
   return text(page, selector);
 }
 async function connected(page) { return waitText(page, "#gen-conn-state", (t) => t.startsWith("Connected")); }
+// A ?backend= address only fills in the field; connecting always takes a click.
+async function pressConnect(page) { await page.click("#gen-connect"); return connected(page); }
 async function installedRun(page, previous = null) {
   await page.waitForFunction((prev) => {
     const t = document.getElementById("gen-run-id").textContent;
@@ -68,16 +70,17 @@ async function scenario(name, body) {
   const browser = await chromium.launch(executablePath ? { executablePath } : {});
   const runs = {};
 
-  await scenario("static mode makes no computation-service request", async () => {
+  await scenario("static mode makes no computation-service request, even with a ?backend= link", async () => {
     const { context, page } = await newPage(browser);
     const urls = [];
     page.on("request", (request) => urls.push(request.url()));
-    await page.goto(page_url());
+    await page.goto(page_url(`?backend=${encodeURIComponent(serviceBase)}`));
     await waitText(page, "#status", (t) => t.startsWith("Showing"));
     await page.evaluate(() => document.getElementById("results").scrollIntoView());
     await waitText(page, "#results-status", (t) => t.startsWith("Eight result groups"));
     assert.ok(urls.every((u) => !u.includes("/api/") && !u.includes("generate")), urls.filter((u) => u.includes("generate") || u.includes("/api/")).join(" "));
-    assert.match(await text(page, "#gen-conn-state"), /^Not connected/);
+    assert.match(await text(page, "#gen-conn-state"), /^Not connected\. This page's address names a computation service .* nothing has been contacted/);
+    assert.equal(await page.inputValue("#gen-url"), serviceBase);
     assert.equal(await page.isHidden("#gen-app"), true);
     assert.ok(urls.some((u) => /code-[0-9a-f]{16}\/app\.js$/.test(u)));
     await context.close();
@@ -100,6 +103,19 @@ async function scenario(name, body) {
     await waitText(page, "#gen-conn-state", (t) => t.includes("not compatible"));
     assert.match(await text(page, "#gen-error"), /needs ao-dynamic\.api\.v1/);
     assert.equal(await page.isHidden("#gen-app"), true);
+    // A service that puts markup into its parameter table is refused; nothing runs.
+    await page.unroute(`${serviceBase}/api/v1/info`);
+    await page.route(`${serviceBase}/api/v1/info`, async (route) => {
+      const response = await route.fetch();
+      const info = await response.json();
+      info.parameters[0].default = '1"><img src=x onerror="window.__xss=1">';
+      info.parameters[1].label = '<img src=x onerror="window.__xss=2">';
+      await route.fulfill({ response, json: info });
+    });
+    await page.click("#gen-connect");
+    await waitText(page, "#gen-error", (t) => t.includes("another kind, range or default"));
+    assert.equal(await page.evaluate(() => window.__xss), undefined);
+    assert.equal(await page.$("#gen-form img"), null);
     assert.match(await text(page, "#status"), /^Showing/);
     await context.close();
   });
@@ -107,11 +123,16 @@ async function scenario(name, body) {
   const { context, page } = await newPage(browser);
   await scenario("cross-origin connect, run, verify and replay", async () => {
     await page.goto(page_url(`?backend=${encodeURIComponent(serviceBase)}#generate`));
-    await connected(page);
+    await pressConnect(page);
     await setParams(page, { n_frames: 24, burn_in: 8, display_stride: 2 });
     assert.match(await text(page, "#gen-hints"), /13 of 24 frames would be kept/);
+    // While the service has not answered a submission, no second one can start.
+    await page.route(`${serviceBase}/api/v1/runs`, async (route) => { if (route.request().method() === "POST") await sleep(800); await route.continue(); });
     await page.click("#gen-run");
+    for (const id of ["gen-run", "gen-new"]) assert.equal(await page.isDisabled(`#${id}`), true, `${id} enabled during submission`);
     runs.A = await installedRun(page);
+    await page.unroute(`${serviceBase}/api/v1/runs`);
+    assert.match(await text(page, "#gen-run-id"), new RegExp(`by the service at ${serviceBase.replace(/[.]/g, "\\.")}`));
     assert.match(await text(page, "#gen-readout"), /^Physical time 0 ms · frame 0 of 0–23 · burn-in · replay frame 1\/13/);
     for (const id of ["gen-map-atmosphere", "gen-map-correction", "gen-map-residual", "gen-psf-uncorrected", "gen-psf-corrected", "gen-scene", "gen-obs-uncorrected", "gen-obs-corrected"]) {
       assert.ok((await canvasInk(page, id)) > 0.3, `${id} is empty`);
@@ -225,7 +246,21 @@ async function scenario(name, body) {
     assert.notEqual(runs.E, superseded);
   });
 
-  await scenario("A→B→A selection ignores a late response", async () => {
+  await scenario("A→B→A selection ignores a late response; hostile list entries are not offered", async () => {
+    await page.route(`${serviceBase}/api/v1/runs`, async (route) => {
+      if (route.request().method() !== "GET") return route.continue();
+      const response = await route.fetch();
+      const list = await response.json();
+      list.runs.unshift({ ...list.runs[0], run_id: '"><img src=x onerror="window.__xss=3">' });
+      list.runs.unshift({ ...list.runs[1], seed: '<img src=x onerror="window.__xss=4">' });
+      await route.fulfill({ response, json: list });
+    });
+    await openRunList(page);
+    await page.waitForFunction((id) => document.querySelector(`#gen-runs option[value="${id}"]`), runs.A);
+    assert.equal(await page.evaluate(() => window.__xss), undefined);
+    assert.equal(await page.$("#gen-runs img"), null);
+    assert.ok(await page.evaluate(() => [...document.querySelectorAll("#gen-runs option")].every((o) => !o.textContent.includes("<"))));
+    await page.unroute(`${serviceBase}/api/v1/runs`);
     await openRunList(page);
     await page.waitForFunction((ids) => ids.every((id) => document.querySelector(`#gen-runs option[value="${id}"]`)), [runs.A, runs.B]);
     await page.selectOption("#gen-runs", runs.A);
@@ -285,8 +320,25 @@ async function scenario(name, body) {
     await page.unroute(/\/files\/run\.json$/);
   });
 
-  await scenario("disconnect keeps the displayed run and disables computation", async () => {
+  await scenario("disconnect keeps the displayed run, cancels an untracked new job and disables computation", async () => {
+    // Disconnect while the service is still creating a job: the page cancels that job instead of leaving it untracked.
+    await page.route(`${serviceBase}/api/v1/runs`, async (route) => {
+      if (route.request().method() !== "POST") return route.continue();
+      const body = JSON.parse(route.request().postData());
+      body.client_token = "test-fault:sleep_at:start";
+      await sleep(800);
+      await route.continue({ postData: JSON.stringify(body) });
+    });
+    const before = new Set((await (await fetch(`${serviceBase}/api/v1/runs`)).json()).runs.map((r) => r.run_id));
+    await page.click("#gen-run");
     await page.click("#gen-disconnect");
+    await sleep(2500);
+    const created = (await (await fetch(`${serviceBase}/api/v1/runs`)).json()).runs.filter((r) => !before.has(r.run_id));
+    assert.equal(created.length, 1);
+    const orphan = await serviceStatus(created[0].run_id);
+    assert.equal(orphan.state, "cancelled", JSON.stringify(orphan));
+    assert.match(orphan.reason, /superseded/);
+    await page.unroute(`${serviceBase}/api/v1/runs`);
     assert.match(await text(page, "#gen-conn-state"), /^Disconnected\. The displayed run stays/);
     for (const id of ["gen-run", "gen-new", "gen-reproduce", "gen-compare"]) assert.equal(await page.isDisabled(`#${id}`), true, id);
     assert.ok((await text(page, "#gen-run-id")).startsWith(runs.F));
@@ -299,7 +351,7 @@ async function scenario(name, body) {
   await scenario("375 px layout and reduced motion", async () => {
     const { context: small, page: phone } = await newPage(browser, { viewport: { width: 375, height: 800 }, reducedMotion: "reduce" });
     await phone.goto(page_url(`?backend=${encodeURIComponent(serviceBase)}#generate`));
-    await connected(phone);
+    await pressConnect(phone);
     assert.equal(await phone.inputValue("#gen-speed"), "2");
     await openRunList(phone);
     await phone.waitForFunction((id) => document.querySelector(`#gen-runs option[value="${id}"]`), runs.A);
@@ -314,7 +366,7 @@ async function scenario(name, body) {
   await scenario("same-origin service page and stale-build refusal", async () => {
     const { context: own, page: same } = await newPage(browser);
     await same.goto(`${serviceBase}/ao-explorer/?backend=/`);
-    assert.match(await connected(same), new RegExp(`^Connected to ${serviceBase.replace(/[.]/g, "\\.")}`));
+    assert.match(await pressConnect(same), new RegExp(`^Connected to ${serviceBase.replace(/[.]/g, "\\.")}`));
     await own.close();
     const { context: stale, page: old } = await newPage(browser);
     await old.route(/\/data\/current\.json$/, async (route) => {

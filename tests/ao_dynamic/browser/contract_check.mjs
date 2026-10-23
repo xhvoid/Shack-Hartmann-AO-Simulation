@@ -87,6 +87,54 @@ for (const [opd, lambda, phase] of fixture.phase) assert.equal(C.opdToPhaseRad(o
 for (const [v, limit, code] of fixture.opd_codes) assert.equal(C.opdCode(v, limit), code, `opd ${v}`);
 for (const [v, peak, code] of fixture.psf_codes) assert.equal(C.intensityCode(v, peak, 4), code, `psf ${v}`);
 
+// Hostile or out-of-contract service data is refused before anything is shown.
+for (const [needle, mutate] of Object.entries({
+  "another kind, range or default": (i) => { i.parameters[0].default = '1"><img src=x onerror=alert(1)>'; },
+  "malformed descriptive text": (i) => { i.parameters[1].label = "x".repeat(500); },
+  "display tables": (i) => { i.display.opd_lut_rgb_hex[3] = 'red"><script>'; },
+  "instance description": (i) => { i.service.instance_id = "<b>x</b>"; },
+  "fixed scope differs": (i) => { i.fixed.telescope_diameter_m = 8; },
+})) {
+  const info = clone(fixture.info); mutate(info);
+  assert.ok(C.validateInfo(info).some((p) => p.includes(needle)), `info ${needle}: ${JSON.stringify(C.validateInfo(info))}`);
+}
+const status = clone(fixture.status);
+assert.deepEqual(C.validateStatus(status, { runId: status.run_id }), []);
+for (const [needle, mutate] of Object.entries({
+  "file references": (s) => { s.files["evidence.npz"].href = "javascript:alert(1)"; },
+  "malformed run id": (s) => { s.run_id = '<img src=x onerror=alert(1)>'; },
+  "job status is malformed": (s) => { s.seed = "<b>1</b>"; },
+})) {
+  const bad = clone(status); mutate(bad);
+  assert.ok(C.validateStatus(bad).some((p) => p.includes(needle)), `status ${needle}: ${JSON.stringify(C.validateStatus(bad))}`);
+}
+const entry = { run_id: status.run_id, state: "completed", seed: 1, evicted: false, parameters: fixture.expected };
+assert.equal(C.validRunListEntry(entry), true);
+assert.equal(C.validRunListEntry({ ...entry, run_id: '<img src=x onerror=alert(1)>' }), false);
+assert.equal(C.validRunListEntry({ ...entry, seed: "<b>" }), false);
+assert.equal(C.validRunListEntry({ ...entry, parameters: { ...fixture.expected, controller_gain: "<i>" } }), false);
+for (const [needle, mutate] of Object.entries({
+  "r0_m = 5": (r) => { r.effective.parameters.r0_m = 5; },
+  "controller_gain = 3": (r) => { r.effective.parameters.controller_gain = 3; },
+  "fixed scope differs": (r) => { r.effective.fixed.telescope_diameter_m = 8; },
+  "fixed scope differs ": (r) => { r.effective.fixed.atmosphere_model = "other"; },
+  "zero-angle sample": (r) => { r.grids.psf.crop_slices_yx = [[45, 109], [46, 110]]; },
+  "+6 x cells": (r) => { r.scene.sources[1].index_yx = [78, 72]; },
+  "malformed run id": (r) => { r.run_id = '<img src=x onerror=alert(1)>'; },
+  "displayed identities": (r) => { r.identities.calibration.interaction_matrix_hash = "<script>alert(1)</script>"; },
+})) {
+  const run = clone(fixture.run); mutate(run);
+  assert.ok(C.validateRun(run).some((p) => p.includes(needle.trim())), `run ${needle}: ${JSON.stringify(C.validateRun(run))}`);
+}
+const window = clone(b); window.effective.parameters.burn_in = 4;
+assert.equal(C.pairingVerdict(a, window).paired, false);
+assert.equal(C.pairingVerdict(a, window).expected.kind, "different_analysis_window");
+
+// Physical identity and Python float formatting agree with the service.
+for (const [value, text] of fixture.floats) assert.equal(C.pythonFloat(value), text, `float ${value}`);
+for (const [params, identity] of fixture.identities) assert.equal(await C.physicalIdentity(params), identity);
+assert.equal(await C.physicalIdentity(fixture.run.effective.parameters), fixture.run.effective.physical_identity);
+
 // Binary views follow the recorded layout.
 const frames = C.frameViews(new ArrayBuffer(4 * C.FLOATS_PER_FRAME * a.transported.indices.length), a);
 assert.equal(frames.length, a.transported.indices.length);

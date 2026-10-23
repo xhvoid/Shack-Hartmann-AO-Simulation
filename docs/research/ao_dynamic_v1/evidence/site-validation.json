@@ -1,0 +1,14 @@
+{
+ "schema": "ao-dynamic.site-validation.v1",
+ "code_build": "a479e1099516c286",
+ "validator": "scripts/ao_explorer/validate.py --web-dir web/ao-explorer (structural mode)",
+ "dataset_id": "series-2m180-b3e1c66-e0d60cbaccc6b",
+ "manifest_sha256": "4c0896afc83c84226143055c2c287ea57a655466cd63c971150c7efd05858a3d",
+ "member_count": 167,
+ "member_bytes": 11532922,
+ "checks_passed": 1290,
+ "valid": true,
+ "raw_evidence_checked": false,
+ "failures": [],
+ "note": "Structural validation of the build that adds the generation mode, run in the cloud session without the retained series. web/ao-explorer/validation/manifest-validation-*.json still records the earlier build 08dc9a4b5688bf41 validated with raw evidence (1394 checks); a maintainer holding outputs/ao_explorer_v1/series-2m180-b3e1c66 can refresh it with python scripts/ao_explorer/validate.py --web-dir web/ao-explorer --series-dir outputs/ao_explorer_v1/series-2m180-b3e1c66 --record"
+}

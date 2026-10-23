@@ -14,9 +14,9 @@
 // against newer data (external review ER-F05).
 //
 // The "Generate an experiment" section is a separate mode: generate.js is
-// imported only when the visitor connects to a computation service (the
-// Connect button or an explicit ?backend= address), so the precomputed
-// explorer makes no additional request unless generation is asked for.
+// imported only when the visitor presses Connect (a ?backend= address merely
+// fills in the field), so the precomputed explorer makes no additional
+// request unless generation is asked for.
 
 import { BundleError, fetchVerified, fetchVerifiedImage, fetchVerifiedJson, isFiniteOrNull, require } from "./integrity.js";
 import { lineChart, redrawWhenResized } from "./charts.js";
@@ -651,12 +651,15 @@ async function connectGenerate(address) {
   }
 }
 
+// A ?backend= address only fills in the field: nothing is contacted until the
+// visitor presses Connect (review R1-F01), so a link alone cannot make this
+// page talk to a service.
 function bindGenerate() {
   $("gen-connect-form").addEventListener("submit", (event) => { event.preventDefault(); connectGenerate($("gen-url").value); });
   const requested = new URLSearchParams(location.search).get("backend");
   if (requested !== null) {
-    $("gen-url").value = requested;
-    connectGenerate(requested);
+    $("gen-url").value = requested.slice(0, 300);
+    $("gen-conn-state").textContent = `Not connected. This page's address names a computation service (${requested.slice(0, 300)}); nothing has been contacted. Check the address and press Connect to use it, or ignore it: the precomputed experiment and the research results need no service.`;
   }
 }
 

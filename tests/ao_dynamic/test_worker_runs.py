@@ -156,11 +156,23 @@ def test_run_record_semantics_are_enforced(fixture_runs):
         "numerical checks": lambda r: r["checks"].__setitem__("all_passed", False),
         "unsupported API": lambda r: r.__setitem__("api", "ao-dynamic.api.v0"),
         "burn-in": lambda r: r["per_frame"]["running_average_peak_strehl_corrected"].__setitem__(0, 0.5),
+        "zero-angle sample": lambda r: r["grids"]["psf"].__setitem__("crop_slices_yx", [[45, 109], [46, 110]]),
+        "+6 x cells": lambda r: r["scene"]["sources"][1].__setitem__("index_yx", [78, 72]),
+        "fixed scope": lambda r: r["effective"]["fixed"].__setitem__("telescope_diameter_m", 8.0),
+        "physical identity": lambda r: r["effective"].__setitem__("physical_identity", "0" * 64),
+        "r0_m = 5.0": lambda r: r["effective"]["parameters"].__setitem__("r0_m", 5.0),
     }
     for needle, mutate in mutations.items():
         mutated = copy.deepcopy(run)
         mutate(mutated)
         problems = contract.validate_run_record(mutated)
         assert problems and any(needle in p for p in problems), (needle, problems)
+    # Pairing needs equal analysis windows as well as equal atmosphere samples.
+    other = copy.deepcopy(fixture_runs["stride5"])
+    other["effective"]["parameters"]["burn_in"] = 4
+    verdict = contract.pairing_verdict(run, other)
+    assert verdict["matching_atmosphere_samples"] == 16 and not verdict["paired"]
+    assert verdict["expected"]["kind"] == "different_analysis_window"
+    assert contract.pairing_verdict(run, fixture_runs["stride5"])["paired"]
     # The record is valid JSON without NaN or Infinity.
     json.loads(json.dumps(run, allow_nan=False))

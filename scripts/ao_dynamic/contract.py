@@ -421,6 +421,10 @@ def comparison_class(reference: Mapping[str, Any], candidate: Mapping[str, Any])
     elif time_grid:
         kind = "different_time_grid"
         text = "different time grid (frame count changed): not a paired comparison"
+    elif "burn_in" in changed:
+        kind = "different_analysis_window"
+        text = ("different analysis window (burn_in changed): the summaries cover different frames, so this is not a "
+                "paired comparison even where the atmosphere samples match")
     elif not changed:
         kind = "identical_configuration"
         text = "identical physical configuration (replay)"
@@ -453,7 +457,6 @@ def pairing_verdict(reference_run: Mapping[str, Any], candidate_run: Mapping[str
         and times_equal
         and len(ref_digests) == len(cand_digests)
         and matching == len(ref_digests)
-        and reference_run["effective"]["parameters"]["burn_in"] == candidate_run["effective"]["parameters"]["burn_in"]
     )
     return {
         "expected": expected,
@@ -576,6 +579,14 @@ def validate_run_record(run: Any, *, expected_parameters: Optional[Mapping[str, 
         _require(list(grid["shape_yx"]) == list(PSF_SHAPE) and list(grid["crop_shape_yx"]) == list(CROP_SHAPE), "PSF grid or crop differs", problems)
         _require(grid["x_angle_rad_sha256"] == scene["grid"]["x_angle_rad_sha256"] and grid["y_angle_rad_sha256"] == scene["grid"]["y_angle_rad_sha256"],
                  "scene grid differs from the PSF grid", problems)
+        # Even 156-sample grid: exact zero angle at index 78; the crop is centred on it.
+        zero = PSF_SHAPE[1] // 2
+        half = CROP_HALF_WIDTH_CELLS
+        _require(grid["x_zero_index"] == zero and grid["y_zero_index"] == zero
+                 and grid["crop_slices_yx"] == [[zero - half, zero + half], [zero - half, zero + half]],
+                 "the crop is not centred on the zero-angle sample", problems)
+        _require([source["index_yx"] for source in scene["sources"]] == [[zero, zero], [zero, zero + SCENE_SECONDARY_OFFSET_X_CELLS]],
+                 "the scene is not at the zero-angle sample and +6 x cells", problems)
         display = run["display"]
         _require(display["psf_log_decades"] == PSF_LOG_DECADES and display["opd_limit_m"] > 0, "display mapping differs", problems)
         _require(len(display["piston_removed_m"]["atmosphere"]) == len(indices) and len(display["clipped_fraction"]["residual"]) == len(indices),

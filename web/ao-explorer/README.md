@@ -37,7 +37,8 @@ python3 -m http.server 8000 --bind 127.0.0.1 --directory web
 Then open `http://127.0.0.1:8000/ao-explorer/`. The site also works from the
 root of a server (`--directory web/ao-explorer`, then `http://127.0.0.1:8000/`)
 or any deeper project subpath: every member is resolved relative to the JSON
-that names it. It makes no external network requests. `crypto.subtle` (used
+that names it. Without a connected computation service it makes no external
+network requests. `crypto.subtle` (used
 to verify every member's SHA-256) is available on `localhost`/`127.0.0.1`
 and on HTTPS origins.
 
@@ -91,9 +92,10 @@ so that visitors see a new version without the reload prompt.
 python scripts/ao_dynamic/service.py --port 8765 --web-dir web
 ```
 
-then open `http://127.0.0.1:8765/ao-explorer/?backend=/`. A page served from
-another origin connects with `?backend=<service URL>` or the *Service address*
-field, provided the service lists that origin with `--allow-origin`.
+then open `http://127.0.0.1:8765/ao-explorer/?backend=/` and press *Connect*
+(`?backend=` only fills in the *Service address* field). A page served from
+another origin can connect provided the service lists that origin with
+`--allow-origin`.
 
 ## Producing and validating
 
