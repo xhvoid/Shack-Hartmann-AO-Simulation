@@ -1,0 +1,245 @@
+{
+ "schema": "ao-dynamic.feature-validation-plan.v1",
+ "created_utc": "2026-10-23T13:01:42+00:00",
+ "api": "ao-dynamic.api.v1",
+ "scope": "bounded validation of the generated-experiment feature; separate from the frozen explorer series and its ledger",
+ "runs": [
+  {
+   "role": "pilot",
+   "observer": true,
+   "parameters": {
+    "seed": 1,
+    "r0_m": 0.1263371938263465,
+    "r0_reference_wavelength_m": 5e-07,
+    "wind_speed_m_per_s": 10.0,
+    "wind_direction_deg": 0,
+    "guide_ab_magnitude": 7.0,
+    "controller_gain": 0.2,
+    "queued_latency_frames": 2,
+    "n_frames": 64,
+    "burn_in": 16,
+    "display_stride": 1
+   },
+   "purpose": "measure the per-frame cost and peak memory before any 180-frame run",
+   "system_config_hash": "31b0761d1b3194bebbad214f3d82626b90674f31427d6f8114a06a188a51d04b",
+   "admission": {
+    "outcome": "ADMITTED",
+    "max_travel_px": 16.065000000000012,
+    "travel_budget_px": 52.0,
+    "margin_px": 35.93499999999999,
+    "request_count": 64
+   }
+  },
+  {
+   "role": "baseline",
+   "observer": true,
+   "parameters": {
+    "seed": 1,
+    "r0_m": 0.1263371938263465,
+    "r0_reference_wavelength_m": 5e-07,
+    "wind_speed_m_per_s": 10.0,
+    "wind_direction_deg": 0,
+    "guide_ab_magnitude": 7.0,
+    "controller_gain": 0.2,
+    "queued_latency_frames": 2,
+    "n_frames": 180,
+    "burn_in": 40,
+    "display_stride": 1
+   },
+   "purpose": "default configuration with seed 1 (equals the frozen explorer's baseline configuration hash)",
+   "system_config_hash": "cb4a1068f08f6841162906d758f762b0285f73b7f97203697c2d8b1c5091f13f",
+   "admission": {
+    "outcome": "ADMITTED",
+    "max_travel_px": 45.64500000000003,
+    "travel_budget_px": 52.0,
+    "margin_px": 6.3549999999999685,
+    "request_count": 180
+   }
+  },
+  {
+   "role": "replay",
+   "observer": true,
+   "parameters": {
+    "seed": 1,
+    "r0_m": 0.1263371938263465,
+    "r0_reference_wavelength_m": 5e-07,
+    "wind_speed_m_per_s": 10.0,
+    "wind_direction_deg": 0,
+    "guide_ab_magnitude": 7.0,
+    "controller_gain": 0.2,
+    "queued_latency_frames": 2,
+    "n_frames": 180,
+    "burn_in": 40,
+    "display_stride": 3
+   },
+   "purpose": "same seed and physical configuration: exact replay; display stride 3 checks that preview throttling leaves histories and averages unchanged",
+   "system_config_hash": "cb4a1068f08f6841162906d758f762b0285f73b7f97203697c2d8b1c5091f13f",
+   "admission": {
+    "outcome": "ADMITTED",
+    "max_travel_px": 45.64500000000003,
+    "travel_budget_px": 52.0,
+    "margin_px": 6.3549999999999685,
+    "request_count": 180
+   }
+  },
+  {
+   "role": "different-seed",
+   "observer": true,
+   "parameters": {
+    "seed": 171885098,
+    "r0_m": 0.1263371938263465,
+    "r0_reference_wavelength_m": 5e-07,
+    "wind_speed_m_per_s": 10.0,
+    "wind_direction_deg": 0,
+    "guide_ab_magnitude": 7.0,
+    "controller_gain": 0.2,
+    "queued_latency_frames": 2,
+    "n_frames": 180,
+    "burn_in": 40,
+    "display_stride": 1
+   },
+   "purpose": "a different realization: atmosphere and results must differ",
+   "system_config_hash": "a87586360d8c07b8632ec911ee72aa212e09da9d3046e113dac4b3b413781737",
+   "admission": {
+    "outcome": "ADMITTED",
+    "max_travel_px": 45.64500000000003,
+    "travel_budget_px": 52.0,
+    "margin_px": 6.3549999999999685,
+    "request_count": 180
+   }
+  },
+  {
+   "role": "same-atmosphere",
+   "observer": true,
+   "parameters": {
+    "seed": 1,
+    "r0_m": 0.1263371938263465,
+    "r0_reference_wavelength_m": 5e-07,
+    "wind_speed_m_per_s": 10.0,
+    "wind_direction_deg": 0,
+    "guide_ab_magnitude": 8.5,
+    "controller_gain": 0.2,
+    "queued_latency_frames": 2,
+    "n_frames": 180,
+    "burn_in": 40,
+    "display_stride": 1
+   },
+   "purpose": "AO/WFS change (guide magnitude) against the same atmosphere: paired only if every atmosphere digest matches; calibration rebuilt",
+   "system_config_hash": "a67937557527f85d8da73157462284925cc4de660e7a2f9348e3b15c737823dd",
+   "admission": {
+    "outcome": "ADMITTED",
+    "max_travel_px": 45.64500000000003,
+    "travel_budget_px": 52.0,
+    "margin_px": 6.3549999999999685,
+    "request_count": 180
+   }
+  },
+  {
+   "role": "control",
+   "observer": false,
+   "parameters": {
+    "seed": 1,
+    "r0_m": 0.1263371938263465,
+    "r0_reference_wavelength_m": 5e-07,
+    "wind_speed_m_per_s": 10.0,
+    "wind_direction_deg": 0,
+    "guide_ab_magnitude": 7.0,
+    "controller_gain": 0.2,
+    "queued_latency_frames": 2,
+    "n_frames": 180,
+    "burn_in": 40,
+    "display_stride": 1
+   },
+   "purpose": "observer-disabled passivity control of the baseline: identical loop history required",
+   "system_config_hash": "cb4a1068f08f6841162906d758f762b0285f73b7f97203697c2d8b1c5091f13f",
+   "admission": {
+    "outcome": "ADMITTED",
+    "max_travel_px": 45.64500000000003,
+    "travel_budget_px": 52.0,
+    "margin_px": 6.3549999999999685,
+    "request_count": 180
+   }
+  }
+ ],
+ "different_seed_source": "drawn once with secrets.randbelow when this plan was written",
+ "fixtures": "small deterministic fixtures (6-48 frames) for boundaries, lifecycle and browser behaviour; their sessions are recorded in the ledger",
+ "ceilings": {
+  "numerical_processing_wall_s": 1200.0,
+  "raw_evidence_bytes": 536870912,
+  "child_timeout_s": 180.0,
+  "native_threads": 2,
+  "accounting": "every launch (successful, refused or failed) and every recorded fixture/browser session adds its measured wall time; every byte under this directory counts as raw evidence",
+  "upper_bounds_only": "ceilings are limits, not predicted costs"
+ },
+ "tolerances": {
+  "rms_rtol": 1e-12,
+  "rms_atol_m": 1e-18,
+  "strehl_atol": 1e-12,
+  "psf_direct_dft_atol": 1e-15,
+  "convolution_atol": 1e-15,
+  "flux_atol": 1e-12,
+  "mean_psf_atol": 1e-15,
+  "replay": "byte-identical histories, digests, frames and averages",
+  "frozen_explorer_baseline": "per-frame RMS and Strehl of the seed-1 baseline against the published dataset: reported, with the differing numerical environment stated"
+ },
+ "resource_policy": {
+  "AO_RESOURCE_GUARD": "unset (memory enforcement off by default)"
+ },
+ "identities": {
+  "producer": {
+   "worker": {
+    "directory": "scripts/ao_dynamic",
+    "sha256": "f267753397eb9cbb4344f146b75a8472575f3d40e22e0735c96cc5048b17755f",
+    "files": {
+     "contract.py": "7ec8404537295a8551e6e099b80153d73da361d3c0955ffa9aef64fb41f90017",
+     "physics.py": "04e9c328af257ee6a9c1c092f5073fe2f0bbe3b3ffbece6385ba2e947a0d5116",
+     "dynamic_observer.py": "28d87412db50327475a4ece0b6adb1de50887310f158621540ff32a1bb766c16",
+     "worker.py": "f66fd18009d7951acc746fc67c9c1648ced03fa4c2c24304aa4b568cbd01a5c8"
+    }
+   },
+   "explorer_modules_used": {
+    "directory": "scripts/ao_explorer",
+    "sha256": "56ad8edea8484383763076bb441234e370dfbb45d3265b278f9296487c7aec60",
+    "files": {
+     "admission.py": "cdffe1561c30789f9732ee766853660cf749f83f35cc13fc3e8d8eb1fa8eb53c",
+     "observer.py": "a21842e29027cff234e6e722830e65f8d954f36644f9f038cdc107ee3a6cf1ca",
+     "binary_scene.py": "b96eeb7f61f5aefa5d92ec4cdf7b0aace9fd581087b99f61846e8617b2f3bb49",
+     "producer.py": "da70744370b59af33c24e4030ca0f584c5a9ea0ed2d19669e67550b29725ef61",
+     "identity.py": "20d172aa5b13c4e3703114b228367491c8a8046aacc7d707aa958de4378b53ed",
+     "protocol.py": "d13021ab0c4662c94f06f2cf0b81a115a82b118695f0cf58d7a54ce2aa4199f7"
+    }
+   }
+  },
+  "git": {
+   "git_head": "2cb4c82ff61a6474efe238a1c2ec850f4ec641cb",
+   "path": "scripts/ao_dynamic",
+   "tracked_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "tracked_changes_empty": true,
+   "untracked_files": [],
+   "untracked_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "core": {
+   "package": "shwfs_ao",
+   "package_directory_relative": "src/shwfs_ao",
+   "imported_from_task_checkout": true,
+   "package_sha256": "deef18f1fe4c9cbd99e247a2ab832d38d44bfc820fe2983418bb890e3674744c",
+   "version": "0.1.0",
+   "git": {
+    "git_head": "2cb4c82ff61a6474efe238a1c2ec850f4ec641cb",
+    "path": "src",
+    "tracked_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tracked_changes_empty": true,
+    "untracked_files": [],
+    "untracked_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  },
+  "environment": {
+   "python": "3.14.6 (main, Jul 18 2026, 17:01:31) [Clang 22.1.3 ]",
+   "implementation": "CPython",
+   "numpy": "2.5.1",
+   "scipy": "1.18.0",
+   "machine": "x86_64",
+   "platform": "Linux-6.18.44-fc-v153-x86_64-with-glibc2.39"
+  }
+ }
+}

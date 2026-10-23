@@ -1,7 +1,12 @@
 # Development and releases
 
 `main` is the integration and publication branch. The explorer serves only
-committed, precomputed data; no Python service is needed in production.
+committed, precomputed data; no Python service is needed to publish it. Its
+optional generation mode talks to a separately run computation service
+(`scripts/ao_dynamic/`); see the
+[generated-experiment contract](docs/research/ao_dynamic_v1/REQUIREMENTS.md) and
+[setup and connection](docs/research/ao_dynamic_v1/DEPLOYMENT.md). No public
+service is hosted for the published site.
 The [release requirements](docs/research/ao_2m_interactive_v1/RELEASE_REQUIREMENTS.md)
 and [acceptance record](docs/research/ao_2m_interactive_v1/ACCEPTANCE_REPORT.md)
 define the scientific and browser contracts. Read [AGENTS.md](AGENTS.md) before
@@ -71,6 +76,7 @@ python scripts/ao_explorer/site_build.py --web-dir web/ao-explorer
 python scripts/ao_explorer/validate.py --web-dir web/ao-explorer
 python -m pytest -q -rs tests/ao_explorer
 python -m ruff check scripts/ao_explorer tests/ao_explorer
+python -m pytest -q tests/ao_dynamic      # generation mode; Node/Playwright parts skip when unavailable
 ```
 
 The suite includes tiny deterministic contract fixtures. It does not regenerate

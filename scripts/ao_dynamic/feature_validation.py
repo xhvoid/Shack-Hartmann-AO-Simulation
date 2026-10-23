@@ -325,6 +325,34 @@ def _frame_blocks(item: Dict[str, Any]) -> Dict[int, Dict[str, Any]]:
     return out
 
 
+def _detilted(values: Any, mask: Any) -> Any:
+    """Pupil samples with their least-squares piston, tip and tilt removed."""
+
+    import numpy as np
+
+    rows, columns = np.nonzero(mask)
+    design = np.column_stack([np.ones(rows.size), columns.astype(float), rows.astype(float)])
+    samples = np.asarray(values, dtype=float)[mask]
+    coefficients, *_ = np.linalg.lstsq(design, samples, rcond=None)
+    return samples - design @ coefficients
+
+
+def _x_differences(values: Any) -> Any:
+    """Pixel-to-pixel OPD differences along x inside the pupil (small-scale structure)."""
+
+    import numpy as np
+
+    array = np.asarray(values, dtype=float)
+    difference = array[:, 1:] - array[:, :-1]
+    return difference[np.isfinite(difference)]
+
+
+def _structure_correlation(a: Any, b: Any) -> float:
+    import numpy as np
+
+    return float(np.corrcoef(_x_differences(a), _x_differences(b))[0, 1])
+
+
 def evaluate(directory: Path, out: Path) -> Dict[str, Any]:
     import numpy as np
 
@@ -363,11 +391,17 @@ def evaluate(directory: Path, out: Path) -> Dict[str, Any]:
     atm_b = np.asarray(base_frames[0]["atmosphere_opd_m"], dtype=float)
     atm_o = np.asarray(_frame_blocks(items["different-seed"])[0]["atmosphere_opd_m"], dtype=float)
     mask = np.isfinite(atm_b)
+    other_frames = _frame_blocks(items["different-seed"])
+    seed_structure = [_structure_correlation(base_frames[k]["atmosphere_opd_m"], other_frames[k]["atmosphere_opd_m"]) for k in sorted(base_frames)]
     result["different_seed"] = {
+        "small_scale_structure_correlation_mean_abs": float(np.mean(np.abs(seed_structure))),
+        "small_scale_structure_correlation_max_abs": float(np.max(np.abs(seed_structure))),
         "seed": other["effective"]["parameters"]["seed"],
         "atmosphere_samples_differing": sum(1 for a, b in zip(digests_b, digests_o) if a != b),
         "frames": len(digests_b),
         "frame0_correlation_with_baseline": float(np.corrcoef(atm_b[mask], atm_o[mask])[0, 1]),
+        "frame0_correlation_with_baseline_tip_tilt_removed": float(np.corrcoef(_detilted(atm_b, mask), _detilted(atm_o, mask))[0, 1]),
+        "correlation_note": "large-scale (subharmonic, 25 m outer scale) tip/tilt dominates single-frame correlations of independent screens; the tip/tilt-removed value compares the remaining structure",
         "mean_residual_rms_nm": [base["summary"]["mean_residual_rms_m"] * 1e9, other["summary"]["mean_residual_rms_m"] * 1e9],
         "averaged_intensity_strehl_ao": [base["summary"]["averaged_intensity_peak_strehl_corrected"], other["summary"]["averaged_intensity_peak_strehl_corrected"]],
         "calibration_identity_differs": base["identities"]["calibration"]["interaction_matrix_hash"] != other["identities"]["calibration"]["interaction_matrix_hash"],
@@ -376,13 +410,23 @@ def evaluate(directory: Path, out: Path) -> Dict[str, Any]:
     }
     # Continuous evolution: consecutive-frame correlation vs independent realizations.
     corr = []
+    corr_detilted = []
     for k in range(0, len(base_frames) - 1):
-        a = np.asarray(base_frames[k]["atmosphere_opd_m"], dtype=float)[mask]
-        b = np.asarray(base_frames[k + 1]["atmosphere_opd_m"], dtype=float)[mask]
-        corr.append(float(np.corrcoef(a, b)[0, 1]))
+        a = np.asarray(base_frames[k]["atmosphere_opd_m"], dtype=float)
+        b = np.asarray(base_frames[k + 1]["atmosphere_opd_m"], dtype=float)
+        corr.append(float(np.corrcoef(a[mask], b[mask])[0, 1]))
+        corr_detilted.append(float(np.corrcoef(_detilted(a, mask), _detilted(b, mask))[0, 1]))
+    first_last = float(np.corrcoef(_detilted(np.asarray(base_frames[0]["atmosphere_opd_m"], dtype=float), mask),
+                                   _detilted(np.asarray(base_frames[max(base_frames)]["atmosphere_opd_m"], dtype=float), mask))[0, 1])
     result["continuity"] = {
         "consecutive_frame_correlation_min": min(corr),
         "consecutive_frame_correlation_mean": float(np.mean(corr)),
+        "consecutive_frame_correlation_tip_tilt_removed_min": min(corr_detilted),
+        "first_to_last_frame_correlation_tip_tilt_removed": first_last,
+        "consecutive_frame_small_scale_structure_correlation_min": min(
+            _structure_correlation(base_frames[k]["atmosphere_opd_m"], base_frames[k + 1]["atmosphere_opd_m"]) for k in range(len(base_frames) - 1)),
+        "first_to_last_frame_small_scale_structure_correlation": _structure_correlation(base_frames[0]["atmosphere_opd_m"], base_frames[max(base_frames)]["atmosphere_opd_m"]),
+        "metric": "correlation of pixel-to-pixel x differences of the OPD inside the pupil: near 1 for the same structure, near 0 for unrelated structure",
         "all_frame_digests_distinct": len(set(digests_b)) == len(digests_b),
         "runtime_travel_equals_admitted": base["checks"]["horizon"]["equal"],
         "max_travel_px": base["admission"]["max_travel_px"],

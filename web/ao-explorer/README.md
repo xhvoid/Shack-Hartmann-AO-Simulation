@@ -1,12 +1,19 @@
 # AO Simulation Explorer
 
-A static, buildless site with three sections:
+A static, buildless site with four sections:
 
 - **Explore 2 m** — a precomputed native 2 m Shack-Hartmann SCAO experiment
   (`det_emccd_2m_synthetic@1`, 180 frames at 1 kHz, burn-in 40, seed 1) in
   eight recorded cases, with synchronized wavefront maps, instantaneous and
   post-burn-in-average PSFs, per-frame metrics and a synthetic binary
   observation.
+- **Generate an experiment** — an optional mode that connects, only when a
+  visitor asks for it, to a computation service (`scripts/ao_dynamic/`) which
+  runs the same native AO model on a new seeded realization with bounded
+  parameters; the page verifies and replays the completed run. See the
+  [contract](../../docs/research/ao_dynamic_v1/REQUIREMENTS.md),
+  [API](../../docs/research/ao_dynamic_v1/API.md) and
+  [setup and connection](../../docs/research/ao_dynamic_v1/DEPLOYMENT.md).
 - **Research Results** — the project's eight main result groups (R1–R8),
   shown from saved records, notebook outputs and figures of the repository.
 - **Methods & Limits** — model families, observable definitions, evidence
@@ -14,7 +21,9 @@ A static, buildless site with three sections:
 
 The browser only selects and replays validated recorded data. It does not
 simulate, interpolate between cases, draw noise or compute metrics from
-images.
+images. In the generation mode the numerical work is done by the connected
+service; the page checks and replays its results. Without a connected
+service the page makes exactly the requests of the precomputed explorer.
 
 ## Local preview
 
@@ -38,6 +47,8 @@ and on HTTPS origins.
 index.html                      page (system fonts, no framework)
 code-<build>/styles.css         layout
 code-<build>/app.js             2 m experiment controller
+code-<build>/generate.js        generated-experiment mode (imported only on connect)
+code-<build>/generate-contract.js  API v1 semantic checks of generated runs
 code-<build>/results.js         Research Results rendering
 code-<build>/charts.js          canvas charts of recorded values
 code-<build>/integrity.js       size + SHA-256 verification, relative resolution
@@ -73,6 +84,16 @@ which renames the code directory to its new build and restamps `index.html`
 and the entry; without `--write` it only checks. A future hosting step may
 still serve `index.html` and `data/current.json` with `Cache-Control: no-cache`
 so that visitors see a new version without the reload prompt.
+
+## Previewing the generation mode
+
+```bash
+python scripts/ao_dynamic/service.py --port 8765 --web-dir web
+```
+
+then open `http://127.0.0.1:8765/ao-explorer/?backend=/`. A page served from
+another origin connects with `?backend=<service URL>` or the *Service address*
+field, provided the service lists that origin with `--allow-origin`.
 
 ## Producing and validating
 

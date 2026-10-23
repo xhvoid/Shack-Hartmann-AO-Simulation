@@ -128,7 +128,15 @@ def test_frozen_flow_translates_one_realization_instead_of_redrawing():
     frame1 = moved.opd_at(0.005)
     assert np.corrcoef(frame4[mask], frame1[mask])[0, 1] > 0.99
     other = FrozenFlowAtmosphere(replace(flow_config, root_seed=7), pupil_mask=flow.pupil_mask, random_streams=NamedRandomStreams(7))
-    assert abs(np.corrcoef(frame0[mask], other.opd_at(0.0)[mask])[0, 1]) < 0.5
+
+    def structure(values):
+        # Pixel-to-pixel x differences: small-scale structure, insensitive to the
+        # few large-scale modes that dominate single-frame correlations on 2 m.
+        difference = values[:, 1:] - values[:, :-1]
+        return difference[np.isfinite(difference)]
+
+    assert np.corrcoef(structure(frame4), structure(frame1))[0, 1] > 0.9
+    assert abs(np.corrcoef(structure(frame0), structure(other.opd_at(0.0)))[0, 1]) < 0.3
     assert atmosphere.realization_index == 0
 
 
