@@ -54,9 +54,12 @@ boundaries in the [limitations register](docs/current_limitations.md).
 
 The [AO Simulation Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/)
 replays eight precomputed 2 m AO cases and presents eight groups of historical
-research results. It performs no online simulation. See the
-[site guide](web/ao-explorer/README.md), [development workflow](DEVELOPMENT.md)
-and [acceptance and limitations](docs/research/ao_2m_interactive_v1/ACCEPTANCE_REPORT.md).
+research results; the published site itself performs no simulation. Its
+optional *Generate an experiment* mode runs new seeded 2 m realizations through
+a separately run computation service; no public service is hosted yet. See the
+[site guide](web/ao-explorer/README.md), [development workflow](DEVELOPMENT.md),
+[acceptance and limitations](docs/research/ao_2m_interactive_v1/ACCEPTANCE_REPORT.md)
+and the [generated-experiment contract](docs/research/ao_dynamic_v1/REQUIREMENTS.md).
 
 ## What the project demonstrates
 
