@@ -1,6 +1,6 @@
 # AO Simulation Explorer
 
-A static, buildless site with three sections:
+A static, buildless site with four sections:
 
 - **Explore 2 m** — a precomputed native 2 m Shack-Hartmann SCAO experiment
   (`det_emccd_2m_synthetic@1`, seed 1) in eight recorded cases. The active
@@ -20,10 +20,19 @@ A static, buildless site with three sections:
   their galaxy observations are kept at full precision outside the site.
   The earlier 180-frame dataset and its galaxy derivative are preserved
   unchanged and are not combined with it.
-- **Research Results** — the project's eight main result groups (R1–R8),
-  shown from saved records, notebook outputs and figures of the repository.
-- **Methods & Limits** — model families, observable definitions, evidence
-  status, numerical limits and identities.
+- **Behind the simulation** — three short topic panels: the ten-layer
+  atmosphere, the large-system architecture, and checks and limits. The layer
+  profile and structure-function plot come from the unchanged saved records.
+- **Explore 42 m** — one fixed exploratory ten-layer trajectory: 500 frames
+  at 500 Hz, 126 recorded replay snapshots, 2.2 µm PSFs and a real HST binary
+  template convolved with those PSFs. OPD maps, per-frame RMS, Strehl and images
+  share a timeline independent of the 2 m controls. Means use all 400 frames
+  in the predeclared 100–499 analysis window. This is a historical 42 m
+  DRM-derived configuration, not a current 39 m ELT instrument prediction.
+- **Appendix** — collapsed records for the 12 m detector studies, analytical
+  MCAO, historical 42 m runs and other experiments. All eight original groups
+  (R1–R8), evidence downloads and deep links are retained. Full methods and
+  observable definitions are also collapsed here.
 
 The browser only selects and replays validated recorded data. It does not
 simulate, interpolate between cases, draw noise or compute metrics from
@@ -53,7 +62,8 @@ code-<build>/styles.css         layout
 code-<build>/app.js             2 m experiment controller
 code-<build>/galaxy.js          observed-template galaxy view
 code-<build>/playback.js        the one playback state and clock both panels operate
-code-<build>/results.js         Research Results rendering
+code-<build>/results.js         topic evidence and lazy appendix rendering
+code-<build>/replay42.js        fixed 42 m recording and independent timeline
 code-<build>/charts.js          canvas charts of recorded values
 code-<build>/integrity.js       size + SHA-256 verification, relative resolution
 data/current.json               entry: dataset id, manifest size/SHA-256, code build,
@@ -73,6 +83,7 @@ derived/<derived-id>/cases/<id>/ galaxy record, sampled atlases and mean images 
 derived/rms-<...>/manifest.json RMS diagnostics: residual RMS after tip/tilt removal of every saved
                                 residual map, bound by the `diagnostics` block of data/current.json
 derived/rms-<...>/cases/<id>/   rms.json per case (1000 values, window means, source digests)
+recordings/42m-500-<hash>/      immutable 42 m data, atlases, scientific source and run evidence
 ```
 
 A galaxy derivative has its own identities and manifest and names the dataset
@@ -147,3 +158,25 @@ checks the bundle's structure and semantics; add
 evidence. Its rules were written for the 180-frame schemas (`*.v1`); it has
 not been extended to, or run on, the 1000-frame dataset (`*.v2`) or its galaxy
 derivative.
+
+## The fixed 42 m recording
+
+The `replay42` entry in `data/current.json` binds a separate manifest by size
+and SHA-256. Its directory name is derived from the canonical member listing.
+The browser verifies each data or image member before displaying it, loads
+this section on demand, and retains a bounded atlas cache. A failed check
+stops playback and identifies any remaining image as the last verified frame.
+
+The real binary template is the MAST HST/ACS HRC F775W product
+`j6kt02020_drz.fits` (program 9451, 2MASS J0746425+200032 AB).
+It retains the original HST PSF and noise; convolution with a simulated
+2.2 µm PSF demonstrates additional blur, not intrinsic K-band morphology or
+the resolving power of a real 42 m telescope. All three panels retain one
+angular scale and brightness mapping. Provenance and linear arrays are
+available through verified downloads.
+
+See `docs/research/ao_42m_replay/README.md` for production, packaging and the
+independent publication checker `scripts/ao_explorer/portfolio_validate.py`.
+It verifies this integration against the completed local recording and the
+pre-integration site, without running the simulation or CI. The 17.1 GB raw
+archive remains local; only the 66.5 MB browser recording is published.

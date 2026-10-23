@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "baseline_commit": "132fbe8c03763d587dd2d6c2e8d077f66024cc0c",
+  "code_build": "939923757a47dbc6",
+  "recording_id": "42m-500-31024b173527b7a6",
+  "manifest_sha256": "cc706d634a243c8b85312006c9e62f8f99b47adabe688f3aef9acef65d620122",
+  "verified_members": 144,
+  "unchanged_local_assets": 134,
+  "two_m_html_and_data_unchanged": true,
+  "archived_research_unchanged": true,
+  "html_ids_and_links": true,
+  "layer_profile_matches_run": true,
+  "public_plan_private_fields_omitted": true,
+  "raw_history_and_science_checks": "PASS; all scalar history, both mean PSFs, four independently recomputed map RMS/PSF samples"
+}

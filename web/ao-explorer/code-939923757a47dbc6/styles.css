@@ -181,3 +181,53 @@ tr.excluded th, tr.excluded td { color: var(--muted); font-style: italic; }
 #galaxy-rms-readout { max-width: 900px; margin-top: 10px; }
 #galaxy-rms-readout .rms-values dd { font-size: 18px; font-variant-numeric: tabular-nums; }
 @media (max-width: 600px) { .rms-values { grid-template-columns: 1fr; } }
+
+/* Project narrative and the independent 42 m recording reuse the 2 m panels. */
+.section, .appendix-record, #methods { scroll-margin-top: 140px; }
+#project, #replay42, #appendix { margin-top: 28px; border-top: 1px solid var(--rule); }
+.section-kicker { text-transform: uppercase; letter-spacing: .09em; color: var(--accent); font-size: 11px; margin: 0 0 7px; }
+.topic-nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 12px; }
+.topic-panel { padding: 22px; }
+.topic-panel h2 { margin-top: 12px; font-size: 21px; }
+.topic-split { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.topic-split p { max-width: 65ch; }
+.layer-diagram { padding: 14px; border: 1px solid var(--rule); border-radius: 5px; background: #f6f4ed; }
+.layer-diagram h3 { margin: 0 0 14px; font-size: 13px; }
+.layer-row { display: grid; grid-template-columns: 54px 1fr 42px 59px; gap: 8px; align-items: center; margin: 8px 0; font: 11px var(--mono); }
+.layer-track { height: 8px; background: #e0e4e2; border-radius: 2px; }
+.layer-track i { height: 100%; display: block; background: var(--accent); border-radius: 2px; }
+.architecture-steps { margin: 0; padding: 0; list-style: none; counter-reset: stage; }
+.architecture-steps li { counter-increment: stage; position: relative; padding: 12px 0 12px 36px; border-bottom: 1px solid var(--rule); }
+.architecture-steps li::before { content: counter(stage, decimal-leading-zero); position: absolute; left: 0; color: var(--accent); font: 13px var(--mono); top: 15px; }
+.architecture-steps strong, .architecture-steps span { display: block; }
+.architecture-steps span { font-size: 13px; color: var(--muted); margin-top: 3px; }
+.evidence-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 24px; margin: 18px 0; }
+.evidence-grid p, .evidence-grid a { font-size: 13px; }
+.r42-binary-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 14px 0; }
+.r42-binary-grid .map figcaption { max-width: none; }
+.r42-picture { position: relative; }
+.r42-picture canvas { width: 100%; height: auto; aspect-ratio: 1; }
+.r42-scale { position: absolute; left: 14px; bottom: 12px; font: 10px var(--sans); color: white; text-align: center; text-shadow: 0 1px 3px #000; }
+.r42-scale i { display: block; height: 6px; border: 1px solid white; border-top: 0; margin-bottom: 3px; }
+#replay42 .params { margin-bottom: 12px; }
+#replay42 .rms-readout { max-width: 900px; margin: 12px 0; }
+#r42-strehl-u, #r42-strehl-c { color: var(--ink); font-family: var(--mono); margin-top: 4px; }
+.appendix-record > .hint { margin: 6px 0 0; }
+.appendix-record > .result { border: 0; padding: 12px 0 0; }
+#results-index:empty { display: none; }
+#appendix #results-body > .hint { display: none; }
+@media (max-width: 760px) {
+  .topic-split, .evidence-grid { grid-template-columns: 1fr; gap: 18px; }
+  .topic-panel { padding: 16px; }
+}
+@media (max-width: 600px) {
+  .section, .appendix-record, #methods { scroll-margin-top: 16px; }
+  .r42-maps { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .r42-maps .map canvas { width: 100%; height: auto; }
+  .r42-maps .map figcaption { max-width: none; font-size: 11px; }
+  .r42-maps .colorbar-block { grid-column: 1 / -1; }
+  .r42-binary-grid { gap: 7px; }
+  .r42-binary-grid .map figcaption { font-size: 11px; }
+  .r42-binary-grid .map figcaption strong { font-size: 12px; }
+  .r42-scale { left: 6px; bottom: 7px; font-size: 8px; }
+}
