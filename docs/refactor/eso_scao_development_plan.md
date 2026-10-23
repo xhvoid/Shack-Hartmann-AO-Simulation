@@ -10,7 +10,11 @@ Repository: https://github.com/xhvoid/Shack-Hartmann-AO-Simulation
 Planning snapshot: e55754f4221a69f4765249c63f39cd081348a955  
 Implementation status: NOT STARTED. This document specifies future work; it is not evidence that any feature or acceptance test already exists.
 
-Desktop execution policy: DESKTOP-SAFE by default. Medium/full-scale scientific runs and broad test suites are not authorized automatically. Section 2.3 takes precedence over instructions elsewhere to execute validation gates.
+Current execution policy: memory/pressure enforcement is disabled by default;
+see [RESOURCE_POLICY.md](../../RESOURCE_POLICY.md). The policy below records
+the historical benchmark requirements.
+
+Historical desktop execution policy: DESKTOP-SAFE by default. Medium/full-scale scientific runs and broad test suites are not authorized automatically. Section 2.3 takes precedence over instructions elsewhere to execute validation gates.
 
 ## 1. Implementation requirements
 

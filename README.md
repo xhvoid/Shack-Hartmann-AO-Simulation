@@ -403,9 +403,9 @@ python examples/run_eso_scao_benchmark.py --tier full --dry-run
 ```
 
 The first command runs the 5 m software-smoke tier in a supervised,
-thread-limited child process. The supervisor keeps all running process-group
-members under memory, pressure and wall-clock limits, stops the group if a
-monitoring probe raises, and treats zombie members as exited.
+thread-limited child process. The supervisor applies wall-clock limits and process cleanup. Memory/pressure
+checks are optional and disabled by default; set `AO_RESOURCE_GUARD=1` to enable
+them. See [the current execution policy](RESOURCE_POLICY.md).
 The second prints the full tier's configuration
 and peak-memory estimate without building it. Larger tiers need
 `--enable-large-run`, and the desktop memory policy may also require an
