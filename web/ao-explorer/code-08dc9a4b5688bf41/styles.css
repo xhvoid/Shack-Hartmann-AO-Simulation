@@ -89,12 +89,14 @@ h3 { font-size: 15px; margin: 14px 0 6px; }
 .current-frame { font-size: 13px; font-family: var(--mono); }
 
 .table-scroll { overflow-x: auto; max-width: 100%; }
+.table-title { font-size: 13px; font-weight: 600; margin: 10px 0 0; }
+.table-title:empty { display: none; }
 table { border-collapse: collapse; font-size: 13px; margin: 6px 0; }
+.table-title + .table-scroll table { margin-top: 4px; }
 th, td { border-bottom: 1px solid var(--rule); padding: 4px 8px; text-align: left; vertical-align: top; }
 th { background: #f2eee6; font-weight: 600; }
 td.num { font-family: var(--mono); text-align: right; white-space: nowrap; }
 td.null { color: var(--muted); font-style: italic; }
-caption { text-align: left; font-weight: 600; padding: 4px 0; }
 
 .binary { display: flex; flex-wrap: wrap; gap: 12px; }
 .map.obs img { width: 312px; height: 312px; }
