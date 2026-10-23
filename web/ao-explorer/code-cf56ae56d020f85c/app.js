@@ -12,6 +12,11 @@
 // (code-<build>/, scripts/ao_explorer/site_build.py) and refuses a dataset
 // entry published with another build, so a cached older page can never run
 // against newer data (external review ER-F05).
+//
+// The "Generate an experiment" section is a separate mode: generate.js is
+// imported only when the visitor connects to a computation service (the
+// Connect button or an explicit ?backend= address), so the precomputed
+// explorer makes no additional request unless generation is asked for.
 
 import { BundleError, fetchVerified, fetchVerifiedImage, fetchVerifiedJson, isFiniteOrNull, require } from "./integrity.js";
 import { lineChart, redrawWhenResized } from "./charts.js";
@@ -629,6 +634,33 @@ function renderMethods() {
 }
 
 // ---------------------------------------------------------------------------
+// Generated experiments (lazy, explicit)
+
+let generateModule = null;
+
+async function generateMode() {
+  if (!generateModule) generateModule = await import("./generate.js");
+  return generateModule;
+}
+
+async function connectGenerate(address) {
+  try {
+    (await generateMode()).connect(address);
+  } catch (error) {
+    $("gen-conn-state").textContent = `The generation code could not be loaded (${error.message}); a newer version of the site may have replaced it. Reload the page.`;
+  }
+}
+
+function bindGenerate() {
+  $("gen-connect-form").addEventListener("submit", (event) => { event.preventDefault(); connectGenerate($("gen-url").value); });
+  const requested = new URLSearchParams(location.search).get("backend");
+  if (requested !== null) {
+    $("gen-url").value = requested;
+    connectGenerate(requested);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Start
 
 function buildGroups() {
@@ -676,6 +708,7 @@ function bindControls() {
 
 async function start() {
   bindControls();
+  bindGenerate();
   for (const id of ["btn-restart", "btn-prev", "btn-play", "btn-next", "seek", "speed"]) $(id).disabled = true;
   try {
     const { manifest, manifestUrl } = await loadEntry();
