@@ -7,7 +7,7 @@
 <meta name="description" content="Recorded 2 m, 2.2 m natural-guide-star and exploratory 42 m adaptive-optics experiments, with a documented loss-of-lock diagnosis, repair and explicit assumptions.">
 <link rel="icon" href="data:,">
 <!-- Code and style come from the content-addressed build directory; see scripts/ao_explorer/site_build.py. -->
-<link rel="stylesheet" href="code-1a3335e1561d3f3b/styles.css">
+<link rel="stylesheet" href="code-6233215ee80710cc/styles.css">
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script type="module" src="code-1a3335e1561d3f3b/app.js" onerror="aoCodeUnavailable()"></script>
+<script type="module" src="code-6233215ee80710cc/app.js" onerror="aoCodeUnavailable()"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -52,6 +52,22 @@ function aoCodeUnavailable() {
     <p class="hint">Each button selects one complete recorded case; groups share the baseline. Combinations of changes were not computed and are not offered.</p>
     <div id="groups" class="groups"></div>
     <div id="case-summary" class="case-summary" aria-live="polite"></div>
+  </section>
+
+  <section id="evidence-2m" class="panel evidence-card" aria-labelledby="evidence-2m-title">
+    <h2 id="evidence-2m-title">Parameters &amp; evidence · selected 2 m case</h2>
+    <p class="evidence-kind">Synthetic engineering model · native time-domain SCAO · saved-data replay</p>
+    <dl class="evidence-grid">
+      <div><dt>Pupil / spatial sampling</dt><dd id="e2-pupil">Loading selected-case parameters…</dd></div>
+      <div><dt>WFS / science wavelength</dt><dd id="e2-wavelength">—</dd></div>
+      <div><dt>Atmosphere</dt><dd id="e2-atmosphere">—</dd></div>
+      <div><dt>Guide source / detector</dt><dd id="e2-source">—</dd></div>
+      <div><dt>Controller / command limit</dt><dd id="e2-control">—</dd></div>
+      <div><dt>Recorded evidence</dt><dd id="e2-record">—</dd></div>
+    </dl>
+    <p><strong>Supports:</strong> the recorded response to the selected change, within this synthetic model and realization.</p>
+    <p><strong>Not established:</strong> observatory hardware performance, a complete instrument error budget, or robustness across seeds and long exposures. The 0.2 s startup exclusion is a declared analysis choice.</p>
+    <p class="hint">Parameter status: synthetic profile and chosen operating conditions; no measured 2 m AO instrument is claimed. All OPD limits are command bounds. <a href="#details-title">Definitions and source identities →</a></p>
   </section>
 
   <section class="panel" aria-labelledby="viewer-title">
@@ -242,10 +258,19 @@ function aoCodeUnavailable() {
   <p class="lede">Follow one fixed on-axis simulation from a ten-layer atmosphere to DM correction and science images. The run covers one second at a 500 Hz simulated loop rate and was calculated offline. The browser replays 126 saved snapshots.</p>
   <p class="hint">Simplified annular pupil based on the <a href="https://www.eso.org/sci/facilities/eelt/science/drm/tech_data/telescope/">historical 42 m E-ELT reference geometry</a>. The <a href="https://elt.eso.org/about/">current ELT is 39 m</a>; this run does not predict an ELT instrument’s performance.</p>
   <div id="r42-status" class="status" role="status">The 42 m recording loads when this section is in view.</div><div id="r42-error" class="error" role="alert" hidden></div>
-  <section class="panel" aria-labelledby="r42-assumptions-title">
-    <h2 id="r42-assumptions-title">Assumptions for this run</h2>
+  <section id="evidence-42m" class="panel evidence-card" aria-labelledby="r42-assumptions-title">
+    <h2 id="r42-assumptions-title">Parameters &amp; evidence · 42 m</h2>
+    <p class="evidence-kind">Historical geometry + published atmosphere inputs + local hardware assumptions</p>
     <ul class="params"><li>42 m annular pupil · 28% obstruction</li><li>10 layers · r₀ 0.13 m at 500 nm</li><li>Science PSF at 2.2 µm</li><li>WFS: 10⁵ detected e⁻ per full subaperture per 2 ms</li><li>Synthetic CCD · detector noise on</li><li>One seed · 500 steps · 1 s simulated time</li></ul>
     <p class="takeaway">This is one configuration under an assumed high-flux guide-source setting. The guide flux is not tied to a measured star magnitude and is independent of the photographed binary.</p>
+    <dl class="evidence-grid">
+      <div><dt>Sampling / WFS wavelength</dt><dd>1008² pupil samples; 84 × 84 lenslet grid; 85 × 85 DM grid; 700 nm WFS reference.</dd></div>
+      <div><dt>Controller / command limit</dt><dd>500 Hz; gain 0.3; leak 0; two queued frames (4 ms); ±100 µm OPD, an assumed high-headroom bound.</dd></div>
+      <div><dt>Evidence window</dt><dd>Seed 1; 0–1 s recorded; [0.2, 1.0) s analysis. One realization, no confidence interval over realizations.</dd></div>
+      <div><dt>Parameter status</dt><dd>42 m historical DRM geometry and ten-layer profile; synthetic CCD, DM and photon-budget assumptions. L₀ = 25 m; all layer winds along +x.</dd></div>
+    </dl>
+    <p><strong>Supports:</strong> on-axis correction and command demand for this recorded model, plus the documented saved-data crop and saturation checks.</p>
+    <p><strong>Not established:</strong> current 39 m ELT performance, a causal aperture-only comparison, or long-run stability. The 0.2 s startup exclusion does not establish convergence.</p>
     <p class="hint">On-axis only; no segment gaps or spiders. Assumed detector and DM models, with a ±100 µm OPD command limit; no hardware-performance claim or complete instrument error budget. The 2 m and 42 m configurations and wavelengths differ, so they do not isolate the effect of aperture size. <a href="#dm-stroke">DM stroke, saturation and ELT M4 context →</a> · <a href="#replay42-methods">Full configuration and checks →</a></p>
   </section>
   <section class="panel" aria-labelledby="r42-viewer-title">
@@ -371,6 +396,21 @@ function aoCodeUnavailable() {
   <p class="hint">Published hardware targets, literature simulation inputs and local assumptions are combined here. This is a model study, not a measured Robo-AO-2 performance result. Publishing this section required no new simulation.</p>
   <p id="ngs22-status" class="status" role="status">Saved evidence loads when this section comes into view.</p>
   <div id="ngs22-error" class="error" role="alert" hidden></div>
+  <section id="evidence-ngs22" class="panel evidence-card" aria-labelledby="evidence-ngs22-title">
+    <h2 id="evidence-ngs22-title">Parameters &amp; evidence · 2.2 m NGS</h2>
+    <p class="evidence-kind">Published hardware targets + literature atmosphere + explicitly assumed operating model</p>
+    <dl class="evidence-grid">
+      <div><dt>Hardware targets / model sampling</dt><dd>UH 2.2 m scale; 16 × 16 lenslets; 17 actuators across the illuminated pupil. Numerical model: 256² samples and 197 command channels, not a measured 492-channel map.</dd></div>
+      <div><dt>Atmosphere / guide source</dt><dd>11 layers including slow dome seeing; r₀ = 0.113 m at 500 nm; L₀ = 25 m. AB 7 flat-fν guide photometry is a local assumption.</dd></div>
+      <div><dt>Wavelengths / sensing</dt><dd>750 nm WFS reference; displayed science PSFs at 1.65 µm. Noisy detector-level sensing; camera electronics, pupil and field-stop treatment remain approximate.</dd></div>
+      <div><dt>Controller / command limit</dt><dd>750 Hz; gain 0.4; leak 0; two queued frames (2.667 ms); ±3.5 µm OPD. Symmetric stroke assumes midpoint bias, normal incidence and no reserved static stroke.</dd></div>
+      <div><dt>Paired repair</dt><dd>TSVD cutoff 0.001 → 0.05; rejection decay added but never activated in v2. Both settings are local engineering choices.</dd></div>
+      <div><dt>Recorded evidence</dt><dd>One paired realization; 1500 frames per run over 2 s. All input atmosphere maps and calibration arrays match. Analysis starts at 0.2 s.</dd></div>
+    </dl>
+    <p><strong>Supports:</strong> stronger regularization prevents the recorded reconstruction failure on this identical input.</p>
+    <p><strong>Not established:</strong> measured Robo-AO-2 performance, recovery during this v2 trajectory, or long-term robustness. A separate tip-tilt mirror is omitted; the original assumptions remain in force.</p>
+    <p class="hint"><a href="#ngs22-assumptions">All 131 original field annotations →</a> · <a href="#ngs22-control">Inspect the control diagnosis →</a></p>
+  </section>
   <section id="ngs22-replay" class="panel ngsr-panel" aria-labelledby="ngsr-title">
     <h2 id="ngsr-title">Replay the same atmosphere, before and after repair.</h2>
     <p>Shared input on the left; original v1 in the middle; repaired v2 on the right. Wavefronts, PSFs, readouts and the black chart cursor advance together. The red dashed line marks <strong>frame 736 · 0.981333 s</strong>, the first rejected v1 reconstruction.</p>
@@ -431,6 +471,38 @@ function aoCodeUnavailable() {
     </ol>
     <p>At three saved times after rejection, a fixed-state check with the <em>same atmosphere and a flat DM</em> restores all calibrated measurement rows. This supports the held correction maintaining the failure in these states. It does not identify a unique first noise event or establish a universal cause of AO loss of lock.</p>
     <p class="takeaway">Few new clipping events after the failure do not mean the loop became stable: the DM stopped updating. Persistent boundary occupancy and reconstruction validity reveal the difference.</p>
+  </section>
+  <section id="ngs22-control" class="panel ngsc-panel" aria-labelledby="ngsc-title">
+    <h2 id="ngsc-title">From usable measurements to a held bad correction.</h2>
+    <p>Inspect four recorded signals on the same time axis. Orange: original v1; green: repaired v2. The red dashed marker is <strong>frame 736 · 0.981333 s</strong>, v1’s first rejected reconstruction. Optical degradation begins earlier.</p>
+    <p id="ngsc-status" class="status" role="status">Saved control telemetry loads when this panel is visible.</p>
+    <p id="ngsc-error" class="error" role="alert" hidden></p>
+    <div class="transport" role="group" aria-label="Control timeline interval">
+      <button id="ngsc-focus" aria-pressed="true" disabled>Failure detail · 0.920–1.040 s</button>
+      <button id="ngsc-full" aria-pressed="false" disabled>Whole recording · 0–2 s</button>
+    </div>
+    <div class="transport" role="group" aria-label="Inspect a control frame">
+      <button id="ngsc-previous" aria-label="Previous telemetry frame" disabled>◀ Frame</button>
+      <label>Telemetry frame <input id="ngsc-seek" type="range" min="0" max="1499" value="736" step="1" disabled></label>
+      <button id="ngsc-next" aria-label="Next telemetry frame" disabled>Frame ▶</button>
+      <button id="ngsc-growth" disabled>Large increment · 732</button>
+      <button id="ngsc-loss" disabled>First rejection · 736</button>
+      <button id="ngsc-held" disabled>Queue drained · 738</button>
+    </div>
+    <p id="ngsc-readout" class="readout" aria-live="off"></p>
+    <div class="ngsc-plots">
+      <figure class="chart"><canvas id="ngsc-valid" width="900" height="190" role="img" aria-label="Valid measurement rows, original and repaired"></canvas><figcaption>1 · Valid rows / 374 calibrated rows. Dashed horizontal line: unchanged 75% reconstruction gate.</figcaption></figure>
+      <figure class="chart"><canvas id="ngsc-increment" width="900" height="190" role="img" aria-label="Reconstructed command increment norm, original and repaired"></canvas><figcaption>2 · Reconstructed actuator-vector L2 norm, before controller gain and queue. Gaps mean no usable estimate; they are not zero error. This is not individual actuator stroke.</figcaption></figure>
+      <figure class="chart"><canvas id="ngsc-boundary" width="900" height="190" role="img" aria-label="Held DM boundary occupancy, original and repaired"></canvas><figcaption>3 · Actuators held at the boundary during this exposure, aligned with its PSF. This differs from newly clipped requests.</figcaption></figure>
+      <figure class="chart"><canvas id="ngsc-strehl" width="900" height="190" role="img" aria-label="H band Strehl on the control timeline"></canvas><figcaption>4 · Instantaneous pre-update H-band peak Strehl. Rejected frames remain in the record.</figcaption></figure>
+    </div>
+    <div class="table-scroll"><table class="comparison-table"><caption>Selected native telemetry frame; no temporal resampling</caption><thead><tr><th scope="col">Signal</th><th scope="col">Original v1</th><th scope="col">Repaired v2</th></tr></thead><tbody id="ngsc-values"></tbody></table></div>
+    <p class="takeaway">At frame 732 (0.976 s), v1’s increment-vector norm is 45.82 µm OPD. Frame 736 has only 278/374 valid rows (74.33%). Queued updates continue through frame 737; from exposure 738, eight actuators remain at their boundary. V2 stays usable with no boundary occupancy in this recording.</p>
+    <details><summary>Frame timing, definitions and downloadable telemetry</summary>
+      <p>Wavefront, measurement validity and Strehl refer to exposure k. The archived applied DM command is recorded after update k and is held for exposure k+1, so the occupancy curve uses applied[k−1]; frame 0 starts flat. The existing comparison table above counts post-update applied states. The CSV keeps both the aligned held occupancy and the unshifted new-clipping fraction.</p>
+      <p>A rejected reconstruction is stored with a zero increment sentinel. Here it is a null value and a plotted gap. All 1500 native samples per run are retained. The curves describe this realization; the previously recorded modal and fixed-state checks support the diagnosis, while the initiating noise event remains unresolved.</p>
+      <div id="ngsc-downloads" class="downloads"></div>
+    </details>
   </section>
   <section class="panel" aria-labelledby="ngs22-repair-title">
     <h2 id="ngs22-repair-title">A limited repair, with its assumptions visible</h2>
@@ -508,6 +580,17 @@ function aoCodeUnavailable() {
 
 <footer class="site-footer">
   <div class="wrap">
+    <section id="references" class="reference-repos" aria-labelledby="references-title">
+      <h2 id="references-title">Source code and reference repositories</h2>
+      <p><a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation"><strong>Shack-Hartmann AO Simulation</strong></a> — this project's source, configurations, notebooks and validation records. The 2 m, 2.2 m and 42 m time-domain recordings use the project's native implementation.</p>
+      <ul>
+        <li><a href="https://github.com/ehpor/hcipy"><strong>HCIPy</strong></a> — optional optical backend and independent component comparison; see the R7 study.</li>
+        <li><a href="https://github.com/astro-tiptop/TIPTOP"><strong>TIPTOP</strong></a> — upstream ecosystem for the separate analytical AO performance study in the appendix.</li>
+        <li><a href="https://github.com/astro-tiptop/P3"><strong>P3</strong></a> — sampled correction-band phase PSD used by that analytical adapter.</li>
+        <li><a href="https://github.com/astro-tiptop/MASTSEL"><strong>MASTSEL</strong></a> — PSD-to-PSF propagation used by that analytical adapter.</li>
+      </ul>
+      <p class="hint">The analytical adapter adds its own fitting-tail completion; its outputs are not unmodified TIPTOP predictions. Repository links identify upstream software, not validation of an instrument. Recorded versions, source revisions, scientific references and evidence limits remain attached to each study.</p>
+    </section>
     <p>Repository-authored code and data under the MIT licence; third-party data and tools keep their own terms (see each result card). Synthetic demonstration — not measured observatory or instrument performance.</p>
     <p id="footer-identity"></p>
   </div>

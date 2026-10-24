@@ -273,3 +273,32 @@ Seek, frame stepping, loss-of-lock jumps, pause and restart share one state.
 A hidden tab pauses; a failed asset verification stops the replay and leaves
 the last verified images and cursor together. The 2 m and 42 m players remain
 independent. The original NGS evidence and all draft assumptions are unchanged.
+
+### Parameter summaries and control diagnosis
+
+The three main experiments have visible parameter/evidence cards. The 2 m
+card follows the currently selected verified case, including changes to guide
+brightness, turbulence, gain and queued delay. The 42 m and 2.2 m cards separate
+published input targets from local assumptions and state what the recorded
+evidence supports. They do not add instrument-validation claims.
+
+`#ngs22-control` presents all 1500 native telemetry samples per 2.2 m run in
+four synchronized charts: effective measurement rows, reconstructed increment
+L2 norm, held DM boundary occupancy and H-band Strehl. The default view covers
+0.920–1.040 s; the full 0–2 s record is also selectable. Native-frame stepping,
+a shared cursor, event shortcuts and a numerical table expose the failure
+sequence without resampling or rerunning a model.
+
+`scripts/ao_explorer/ngs_control_bundle.py` exports the hash-verified `ngsControl`
+bundle from existing histories. It imports no AO runtime. The applied command
+archive records the state after update k, so held occupancy at exposure k uses
+the applied state at k−1. This differs intentionally from the original
+comparison table's post-update boundary counts. Unusable reconstruction zeros
+are exported as null increments and shown as gaps; they do not mean zero error.
+CSV and JSON retain every sample and the definitions/source hashes are downloadable.
+All earlier evidence, draft assumptions and replay bundles remain unchanged.
+
+`#references` links this repository and the official HCIPy, TIPTOP, P3 and
+MASTSEL repositories, identifying their roles in independent component
+comparisons or the separate analytical study. Recorded versions remain with
+each study rather than being replaced by whatever is currently upstream.
