@@ -1,0 +1,21 @@
+{
+  "all_1500_atmosphere_maps_matched_bitwise": true,
+  "identical_calibration_arrays": true,
+  "first_command_difference_frame": 92,
+  "initial_commands_identical_frames": 92,
+  "new_saved_psf_peak_metric_max_error": 2.220446049250313e-16,
+  "full_saved_residual_rms_max_error_m": 0.0,
+  "effective_stroke_clipping_and_boundary_checks": true,
+  "baseline_files_unchanged": 12,
+  "original_report_manifest_unchanged": true,
+  "ci_run": false,
+  "focused_local_tests": {
+    "passed": 3,
+    "duration_s": 0.34,
+    "selection": [
+      "test_tsvd_kept_mode_boundary_spectrum_residual_and_noise_proxy",
+      "test_noise_amplification_is_monotonic_as_tsvd_cutoff_decreases",
+      "test_decay_counts_consecutive_unused_frames_and_resets_on_a_used_one"
+    ]
+  }
+}

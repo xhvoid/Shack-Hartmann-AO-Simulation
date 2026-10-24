@@ -199,6 +199,14 @@ tr.excluded th, tr.excluded td { color: var(--muted); font-style: italic; }
 .comparison-table { width: 100%; font-variant-numeric: tabular-nums; }
 .comparison-table caption { text-align: left; font-size: 12px; color: var(--muted); margin: 10px 0; }
 #aperture-comparison { border-top: 1px solid var(--rule); margin-top: 28px; }
+#ngs22 { border-top: 1px solid var(--rule); margin-top: 28px; }
+.ngs-chain li { margin-bottom: 12px; }
+.ngs-filter { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 15px 0; }
+.ngs-filter input { font: inherit; padding: 7px 10px; border: 1px solid var(--rule); border-radius: 4px; min-width: 240px; max-width: 100%; }
+.ngs-ledger { max-height: 600px; overflow: auto; }
+.ngs-ledger table { min-width: 800px; }
+.ngs-ledger th, .ngs-ledger td { vertical-align: top; overflow-wrap: anywhere; max-width: 300px; }
+.ngs-ledger pre { white-space: pre-wrap; font-size: 11px; }
 @media (max-width: 700px) { .comparison-columns { grid-template-columns: 1fr; gap: 8px; } .comparison-table { font-size: 12px; } }
 .section, .appendix-record, #methods { scroll-margin-top: 140px; }
 #project, #replay42, #appendix { margin-top: 28px; border-top: 1px solid var(--rule); }

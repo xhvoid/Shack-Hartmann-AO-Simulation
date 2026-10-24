@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AO Simulation Explorer</title>
-<meta name="description" content="Recorded 2 m and exploratory 42 m adaptive-optics experiments, the ten-layer atmosphere, and the numerical evidence behind the simulation.">
+<meta name="description" content="Recorded 2 m, 2.2 m natural-guide-star and exploratory 42 m adaptive-optics experiments, with a documented loss-of-lock diagnosis, repair and explicit assumptions.">
 <link rel="icon" href="data:,">
 <!-- Code and style come from the content-addressed build directory; see scripts/ao_explorer/site_build.py. -->
-<link rel="stylesheet" href="code-c59c058c67176585/styles.css">
+<link rel="stylesheet" href="code-02baf4540e11e316/styles.css">
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script type="module" src="code-c59c058c67176585/app.js" onerror="aoCodeUnavailable()"></script>
+<script type="module" src="code-02baf4540e11e316/app.js" onerror="aoCodeUnavailable()"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -32,6 +32,7 @@ function aoCodeUnavailable() {
         <li><a href="#explore">Explore 2 m</a></li>
         <li><a href="#project">Behind the simulation</a></li>
         <li><a href="#replay42">Explore 42 m</a></li>
+        <li><a href="#ngs22">2.2 m NGS study</a></li>
         <li><a href="#appendix">Appendix</a></li>
       </ul>
     </nav>
@@ -360,6 +361,65 @@ function aoCodeUnavailable() {
     <p>The ±100 µm assumption is therefore compatible with a large-mirror stroke scale, but it is not a calibrated ELT M4 hardware specification. The demonstrated absence of saturation applies to this recorded model and bound.</p>
     <details><summary>Methods, source identities and downloadable evidence</summary><div class="prose"><p>The raw histories match their archived SHA-256 records. Saturation was independently reconstructed from the requested commands, applied commands were checked against clipping, and published timestamps and residual RMS were checked against the histories. The public data and PNG/PDF are copied from the completed audit without recalculation.</p><p>For the distinction between limited stroke and controller state, see <a href="https://faculty.nps.edu/agrawal/docs/DEPS_BC_12-BC-011%20paper.pdf">Nagashima, Kim and Agrawal, actuator limitations and anti-windup</a>. For controlled finite-stroke comparisons in a different ELT AO architecture, see <a href="https://academic.oup.com/mnras/article/435/2/992/1033081">Basden et al. (2013), §§2.3 and 3.3</a>. Their numerical performance penalties are not transferred to this recording.</p><div id="stroke-downloads" class="downloads"></div></div></details>
   </section>
+</section>
+
+<section id="ngs22" class="wrap section" aria-labelledby="ngs22-title">
+  <p class="section-kicker">Natural guide star · saved experiment</p>
+  <h1 id="ngs22-title">A 2.2 m model: failure, diagnosis, repair.</h1>
+  <p class="lede">A Robo-AO-2-inspired configuration on the UH 2.2 m telescope scale. The original draft loses usable reconstruction after 0.9813 s; a revised inverse remains usable through the same two-second atmosphere sequence. Both outcomes are retained.</p>
+  <p class="takeaway"><strong>What changed:</strong> stronger rejection of weakly sensed reconstruction modes. The DM stroke, atmosphere, photons, loop gain and timing are unchanged between the two 2.2 m runs. The added recovery safeguard never activated in the validation run.</p>
+  <p class="hint">Published hardware targets, literature simulation inputs and local assumptions are combined here. This is a model study, not a measured Robo-AO-2 performance result. Publishing this section required no new simulation.</p>
+  <p id="ngs22-status" class="status" role="status">Saved evidence loads when this section comes into view.</p>
+  <div id="ngs22-error" class="error" role="alert" hidden></div>
+  <section class="panel" aria-labelledby="ngs22-compare-title">
+    <h2 id="ngs22-compare-title">Compare the same time interval.</h2>
+    <div class="comparison-controls" role="group" aria-label="NGS comparison interval">
+      <button type="button" data-ngs-window="primary" aria-pressed="true" aria-controls="ngs22-table" disabled>0.2–1.0 s · with saved 2 m baseline</button>
+      <button type="button" data-ngs-window="secondary" aria-pressed="false" aria-controls="ngs22-table" disabled>0.2–2.0 s · 2.2 m before / after</button>
+    </div>
+    <p id="ngs22-window-note" class="hint">The baseline covers one second. The longer window compares only the two 2.2 m runs.</p>
+    <div class="table-scroll"><table id="ngs22-table" class="comparison-table"><caption>H-band (1.65 µm), instantaneous pre-update peak Strehl. All frames in the selected window are included.</caption><thead><tr><th scope="col">Recorded configuration</th><th scope="col">Frames</th><th scope="col">Mean Strehl</th><th scope="col">Temporal SD</th><th scope="col">CV</th><th scope="col">Frames with new clipping</th><th scope="col">Frames with DM at boundary</th><th scope="col">Unusable reconstruction</th></tr></thead><tbody id="ngs22-table-body"></tbody></table></div>
+    <p class="hint">SD is the population standard deviation over time; CV = SD / mean. These are fluctuations of this recording, not error bars on a population mean. The first 0.2 s is excluded as predeclared; rejected frames after that remain in the statistics.</p>
+    <p class="hint"><strong>Saturation has two meanings:</strong> new clipping counts a command request beyond the limit; boundary occupancy also counts a command held at the limit. Each table percentage counts frames with at least one affected actuator. The plot below instead shows the fraction of actuators in each frame.</p>
+    <figure class="comparison-figure"><a id="ngs22-figure-full"><img id="ngs22-figure" width="1760" height="1520" alt="Saved 2 m baseline and original and revised 2.2 m trajectories: H Strehl, usable measurement rows, newly clipped actuators and persistent boundary occupancy. The revised trajectory remains usable after the original fails at 0.9813 seconds." hidden></a><figcaption>The existing scientific figure is reproduced unchanged. Orange: original 2.2 m draft; green: revision; blue: saved 2 m baseline. The original failure remains visible. <span id="ngs22-validation"></span></figcaption></figure>
+  </section>
+  <section class="panel prose" aria-labelledby="ngs22-cause-title">
+    <h2 id="ngs22-cause-title">How a small measurement loss became sustained loss of lock</h2>
+    <ol class="ngs-chain">
+      <li><strong>Some lenslets fail quality gates.</strong> Peak-SNR rejection appears before window-clipping and centroid-uncertainty failures spread. Selected deterministic checks reproduce the saved effective row counts; detector pixel saturation is absent in those states.</li>
+      <li><strong>The remaining measurements poorly constrain some modes.</strong> The full calibration is reasonably conditioned, but removing rows creates weak response modes. The draft's TSVD cutoff of 0.001 still retains modes that amplify small measurement errors into large DM increments.</li>
+      <li><strong>Large increments drive further measurement loss.</strong> At frame 732 (0.976 s), the reconstructed actuator-vector increment norm reaches 45.82 µm OPD. Filtering that saved vector at 0.05 removes 98.43% of its squared norm. This vector norm is not the excursion of one actuator.</li>
+      <li><strong>Reconstruction is rejected and the mirror holds a bad shape.</strong> At frame 736 (0.981333 s), only 278 of 374 calibrated rows remain: 74.33%, below the unchanged 75% gate. Queued commands continue through frame 737; zero leak then holds the applied shape, with eight actuators at their limit.</li>
+    </ol>
+    <p>At three saved times after rejection, a fixed-state check with the <em>same atmosphere and a flat DM</em> restores all calibrated measurement rows. This supports the held correction maintaining the failure in these states. It does not identify a unique first noise event or establish a universal cause of AO loss of lock.</p>
+    <p class="takeaway">Few new clipping events after the failure do not mean the loop became stable: the DM stopped updating. Persistent boundary occupancy and reconstruction validity reveal the difference.</p>
+  </section>
+  <section class="panel" aria-labelledby="ngs22-repair-title">
+    <h2 id="ngs22-repair-title">A limited repair, with its assumptions visible</h2>
+    <div class="table-scroll"><table class="comparison-table"><thead><tr><th scope="col">Setting</th><th scope="col">Original draft · v1</th><th scope="col">Revision · v2</th><th scope="col">Evidence status</th></tr></thead><tbody>
+      <tr><th scope="row">TSVD relative cutoff</th><td>0.001</td><td>0.05</td><td>Local numerical/engineering choice; not an instrument setting. Limits retained relative inverse sensitivity to 20 instead of 1000. All 197 full-support calibration modes remain.</td></tr>
+      <tr><th scope="row">Consecutive-rejection recovery</th><td>None</td><td>After 3 rejected frames, decay requested commands by 5% on each further rejected frame</td><td>Local safety assumption. Two-frame queue drains first. Fallback reconstruction and gain scheduling remain disabled.</td></tr>
+      <tr><th scope="row">Physical model and normal controller</th><td colspan="2">2.2 m; ±3.5 µm OPD; gain 0.4; zero leak; two queued frames; 750 Hz; same atmosphere, optics and camera settings</td><td>Unchanged between v1 and v2. Original classifications and qualifications remain in the field ledger.</td></tr>
+    </tbody></table></div>
+    <p>Validation uses the same seed and realization: all 1500 atmospheric maps match bitwise and the calibration arrays are identical. All 1500 revised frames reconstruct, with zero command clipping and zero boundary occupancy. <strong>No recovery decay or fallback was activated.</strong> The preventive cutoff change accounts for the improvement on this input; recovery capability was checked separately.</p>
+    <p>The <a href="https://arxiv.org/html/2407.14677v1">published NGS simulation</a> uses regularized zonal least squares. This model retains a TSVD approximation. The rationale for suppressing weak inverse modes follows <a href="https://aomicroscopy.org/calibration-and-closed-loop-control-of-deformable-mirrors-using-direct-sensing">the SVD calibration discussion</a>; neither source supplies the chosen 0.05 cutoff or recovery settings.</p>
+  </section>
+  <details class="panel" id="ngs22-assumptions"><summary>Hardware targets, model gaps and all 131 original field annotations</summary>
+    <div class="prose"><p><strong>The original preparation draft is preserved.</strong> Its “not run / unregistered” wording describes that earlier checkpoint. The executed v1 and v2 configurations are available below. The revision overlay changes only the cutoff and recovery policy; it does not silently reclassify other assumptions.</p>
+      <p>Hardware targets include the UH 2.2 m aperture, a 16 × 16 NGS lenslet layout and a BMC DM492-3.5 mirror with 17 actuators across the illuminated pupil. The model uses 197 retained actuator centres, not a measured 492-channel hardware map. Its symmetric ±3.5 µm OPD bound assumes normal incidence, midpoint bias and no reserved static-correction stroke.</p>
+      <p>Important gaps remain: a separate tip-tilt mirror is omitted; the pupil and influence functions are approximate; NGS binning, field-stop propagation, actual controller timing and detector electronics are not fully calibrated. AB 7 flat-fν photometry, the sky convention, numerical sampling and some camera values are local assumptions. The slowly evolving dome layer makes two seconds insufficient to establish long-term stability.</p>
+      <p>Evidence categories distinguish published hardware or operating modes, literature simulation assumptions, derived values, local assumptions and numerical choices. The original field ledger retains its detailed notes and source labels. Revision settings have their own downloadable overlay.</p>
+    </div>
+    <label class="ngs-filter" for="ngs22-filter">Find a field or assumption <input id="ngs22-filter" type="search" placeholder="e.g. stroke, latency, assumed" disabled></label>
+    <p id="ngs22-ledger-count" class="hint" role="status"></p>
+    <div class="table-scroll ngs-ledger"><table><caption>Frozen v1 preparation ledger. Unchanged fields carry the same classifications in v2; the two overrides are listed above.</caption><thead><tr><th scope="col">Field</th><th scope="col">Original 2 m</th><th scope="col">2.2 m draft</th><th scope="col">Classification / sources</th><th scope="col">Qualification</th></tr></thead><tbody id="ngs22-ledger-body"></tbody></table></div>
+  </details>
+  <details class="panel"><summary>Preserved data, execution history and downloads</summary><div class="prose">
+    <p>The original 2 m archive remains unchanged and no 42 m run was needed. This publication uses only the completed records. The comparison with 2 m is descriptive: aperture, atmosphere, spatial sampling, camera and controller all differ. It cannot identify the causal effect of DM stroke.</p>
+    <p>The original run also encountered a separate telemetry-export issue: a negative background-subtracted SNR diagnostic was clipped to zero for export, while signed quality calculations and validity gates remained unchanged. A replay reproduced all 745 prior frames exactly before completing the same realization. A later one-ULP stroke-limit postcheck was corrected using saved data. These execution corrections are distinct from the loss-of-lock mechanism above.</p>
+    <p>The downloads preserve source hashes, all field assumptions, executed configurations, diagnostic checks and per-frame scalar values. Full-resolution raw wavefront stacks remain in the local archive. The figures and statistics establish this single two-second realization, not long-duration robustness, convergence or measured hardware performance.</p>
+    <div id="ngs22-downloads" class="downloads"></div>
+  </div></details>
 </section>
 
 <section id="appendix" class="wrap section" aria-labelledby="appendix-title">
