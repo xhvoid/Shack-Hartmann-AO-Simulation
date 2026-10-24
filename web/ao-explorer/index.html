@@ -7,7 +7,7 @@
 <meta name="description" content="Recorded 2 m, 2.2 m natural-guide-star and exploratory 42 m adaptive-optics experiments, with a documented loss-of-lock diagnosis, repair and explicit assumptions.">
 <link rel="icon" href="data:,">
 <!-- Code and style come from the content-addressed build directory; see scripts/ao_explorer/site_build.py. -->
-<link rel="stylesheet" href="code-02baf4540e11e316/styles.css">
+<link rel="stylesheet" href="code-e9f3920178e1d783/styles.css">
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script type="module" src="code-02baf4540e11e316/app.js" onerror="aoCodeUnavailable()"></script>
+<script type="module" src="code-e9f3920178e1d783/app.js" onerror="aoCodeUnavailable()"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -371,6 +371,44 @@ function aoCodeUnavailable() {
   <p class="hint">Published hardware targets, literature simulation inputs and local assumptions are combined here. This is a model study, not a measured Robo-AO-2 performance result. Publishing this section required no new simulation.</p>
   <p id="ngs22-status" class="status" role="status">Saved evidence loads when this section comes into view.</p>
   <div id="ngs22-error" class="error" role="alert" hidden></div>
+  <section id="ngs22-replay" class="panel ngsr-panel" aria-labelledby="ngsr-title">
+    <h2 id="ngsr-title">Replay the same atmosphere, before and after repair.</h2>
+    <p>Shared input on the left; original v1 in the middle; repaired v2 on the right. Wavefronts, PSFs, readouts and the black chart cursor advance together. The red dashed line marks <strong>frame 736 · 0.981333 s</strong>, the first rejected v1 reconstruction.</p>
+    <p id="ngsr-status" class="status" role="status">Saved replay loads when this panel is visible.</p>
+    <p id="ngsr-error" class="error" role="alert" hidden></p>
+    <div class="ngsr-grid">
+      <figure><h3>Shared input</h3><canvas id="ngsr-atmosphere" width="256" height="256" role="img" aria-label="Shared atmospheric OPD"></canvas><figcaption id="ngsr-atmosphere-caption">Shared atmosphere</figcaption></figure>
+      <figure><h3 class="ngsr-v1">Original · v1</h3><canvas id="ngsr-residual-v1" width="256" height="256" role="img" aria-label="Original v1 pre-update residual OPD"></canvas><figcaption id="ngsr-residual-v1-caption">Original residual</figcaption></figure>
+      <figure><h3 class="ngsr-v2">Repaired · v2</h3><canvas id="ngsr-residual-v2" width="256" height="256" role="img" aria-label="Repaired v2 pre-update residual OPD"></canvas><figcaption id="ngsr-residual-v2-caption">Repaired residual</figcaption></figure>
+    </div>
+    <div class="ngsr-scale"><canvas id="ngsr-wave-scale" width="256" height="12" aria-label="Common diverging OPD color scale"></canvas><span id="ngsr-wave-scale-text"></span></div>
+    <p class="hint">One fixed OPD scale for all three panels and every frame; no displayed value is clipped. Piston removed for map display only; tilt retained. Dark pixels lie outside the pupil.</p>
+    <div class="ngsr-grid">
+      <figure><canvas id="ngsr-psf-u" width="256" height="256" role="img" aria-label="Uncorrected H-band PSF"></canvas><figcaption id="ngsr-psf-u-caption">Uncorrected PSF</figcaption></figure>
+      <figure><canvas id="ngsr-psf-v1" width="256" height="256" role="img" aria-label="Original v1 H-band PSF"></canvas><figcaption id="ngsr-psf-v1-caption">Original PSF</figcaption></figure>
+      <figure><canvas id="ngsr-psf-v2" width="256" height="256" role="img" aria-label="Repaired v2 H-band PSF"></canvas><figcaption id="ngsr-psf-v2-caption">Repaired PSF</figcaption></figure>
+    </div>
+    <div class="ngsr-scale"><canvas id="ngsr-psf-scale" width="256" height="12" aria-label="Common logarithmic PSF brightness scale"></canvas><span>10⁻⁶ · 10⁻³ · 1 of ideal peak (log scale)</span></div>
+    <p id="ngsr-field" class="hint"></p>
+    <div class="transport" role="group" aria-label="Synchronized 2.2 m playback">
+      <button id="ngsr-restart" disabled>Restart</button><button id="ngsr-previous" disabled aria-label="Previous 2.2 m snapshot">◀ Step</button><button id="ngsr-play" disabled aria-pressed="false">Play</button><button id="ngsr-next" disabled aria-label="Next 2.2 m snapshot">Step ▶</button>
+      <label>Seek <input id="ngsr-seek" type="range" min="0" max="1" value="0" step="1" disabled></label>
+      <label>One pass in <select id="ngsr-duration" disabled><option value="20">20 s</option><option value="40" selected>40 s</option><option value="60">60 s</option></select></label>
+    </div>
+    <div class="transport" role="group" aria-label="Inspect loss of lock">
+      <button id="ngsr-before" disabled>Before loss · frame 735</button><button id="ngsr-loss" disabled>Loss of lock · 0.981333 s</button><button id="ngsr-after" disabled>After loss · frame 737</button>
+    </div>
+    <p id="ngsr-readout" class="readout" aria-live="off"></p><p id="ngsr-event" class="ngsr-event"></p>
+    <div class="ngsr-validity"><p id="ngsr-valid-v1" class="ngsr-v1"></p><p id="ngsr-valid-v2" class="ngsr-v2"></p></div>
+    <figure class="chart"><canvas id="ngsr-strehl" width="900" height="260" role="img" aria-label="Synchronized H-band Strehl curves"></canvas><figcaption>All 1500 instantaneous pre-update peak Strehl values, including rejected frames. Black: displayed timestamp. Red dashed: v1’s first rejected reconstruction; optical degradation starts earlier.</figcaption></figure>
+    <p id="ngsr-timing" class="hint"></p>
+    <details><summary>Replay sampling, PSF derivation and downloads</summary>
+      <p id="ngsr-sampling"></p>
+      <p>PSFs were rendered offline from existing raw OPD maps using the original centered FFT convention, binary pupil, threefold padding and unit total flux. All 15 archived original/repaired PSF snapshots match exactly; sampled Strehl values agree to within 4.5 × 10⁻¹⁶. The browser only replays the exported images. No atmosphere, detector noise or control trajectory was rerun.</p>
+      <p>Maps retain all 256 × 256 pupil samples. Cropped PSFs are enlarged with nearest-neighbour sampling for display; the full PSF determines Strehl. No temporal interpolation or per-frame contrast rescaling is applied. Changing speed only changes presentation time. Playback pauses when the tab is hidden and does not skip frames while loading. The original draft and all assumptions remain below.</p>
+      <div id="ngsr-downloads" class="downloads"></div>
+    </details>
+  </section>
   <section class="panel" aria-labelledby="ngs22-compare-title">
     <h2 id="ngs22-compare-title">Compare the same time interval.</h2>
     <div class="comparison-controls" role="group" aria-label="NGS comparison interval">
