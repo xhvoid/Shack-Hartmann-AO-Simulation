@@ -4,7 +4,7 @@
  "manifest": "series-2m1000-s624-c7241e4190d5-ef74a541b0e60/manifest.json",
  "manifest_bytes": 42464,
  "manifest_sha256": "a151da4b84b21029c03a9f373c586a8203781807e52cb0f9bedddef4ae1719ee",
- "code_build": "02baf4540e11e316",
+ "code_build": "e9f3920178e1d783",
  "galaxy": {
   "schema": "ao-explorer.galaxy-entry.v3",
   "derived_id": "ngc1705-f814w-2m1000-s624-c7241e4190d5-gda93ed5af026-m4adb5a4af111",
@@ -46,5 +46,12 @@
   "manifest": "../derived/ngs-22m-53663e0742d1d106/manifest.json",
   "manifest_bytes": 3302,
   "manifest_sha256": "0030fbd65ee38ea98e364a3f94fd158794b49bfa215fe97f78ab0e5c0b860154"
+ },
+ "ngsReplay": {
+  "schema": "ao-explorer.ngs-replay-entry.v1",
+  "id": "ngs-replay-b3e470f2d04acd5b",
+  "manifest": "../recordings/ngs-replay-b3e470f2d04acd5b/manifest.json",
+  "manifest_bytes": 27969,
+  "manifest_sha256": "cd70424f702bd0c72eb9e5a78f4775303e0bfa2f1f72bd6396b68784e8f351eb"
  }
 }

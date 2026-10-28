@@ -78,6 +78,7 @@ code-<build>/galaxy.js          observed-template galaxy view
 code-<build>/playback.js        the one playback state and clock both panels operate
 code-<build>/results.js         topic evidence and lazy appendix rendering
 code-<build>/replay42.js        fixed 42 m recording and independent timeline
+code-<build>/ngs-replay.js      synchronized v1/v2 2.2 m wavefront/PSF replay
 code-<build>/charts.js          canvas charts of recorded values
 code-<build>/integrity.js       size + SHA-256 verification, relative resolution
 data/current.json               entry: dataset id, manifest size/SHA-256, code build,
@@ -98,6 +99,8 @@ derived/rms-<...>/manifest.json RMS diagnostics: residual RMS after tip/tilt rem
                                 residual map, bound by the `diagnostics` block of data/current.json
 derived/rms-<...>/cases/<id>/   rms.json per case (1000 values, window means, source digests)
 recordings/42m-500-<hash>/      immutable 42 m data, atlases, scientific source and run evidence
+recordings/ngs-replay-<hash>/   159 paired display atlases, all 1500 scalar samples,
+                                offline PSF checks and archive hashes
 derived/ngs-22m-<hash>/         saved NGS results, diagnosis, figure, scalar histories,
                                 original draft ledger, configurations and revision assumptions
 ```
@@ -245,3 +248,28 @@ input; the added recovery safeguard did not activate. Neither the selected
 cutoff nor recovery policy is presented as a measured hardware setting or
 long-term validation. The public bundle includes source hashes and scalar
 records; full wavefront stacks remain in the local archives.
+
+### Paired wavefront and PSF replay
+
+`#ngs22-replay` uses a separate `ngsReplay` entry and hash-verified immutable
+bundle. `scripts/ao_explorer/ngs_replay_bundle.py` reads only saved arrays and
+scalar records; it imports no AO runtime. A centered FFT renders H-band PSFs
+from the raw saved OPD. All 15 archived v1/v2 PSF snapshots match exactly, and
+all 477 displayed uncorrected/v1/v2 Strehl samples match the saved metrics to
+within 4.5e-16. These are archive-consistency checks, not a new trajectory.
+
+The display selects 159 actual timestamps: every 12th frame, every archived
+PSF snapshot time and all frames 720–752 around the first rejected v1
+reconstruction (frame 736, 0.981333333 s). Both residual maps, the common input,
+all three PSFs and the chart cursor commit atomically from one verified atlas.
+All 1500 scalar samples remain in the curve. The fixed OPD scale covers every
+displayed map without clipping; piston is removed only for map display. PSFs
+retain tilt, the original angular grid and one ideal-peak logarithmic scale;
+cropping is only for display and does not determine Strehl.
+
+A single timer holds each selected frame until the next recorded timestamp
+at the chosen slowdown. Loading can extend a hold but never skips frames.
+Seek, frame stepping, loss-of-lock jumps, pause and restart share one state.
+A hidden tab pauses; a failed asset verification stops the replay and leaves
+the last verified images and cursor together. The 2 m and 42 m players remain
+independent. The original NGS evidence and all draft assumptions are unchanged.

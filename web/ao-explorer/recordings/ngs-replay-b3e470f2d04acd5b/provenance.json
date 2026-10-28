@@ -1,0 +1,72 @@
+{
+  "schema": "ao-explorer.ngs-replay-provenance.v1",
+  "inputs": {
+    "outputs/robo_ao2_ngs/20261024-first-trajectory/attempt-04/pre_update_residual_opd_m.npy": {
+      "bytes": 786432128,
+      "sha256": "7d8964e71a03ce6d2ebc7a4e1dec22a08cb92f482fe05c27cf9325a6e30e1fa1"
+    },
+    "outputs/robo_ao2_ngs/20261024-first-trajectory/attempt-04/history.npz": {
+      "bytes": 5477394,
+      "sha256": "3c1c2435f0b925fa929ad05579dbb674a0faef3f31cd5ce6d64c715f00dfae77"
+    },
+    "outputs/robo_ao2_ngs/20261024-first-trajectory/attempt-04/science-psfs.npz": {
+      "bytes": 47267022,
+      "sha256": "a9ca02ef2cf7816b5c337792ea7a19776cfeb61eb686c3358e8565157c715e6a"
+    },
+    "outputs/robo_ao2_ngs/20261024-first-trajectory/attempt-04/frame-metrics.csv": {
+      "bytes": 159185,
+      "sha256": "3efc096ff5fbf5bee0b2ead0d6c4f5d91ffb8736b11de16b94e712a8173e31b6"
+    },
+    "outputs/robo_ao2_ngs/20261024-first-trajectory/attempt-04/atmosphere_opd_m.npy": {
+      "bytes": 786432128,
+      "sha256": "f0e52b51e94c376b8a35fd96d240042a409b0001713bb11f4e86d050b8328779"
+    },
+    "outputs/robo_ao2_ngs/20261024-loss-of-lock-repair/trajectory-v2/pre_update_residual_opd_m.npy": {
+      "bytes": 786432128,
+      "sha256": "8546e884998ea9eaf2f177a22eb8cc4ebf406a0e7319f12e0c672b82c4ec30cc"
+    },
+    "outputs/robo_ao2_ngs/20261024-loss-of-lock-repair/trajectory-v2/history.npz": {
+      "bytes": 5477394,
+      "sha256": "cce2cd95ecf01219ca6e02735329b0da1a646ed48e477f7bb15efd8d0bb8dcc4"
+    },
+    "outputs/robo_ao2_ngs/20261024-loss-of-lock-repair/trajectory-v2/science-psfs.npz": {
+      "bytes": 42535380,
+      "sha256": "d156a30f0b9ca2572e3f9e6cf364c91c13e3cf1591c4b74d525c50ab7d70ac9d"
+    },
+    "outputs/robo_ao2_ngs/20261024-loss-of-lock-repair/trajectory-v2/frame-metrics.csv": {
+      "bytes": 97058,
+      "sha256": "15b3882b4820c79ee1fce1afb8102c16ade4528762a03433cb8e3e4d3ea6e5a3"
+    }
+  },
+  "original_manifest_sha256": [
+    "64bc437cc4f28a75fa2e0e587de16283dddb727da7e618f19f184691bdaab8c7",
+    "2100ab93ea24a98a4ce136faa202bbebe0a1416d821e057d4f0b8ea78d5a1979"
+  ],
+  "original_evidence_entry": {
+    "schema": "ao-explorer.ngs-entry.v1",
+    "id": "ngs-22m-53663e0742d1d106",
+    "manifest": "../derived/ngs-22m-53663e0742d1d106/manifest.json",
+    "manifest_bytes": 3302,
+    "manifest_sha256": "0030fbd65ee38ea98e364a3f94fd158794b49bfa215fe97f78ab0e5c0b860154"
+  },
+  "exporter_sha256": "57742a38e84b9ae0096b4a830532016e32eb2e1b0a6337bbf0e1dea1eb4e25af",
+  "operations": [
+    "Read existing maps/metrics only; no AO runtime import, RNG, calibration, sensor or controller execution.",
+    "Centered FFT of saved raw OPD, binary pupil, 3x padding, 1.65 um, unit total flux; no recentering or pupil tilt removal.",
+    "Piston removal for wavefront display only; fixed common symmetric scale covers every displayed map without clipping.",
+    "Flip both maps and PSFs vertically for positive y upwards; fixed common PSF crop and ideal-peak log scale from 1e-6 to 1.",
+    "PSF crop uses nearest-neighbour enlargement for display; saved scalar curves retain all 1500 frames.",
+    "Every 12th frame plus all saved PSF snapshots and each frame 720-752. No interpolation. Hold until next recorded timestamp."
+  ],
+  "checks": {
+    "all_sources_hash_verified": true,
+    "identical_time_arrays": true,
+    "ideal_psf_max_abs_error": 0.0,
+    "saved_psf_snapshots_checked": 15,
+    "saved_psf_max_abs_error": 0.0,
+    "sampled_strehl_max_abs_error": 4.440892098500626e-16,
+    "matched_strehl_samples": 477,
+    "failure_frame": 736,
+    "simulation_rerun": false
+  }
+}
