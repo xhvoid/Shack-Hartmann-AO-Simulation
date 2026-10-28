@@ -21,6 +21,11 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
+# Where files are read and written, and which repository the recorded
+# provenance refers to, are two different questions.  Keeping them separate
+# lets provenance always be checked against the real source repository even
+# when the resource tree under test is a copy.
+REPO_ROOT = ROOT
 
 GENERATOR_NAME = "scripts/generate_cross_backend_candidate.py"
 GENERATOR_VERSION = "2"
@@ -176,6 +181,7 @@ def _accept_reviewed_candidate(
             "Candidate is missing its generator block; regenerate it with "
             "this script."
         )
+    _verify_candidate_provenance(generator)
 
     # The recomputed diff embeds content hashes of the candidate file bytes
     # and the current packaged baseline, so any modification to either after
@@ -227,6 +233,67 @@ def _accept_reviewed_candidate(
     )
     print(f"Updated {target.relative_to(ROOT)} from {candidate_path}")
     _refresh_resource_manifest()
+
+
+def _verify_candidate_provenance(generator: dict[str, Any]) -> None:
+    """Check the generator block against the repository, not just its shape.
+
+    The installed validator can only check that ``source_commit`` *looks* like a
+    commit; acceptance is the one step that runs inside the source repository,
+    so it is the only place the claim can actually be tested.  Without this a
+    candidate could name any 40 hexadecimal characters — a commit that never
+    existed — and be accepted as the reproducible origin of the baseline.
+    """
+
+    for field, expected in (
+        ("generator_name", GENERATOR_NAME),
+        ("generator_version", GENERATOR_VERSION),
+    ):
+        recorded = generator.get(field)
+        if recorded != expected:
+            raise SystemExit(
+                f"Candidate generator.{field} is {recorded!r}, but this script "
+                f"is {expected!r}. Accepting it would credit the baseline to a "
+                "generator that did not produce it; regenerate the candidate."
+            )
+
+    commit = generator.get("source_commit")
+    if not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}", commit):
+        raise SystemExit(
+            f"Candidate generator.source_commit {commit!r} is not a "
+            "40-character lowercase git commit hash."
+        )
+    try:
+        resolved = subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", f"{commit}^{{commit}}"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise SystemExit(
+            f"Candidate generator.source_commit {commit} is not a commit in "
+            "this repository. A baseline's provenance must be reproducible "
+            "from the commit it names, so acceptance stops here."
+        ) from exc
+    if resolved != commit:
+        raise SystemExit(
+            f"Candidate generator.source_commit {commit} resolves to "
+            f"{resolved}, so it does not name a commit object."
+        )
+
+    # A tree recorded as clean has nothing that diverged from that commit, so
+    # patch evidence of a divergence contradicts the record.  One of the two is
+    # wrong, and acceptance cannot tell which.
+    if generator.get("source_tree_clean") is True and (
+        generator.get("source_patch_sha256") is not None
+    ):
+        raise SystemExit(
+            "Candidate generator records source_tree_clean=true together with "
+            f"source_patch_sha256={generator['source_patch_sha256']!r}. A clean "
+            "tree has no divergence to hash; regenerate the candidate."
+        )
 
 
 def _refresh_resource_manifest() -> None:
@@ -510,7 +577,29 @@ def _installed_distributions() -> dict[str, str]:
     return installed
 
 
-_LOCK_PLATFORMS = {"Linux": "linux", "macOS-arm64": "macos-arm64"}
+# A lock is resolved for one operating system *and one architecture*: Linux
+# aarch64 and Linux x86-64 resolve different wheels from the same requirement
+# set, so an architecture-blind "linux" tag could be claimed by a machine the
+# lock was never resolved on whenever the pinned versions happened to coincide.
+_LOCK_PLATFORMS = {
+    "Linux-x86-64": "linux-x86-64",
+    "Linux-aarch64": "linux-aarch64",
+    "macOS-arm64": "macos-arm64",
+}
+# Longest first, so "Linux-x86-64" can never be matched as a bare "Linux".
+_LOCK_PLATFORM_DECLARATION = re.compile(
+    r"\bon[ \t]*(?:\r?\n[ \t]*#[ \t]*)?("
+    + "|".join(
+        re.escape(name) for name in sorted(_LOCK_PLATFORMS, key=len, reverse=True)
+    )
+    + r")\b"
+)
+_MACHINE_TAGS = {
+    "x86_64": "x86-64",
+    "amd64": "x86-64",
+    "aarch64": "aarch64",
+    "arm64": "aarch64",
+}
 
 
 def _current_platform_tag() -> str:
@@ -519,26 +608,35 @@ def _current_platform_tag() -> str:
     import platform as _platform
 
     system = _platform.system()
-    machine = _platform.machine().lower()
-    if system == "Linux":
-        return "linux"
-    if system == "Darwin" and machine in ("arm64", "aarch64"):
+    machine = _platform.machine()
+    architecture = _MACHINE_TAGS.get(machine.lower())
+    if system == "Linux" and architecture is not None:
+        return f"linux-{architecture}"
+    if system == "Darwin" and architecture == "aarch64":
         return "macos-arm64"
     raise SystemExit(
-        "Cross-backend baselines are only locked for Linux and macOS-arm64; "
-        f"the running platform {system}/{machine} has no reproducible lock, so "
-        "generating one here would record an unverifiable environment."
+        "Cross-backend baselines are only locked for "
+        f"{', '.join(sorted(_LOCK_PLATFORMS.values()))}; the running platform "
+        f"{system}/{machine} has no reproducible lock, so generating one here "
+        "would record an unverifiable environment."
     )
 
 
 def _lock_platform_tag(header_text: str, profile: str) -> str:
-    """The platform a constraint lock declares in its header prose."""
+    """The platform a constraint lock declares in its header prose.
 
-    match = re.search(r"\bon (Linux|macOS-arm64)\b", header_text)
+    The declaration may be wrapped across the header's comment lines, so a
+    single comment continuation between ``on`` and the platform name is
+    accepted; nothing else is, because a lock that does not name its
+    architecture cannot be matched to the environment that resolved it.
+    """
+
+    match = _LOCK_PLATFORM_DECLARATION.search(header_text)
     if match is None:
+        expected = ", ".join(f"'on {name}'" for name in sorted(_LOCK_PLATFORMS))
         raise SystemExit(
-            f"Constraint profile {profile} does not declare its platform "
-            "(expected 'on Linux' or 'on macOS-arm64' in its header)."
+            f"Constraint profile {profile} does not declare its platform and "
+            f"architecture (expected one of {expected} in its header)."
         )
     return _LOCK_PLATFORMS[match.group(1)]
 
@@ -628,7 +726,7 @@ def _source_commit() -> str:
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
-            cwd=ROOT,
+            cwd=REPO_ROOT,
             capture_output=True,
             text=True,
             check=True,
@@ -649,27 +747,39 @@ def _source_commit() -> str:
 def _source_patch_sha256() -> str | None:
     """Content hash of the working tree's divergence from HEAD, or None if none.
 
-    Binds both tracked modifications (``git diff HEAD``) and the sorted paths
-    and contents of untracked, non-ignored files.  Untracked scientific inputs
-    can change a generated result just as much as a tracked edit, so a dirty
-    tree records verifiable evidence of exactly what diverged from the recorded
-    commit (the documented ``source_patch_sha256`` contract) instead of hiding
-    it.  Returns ``None`` only when the tree matches HEAD exactly.
+    Binds both tracked modifications (``git diff HEAD --binary``) and the sorted
+    paths and contents of untracked, non-ignored files.  Untracked scientific
+    inputs can change a generated result just as much as a tracked edit, so a
+    dirty tree records verifiable evidence of exactly what diverged from the
+    recorded commit (the documented ``source_patch_sha256`` contract) instead of
+    hiding it.  Every divergence contributes its real bytes: anything that
+    reduced to a placeholder would let two different working trees record the
+    same evidence.  Returns ``None`` only when the tree matches HEAD exactly.
     """
 
+    # Everything here is handled as bytes.  A working tree can hold paths and
+    # file contents that are not valid UTF-8, and a content hash has no business
+    # decoding them: text mode would both corrupt the evidence (newline
+    # translation) and crash on the first undecodable byte.
     try:
         tracked = subprocess.run(
-            ["git", "diff", "HEAD"],
-            cwd=ROOT,
+            # --binary carries the actual changed bytes.  A plain diff of a
+            # modified binary input — a .npy fixture, say — records only
+            # "Binary files differ" plus abbreviated blob hashes, which is not
+            # evidence of what the run actually read.
+            ["git", "diff", "HEAD", "--binary"],
+            cwd=REPO_ROOT,
             capture_output=True,
-            text=True,
             check=True,
         ).stdout
         status = subprocess.run(
-            ["git", "status", "--porcelain", "--untracked-files=all"],
-            cwd=ROOT,
+            # -z emits raw, NUL-delimited paths.  The default line-oriented form
+            # quotes any path containing a space, a quote, or a non-ASCII byte,
+            # so the parsed path would not exist on disk and the file's real
+            # contents would never reach this hash.
+            ["git", "status", "--porcelain", "-z", "--untracked-files=all"],
+            cwd=REPO_ROOT,
             capture_output=True,
-            text=True,
             check=True,
         ).stdout
     except (OSError, subprocess.CalledProcessError) as exc:
@@ -677,23 +787,54 @@ def _source_patch_sha256() -> str | None:
             "Cannot record source provenance: reading the working-tree "
             "divergence from HEAD failed."
         ) from exc
-    untracked = sorted(
-        line[3:] for line in status.splitlines() if line.startswith("?? ")
-    )
+    untracked = _untracked_paths(status)
     if not tracked and not untracked:
         return None
     hasher = hashlib.sha256()
     hasher.update(b"tracked-diff\0")
-    hasher.update(tracked.encode("utf-8"))
+    hasher.update(tracked)
     for path in untracked:
         hasher.update(b"\0untracked\0")
-        hasher.update(path.encode("utf-8"))
+        hasher.update(path)
         hasher.update(b"\0content\0")
         try:
-            hasher.update((ROOT / path).read_bytes())
-        except OSError:
-            hasher.update(b"<unreadable>\0")
+            contents = (REPO_ROOT / os.fsdecode(path)).read_bytes()
+        except OSError as exc:
+            # Fail closed.  A placeholder standing in for unreadable contents
+            # gives two different working trees the same patch hash, which is
+            # exactly the evidence this hash exists to provide.
+            raise SystemExit(
+                "Cannot record source provenance: the untracked working-tree "
+                f"input {os.fsdecode(path)!r} could not be read ({exc}). Its "
+                "contents can change the generated result, so a patch hash that "
+                "stood in a placeholder for them would not be evidence of "
+                "anything."
+            ) from exc
+        hasher.update(contents)
     return hasher.hexdigest()
+
+
+def _untracked_paths(status: bytes) -> list[bytes]:
+    """Sorted untracked paths from NUL-delimited ``git status`` output.
+
+    Each record is a two-character status code, a space, and the raw path; a
+    rename or copy is followed by its origin path as a separate NUL-delimited
+    field, which is consumed here so it can never be mistaken for a record of
+    its own.  NUL is the one byte a path cannot contain, so this parse is exact
+    for every path git can report — including paths that are not valid UTF-8.
+    """
+
+    records = iter(status.split(b"\0"))
+    untracked: list[bytes] = []
+    for record in records:
+        if not record:
+            continue
+        code, path = record[:2], record[3:]
+        if b"R" in code or b"C" in code:
+            next(records, None)
+        if code == b"??":
+            untracked.append(path)
+    return sorted(untracked)
 
 
 def _source_tree_clean() -> bool:

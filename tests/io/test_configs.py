@@ -33,12 +33,25 @@ from shwfs_ao.io.configs import (
 )
 
 
+# Every published profile version stays packaged and loadable: a result
+# labelled with a v1 profile must remain exactly reproducible after the v2
+# review, so v2 supersedes v1 as the recommended profile without retiring it.
 EXPECTED_PROFILES = (
+    ("fast_2m_detector", 1),
+    ("fast_2m_detector", 2),
+    ("portfolio_2m_detector", 1),
+    ("portfolio_2m_detector", 2),
+    ("research_2m_detector", 1),
+    ("research_2m_detector", 2),
+    ("high_order_10m_geometric", 1),
+    ("high_order_10m_geometric", 2),
+    ("high_order_10m_hcipy", 1),
+    ("high_order_10m_hcipy", 2),
+)
+CURRENT_2M_PROFILES = (
     ("fast_2m_detector", 2),
     ("portfolio_2m_detector", 2),
     ("research_2m_detector", 2),
-    ("high_order_10m_geometric", 2),
-    ("high_order_10m_hcipy", 2),
 )
 
 
@@ -64,12 +77,68 @@ def test_required_profiles_are_explicit_versions_and_load_outside_checkout(
 def test_profile_loader_has_no_latest_alias() -> None:
     with pytest.raises(TypeError):
         load_system_profile("fast_2m_detector")  # type: ignore[call-arg]
-    # The retired v1 and a never-published v3 are both unknown: there is no
-    # implicit "latest" and no silent fall-through to an adjacent version.
-    with pytest.raises(SystemConfigError, match="unknown system profile"):
-        load_system_profile("fast_2m_detector", 1)
+    # A never-published version is unknown: there is no implicit "latest" and no
+    # silent fall-through to an adjacent version in either direction.
     with pytest.raises(SystemConfigError, match="unknown system profile"):
         load_system_profile("high_order_10m_hcipy", 3)
+    with pytest.raises(SystemConfigError, match="unknown system profile"):
+        load_system_profile("fast_2m_geometric", 2)
+
+
+def test_v1_profiles_stay_loadable_beside_their_v2_successors() -> None:
+    """A published profile version stays reproducible after it is superseded.
+
+    Each v1 profile keeps its own identity (``…@1``, its own config hash) while
+    describing the same physics as its v2 successor: the v2 review made
+    ``photon_allocation`` explicit at the value v1 already ran with, so every
+    physical component hash is unchanged and only the profile provenance moves.
+    """
+
+    for name, _ in CURRENT_2M_PROFILES + (
+        ("high_order_10m_geometric", 2),
+        ("high_order_10m_hcipy", 2),
+    ):
+        v1 = load_system_profile(name, 1)
+        v2 = load_system_profile(name, 2)
+
+        assert v1.profile.profile_id == f"{name}@1"
+        assert v1.profile.provenance.source_id == f"shwfs_ao.system_profile.{name}.v1"
+        # v1 predates the explicit field and takes the allocation it was
+        # reviewed and published under, not a silently different one.
+        assert v1.wfs.photon_allocation == v2.wfs.photon_allocation == "throughput_scaled"
+
+        physics = dict(v1.component_config_hashes)
+        successor = dict(v2.component_config_hashes)
+        assert physics.pop("profile") != successor.pop("profile")
+        assert physics == successor
+        # Distinct published identities never collide.
+        assert v1.config_hash != v2.config_hash
+
+        # A v1 profile re-serializes into the current record schema and parses
+        # back equal, still identifying itself as version 1.
+        record = system_config_to_mapping(v1)
+        assert record["schema_version"] == PROFILE_SCHEMA_VERSION
+        assert record["profile_version"] == 1
+        assert system_config_from_mapping(record) == v1
+
+
+def test_each_record_schema_version_has_an_exact_field_set() -> None:
+    """Neither schema version may borrow the other's WFS field set."""
+
+    v1_record = copy.deepcopy(system_config_to_mapping(load_system_profile("fast_2m_detector", 1)))
+    v1_record["schema_version"] = 1
+    # A v1 record carrying the v2 field is neither: it is rejected, not upgraded.
+    with pytest.raises(SystemConfigError, match="unknown=\\['photon_allocation'\\]"):
+        system_config_from_mapping(v1_record)
+
+    del v1_record["config"]["wfs"]["photon_allocation"]
+    parsed = system_config_from_mapping(v1_record)
+    assert parsed.wfs.photon_allocation == "throughput_scaled"
+
+    # An unsupported record schema version is refused with the supported set.
+    v1_record["schema_version"] = 3
+    with pytest.raises(SystemConfigError, match="unsupported profile schema_version"):
+        system_config_from_mapping(v1_record)
 
 
 def test_profile_round_trip_is_exact_and_deterministic() -> None:
@@ -122,7 +191,7 @@ def test_wfs_photon_allocation_is_required_serialized_and_hashed() -> None:
 
 
 def test_2m_profiles_change_scale_without_changing_observing_conditions() -> None:
-    profiles = [load_system_profile(name, version) for name, version in EXPECTED_PROFILES[:3]]
+    profiles = [load_system_profile(name, version) for name, version in CURRENT_2M_PROFILES]
     assert [(p.pupil_pixels, p.lenslets_across, p.actuators_across) for p in profiles] == [
         (52, 5, 5),
         (72, 7, 7),

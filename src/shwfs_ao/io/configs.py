@@ -25,16 +25,26 @@ from .resources import read_text_resource
 
 PROFILE_SCHEMA_NAME = "shwfs_ao.system_profile"
 # Schema v2 makes wfs.photon_allocation an explicit, required field.  The v1
-# profiles omitted it and silently defaulted to "throughput_scaled" on load,
-# which changed their recorded WFS/system identity when the field was added; the
-# reviewed v2 profiles record it explicitly so their identity is unambiguous.
+# profiles omitted it and relied on the "throughput_scaled" default on load,
+# which left their recorded WFS/system identity implicit; the reviewed v2
+# profiles record it explicitly so their identity is unambiguous.  v2 is what
+# the serializer writes, but v1 records are still *read*: retiring the reading
+# side would break exact-version reproducibility of every result labelled with
+# a v1 profile, so both schema versions load and both profile versions remain
+# packaged.
 PROFILE_SCHEMA_VERSION = 2
+SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2)
 _PROFILE_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
+    ("fast_2m_detector", 1): "synthetic_presets/fast_2m_detector.v1.json",
     ("fast_2m_detector", 2): "synthetic_presets/fast_2m_detector.v2.json",
+    ("portfolio_2m_detector", 1): "synthetic_presets/portfolio_2m_detector.v1.json",
     ("portfolio_2m_detector", 2): "synthetic_presets/portfolio_2m_detector.v2.json",
+    ("research_2m_detector", 1): "synthetic_presets/research_2m_detector.v1.json",
     ("research_2m_detector", 2): "synthetic_presets/research_2m_detector.v2.json",
+    ("high_order_10m_geometric", 1): "synthetic_presets/high_order_10m_geometric.v1.json",
     ("high_order_10m_geometric", 2): "synthetic_presets/high_order_10m_geometric.v2.json",
+    ("high_order_10m_hcipy", 1): "synthetic_presets/high_order_10m_hcipy.v1.json",
     ("high_order_10m_hcipy", 2): "synthetic_presets/high_order_10m_hcipy.v2.json",
 }
 
@@ -549,7 +559,16 @@ def load_system_profile(name: str, version: int) -> SystemConfig:
 
 
 def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
-    """Parse one strict profile-schema-v1 mapping into :class:`SystemConfig`."""
+    """Parse one strict profile-schema mapping into :class:`SystemConfig`.
+
+    Every version in :data:`SUPPORTED_PROFILE_SCHEMA_VERSIONS` parses, because a
+    published profile must stay readable for exactly as long as results cite it.
+    Schema v2 requires ``wfs.photon_allocation``; schema v1 predates the field
+    and must omit it, taking the ``throughput_scaled`` allocation the v1
+    profiles were reviewed and published under.  Each version's field set is
+    exact in both directions, so a v1 record can neither carry the v2 field nor
+    be silently upgraded, and a v2 record can never omit it.
+    """
 
     root = _mapping(record, "profile record")
     _keys(
@@ -567,8 +586,12 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
     )
     if root["schema_name"] != PROFILE_SCHEMA_NAME:
         raise SystemConfigError(f"schema_name must be {PROFILE_SCHEMA_NAME!r}.")
-    if _integer(root["schema_version"], "schema_version", minimum=1) != PROFILE_SCHEMA_VERSION:
-        raise SystemConfigError(f"unsupported profile schema_version={root['schema_version']!r}.")
+    schema_version = _integer(root["schema_version"], "schema_version", minimum=1)
+    if schema_version not in SUPPORTED_PROFILE_SCHEMA_VERSIONS:
+        raise SystemConfigError(
+            f"unsupported profile schema_version={root['schema_version']!r}; "
+            f"supported={list(SUPPORTED_PROFILE_SCHEMA_VERSIONS)}."
+        )
     profile = ProfileProvenance(
         profile_name=cast(str, root["profile_name"]),
         profile_version=cast(int, root["profile_version"]),
@@ -592,7 +615,7 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
         wfs=_construct(
             WfsConfig,
             values["wfs"],
-            _WFS_FIELDS,
+            _WFS_FIELDS if schema_version >= 2 else _WFS_FIELDS_V1,
             "wfs",
         ),
         dm=_construct(DmSystemConfig, values["dm"], _DM_FIELDS, "dm", tuple_fields={"dead_actuator_indices", "stuck_actuator_indices"}),
@@ -607,7 +630,14 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
 
 
 def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
-    """Serialize a system config to the deterministic profile-schema-v1 model."""
+    """Serialize a system config to the deterministic current profile schema.
+
+    Serialization is always to :data:`PROFILE_SCHEMA_VERSION`, whatever schema
+    version a config was read from: this mapping is the canonical hashing basis,
+    so one config always has one serialized form.  The record's schema version
+    is independent of ``profile_version`` — a v1 *profile* re-serializes as a v2
+    *record* that still identifies itself as ``…@1`` and parses back equal.
+    """
 
     if not isinstance(config, SystemConfig):
         raise SystemConfigError("config must be a SystemConfig.")
@@ -648,8 +678,11 @@ _ATMOSPHERE_FIELDS = {"r0_m", "r0_reference_wavelength_m", "outer_scale_m", "win
 _DETECTOR_FIELDS = {"enabled", "photons_per_subap_frame", "read_noise_e", "dark_e_per_s", "background_e_per_pixel_frame", "full_well_e", "qe", "prnu_rms", "exposure_s", "prnu_mode", "bad_pixel_fraction"}
 _WFS_FIELDS = {"min_fill_fraction", "pad_factor", "detector_window_px", "centroid_estimator", "threshold_fraction", "subtract_minimum", "min_flux_e", "min_peak_snr", "max_centroid_sigma_px", "max_window_clipping_fraction", "central_obstruction_ratio", "spider_width_m", "photon_allocation"}
 # Schema v2 requires photon_allocation in every profile: it materially affects
-# the WFS photon budget and therefore the recorded identity, so it is never
-# defaulted silently on load.
+# the WFS photon budget and therefore the recorded identity, so a v2 record
+# never defaults it silently.  Schema v1 predates the field, so a v1 record must
+# omit it and takes the reviewed "throughput_scaled" default it was published
+# with; carrying it would make the record neither a valid v1 nor a valid v2.
+_WFS_FIELDS_V1 = _WFS_FIELDS - {"photon_allocation"}
 _DM_FIELDS = {"influence_model", "coupling_width_pitch", "stroke_limit_opd_m", "include_edge_actuators", "actuator_margin_fraction", "dead_actuator_indices", "stuck_actuator_indices", "stuck_command_opd_m"}
 _CALIBRATION_FIELDS = {"source", "method", "probe_kind", "amplitude_m", "include_noise", "repeats", "resource_name"}
 _RECONSTRUCTOR_FIELDS = {"kind", "rcond", "alpha", "min_valid_fraction", "min_rank", "max_cached_masks"}
@@ -835,6 +868,7 @@ def _indices(value: object, label: str) -> tuple[int, ...]:
 __all__ = (
     "PROFILE_SCHEMA_NAME",
     "PROFILE_SCHEMA_VERSION",
+    "SUPPORTED_PROFILE_SCHEMA_VERSIONS",
     "SystemConfigError",
     "ProfileProvenance",
     "AtmosphereConfig",

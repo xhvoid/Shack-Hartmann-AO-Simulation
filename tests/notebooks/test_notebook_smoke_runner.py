@@ -85,6 +85,18 @@ def test_network_guard_denies_outbound_ip_but_allows_loopback():
     saved_connect_ex = socket.socket.connect_ex
     saved_sendto = socket.socket.sendto
     saved_sendmsg = socket.socket.sendmsg
+    # The guard also replaces these module-level functions, so they must be
+    # restored or its deny-by-default resolution leaks into every later test.
+    saved_resolvers = {
+        name: getattr(socket, name)
+        for name in (
+            "getaddrinfo",
+            "gethostbyname",
+            "gethostbyname_ex",
+            "gethostbyaddr",
+            "getnameinfo",
+        )
+    }
     try:
         # Install recorders as the real operations so allowed addresses fall
         # through to them instead of touching the network; the guard source
@@ -128,6 +140,109 @@ def test_network_guard_denies_outbound_ip_but_allows_loopback():
         socket.socket.connect_ex = saved_connect_ex
         socket.socket.sendto = saved_sendto
         socket.socket.sendmsg = saved_sendmsg
+        for name, original in saved_resolvers.items():
+            setattr(socket, name, original)
+
+
+def test_network_guard_blocks_name_resolution_before_any_dns_query_leaves():
+    """The connect() block alone still leaked an external DNS query.
+
+    ``socket.create_connection`` — and therefore urllib, http.client and
+    requests — resolves the host first, so a guard that watched only the
+    connection would refuse the TCP handshake *after* the resolver had already
+    been asked about the name.
+    """
+
+    import socket
+
+    resolvers = (
+        "getaddrinfo",
+        "gethostbyname",
+        "gethostbyname_ex",
+        "gethostbyaddr",
+        "getnameinfo",
+    )
+    saved = {name: getattr(socket, name) for name in resolvers}
+    saved_connect = socket.socket.connect
+    try:
+        resolved: list = []
+        socket.getaddrinfo = lambda host, *args, **kwargs: (
+            resolved.append(host)
+            or saved["getaddrinfo"](host, *args, **kwargs)
+        )
+        exec(runner.NETWORK_GUARD_SOURCE, {})
+
+        # The whole resolution surface is covered, forward and reverse: a
+        # notebook that reached any of these would emit an external query.
+        for attempt in (
+            lambda: socket.create_connection(("example.com", 80), timeout=0.1),
+            lambda: socket.getaddrinfo("example.com", 80),
+            lambda: socket.gethostbyname("example.com"),
+            lambda: socket.gethostbyname_ex("example.com"),
+            lambda: socket.gethostbyaddr("93.184.216.34"),
+            lambda: socket.getnameinfo(("93.184.216.34", 80), 0),
+        ):
+            with pytest.raises(OSError, match="denies outbound network"):
+                attempt()
+        # No external name ever reached the recorder underneath the guard.
+        assert resolved == []
+
+        # Loopback resolution still works, so Jupyter's own transport and any
+        # local server a notebook starts keep functioning.
+        assert socket.getaddrinfo("localhost", 0)
+        assert socket.getaddrinfo("127.0.0.1", 0)
+        assert socket.getaddrinfo("::1", 0)
+        assert socket.getaddrinfo(None, 0)
+        assert socket.getnameinfo(("127.0.0.1", 0), 0)
+    finally:
+        for name, original in saved.items():
+            setattr(socket, name, original)
+        socket.socket.connect = saved_connect
+
+
+def test_network_guard_installs_where_sendmsg_does_not_exist():
+    """``socket.sendmsg`` is Unix-only; its absence must not fail the notebook.
+
+    The guard is cell 0, so an AttributeError while installing it aborts the
+    whole notebook rather than merely leaving one hook unset.
+    """
+
+    import socket
+    import sys
+    import types
+
+    class _FakeSocketType:
+        connect = staticmethod(lambda self, address: None)
+        connect_ex = staticmethod(lambda self, address: 0)
+        sendto = staticmethod(lambda self, data, *args: None)
+        # deliberately no sendmsg
+
+    fake = types.SimpleNamespace(
+        AF_INET=socket.AF_INET,
+        AF_INET6=socket.AF_INET6,
+        socket=_FakeSocketType,
+        getaddrinfo=lambda host, *args, **kwargs: [],
+        gethostbyname=lambda hostname: "127.0.0.1",
+        # gethostbyname_ex/gethostbyaddr/getnameinfo deliberately absent too:
+        # every optional hook is installed only where the platform has it.
+    )
+    saved = sys.modules["socket"]
+    sys.modules["socket"] = fake  # type: ignore[assignment]
+    try:
+        exec(runner.NETWORK_GUARD_SOURCE, {})
+    finally:
+        sys.modules["socket"] = saved
+    assert not hasattr(_FakeSocketType, "sendmsg")
+    assert not hasattr(fake, "gethostbyaddr")
+    # Everything the platform does provide is still guarded.
+    with pytest.raises(OSError, match="denies outbound network"):
+        fake.getaddrinfo("example.com", 80)
+    with pytest.raises(OSError, match="denies outbound network"):
+        fake.gethostbyname("example.com")
+    with pytest.raises(OSError, match="denies outbound network"):
+        _FakeSocketType.connect(
+            types.SimpleNamespace(family=socket.AF_INET), ("93.184.216.34", 80)
+        )
 
 
 def test_kernel_receives_the_isolated_environment_and_the_override(
