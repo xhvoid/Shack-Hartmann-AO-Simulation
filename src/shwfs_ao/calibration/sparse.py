@@ -1076,8 +1076,81 @@ class SparseLsmrReconstructor:
         valid_count = int(np.count_nonzero(matrix.row_valid))
         if usable_count == 0 or usable_count / valid_count < self._min_valid_fraction:
             return None
+        return self._solve(signal, usable, usable_count, columns=None)
+
+    def reconstruct_subset(
+        self,
+        measurement: MeasurementVector,
+        *,
+        min_valid_fraction: float,
+        min_actuator_coverage: float | None = None,
+    ) -> ReconstructionEstimate | None:
+        """Reconstruct from the usable rows under a lower coverage threshold.
+
+        The fallback of an opt-in recovery policy (``controller.recovery``):
+        the same Tikhonov LSMR solve as :meth:`reconstruct`, with
+        ``min_valid_fraction`` in place of this reconstructor's own.  With
+        ``min_actuator_coverage`` (the rank guard) only actuators whose usable
+        rows keep at least that fraction of their calibrated response energy
+        (squared column norm over the calibration-valid rows) are solved for;
+        the rest receive an exactly zero increment.  Returns ``None`` when too
+        few rows are usable, no actuator qualifies, or the solve is rejected.
+        This reconstructor's identity and :meth:`reconstruct` are unchanged.
+        """
+
+        if not isinstance(measurement, MeasurementVector):
+            raise SparseCalibrationError("measurement must be a MeasurementVector.")
+        matrix = self._matrix
+        if measurement.row_ids != matrix.row_ids:
+            raise SparseCalibrationError(
+                "measurement.row_ids must exactly match the response row layout."
+            )
+        if measurement.measurement_unit != matrix.measurement_unit:
+            raise SparseCalibrationError("measurement unit must match the response.")
+        fraction = float(min_valid_fraction)
+        if not math.isfinite(fraction) or not 0.0 <= fraction <= 1.0:
+            raise SparseCalibrationError("min_valid_fraction must be in [0, 1].")
+        signal = np.asarray(measurement.values, dtype=float)
+        usable = (
+            np.asarray(matrix.row_valid, dtype=bool)
+            & np.asarray(measurement.valid_rows, dtype=bool)
+            & np.isfinite(signal)
+        )
+        usable_count = int(np.count_nonzero(usable))
+        valid_count = int(np.count_nonzero(matrix.row_valid))
+        if usable_count == 0 or usable_count / valid_count < fraction:
+            return None
+        columns: np.ndarray | None = None
+        if min_actuator_coverage is not None:
+            coverage = float(min_actuator_coverage)
+            if not math.isfinite(coverage) or not 0.0 < coverage <= 1.0:
+                raise SparseCalibrationError("min_actuator_coverage must be in (0, 1].")
+            operator = matrix._operator()
+            calibrated = operator[np.flatnonzero(matrix.row_valid)]
+            seen = operator[np.flatnonzero(usable)]
+            calibrated_energy = np.asarray(calibrated.multiply(calibrated).sum(axis=0)).ravel()
+            seen_energy = np.asarray(seen.multiply(seen).sum(axis=0)).ravel()
+            qualified = (calibrated_energy > 0.0) & (
+                seen_energy >= coverage * calibrated_energy
+            )
+            if not np.any(qualified):
+                return None
+            columns = np.flatnonzero(qualified)
+        return self._solve(signal, usable, usable_count, columns=columns)
+
+    def _solve(
+        self,
+        signal: np.ndarray,
+        usable: np.ndarray,
+        usable_count: int,
+        *,
+        columns: np.ndarray | None,
+    ) -> ReconstructionEstimate | None:
+        matrix = self._matrix
         rows = np.flatnonzero(usable)
         submatrix = matrix._operator()[rows]
+        if columns is not None:
+            submatrix = submatrix[:, columns]
         target = signal[rows]
         output = lsmr(
             submatrix,
@@ -1120,6 +1193,11 @@ class SparseLsmrReconstructor:
         full_residual = np.full(len(matrix.row_ids), np.nan)
         full_predicted[rows] = predicted
         full_residual[rows] = residual
+        if columns is not None:
+            # Actuators left out of a guarded subset solve hold: zero increment.
+            restricted = solution
+            solution = np.zeros(len(matrix.coordinate_ids), dtype=float)
+            solution[columns] = restricted
         return ReconstructionEstimate(
             delta_coordinates_opd_m=solution,
             coordinate_ids=matrix.coordinate_ids,

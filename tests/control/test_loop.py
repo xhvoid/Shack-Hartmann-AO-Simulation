@@ -814,3 +814,140 @@ def test_replaying_parameter_points_in_reverse_order_is_pointwise_identical(
     assert forward.keys() == reverse.keys()
     for gain in forward:
         np.testing.assert_array_equal(forward[gain], reverse[gain])
+
+
+class _FallbackReconstructor(_Reconstructor):
+    """Rejects ``none_frames`` but reconstructs them through the subset fallback."""
+
+    config_hash = "test-fallback-reconstructor-hash"
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)  # type: ignore[arg-type]
+        self.subset_calls: list[tuple[float, float | None]] = []
+
+    def reconstruct_subset(
+        self,
+        measurement: MeasurementVector,
+        *,
+        min_valid_fraction: float,
+        min_actuator_coverage: float | None = None,
+    ) -> ReconstructionEstimate | None:
+        self.subset_calls.append((min_valid_fraction, min_actuator_coverage))
+        rejected = self.none_frames
+        self.none_frames = frozenset()
+        try:
+            estimate = self.reconstruct(measurement)
+        finally:
+            self.none_frames = rejected
+            self.measurements.pop()
+        return estimate
+
+
+def _run_with_recovery(config, interaction, components, recovery):
+    _, atmosphere, wfs, reconstructor, projector, controller, dm = components
+    return run_closed_loop(
+        config,
+        random_streams=NamedRandomStreams(config.root_seed),
+        atmosphere=atmosphere,
+        wfs=wfs,
+        dm=dm,
+        interaction_matrix=interaction,
+        reconstructor=reconstructor,
+        command_projector=projector,
+        controller=controller,
+        include_noise=True,
+        realization_index=0,
+        recovery=recovery,
+    )
+
+
+def test_recovery_decays_the_held_command_after_consecutive_rejected_frames(
+    interaction_matrix: InteractionMatrix,
+) -> None:
+    from shwfs_ao.control.recovery import ClosedLoopRecoveryPolicy
+
+    config = _config(n_steps=5)
+    none_frames = frozenset({1, 2, 3, 4})
+    held = _run(config, interaction_matrix, _components(interaction_matrix, config, none_frames=none_frames))
+    np.testing.assert_allclose(held.applied_command_history_opd_m[:, 0], [4e-9] * 5)
+    assert "recovery" not in held.metadata
+    assert "recovery" not in held.metadata["component_hashes"]
+
+    policy = ClosedLoopRecoveryPolicy(rejected_frames_before_decay=1, decay_per_rejected_frame=0.5)
+    history = _run_with_recovery(
+        config, interaction_matrix, _components(interaction_matrix, config, none_frames=none_frames), policy
+    )
+    # Frame 1 holds; every further rejected frame halves the command.
+    np.testing.assert_allclose(
+        history.applied_command_history_opd_m[:, 0], [4e-9, 4e-9, 2e-9, 1e-9, 0.5e-9]
+    )
+    np.testing.assert_array_equal(history.reconstruction_usable, [True, False, False, False, False])
+    assert history.metadata["recovery"] == {
+        "config_hash": policy.config_hash,
+        "fallback_frames": 0,
+        "decayed_frames": 3,
+    }
+    assert history.metadata["component_hashes"]["recovery"] == policy.config_hash
+    assert history.config_hash != held.config_hash
+    # A reset policy returns the DM to flat on the first decayed frame, and the
+    # controller keeps integrating from the applied (flat) command.
+    reset = ClosedLoopRecoveryPolicy(rejected_frames_before_decay=0, decay_per_rejected_frame=1.0)
+    history = _run_with_recovery(
+        config,
+        interaction_matrix,
+        _components(interaction_matrix, config, none_frames=frozenset({1})),
+        reset,
+    )
+    np.testing.assert_allclose(
+        history.applied_command_history_opd_m[:, 0], [4e-9, 0.0, 4e-9, 4e-9, 4e-9]
+    )
+
+
+def test_recovery_fallback_and_gain_schedule_act_on_rejected_and_partial_frames(
+    interaction_matrix: InteractionMatrix,
+) -> None:
+    from shwfs_ao.control.recovery import ClosedLoopRecoveryPolicy
+
+    config = _config(n_steps=3)
+    events: list[str] = []
+    components = list(_components(interaction_matrix, config, none_frames=frozenset({1})))
+    reconstructor = _FallbackReconstructor(interaction_matrix, events, none_frames=frozenset({1}))
+    components[3] = reconstructor
+    policy = ClosedLoopRecoveryPolicy(
+        fallback_min_valid_fraction=0.25,
+        fallback_min_actuator_coverage=0.5,
+        fallback_reconstructor=reconstructor,
+    )
+    history = _run_with_recovery(config, interaction_matrix, tuple(components), policy)
+    assert reconstructor.subset_calls == [(0.25, 0.5)]
+    np.testing.assert_array_equal(history.reconstruction_usable, [True, True, True])
+    assert history.metadata["recovery"]["fallback_frames"] == 1
+
+    # Half the calibration-valid rows usable: the increment is scaled by 0.5.
+    valid = np.asarray([True, False, False])
+    components = _components(interaction_matrix, config, valid_rows=(valid, valid, valid))
+    schedule = ClosedLoopRecoveryPolicy(gain_full_valid_fraction=1.0)
+    history = _run_with_recovery(config, interaction_matrix, components, schedule)
+    np.testing.assert_allclose(history.valid_measurement_fraction, [0.5, 0.5, 0.5])
+    np.testing.assert_allclose(history.applied_command_history_opd_m[:, 0], [2e-9, 3e-9, 3.5e-9])
+
+
+def test_recovery_fallback_must_share_the_interaction_matrix(
+    interaction_matrix: InteractionMatrix,
+) -> None:
+    from shwfs_ao.control.recovery import ClosedLoopRecoveryPolicy
+
+    config = _config(n_steps=2)
+    components = _components(interaction_matrix, config)
+
+    class _Foreign(_FallbackReconstructor):
+        @property
+        def matrix_hash(self) -> str:
+            return "another-calibration"
+
+    foreign = _Foreign(interaction_matrix, [])
+    policy = ClosedLoopRecoveryPolicy(fallback_min_valid_fraction=0.25, fallback_reconstructor=foreign)
+    with pytest.raises(ControlLoopError, match="fallback reconstructor matrix hash"):
+        _run_with_recovery(config, interaction_matrix, components, policy)
+    with pytest.raises(ControlLoopError, match="ClosedLoopRecoveryPolicy"):
+        _run_with_recovery(config, interaction_matrix, components, object())

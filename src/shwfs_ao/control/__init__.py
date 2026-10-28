@@ -9,6 +9,7 @@ from .command_mapping import (
 )
 from .controller import ControllerError, LeakyIntegratorController
 from .history import LoopHistory, LoopHistoryError
+from .recovery import ClosedLoopRecoveryPolicy, RecoveryPolicyError
 from .observation import (
     OBSERVABLE_FIELDS,
     OBSERVATION_POINT,
@@ -43,6 +44,8 @@ __all__ = (
     "LeakyIntegratorController",
     "LoopHistoryError",
     "LoopHistory",
+    "RecoveryPolicyError",
+    "ClosedLoopRecoveryPolicy",
     "OBSERVABLE_FIELDS",
     "OBSERVATION_POINT",
     "FrameObservation",

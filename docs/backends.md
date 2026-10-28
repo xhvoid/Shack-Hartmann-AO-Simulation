@@ -207,6 +207,14 @@ requested_commands_opd_m = (
 `released_delta_opd_m` is the increment released by the sole controller delay
 queue on this frame; it may be older than the increment just reconstructed.
 
+A frame the reconstructor rejects (`None`) holds the DM apart from the leak.
+The opt-in schema-7 `controller.recovery` block adds a loop supervisor,
+`control.ClosedLoopRecoveryPolicy`. It can reset or decay the requested
+command after consecutive rejected frames, reconstruct a rejected frame from
+its usable rows (sparse LSMR only), or scale increments by the valid fraction.
+Without the block, the loop and every identity are unchanged
+([evidence](refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md#closed-loop-recovery-policy-follow-up-2026-10-16)).
+
 A positive command produces a positive correction map, which is subtracted
 from atmospheric OPD. HCIPy's reflective DM accepts physical surface
 displacement, so its adapter sends half the OPD-equivalent command and returns
@@ -524,6 +532,7 @@ loop/result types.
 | `interaction_matrix`, `reconstructor`, `command_projector`, `controller` | calibrated inverse and real-time-control chain |
 | `science_propagator` | configured physical-axis PSF backend |
 | `component_hashes`, `config_hash`, `source_config` | immutable component map, serialized profile identity, and the `SystemConfig` the system was built from (`config_hash` equals `source_config.config_hash`) |
+| `recovery_policy` | the opt-in `controller.recovery` loop supervisor, or `None` (the freeze-on-rejection loop); when set, its identity joins `component_hashes` as `"recovery"` |
 | `build_attestation` | evidence that `build_scao_system` produced exactly these component identities from exactly this configuration and supplied matrix, so verifying the system before a run costs a comparison instead of a second build and its interaction-matrix calibration. It is checked against the system carrying it and never widens what is accepted: a system with no matching attestation is verified by rebuilding its configuration, which stays the authority |
 
 The detector layer also returns detector-state and detector-local records;
