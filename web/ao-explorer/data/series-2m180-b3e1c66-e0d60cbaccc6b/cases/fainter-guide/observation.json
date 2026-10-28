@@ -1,0 +1,226 @@
+{
+ "schema": "ao-explorer.observation.v1",
+ "case_id": "fainter-guide",
+ "label": "Synthetic binary observation -- post-burn-in average; relative flux per numerical cell; no additional science-camera noise",
+ "scene_id": "3c781197ef0ba5953690e8b8b38bf58230811fad312f9bbb988b254a33e17399",
+ "scene_grid_id": "863ae5b81193d9e7b0a077c1fbcbce55fccdcc39dbbaf36cbdb749aa529c058a",
+ "scene": {
+  "href": "../../scene/scene.json",
+  "bytes": 2843,
+  "sha256": "607dbfd98a5e0befa6f21a625b0667364bf1f2118109819aa7792f3866b96eee",
+  "media_type": "application/json"
+ },
+ "window": [
+  40,
+  180
+ ],
+ "sample_count": 140,
+ "weights": "equal",
+ "renderer_revision": "ao-explorer.binary-observation.v1",
+ "policy": {
+  "kind": "discrete linear convolution, zero extension",
+  "full_shape_rule": "N + M - 1 samples per axis",
+  "evaluation": "explicit sum of weight-scaled kernels at each non-zero scene cell (exact, no FFT, no wrap)",
+  "kernel_origin": "the kernel sample at exactly zero angle on both actual axes",
+  "output_axes": "theta_S[0] + theta_P[0] + m * delta for full index m",
+  "crop": "full-output samples whose angles equal the native PSF grid, matched from coordinates",
+  "boundary": "zero outside both arrays",
+  "renormalization": "none (no peak, cropped-sum or per-image normalization)",
+  "spatial_invariance": "one on-axis PSF assumed throughout the compact scene (illustrative)"
+ },
+ "derived_arrays_sha256": "64e862d902be391707643b091b9c063210060ae7af6a7571164c4b33717c12ed",
+ "observation_code_identity": {
+  "sha256": "828368f90772bf845074836bcc2724d591faa8b8dd3a7ead2b35237031c8d6f0",
+  "files": {
+   "binary_scene.py": "b96eeb7f61f5aefa5d92ec4cdf7b0aace9fd581087b99f61846e8617b2f3bb49",
+   "render.py": "5f43ac87fb6ffd7ab5f3f69fd443214a72f7530f5802bd384719cec737a64a31"
+  }
+ },
+ "roles": {
+  "uncorrected": {
+   "parent": {
+    "job_id": "case-fainter-guide",
+    "role": "uncorrected",
+    "field": "atmosphere_opd_m (zero-DM optical counterfactual)",
+    "array": "mean_psf_uncorrected",
+    "array_sha256": "3b0675e2bc212c5c4b3bd8080cd3610b2da75ea94309347ae2d23cbed8ce1f19",
+    "file": "mean_psfs.npz",
+    "file_sha256": "82695e04862d78a7dde422360fb47938c2f4fc24696d1527f46f560a95b1346d",
+    "shape": [
+     156,
+     156
+    ],
+    "window": [
+     40,
+     180
+    ],
+    "sample_count": 140,
+    "stride": 1,
+    "weights": "equal",
+    "frame_period_s": 0.001,
+    "first_timestamp_s": 0.04,
+    "last_timestamp_s": 0.179,
+    "timestamp_span_s": 0.13899999999999998,
+    "nominal_quadrature_duration_s": 0.14,
+    "sampling": "frame-start instantaneous snapshots; not a finite-shutter sub-frame integration",
+    "recentering": "none",
+    "coaddition": "intensity",
+    "normalization": "unit total flux over the complete uncropped propagator grid",
+    "accumulator_config_hash": "3b826cfedf2d0fbb9a890d9d5c3e7d29a80bae3dbeac240909e42c5de8f7e811",
+    "propagator_config_hash": "a013e8551405b93a469b56b6eb2d3cd15321913593a60858c13f4086e4f5d57d",
+    "run_config_hash": "a53e01ddb749b73d511169f8c661e8ad3f35751acd19cbfac06b306d7a400bb1",
+    "history_config_hash": "0f10179dd29df560b77056a770f05546a2f243213cf923c77b14f8ab7fa1c718",
+    "x_angle_rad_sha256": "9d80ae68b70f10bd3e51013f688a862b2d3e9ed0009e1940d33c52ed961b60f5",
+    "y_angle_rad_sha256": "9d80ae68b70f10bd3e51013f688a862b2d3e9ed0009e1940d33c52ed961b60f5",
+    "wavelength_m": 1.65e-06,
+    "total_flux": 1.0
+   },
+   "full_shape_yx": [
+    311,
+    311
+   ],
+   "full_axis_first_rad": [
+    -4.207500000000003e-05,
+    -4.207500000000003e-05
+   ],
+   "crop_slices_yx": [
+    [
+     78,
+     234
+    ],
+    [
+     78,
+     234
+    ]
+   ],
+   "scene_flux": 1.0,
+   "kernel_flux": 1.0,
+   "full_flux": 1.0,
+   "expected_full_flux": 1.0,
+   "full_flux_error": 0.0,
+   "cropped_flux": 0.9997963870656379,
+   "retained_fraction": 0.9997963870656379,
+   "lost_fraction": 0.00020361293436210737,
+   "image_sha256": "b45e334ebd228dffb78b8abb4364bbdcddac5d47e3ed37498bea8b4a68011fc4",
+   "display": {
+    "image": {
+     "href": "observation-uncorrected.png",
+     "bytes": 8005,
+     "sha256": "eac138515c4dbaab9d671b069e5d9d5fcd9d6cf4128d70bab01267a6c0f75c16",
+     "media_type": "image/png"
+    },
+    "scale": {
+     "mapping": "log10(I / I_ideal_peak) clipped to [-4, 0]",
+     "ideal_peak_cell_flux": 0.08349769888231426,
+     "ideal_reference": "zero-OPD image of the same native propagator, wavelength and grid (unit total flux)",
+     "colormap": "inferno",
+     "normalization": "common to every frame, case, role, average image, observation and the scene reference; no per-image peak normalization"
+    },
+    "clipping": {
+     "above_display_max_fraction": 0.0,
+     "below_display_min_fraction": 0.8627136752136753
+    },
+    "extent_mas": [
+     -4367.111860534981,
+     4311.479862311605
+    ]
+   }
+  },
+  "corrected": {
+   "parent": {
+    "job_id": "case-fainter-guide",
+    "role": "corrected",
+    "field": "pre_update_residual_opd_m",
+    "array": "mean_psf_corrected",
+    "array_sha256": "25b88619972962465234d3edd099f0f115d97ee2e21daa8560abda2757191af8",
+    "file": "mean_psfs.npz",
+    "file_sha256": "82695e04862d78a7dde422360fb47938c2f4fc24696d1527f46f560a95b1346d",
+    "shape": [
+     156,
+     156
+    ],
+    "window": [
+     40,
+     180
+    ],
+    "sample_count": 140,
+    "stride": 1,
+    "weights": "equal",
+    "frame_period_s": 0.001,
+    "first_timestamp_s": 0.04,
+    "last_timestamp_s": 0.179,
+    "timestamp_span_s": 0.13899999999999998,
+    "nominal_quadrature_duration_s": 0.14,
+    "sampling": "frame-start instantaneous snapshots; not a finite-shutter sub-frame integration",
+    "recentering": "none",
+    "coaddition": "intensity",
+    "normalization": "unit total flux over the complete uncropped propagator grid",
+    "accumulator_config_hash": "3b826cfedf2d0fbb9a890d9d5c3e7d29a80bae3dbeac240909e42c5de8f7e811",
+    "propagator_config_hash": "a013e8551405b93a469b56b6eb2d3cd15321913593a60858c13f4086e4f5d57d",
+    "run_config_hash": "a53e01ddb749b73d511169f8c661e8ad3f35751acd19cbfac06b306d7a400bb1",
+    "history_config_hash": "0f10179dd29df560b77056a770f05546a2f243213cf923c77b14f8ab7fa1c718",
+    "x_angle_rad_sha256": "9d80ae68b70f10bd3e51013f688a862b2d3e9ed0009e1940d33c52ed961b60f5",
+    "y_angle_rad_sha256": "9d80ae68b70f10bd3e51013f688a862b2d3e9ed0009e1940d33c52ed961b60f5",
+    "wavelength_m": 1.65e-06,
+    "total_flux": 0.9999999999999999
+   },
+   "full_shape_yx": [
+    311,
+    311
+   ],
+   "full_axis_first_rad": [
+    -4.207500000000003e-05,
+    -4.207500000000003e-05
+   ],
+   "crop_slices_yx": [
+    [
+     78,
+     234
+    ],
+    [
+     78,
+     234
+    ]
+   ],
+   "scene_flux": 1.0,
+   "kernel_flux": 0.9999999999999999,
+   "full_flux": 1.0,
+   "expected_full_flux": 0.9999999999999999,
+   "full_flux_error": 1.1102230246251565e-16,
+   "cropped_flux": 0.9997973308309628,
+   "retained_fraction": 0.9997973308309628,
+   "lost_fraction": 0.00020266916903721732,
+   "image_sha256": "644699122687c10021da0230fccb98f7d8d8e381c6b1a4ec1d643ed58ff6a07e",
+   "display": {
+    "image": {
+     "href": "observation-corrected.png",
+     "bytes": 7889,
+     "sha256": "97c9352484c74e3f97ac9158d91e3f18b3e41f697fe8cc1ec9bd763e44d481d3",
+     "media_type": "image/png"
+    },
+    "scale": {
+     "mapping": "log10(I / I_ideal_peak) clipped to [-4, 0]",
+     "ideal_peak_cell_flux": 0.08349769888231426,
+     "ideal_reference": "zero-OPD image of the same native propagator, wavelength and grid (unit total flux)",
+     "colormap": "inferno",
+     "normalization": "common to every frame, case, role, average image, observation and the scene reference; no per-image peak normalization"
+    },
+    "clipping": {
+     "above_display_max_fraction": 0.0,
+     "below_display_min_fraction": 0.8639464168310322
+    },
+    "extent_mas": [
+     -4367.111860534981,
+     4311.479862311605
+    ]
+   }
+  }
+ },
+ "limitations": [
+  "WFS detector noise is on and affects the AO residual; no science-camera noise, counts, SNR, limiting magnitude or detection significance is modelled.",
+  "One spatially invariant on-axis PSF is assumed across the compact scene; no off-axis, isoplanatic or sky-coverage validation is implied.",
+  "Frame-start snapshot average (140 x 1 ms nominal quadrature, timestamp span 0.139 s), not a finite-shutter exposure.",
+  "The highest pixel of a binary image is not a Strehl ratio; Strehl stays a PSF metric.",
+  "The guide-source magnitude is a WFS input; the scene's relative flux is the same in every case."
+ ]
+}

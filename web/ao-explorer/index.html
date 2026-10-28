@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AO Simulation Explorer</title>
+<meta name="description" content="Precomputed native 2 m Shack-Hartmann SCAO experiment and the main results of the AO simulation project, with their evidence and limits.">
+<link rel="icon" href="data:,">
+<!-- Code and style come from the content-addressed build directory; see scripts/ao_explorer/site_build.py. -->
+<link rel="stylesheet" href="code-7c04e5cefab85e8b/styles.css">
+<script>
+function aoCodeUnavailable() {
+  const show = () => {
+    const status = document.getElementById("status");
+    if (status) status.textContent = "The page code could not be loaded (a newer version of the site may have replaced it). Reload the page.";
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
+}
+</script>
+<script type="module" src="code-7c04e5cefab85e8b/app.js" onerror="aoCodeUnavailable()"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap header-row">
+    <div>
+      <p class="site-title">AO Simulation Explorer</p>
+      <p class="scope">Shack-Hartmann adaptive-optics simulation: a precomputed 2 m experiment and the project's recorded results.</p>
+    </div>
+    <nav aria-label="Sections">
+      <ul class="nav">
+        <li><a href="#explore">Explore 2 m</a></li>
+        <li><a href="#results">Research Results</a></li>
+        <li><a href="#methods">Methods &amp; Limits</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<section id="explore" class="wrap section" aria-labelledby="explore-title">
+  <h1 id="explore-title">2 m Interactive AO Experiment</h1>
+  <p class="lede">A precomputed native 2 m Shack-Hartmann SCAO loop with a synthetic on-axis guide source: one seed, 180 frames at 1 kHz, burn-in 40. Your browser replays recorded frames and selects recorded cases; it does not simulate, interpolate or draw noise.</p>
+
+  <div id="status" class="status" role="status" aria-live="polite">Loading the dataset manifest…</div>
+  <div id="error" class="error" role="alert" hidden></div>
+
+  <section class="panel" aria-labelledby="scenario-title">
+    <h2 id="scenario-title">Scenario</h2>
+    <p class="hint">Each button selects one complete recorded case; groups share the baseline. Combinations of changes were not computed and are not offered.</p>
+    <div id="groups" class="groups"></div>
+    <div id="case-summary" class="case-summary" aria-live="polite"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="viewer-title">
+    <div class="viewer-head">
+      <h2 id="viewer-title">Wavefronts and images</h2>
+      <fieldset class="segmented" id="psf-mode">
+        <legend>PSF view</legend>
+        <label><input type="radio" name="psf-mode" value="instantaneous" checked> Instantaneous</label>
+        <label><input type="radio" name="psf-mode" value="average"> Post-burn-in average</label>
+      </fieldset>
+    </div>
+    <div class="maps">
+      <figure class="map">
+        <canvas id="map-atmosphere" width="208" height="208" role="img" aria-label="Atmospheric OPD map"></canvas>
+        <figcaption><strong>Atmospheric OPD</strong><span>the frame's recorded atmosphere, nm</span><span class="map-frame" id="note-atmosphere"></span></figcaption>
+      </figure>
+      <figure class="map">
+        <canvas id="map-correction" width="208" height="208" role="img" aria-label="Held DM correction map"></canvas>
+        <figcaption><strong>Held DM correction</strong><span>atmosphere minus residual, nm OPD-equivalent</span><span class="map-frame" id="note-correction"></span></figcaption>
+      </figure>
+      <figure class="map">
+        <canvas id="map-residual" width="208" height="208" role="img" aria-label="Residual seen by the WFS"></canvas>
+        <figcaption><strong>Residual seen by the WFS</strong><span>pre-update residual, nm</span><span class="map-frame" id="note-residual"></span></figcaption>
+      </figure>
+      <div class="colorbar-block">
+        <canvas id="cbar-opd" width="24" height="200" aria-hidden="true"></canvas>
+        <div class="cbar-labels" id="cbar-opd-labels"></div>
+        <p class="cbar-note" id="cbar-opd-note"></p>
+      </div>
+    </div>
+    <div class="psfs">
+      <figure class="map psf">
+        <canvas id="psf-uncorrected" width="256" height="256" role="img" aria-label="Uncorrected PSF"></canvas>
+        <figcaption><strong id="psf-unc-title">Matched uncorrected image</strong><span id="psf-unc-sub">same atmosphere, zero DM</span></figcaption>
+      </figure>
+      <figure class="map psf">
+        <canvas id="psf-corrected" width="256" height="256" role="img" aria-label="AO-corrected PSF"></canvas>
+        <figcaption><strong id="psf-ao-title">AO-corrected image</strong><span id="psf-ao-sub">pre-update residual</span></figcaption>
+      </figure>
+      <div class="colorbar-block">
+        <canvas id="cbar-psf" width="24" height="200" aria-hidden="true"></canvas>
+        <div class="cbar-labels" id="cbar-psf-labels"></div>
+        <p class="cbar-note" id="cbar-psf-note"></p>
+      </div>
+    </div>
+    <p class="mode-note" id="mode-note" hidden></p>
+
+    <div class="transport" role="group" aria-label="Playback">
+      <button type="button" id="btn-restart" title="Restart at frame 0">Restart</button>
+      <button type="button" id="btn-prev" title="Previous recorded frame">◀ Step</button>
+      <button type="button" id="btn-play" aria-pressed="false">Play</button>
+      <button type="button" id="btn-next" title="Next recorded frame">Step ▶</button>
+      <label class="seek">Seek <input type="range" id="seek" min="0" max="39" value="9" step="1"></label>
+      <label class="speed">Display rate
+        <select id="speed">
+          <option value="2">2 movie frames/s</option>
+          <option value="5" selected>5 movie frames/s</option>
+          <option value="10">10 movie frames/s</option>
+          <option value="20">20 movie frames/s</option>
+        </select>
+      </label>
+    </div>
+    <p class="frame-readout" id="frame-readout" aria-live="polite"></p>
+    <p class="hint" id="speed-note">Display rate is presentation speed only. Physical time advances 1 ms per simulated frame; the movie shows 40 of the 180 recorded frames.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="curves-title">
+    <h2 id="curves-title">Metrics over the whole trajectory</h2>
+    <p class="hint">All 180 frames, including burn-in (shaded). Summaries use frames 40–179 only (140 equal-weight samples). The cursor marks the displayed frame.</p>
+    <div class="charts">
+      <figure class="chart"><canvas id="chart-rms" width="640" height="220" role="img" aria-label="RMS against frame"></canvas><figcaption>Pupil RMS (piston removed): atmosphere and pre-update residual, nm</figcaption></figure>
+      <figure class="chart"><canvas id="chart-strehl" width="640" height="220" role="img" aria-label="Strehl against frame"></canvas><figcaption>Instantaneous peak Strehl at 1.65 µm: uncorrected and AO-corrected</figcaption></figure>
+      <figure class="chart"><canvas id="chart-valid" width="640" height="160" role="img" aria-label="Measurement validity against frame"></canvas><figcaption>Valid measurement fraction of frame k, and the DM saturation fraction of the command issued at the end of frame k (that command is held from frame k + 1); ticks below mark frames whose reconstruction was unusable</figcaption></figure>
+    </div>
+    <p class="current-frame" id="current-frame" aria-live="polite"></p>
+    <details>
+      <summary>Data table and downloads for this case</summary>
+      <div id="downloads" class="downloads"></div>
+      <div id="frame-table" class="table-scroll"></div>
+    </details>
+  </section>
+
+  <section class="panel" aria-labelledby="summary-title">
+    <h2 id="summary-title">Post-burn-in summary and comparison with the baseline</h2>
+    <div id="summary-table" class="table-scroll"></div>
+    <p class="hint" id="pairing-note"></p>
+  </section>
+
+  <section class="panel" aria-labelledby="binary-title">
+    <h2 id="binary-title">Synthetic binary observation</h2>
+    <p class="hint" id="binary-label">Synthetic binary observation — post-burn-in average; relative flux per numerical cell; no additional science-camera noise.</p>
+    <div class="binary">
+      <figure class="map obs"><div class="zoomwrap"><img id="scene-img" alt="Input binary scene reference" width="312" height="312"></div><figcaption><strong>Input scene (shared)</strong><span id="scene-caption"></span></figcaption></figure>
+      <figure class="map obs"><div class="zoomwrap"><img id="obs-unc" alt="Binary through the uncorrected average PSF" width="312" height="312"></div><figcaption><strong>Through the uncorrected average</strong><span id="obs-unc-caption"></span></figcaption></figure>
+      <figure class="map obs"><div class="zoomwrap"><img id="obs-ao" alt="Binary through the AO-corrected average PSF" width="312" height="312"></div><figcaption><strong>Through the AO-corrected average</strong><span id="obs-ao-caption"></span></figcaption></figure>
+    </div>
+    <label class="zoom-toggle"><input type="checkbox" id="zoom"> Show the full native window (±4.3″, 156 cells); the default view is the central ±1.8″ (64 cells), the same window as the PSF panels. Display scaling only; the images are not resampled or renormalized.</label>
+    <p class="hint" id="binary-note"></p>
+  </section>
+
+  <section class="panel" aria-labelledby="details-title">
+    <h2 id="details-title">Model, metrics and provenance</h2>
+    <details><summary>How the frames and images are defined</summary><div id="model-notes" class="prose"></div></details>
+    <details><summary>Provenance of this case</summary><pre id="provenance" class="pre"></pre></details>
+    <details><summary>Scene and observation metadata</summary><pre id="observation-meta" class="pre"></pre></details>
+  </section>
+</section>
+
+<section id="results" class="wrap section" aria-labelledby="results-title">
+  <h1 id="results-title">Research Results</h1>
+  <p class="lede">The project's main recorded results, shown from their saved records, notebook outputs and figures. Each card keeps its own model family, scale, wavelength, sampling window and uncertainty definition; none of them is produced by, or responds to, the 2 m controls above.</p>
+  <div id="results-status" class="status" role="status" aria-live="polite">Research Results load when you open this section.</div>
+  <nav aria-label="Result groups"><ul id="results-index" class="results-index"></ul></nav>
+  <div id="results-body"></div>
+</section>
+
+<section id="methods" class="wrap section" aria-labelledby="methods-title">
+  <h1 id="methods-title">Methods &amp; Limits</h1>
+  <div class="prose">
+    <h2>Model families on this site</h2>
+    <ul>
+      <li><strong>Native time-domain SCAO</strong> (the 2 m experiment, R1–R5 and the ESO-tier convergence studies of R8): a frame-by-frame closed loop with a Shack-Hartmann sensor, a deformable mirror, a TSVD or sparse reconstructor and a leaky-integrator controller with queued delay. Detector-level profiles add a physical camera (photon, read and sky noise, calibration products).</li>
+      <li><strong>HCIPy time-domain components</strong> (R7): an independent backend compared with the native one on an accepted small fixture.</li>
+      <li><strong>Analytical MCAO adapter</strong> (R6 and the analytical-study checks of R8): P3 sampled correction-band PSD plus a continuous fitting-tail completion propagated by MASTSEL. It is a separate study, not an extension of the native loop.</li>
+    </ul>
+    <p>Wavelengths, residual conventions, noise settings, profiles, sampling windows and budgets differ between these families and between studies; the site never merges them into one performance comparison.</p>
+
+    <h2>The 2 m experiment</h2>
+    <ul id="methods-2m"></ul>
+
+    <h2>Observable definitions</h2>
+    <ul>
+      <li><strong>Residual RMS</strong>: pupil RMS of the pre-update residual (what the WFS measured) after removing the pupil mean, in nm OPD. Mean per-frame RMS and the root of the mean square are reported separately.</li>
+      <li><strong>Peak Strehl</strong>: peak angular surface brightness of an image over that of the zero-OPD image of the same propagator and grid. The mean of instantaneous Strehl and the Strehl of the averaged image are different quantities and are labelled as such.</li>
+      <li><strong>Averaged image</strong>: the equal-weight mean of 140 sampled instantaneous intensities (frames 40–179). The averaged OPD is never propagated; tilt is kept and nothing is recentred.</li>
+      <li><strong>Validity</strong>: measured fractions of valid measurement rows and sub-apertures, and whether the reconstructor returned an estimate. No lock classifier is claimed.</li>
+    </ul>
+
+    <h2>Evidence status</h2>
+    <ul id="methods-status"></ul>
+
+    <h2>Numerical limits and open questions</h2>
+    <ul id="methods-open"></ul>
+
+    <h2>Reproducibility and identity</h2>
+    <ul id="methods-identity"></ul>
+
+    <h2>Local preview</h2>
+    <p>The site is static and needs an HTTP server; opening <code>index.html</code> from the file system is not supported. From the repository root run <code>python3 -m http.server 8000 --directory web</code> and open <code>http://localhost:8000/ao-explorer/</code>. All assets are bundled; the page makes no external requests. Source links in the Research Results open the repository at the recorded commit on GitHub, an external site, only when followed.</p>
+    <p>The page's code lives in a directory named after its content (<code>code-&lt;build&gt;/</code>) and the dataset entry records that build, so a browser cannot combine a cached older script with newer data: a page whose code does not match the entry says so and asks for a reload.</p>
+  </div>
+</section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>Repository-authored code and data under the MIT licence; third-party data and tools keep their own terms (see each result card). Synthetic demonstration — not measured observatory or instrument performance.</p>
+    <p id="footer-identity"></p>
+  </div>
+</footer>
+</body>
+</html>

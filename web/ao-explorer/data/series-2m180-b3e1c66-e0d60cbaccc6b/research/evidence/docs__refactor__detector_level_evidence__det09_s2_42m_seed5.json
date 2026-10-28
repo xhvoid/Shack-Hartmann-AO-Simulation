@@ -1,0 +1,79 @@
+{
+  "command": "S2 e5 realization, root seed 5",
+  "argv": [
+    "outputs/large_experiments/2026-10-18/s2/run_one_seed.py",
+    ".",
+    "5",
+    "2026-10-18: the user wrote 'Conduct the large experiments.' in chat, enabling roadmap S1, S2 and S3 (one run at a time)"
+  ],
+  "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+  "numpy": "2.5.0",
+  "scipy": "1.18.0",
+  "machine": "arm64",
+  "started_unix_s": 1792366206.331004,
+  "enabled_by_user": "2026-10-18: the user wrote 'Conduct the large experiments.' in chat, enabling roadmap S1, S2 and S3 (one run at a time)",
+  "n_steps": 2000,
+  "burn_in_frames": 200,
+  "series_protocol_version": 2,
+  "code_identity": {
+    "git_head": "23125024e77769d067f53d837e035b340fc2139a",
+    "source_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "runs": [
+    {
+      "config_hash": "c9ccfcf7e15440dc1902e0acb16a31a2fe9391a85a79dd009f7ede7298e848eb",
+      "root_seed": 5,
+      "n_steps": 2000,
+      "burn_in_frames": 200,
+      "build_s": 27.713511042296886,
+      "loop_s": 3476.738703542389,
+      "per_frame_s": 1.7383693517711944,
+      "process_peak_rss_bytes": 2109980672,
+      "post_update_rms_m": 1.728133670572394e-07,
+      "post_update_mean_square_m2": 2.987649438790355e-14,
+      "open_loop_rms_m": 2.106106451963768e-06,
+      "final_post_update_rms_m": 1.7582706186191697e-07,
+      "valid_measurement_fraction": 0.9995314945226917,
+      "min_valid_measurement_fraction": 0.9974569640062598,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7526210547421326,
+          "on_axis_strehl": 0.7526210547421326,
+          "fwhm_lambda_over_d": 0.9295171016022823
+        }
+      ],
+      "label": "det_ccd_42m_r3band_derived@1",
+      "protocol_hash": "860c2e8d6c2b31f6282610ed93e93d225c102549d3f7acd68f0c24241e4e848d",
+      "protocol": {
+        "label": "det_ccd_42m_r3band_derived@1",
+        "root_seed": 5,
+        "config_hash": "c9ccfcf7e15440dc1902e0acb16a31a2fe9391a85a79dd009f7ede7298e848eb",
+        "series_protocol_version": 2,
+        "n_steps": 2000,
+        "burn_in_frames": 200,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='regenerate', telemetry_level='summary')",
+        "code": {
+          "git_head": "23125024e77769d067f53d837e035b340fc2139a",
+          "source_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    }
+  ],
+  "summary": {
+    "det_ccd_42m_r3band_derived@1": {
+      "runs": 1,
+      "post_update_rms_mean_m": 1.728133670572394e-07,
+      "post_update_rms_seed_std_m": 0.0,
+      "valid_fraction_mean": 0.9995314945226917,
+      "valid_fraction_seed_std": 0.0,
+      "peak_strehl_mean": 0.7526210547421326,
+      "peak_strehl_seed_std": 0.0,
+      "lost_lock_runs": 0
+    }
+  },
+  "refused": [],
+  "wall_s": 3520.580600976944
+}

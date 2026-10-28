@@ -9,3 +9,6 @@ data/reference_metrics/** linguist-generated
 
 # PDFs are binary report artifacts and should not be diffed as text.
 *.pdf binary
+
+# The explorer dataset is hashed byte for byte; never normalize its line endings.
+web/ao-explorer/data/** -text linguist-generated

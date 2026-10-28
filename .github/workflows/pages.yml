@@ -1,0 +1,84 @@
+name: Explorer Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: explorer-pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Explorer bundle Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      OMP_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      VECLIB_MAXIMUM_THREADS: '2'
+      NUMEXPR_NUM_THREADS: '2'
+      MPLBACKEND: Agg
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: '3.10'
+            constraints: constraints/py310.txt
+          - python: '3.14'
+            constraints: constraints/py314.txt
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: ${{ matrix.constraints }}
+      - name: Install constrained validation dependencies
+        env:
+          PIP_CONSTRAINT: ${{ github.workspace }}/${{ matrix.constraints }}
+        run: python -m pip install -e '.[test]'
+      - run: python -m pip check
+      - name: Check content-addressed frontend
+        run: python scripts/ao_explorer/site_build.py --web-dir web/ao-explorer
+      - name: Validate committed distribution
+        run: python scripts/ao_explorer/validate.py --web-dir web/ao-explorer
+      - name: Run explorer contract checks and report evidence skips
+        run: python -m pytest -q -rs tests/ao_explorer
+      - name: Ensure checks preserved tracked files
+        run: git diff --exit-code
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Configure Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - name: Upload only the validated explorer
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: web/ao-explorer
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
