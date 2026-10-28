@@ -72,15 +72,25 @@ not assumed — to disagree with each other:
 | HCIPy 0.7 primitive | raw behavior for `velocity = (a, b)` |
 |---|---|
 | `InfiniteAtmosphericLayer` | pattern translates along `(-a, -b)` |
-| `FiniteAtmosphericLayer` | pattern translates along `(+b, +a)` (spectral shift built in separated-coordinate order lands `velocity[0]` on the slow y field axis) |
+| `FiniteAtmosphericLayer` | square grids: pattern translates along `(+b, +a)`; rectangular grids: not a translation (the spectral shift builds its ramp as an `(nx, ny)` outer sum and ravels it onto `(ny, nx)`-ordered coefficients) |
 
-The adapter therefore passes `(-wx, -wy)` to infinite layers and `(wy, wx)`
-to finite layers (`_WIND_NORMALIZATION_ID =
-"hcipy-0.7-layer-velocity-normalization-v1"`, part of the config hash), and
-the wind-direction tests assert the repository convention for both kinds on
-three wind vectors, so a behavioral change in a future pinned HCIPy fails
-loudly instead of silently flipping the wind. Sub-pixel translation is
-tested for both kinds; neither is restricted to integer-pixel motion.
+The adapter therefore passes `(-wx, -wy)` to infinite layers
+(`_WIND_NORMALIZATION_ID = "hcipy-0.7-layer-velocity-normalization-v1"`,
+part of the config hash). Finite layers are built with zero HCIPy velocity
+and the adapter translates them itself: every spectral coefficient of the
+layer's unshifted multiscale noise is multiplied by
+`exp(-i (kx·wx + ky·wy)·t)` at its own flattened frequency coordinate, which
+is a rigid sub-pixel translation on any rectangular grid and bit-identical
+to the previous `(wy, wx)` HCIPy shift on square grids
+(`_FINITE_LAYER_TRANSLATION_ID = "true-frequency-coordinate-phase-ramp-v1"`,
+added to the config hash only when a finite layer is configured, so
+infinite-only identities are unchanged). The wind-direction tests assert the
+repository convention for both kinds on three wind vectors, so a behavioral
+change in a future pinned HCIPy fails loudly instead of silently flipping the
+wind. Sub-pixel translation is tested for both kinds; neither is restricted
+to integer-pixel motion. On 24x40, 40x24 and 17x29 grids, finite layers are
+checked against integer-pixel sample identity, sub-pixel/whole-pixel
+composition, and the true-frequency phase-ramp oracle.
 
 ## Determinism and replay
 
@@ -104,10 +114,14 @@ AO-REF-014 identity: backend name, config hash, HCIPy version, root seed,
 realization index (a plain `int`, as the shared loop requires), grid shape,
 pupil-geometry and pupil-mask hashes, both distinct reference wavelengths,
 `total_r0_m`, and one entry per layer with its kind, `r0_m`, integrated Cn²,
-outer scale, repository wind, raw HCIPy velocity, altitude, kind-specific
-numerics, temporal model, and stream ID. The config hash covers the full
-serialized configuration, both grid hashes, the wind-normalization and
-phase-conversion construction IDs, and the random-derivation scheme.
+outer scale, repository wind, raw HCIPy velocity (`(0, 0)` for finite
+layers), altitude, kind-specific numerics, temporal model, frozen-flow
+translation (`frozen_flow_translation`), and stream ID; the model-level
+`finite_layer_translation` is the finite translation ID or `None` (metadata
+schema version 2). The config hash covers the full serialized
+configuration, both grid hashes, the wind-normalization and phase-conversion
+construction IDs, the finite-layer translation ID when a finite layer is
+present, and the random-derivation scheme.
 
 ## Loop integration and tests
 
