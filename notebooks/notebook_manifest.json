@@ -369,5 +369,25 @@
       "fixed_seed_policy": "fixed root_seed=20240517 in every simulation config",
       "captured_output_location": "notebooks/experimental/pwfs_detector_level_atmosphere.ipynb (executed outputs stored inline)"
     }
+  ],
+  "supplemental": [
+    {
+      "path": "notebooks/experimental/sh_wfs_experiment_revised.ipynb",
+      "execution_class": "manual",
+      "owner": "Xu Han",
+      "source": "Preserved local revision of AO-NB-004, relocated before restoring the immutable archive.",
+      "preserved_sha256": "cbbac69113f4c0da48173134b89613c27d47cb764d8fce3838e585025c744b50",
+      "captured_output_location": "notebooks/experimental/sh_wfs_experiment_revised.ipynb (existing outputs preserved byte-for-byte)",
+      "validation_scope": "Preserved research work; outside the canonical installed-only notebook contract."
+    },
+    {
+      "path": "notebooks/studies/12_TIPTOP_performance_modelling.ipynb",
+      "execution_class": "manual",
+      "owner": "Xu Han",
+      "source": "Supplemental TIPTOP/P3 Fourier-domain AO study.",
+      "dependency_extra": "tiptop",
+      "captured_output_location": "notebooks/studies/12_TIPTOP_performance_modelling.ipynb (executed outputs stored inline)",
+      "validation_scope": "Optional TIPTOP environment; frequency-tail and sampling convergence documented in docs/notebook12_tiptop_portfolio_notes.md."
+    }
   ]
 }

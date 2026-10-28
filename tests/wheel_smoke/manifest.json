@@ -14,6 +14,11 @@
       "requires": []
     },
     {
+      "source": "tests/backends/native/test_atmosphere_physics.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
       "source": "tests/calibration/test_interaction_calibration.py",
       "kind": "test",
       "requires": []
@@ -120,6 +125,11 @@
     },
     {
       "source": "tests/io/test_configs.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/notebooks/test_tiptop_support.py",
       "kind": "test",
       "requires": []
     },
@@ -327,6 +337,11 @@
     {
       "source": "notebooks/studies/detector_level_2m.ipynb",
       "kind": "notebook",
+      "requires": []
+    },
+    {
+      "source": "notebooks/studies/tiptop_support.py",
+      "kind": "support",
       "requires": []
     },
     {

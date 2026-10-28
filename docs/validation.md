@@ -26,7 +26,7 @@ tests, and the retained compatibility validation adapter cover:
 | --- | --- |
 | OPD/phase conversion | `phase = 2*pi*OPD/lambda`, explicit positive wavelength, round-trip within numerical precision |
 | piston and masked RMS | piston removed only inside a non-empty pupil; interior NaN/Inf fails |
-| Maréchal consistency | for the small-aberration regime, measured peak Strehl follows `exp[-(2*pi*sigma_opd/lambda)^2]` and falls as RMS grows |
+| Maréchal consistency | for tilt-free or consistently aligned small-aberration fixtures, measured peak Strehl approximately follows `exp[-(2*pi*sigma_opd/lambda)^2]` |
 | diffraction scale | ideal circular-pupil core/first-minimum scale is consistent with `lambda/D` on physical angular axes |
 | detector statistics | photon noise and centroid uncertainty improve with photon count; read noise degrades quality; full-well/bad-pixel/PRNU policies are explicit |
 | centroid validity | flux, SNR, uncertainty, and window-clipping gates trigger independently; faint noise is not reported as a valid centroid |
@@ -105,9 +105,18 @@ carries real fitting error, real servo lag, and real aliasing.
 | --- | --- | --- |
 | disturbance | DM surface | von Kármán screen, `subharmonic_von_karman_v2` |
 | amplitude set by | `phase_amplitude_nm` | `r0_m`, `outer_scale_m` |
-| fitting error | none, by construction | present (~43 % of the screen at 5×5 actuators) |
+| fitting error | none, by construction | specific to the 13-actuator illuminated basis and Gaussian influence width |
 | latency | 0 frames | 2 frames |
 | `workflow` label | `fast_integration` | `physical_integration` |
+
+The synthetic DM uses width/pitch 0.40 (4.4% adjacent-actuator coupling).
+Actuator count alone does not set its fitting floor. The `all_effects` case
+also retains a 120 nm OPD-equivalent stroke limit to exercise saturation; it
+is not a tuned hardware-performance scenario. RMS removes piston and retains
+tip/tilt. Peak Strehl follows the brightest sampled image point, so image
+motion alone does not reduce its continuous limit (finite sampling can).
+The table contains wavelength-weighted scalar metrics and medians over tail
+frames, not an exposure-integrated broadband PSF.
 
 Both baseline sets are packaged and governed the same way, by separate tools
 so that neither can move the other:

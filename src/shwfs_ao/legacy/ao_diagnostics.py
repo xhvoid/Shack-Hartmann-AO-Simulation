@@ -30,7 +30,9 @@ from ..science.bandpass import (
 )
 from ..science.metrics import (
     _encircled_energy_radius_from_discrete_flux as _canonical_ee_radius,
+    _radial_profile_fwhm_diameter as _canonical_radial_fwhm,
     _weighted_scalar_fields as _canonical_weighted_scalar_fields,
+    discrete_flux_to_angular_surface_brightness as _canonical_surface_brightness,
     psf_scalar_metrics as _psf_scalar_metrics,
 )
 from .data_sources import FilterCurve
@@ -243,7 +245,15 @@ def science_psf_metrics_from_opd(
     except (TypeError, ValueError) as exc:
         raise AODiagnosticsError(str(exc)) from exc
 
-    fwhm_px = canonical.fwhm_rad / focal_pixel_scale_rad
+    # Preserve the frozen pixel facade's annulus-edge convention.  The public
+    # physical metric uses mean sample radii to avoid a sampling-dependent
+    # downward bias; both paths share the same canonical radial-profile kernel.
+    fwhm_px = _canonical_radial_fwhm(
+        _canonical_surface_brightness(psf),
+        psf.x_angle_rad,
+        psf.y_angle_rad,
+        historical_annulus_edges=True,
+    ) / focal_pixel_scale_rad
     # NumPy's historical default argsort was quicksort.  Preserve that tie
     # ordering in the frozen pixel facade while keeping the public canonical
     # physical metric deterministically stable-sorted.

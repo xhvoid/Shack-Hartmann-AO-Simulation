@@ -70,6 +70,14 @@ the supplied residual OPD in metres and applies the science wavelength
 explicitly; passing WFS phase at a different wavelength would violate the
 contract.
 
+The OPD RMS and Maréchal calculation retain tip/tilt. Peak Strehl follows the
+brightest sampled PSF point, so pure image displacement preserves its
+continuous limit; finite sampling and clipping can still affect the maximum.
+A Maréchal comparison to this peak requires consistent tilt removal.
+Canonical FWHM uses the area-weighted mean radius of each annulus rather than
+its inner edge, with interpolation at half maximum and explicit sampling
+convergence tests. Encircled-energy radii retain finite-grid quantization.
+
 `band_average_scalar_metrics` normalizes the supplied weights and averages
 already-computed monochromatic scalar fields. It does not accept PSF arrays and
 does not produce a broadband image. A future broadband image API must require
@@ -85,6 +93,9 @@ scalar-metric work delegates to `shwfs_ao.science`; their FFT work delegates to
 the single kernel in `shwfs_ao.backends.native.propagation`. New code should
 use `shwfs_ao.science` and SI inputs directly; backend implementers use the
 corresponding backend namespace. `shwfs_ao.legacy` remains internal.
+
+Compatibility FWHM retains the historical inner-annulus-edge convention
+explicitly; its coarse-grid bias is not the canonical FWHM definition.
 
 Notebook 09 and Notebook 11 migration remains assigned to AO-REF-019. Their
 existing output tables and figures remain compatibility surfaces rather than a

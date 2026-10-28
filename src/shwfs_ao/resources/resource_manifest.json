@@ -84,19 +84,19 @@
     },
     {
       "logical_name": "reference_metrics/physical_baseline_acceptance.json",
-      "sha256": "af4c10345923e39faad879a52931584dcd5f9f0f89ac3b508df6bee4104c438a"
+      "sha256": "fdcb0db9969a177bccea4e53edc6bd5c6fc817528c6493fa4e56322854fdfb47"
     },
     {
       "logical_name": "reference_metrics/physical_error_budget_regression_baseline.csv",
-      "sha256": "876289197b253e517cd6f0942eddcdeaebbeb3c946846dc9294bcbcb2559b4b2"
+      "sha256": "561886731ecde35c7da15bd07c97639e97f7e0e5b7190cddf1e8cfabd3bc7705"
     },
     {
       "logical_name": "reference_metrics/physical_reference_metrics.json",
-      "sha256": "705ef8acddd285e23d1a40f4f7344e330bf1701508bbf63d753818a84ea5ed29"
+      "sha256": "7be0348f2760a3e1a8834b6c4752f69352f54fa347a7c1ed3234a3c1244c0af3"
     },
     {
       "logical_name": "reference_metrics/physical_reference_metrics_regression_baseline.json",
-      "sha256": "705ef8acddd285e23d1a40f4f7344e330bf1701508bbf63d753818a84ea5ed29"
+      "sha256": "7be0348f2760a3e1a8834b6c4752f69352f54fa347a7c1ed3234a3c1244c0af3"
     },
     {
       "logical_name": "reference_metrics/physical_validation_regression_baseline.csv",

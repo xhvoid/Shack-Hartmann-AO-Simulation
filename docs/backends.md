@@ -17,7 +17,7 @@ with that install hint.
 | Concern | Repository/shared owner | Native implementation | HCIPy implementation |
 | --- | --- | --- | --- |
 | pupil and stable IDs | `core.geometry`, `wfs.shack_hartmann.geometry` | consumes repository geometry | conversion validates exact grid order and mask |
-| atmosphere output | `AtmosphereModel`: piston-removed OPD m | static OPD or periodic Fourier screen with integer-pixel frozen flow | finite/infinite von Kármán layers with sub-pixel flow; summed near-field OPD |
+| atmosphere output | `AtmosphereModel`: piston-removed OPD m | static OPD; legacy periodic integer flow; v2 spectral quadrature with exact sub-pixel flow | finite/infinite von Kármán layers with sub-pixel flow; summed near-field OPD |
 | SH-WFS optics | `ShackHartmannOpticsBackend`: normalized spots and throughput | local extraction, piston removal, padded FFT | microlens array plus Fresnel propagation |
 | detector/electrons | `detector.effects` and one `DetectorRealization` | shared | shared; HCIPy does not replace it |
 | centroid and validity | `detector.centroid`, `detector.validity` | shared | shared; HCIPy estimator is diagnostics-only |
@@ -65,33 +65,39 @@ HCIPy's. Its frozen flow rounds the wind to whole pixels, so a 10 m/s wind on
 a 1 kHz loop over 0.0385 m pixels leaves consecutive frames byte-identical
 about three quarters of the time.
 
-It is retained byte-identical because every accepted baseline in the
-repository was generated with it. Do not "fix" it; select the corrected model
+It is retained byte-identical for historical profiles and regression evidence.
+Select the corrected model
 instead.
 
-`native_frozen_flow_v2` corrects all three defects. The synthesis carries its
-physical amplitude and integrates the PSD over each frequency cell rather than
-sampling its centre; three levels of Lane/Johansson subharmonics restore the
-sub-`1/(N*delta)` frequencies; the default RMS target is the von Kármán
-piston-removed aperture variance, which honours `outer_scale_m`; and frozen
-flow translates by an exact Fourier phase ramp, so every frame differs.
-Validated in `tests/backends/native/test_atmosphere_physics.py` against the
-Kolmogorov structure function (0.92-0.98 of `6.88 (r/r0)**(5/3)` with a fitted
-exponent of 1.674 on a resolved grid) and against HCIPy (total RMS ratio 0.99,
-low-order variance fraction 0.951 against 0.948).
+`native_frozen_flow_v2` carries physical PSD amplitude and resolves each
+frequency cell with 4×4 midpoint quadrature nodes at their actual frequencies.
+Three nested subharmonic levels cover frequencies below the main FFT band.
+This corrects the earlier covariance bias from concentrating a cell's
+integrated power at its centre: at the shipped geometry the deterministic
+circular-pupil variance error falls from about +19% to below 0.5%.
+Frozen flow replays the same spectral coefficients at translated coordinates,
+so off-grid modes move exactly without periodic interpolation. A finite
+frequency band and subharmonic depth still require convergence checks.
+`tests/backends/native/test_atmosphere_physics.py` checks continuum and raster
+pupil variances, realization scatter, structure functions, translation against
+direct plane-wave sums, and optional HCIPy statistics.
 
-Because v2 is absolutely normalized, `normalize_rms` is optional rather than
-load-bearing. Keeping an explicit `target_rms_opd_m` with v2 is a valid
-migration step: it holds the total wavefront error fixed while correcting the
-modal distribution and removing the temporal staircase.
+Use `normalize_rms=False` to retain physical ensemble amplitude and natural
+realization scatter. The historical default remains `True`: it rescales the
+initial pupil RMS to a target and is an amplitude-controlled experiment.
+The v2 default target, when rescaling is requested, uses the finite-outer-scale
+von Kármán piston-removed variance.
 
 Both models are selected by profile name through `atmosphere_model`. The three
 v2 construction fields on `FrozenFlowAtmosphereConfig` are omitted from the
 config hash whenever they hold their legacy values, so every profile written
 before v2 existed hashes exactly as it did and its baselines stay valid; any v2
 configuration hashes differently and records `spectrum_model`,
-`translation_model`, `screen_grid_size`, `absolutely_normalized`, and
-`subharmonic_depth` in its metadata.
+`translation_model`, `screen_grid_size`, and `subharmonic_depth` in its metadata.
+V2 identities also record the quadrature and translation algorithm versions.
+`absolutely_normalized` is true only for unrescaled v2 realizations;
+`raw_spectrum_absolutely_normalized` and `realization_rms_rescaled` distinguish
+the spectrum calibration from subsequent amplitude rescaling.
 
 ### Known backend scope
 
@@ -105,9 +111,10 @@ configuration hashes differently and records `spectrum_model`,
   generated screen using `screen_grid_size`. `opd_at()` refuses the first frame
   whose requested translation exceeds that padding, before the wrap seam can
   enter the pupil; an unpadded v2 screen consequently permits only zero travel.
-- The subharmonic hierarchy represents scales far larger than the screen. On
-  coarse grids this lifts `D(r)` slightly above the infinite-medium
-  Kolmogorov value at separations approaching the grid size.
+- The finite frequency band and subharmonic depth limit spatial statistics.
+  Check convergence for the requested aperture, separations and outer scale;
+  very large outer scales require deeper low-frequency coverage than the
+  shipped finite-L0 configuration.
 - The HCIPy SH-WFS block-window adapter requires each pupil dimension to be an
   integer multiple of `n_lenslets_across`. Other samplings use the native
   optics backend.
@@ -400,7 +407,7 @@ calibration, diagnostic, science, and experiment-result record is listed here.
 | Fields | Unit | Meaning |
 | --- | --- | --- |
 | `wavelength_m`, `telescope_diameter_m`, `opd_rms_m` | metres | monochromatic/effective wavelength, aperture diameter, and pupil OPD RMS |
-| `peak_strehl`, `marechal_strehl`, `marechal_abs_difference` | dimensionless | sampled peak ratio, Maréchal estimate, and their absolute difference |
+| `peak_strehl`, `marechal_strehl`, `marechal_abs_difference` | dimensionless | displaced sampled-peak ratio; piston-only Maréchal estimate (retains tilt); their absolute difference |
 | `fwhm_rad`, `fwhm_lambda_over_d`, `fwhm_arcsec` | rad, `lambda/D`, arcsec | the same surface-brightness FWHM diameter in three declared units |
 | `ee50_rad`, `ee50_lambda_over_d`, `ee50_arcsec` | rad, `lambda/D`, arcsec | 50-percent encircled-energy radius |
 | `ee80_rad`, `ee80_lambda_over_d`, `ee80_arcsec` | rad, `lambda/D`, arcsec | 80-percent encircled-energy radius |
@@ -419,8 +426,8 @@ loop/result types.
 | Fields | Unit | Meaning |
 | --- | --- | --- |
 | `scenario_name`, `enabled_effects` | strings | stable row identity and explicit enabled-effect labels |
-| `open_rms_nm`, `closed_rms_nm` | nm OPD RMS | median open- and closed-loop tail-window residuals |
-| `strehl_J`, `strehl_H`, `strehl_K`, `open_strehl_H` | dimensionless | band-specific closed-loop peak ratios and open-loop H-band ratio |
+| `open_rms_nm`, `closed_rms_nm` | nm OPD RMS | median piston-removed tail-window residuals; tip/tilt retained |
+| `strehl_J`, `strehl_H`, `strehl_K`, `open_strehl_H` | dimensionless | medians of wavelength-weighted instantaneous peak ratios; follows displaced peak, not an exposure-integrated image |
 | `ee50_J`, `ee50_H`, `ee50_K` | `lambda/D` | band-specific 50-percent encircled-energy radii |
 | `ee80_J`, `ee80_H`, `ee80_K` | `lambda/D` | band-specific 80-percent encircled-energy radii |
 | `command_rms_nm`, `command_peak_nm` | nm OPD-equivalent | applied-command RMS and maximum absolute command in the compatibility loop |

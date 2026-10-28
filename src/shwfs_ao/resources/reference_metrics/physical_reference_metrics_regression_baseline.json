@@ -1,9 +1,9 @@
 {
-  "closed_rms_nm": 595.268796,
+  "closed_rms_nm": 440.574158,
   "config_hash": "00f28fa6743727d2c0d7cfbd924ce78c19a6cd4f25ebd4d20fd9e17d74b35a88",
-  "h_strehl": 0.533341,
+  "h_strehl": 0.249565,
   "kept_modes": 13,
-  "open_rms_nm": 645.444325,
+  "open_rms_nm": 492.001228,
   "preset": "physical_2m",
   "reference_scenario": "all_effects",
   "runtime_band": "fast_over_60s",

@@ -23,3 +23,6 @@ data/cache/*
 !data/cache/.gitkeep
 outputs/
 results/
+
+# Output directory used by the README demonstration.
+/readme-smoke-output/
