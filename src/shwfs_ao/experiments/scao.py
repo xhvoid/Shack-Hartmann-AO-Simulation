@@ -936,11 +936,13 @@ def _validate_matrix_response(
     """Fail closed unless a supplied or resource matrix fits this WFS response.
 
     Geometry, row IDs, and units all survive a change of WFS wavelength,
-    padding, detector window, optics backend, or centroid estimator, so only
-    the sensor response identity can expose a stale matrix.  Photon and
-    read-noise operating points lie outside that identity and stay free.  A
-    built matrix is calibrated on this very sensor; a matrix without a
-    recorded identity cannot be verified and is rejected rather than trusted.
+    padding, detector window, optics backend, detector pedestal, saturation,
+    or pixel maps, or centroid estimator, so only the sensor response identity
+    can expose a stale matrix.  Read noise lies outside that identity, and so
+    does the photon budget wherever it leaves the noiseless response
+    unchanged (no pedestal and no full well).  A built matrix is calibrated
+    on this very sensor; a matrix without a recorded identity cannot be
+    verified and is rejected rather than trusted.
     """
 
     source = config.calibration.source
@@ -963,8 +965,9 @@ def _validate_matrix_response(
         raise ScaoConstructionError(
             "interaction-matrix sensor_response_hash must match the "
             "constructed WFS response (optics backend, WFS wavelength, "
-            "padding and window sampling, centroid estimator and threshold) "
-            "before the first frame."
+            "padding and window sampling, detector pedestal and full well "
+            "relative to the source, PRNU and bad-pixel maps, centroid "
+            "estimator and threshold) before the first frame."
         )
 
 

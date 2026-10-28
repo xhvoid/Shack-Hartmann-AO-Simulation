@@ -290,6 +290,61 @@ def apply_legacy_detector_effects(
     )
 
 
+def _noiseless_response_identity(
+    config: DetectorConfig,
+    realization: DetectorRealization,
+) -> dict[str, object]:
+    """Return what fixes the noiseless detector frame up to a positive scale.
+
+    Without noise :func:`apply_detector_effects` forms
+    ``min((s * I + B) * PRNU, FW)`` and zeroes bad pixels, where ``s`` is the
+    source scale (photon budget times QE, or one on the photonless branch) and
+    ``B`` the dark-plus-background pedestal.  Centroid estimators commute with
+    a positive rescaling of the frame (the relative threshold, minimum
+    subtraction, and negative clipping all do), so only ``B / s``, ``FW / s``,
+    the PRNU response, and the bad-pixel mask shape the OPD-to-centroid
+    response.  Read noise never enters it, and the photon budget enters only
+    through those ratios: it is free exactly when the detector has neither a
+    pedestal nor a full well.
+    """
+
+    photons = config.photons_per_subap_frame
+    persistent = config.prnu_mode == "persistent"
+    pedestal_e = float(config.dark_e_per_s) * float(config.exposure_s) + float(
+        config.background_e_per_pixel_frame
+    )
+    if photons is None:
+        # The photonless branch adds the pedestal only in persistent mode.
+        source_scale = 1.0
+        if not persistent:
+            pedestal_e = 0.0
+    else:
+        source_scale = float(photons) * float(config.qe)
+    prnu: object
+    if persistent:
+        prnu = np.asarray(realization.prnu_response, dtype=float)
+    elif photons is not None and float(config.prnu_rms) > 0.0:
+        # Redrawn for every frame, including noiseless calibration frames.
+        prnu = {"per_frame_legacy_prnu_rms": float(config.prnu_rms)}
+    else:
+        prnu = None
+    full_well_e = None if config.full_well_e is None else float(config.full_well_e)
+    if source_scale > 0.0:
+        pedestal: dict[str, float | None] = {
+            "pedestal_over_source": pedestal_e / source_scale,
+            "full_well_over_source": (
+                None if full_well_e is None else full_well_e / source_scale
+            ),
+        }
+    else:
+        pedestal = {"pedestal_e": pedestal_e, "full_well_e": full_well_e}
+    return {
+        **pedestal,
+        "prnu_response": prnu,
+        "bad_pixel_mask": np.asarray(realization.bad_pixel_mask, dtype=bool),
+    }
+
+
 def _apply_configured_photonless_effects(
     intensity: np.ndarray,
     config: DetectorConfig,

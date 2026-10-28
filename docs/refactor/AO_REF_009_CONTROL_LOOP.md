@@ -129,13 +129,16 @@ never changed the DM command, so its residual histories are open-loop:
 `shwfs_ao.control.ControlLoopWarning` naming the observed valid-measurement
 range and, when the reconstructor exposes it, its `min_valid_fraction`.
 
-Runtime WFS operating points may deliberately vary photon or read-noise
-configuration while reusing one response calibration. The loop therefore
+Runtime WFS operating points may deliberately vary read noise, or the photon
+budget of a detector without pedestal or full well, while reusing one response
+calibration: neither changes the noiseless response. The loop therefore
 requires exact row IDs and measurement units and records both runtime-WFS and
 calibration identities. When both the runtime WFS and the interaction matrix
 declare a sensor response identity they must be equal, so a change of WFS
-wavelength, sampling, or centroid estimator cannot reuse a stale calibration;
-the AO-REF-011 system factory owns construction of a fully coherent component
+wavelength, sampling, detector pedestal, saturation, or pixel maps, or of the
+centroid estimator, cannot reuse a stale calibration. With a background a
+photon change alters the source-to-pedestal ratio, so it is rejected too. The
+AO-REF-011 system factory owns construction of a fully coherent component
 bundle. Actuator-space matrices are already bound to
 the exact DM hash, and modal projectors carry their target DM hash explicitly.
 

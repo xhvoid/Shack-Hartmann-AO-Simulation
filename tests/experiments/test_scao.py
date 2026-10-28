@@ -1268,6 +1268,117 @@ def test_operating_point_scans_reuse_one_supplied_matrix(
     )
 
 
+_PEDESTAL_E = 1.0e4
+
+
+@pytest.mark.parametrize(
+    ("reference_change", "detector_change"),
+    (
+        pytest.param(
+            {},
+            {"background_e_per_pixel_frame": _PEDESTAL_E},
+            id="background",
+        ),
+        pytest.param({}, {"dark_e_per_s": 1.0e7}, id="dark-current"),
+        pytest.param({}, {"full_well_e": 2.0e4}, id="full-well"),
+        pytest.param({}, {"prnu_rms": 0.1}, id="persistent-prnu-map"),
+        pytest.param({}, {"bad_pixel_fraction": 0.05}, id="bad-pixel-map"),
+        pytest.param(
+            {"background_e_per_pixel_frame": _PEDESTAL_E},
+            {
+                "background_e_per_pixel_frame": _PEDESTAL_E,
+                "photons_per_subap_frame": 5.0e5,
+            },
+            id="photon-budget-over-a-pedestal",
+        ),
+    ),
+)
+def test_a_stale_matrix_is_rejected_after_the_noiseless_detector_frame_changes(
+    reference_change: dict[str, object],
+    detector_change: dict[str, object],
+) -> None:
+    """Pedestal, saturation, and pixel maps reshape the noiseless frame.
+
+    Centroids ignore only an overall rescaling of the frame, so each change
+    moves the calibrated response; over a pedestal the photon budget does too,
+    because it changes the source-to-pedestal ratio.
+    """
+
+    tiny = _tiny_system_config("detector_level")
+    reference_config = replace(
+        tiny,
+        detector=replace(tiny.detector, **reference_change),  # type: ignore[arg-type]
+    )
+    changed = replace(
+        tiny,
+        detector=replace(tiny.detector, **detector_change),  # type: ignore[arg-type]
+    )
+    reference = scao.build_scao_system(reference_config)
+    fresh = scao.build_scao_system(changed)
+    # Independent oracle: recalibrating the changed sensor moves the response.
+    rows = reference.interaction_matrix.row_valid & fresh.interaction_matrix.row_valid
+    old_response = reference.interaction_matrix.matrix[rows]
+    assert np.linalg.norm(fresh.interaction_matrix.matrix[rows] - old_response) > (
+        0.01 * np.linalg.norm(old_response)
+    )
+    assert fresh.wfs.response_hash != reference.wfs.response_hash
+
+    with pytest.raises(
+        scao.ScaoConstructionError,
+        match="sensor_response_hash must match the constructed WFS response",
+    ):
+        scao.build_scao_system(
+            _with_calibration_source(changed, "supplied"),
+            interaction_matrix=reference.interaction_matrix,
+        )
+
+
+@pytest.mark.parametrize(
+    "detector_change",
+    (
+        pytest.param({"read_noise_e": 3.0}, id="read-noise"),
+        pytest.param(
+            {
+                "photons_per_subap_frame": 5.0e5,
+                "background_e_per_pixel_frame": 0.5 * _PEDESTAL_E,
+            },
+            id="photons-and-pedestal-halved-together",
+        ),
+    ),
+)
+def test_changes_that_only_rescale_the_noiseless_frame_reuse_one_matrix(
+    detector_change: dict[str, object],
+) -> None:
+    """Over a pedestal, read noise and a common rescaling stay response-neutral."""
+
+    tiny = _tiny_system_config("detector_level")
+    reference_config = replace(
+        tiny,
+        detector=replace(tiny.detector, background_e_per_pixel_frame=_PEDESTAL_E),
+    )
+    changed = replace(
+        reference_config,
+        detector=replace(reference_config.detector, **detector_change),  # type: ignore[arg-type]
+    )
+    reference = scao.build_scao_system(reference_config)
+    fresh = scao.build_scao_system(changed)
+    assert fresh.wfs.config_hash != reference.wfs.config_hash
+    # Invariance oracle: the recalibrated response is unchanged.
+    np.testing.assert_allclose(
+        fresh.interaction_matrix.matrix,
+        reference.interaction_matrix.matrix,
+        rtol=1.0e-12,
+        atol=0.0,
+    )
+    assert fresh.wfs.response_hash == reference.wfs.response_hash
+
+    supplied = scao.build_scao_system(
+        _with_calibration_source(changed, "supplied"),
+        interaction_matrix=reference.interaction_matrix,
+    )
+    assert supplied.interaction_matrix is reference.interaction_matrix
+
+
 class _ResponseUndeclaredSensor:
     """A WFS seen as a structural sensor that declares no response identity."""
 

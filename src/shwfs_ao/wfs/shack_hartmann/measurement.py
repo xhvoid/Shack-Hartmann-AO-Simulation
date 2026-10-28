@@ -19,6 +19,7 @@ from ...core.types import (
 from ...detector.centroid import CentroidConfig, estimate_centroid
 from ...detector.config import DetectorConfig
 from ...detector.effects import (
+    _noiseless_response_identity,
     apply_detector_effects,
     apply_legacy_detector_effects,
 )
@@ -145,11 +146,14 @@ class DetectorShackHartmannSensor:
         )
         # The response identity binds only what shapes the noiseless
         # OPD-to-centroid transfer: the optics (backend, WFS wavelength,
-        # padding and detector-window sampling) and the centroid estimator
-        # with its threshold.  Photometry, noise, and validity settings are
-        # deliberately absent, so photon and read-noise operating-point scans
-        # may reuse one interaction-matrix calibration while a sampling or
-        # estimator change cannot.
+        # padding and detector-window sampling), the noiseless detector frame
+        # up to its overall scale (pedestal and full well relative to the
+        # source, PRNU response, bad pixels), and the centroid estimator with
+        # its threshold.  Read noise and validity settings are absent, and the
+        # photon budget enters only through those ratios, so read-noise scans,
+        # and photon scans on a detector without pedestal or full well, may
+        # reuse one interaction-matrix calibration while any change of the
+        # noiseless response cannot.
         self._response_hash = component_config_hash(
             "detector_shack_hartmann_response",
             {
@@ -159,6 +163,10 @@ class DetectorShackHartmannSensor:
                 "wfs_wavelength_m": calibration.wfs_wavelength_m,
                 "detector_sampling_hash": (
                     calibration.detector_sampling.sampling_hash
+                ),
+                "detector_response": _noiseless_response_identity(
+                    calibration.detector_config,
+                    detector_realization,
                 ),
                 "centroid_config": calibration.centroid_config,
                 "measurement_unit": calibration.measurement_unit,
@@ -257,10 +265,12 @@ class DetectorShackHartmannSensor:
 
     @property
     def response_hash(self) -> str:
-        """Identity of the optical response an interaction matrix calibrates.
+        """Identity of the noiseless response an interaction matrix calibrates.
 
-        Unlike :attr:`config_hash` it omits photometric and noise settings,
-        which leave the noiseless response unchanged.
+        Unlike :attr:`config_hash` it omits read noise, validity settings, and
+        the absolute source scale, which leave the noiseless response
+        unchanged; detector pedestal and full well enter relative to the
+        source, so a photon change that alters the response changes it.
         """
 
         return self._response_hash
