@@ -62,6 +62,7 @@ import re
 from pathlib import Path, PurePosixPath
 import sys
 from typing import Any, Dict, List, Optional, Sequence
+import zipfile
 
 import long_series
 import protocol
@@ -91,6 +92,8 @@ RECORD_SCHEMA = "ao-explorer.manifest-validation.v2"
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 _RGB = re.compile(r"^#[0-9a-f]{6}$")
 PAIRING_STATUSES = ("reference", "paired", "different_atmosphere")
+# What reading a retained raw archive raises when it is missing, truncated, mis-shaped or not the declared kind of file.
+RAW_READ_ERRORS = (OSError, ValueError, KeyError, IndexError, EOFError, zipfile.BadZipFile)
 # Atmosphere-side images that paired cases share with the baseline (long_export stores them once).
 SHARED_IMAGE_KEYS = (("images", "atmosphere", "atlas"), ("images", "psf_uncorrected", "atlas"), ("images", "psf_average_uncorrected", "image"))
 
@@ -1131,19 +1134,11 @@ class Checker:
         """Bind the bundle to the retained raw archives, with the contract's own layout and frame indexing."""
 
         import numpy as np
-        from PIL import Image
 
         c = self.c
         series_dir = Path(series_dir)
         self.check(series_dir.is_dir(), f"raw evidence: series directory {series_dir} exists ({c.name} layout: {c.raw_layout})", area="raw")
-
-        def lut_codes(lut_hex: List[str]) -> Any:
-            return np.array([[int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)] for h in lut_hex], dtype=np.uint8)
-
-        opd_lut = lut_codes(display["opd"]["lut_rgb_hex"])
-        limit = display["opd"]["limit_m"]
-        levels = c.opd_levels
-        positions = {frame: index for index, frame in enumerate(c.display_indices)}
+        opd_lut = np.array([[int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)] for h in display["opd"]["lut_rgb_hex"]], dtype=np.uint8)
         for case_id, bundle in cases.items():
             provenance = bundle["provenance"]
             if c.raw_layout == "movie_npz":
@@ -1152,53 +1147,68 @@ class Checker:
                 attempt = series_dir / "cases" / case_id / str(provenance.get("attempt"))
             if not self.check(attempt.is_dir(), f"{case_id}: raw attempt directory {attempt} exists ({c.raw_layout} layout)", area="raw"):
                 continue
-            for name, info in provenance["raw_evidence"]["files"].items():
-                path = attempt / name
-                self.check(path.is_file() and path.stat().st_size == info["bytes"] and _sha_file(path) == info["sha256"], f"{case_id}: raw {name} matches its provenance digest", area="raw")
-            retained_mask = None
-            with np.load(attempt / "mean_psfs.npz", allow_pickle=False) as data:
-                for role, name in (("uncorrected", "mean_psf_uncorrected"), ("corrected", "mean_psf_corrected")):
-                    digest = _sha(np.ascontiguousarray(data[name]).tobytes())
-                    self.check(digest == bundle["observation"]["roles"][role]["parent"]["array_sha256"], f"{case_id}: {role} observation parent digest equals the retained numeric mean", area="raw")
-                self.check([int(v) for v in data["analysis_frames"]] == list(range(c.burn_in, c.frames)), f"{case_id}: retained mean covers frames {c.burn_in}-{c.last_frame} (not the displayed frames)", area="raw")
-                if "pupil_mask" in data.files:
-                    retained_mask = np.asarray(data["pupil_mask"], dtype=bool)
-            atlas_item = self.active.verify(f"{bundle['prefix']}/atlas-residual.png")
-            if atlas_item is None:
-                continue
-            atlas = np.asarray(Image.open(io.BytesIO(atlas_item["data"])).convert("RGBA"))
-            rects = bundle["case"]["images"]["residual"]["rectangles_xywh"]
-            pistons = bundle["case"]["images"]["residual"]["display_piston_nm"]
-            if c.raw_layout == "movie_npz":
-                movie = np.load(attempt / "movie.npz", allow_pickle=False)
+            try:
+                self.check_raw_case(case_id, attempt, bundle, opd_lut, display["opd"]["limit_m"])
+            except RAW_READ_ERRORS as exc:
+                # A missing or malformed archive is a recorded failure of this case, not a crash of the run.
+                self.check(False, f"{case_id}: raw evidence in {attempt} is readable ({type(exc).__name__}: {exc})", area="raw")
+
+    def check_raw_case(self, case_id: str, attempt: Path, bundle: Dict[str, Any], opd_lut: Any, limit: float) -> None:
+        """One case's retained archives: file digests, retained means, analysis frames, mask and the residual probe tiles."""
+
+        import numpy as np
+        from PIL import Image
+
+        c = self.c
+        provenance = bundle["provenance"]
+        for name, info in provenance["raw_evidence"]["files"].items():
+            path = attempt / name
+            self.check(path.is_file() and path.stat().st_size == info["bytes"] and _sha_file(path) == info["sha256"], f"{case_id}: raw {name} matches its provenance digest", area="raw")
+        retained_mask = None
+        with np.load(attempt / "mean_psfs.npz", allow_pickle=False) as data:
+            for role, name in (("uncorrected", "mean_psf_uncorrected"), ("corrected", "mean_psf_corrected")):
+                digest = _sha(np.ascontiguousarray(data[name]).tobytes())
+                self.check(digest == bundle["observation"]["roles"][role]["parent"]["array_sha256"], f"{case_id}: {role} observation parent digest equals the retained numeric mean", area="raw")
+            self.check([int(v) for v in data["analysis_frames"]] == list(range(c.burn_in, c.frames)), f"{case_id}: retained mean covers frames {c.burn_in}-{c.last_frame} (not the displayed frames)", area="raw")
+            if "pupil_mask" in data.files:
+                retained_mask = np.asarray(data["pupil_mask"], dtype=bool)
+        atlas_item = self.active.verify(f"{bundle['prefix']}/atlas-residual.png")
+        if atlas_item is None:
+            return
+        atlas = np.asarray(Image.open(io.BytesIO(atlas_item["data"])).convert("RGBA"))
+        rects = bundle["case"]["images"]["residual"]["rectangles_xywh"]
+        pistons = bundle["case"]["images"]["residual"]["display_piston_nm"]
+        if c.raw_layout == "movie_npz":
+            with np.load(attempt / "movie.npz", allow_pickle=False) as movie:
                 mask = np.asarray(movie["pupil_mask"], dtype=bool)
                 indices = [int(v) for v in movie["indices"]]
-                self.check(indices == list(c.display_indices), f"{case_id}: raw movie indices equal the frozen rule", area="raw")
-
-                def raw_map(frame: int) -> Any:
-                    return np.asarray(movie["pre_update_residual_opd_m"][indices.index(frame)], dtype=float)
-            else:
-                stack = np.load(attempt / "frames" / "pre_update_residual_opd_m.npy", mmap_mode="r")
-                self.check(stack.shape[0] == c.frames, f"{case_id}: raw residual stack holds {c.frames} frames", area="raw")
-                mask = np.isfinite(np.asarray(stack[0]))
-                if retained_mask is not None:
-                    self.check(bool(np.array_equal(mask, retained_mask)), f"{case_id}: raw pupil mask equals the retained mask", area="raw")
-
-                def raw_map(frame: int) -> Any:
-                    return np.asarray(stack[frame], dtype=float)
-            for frame in c.raw_probe_frames:
-                position = positions[frame]
-                raw = raw_map(frame)
-                piston = float(np.mean(raw[mask]))
-                self.check(abs(piston * 1e9 - pistons[position]) <= 1e-9, f"{case_id}: residual display piston at frame {frame} equals the raw pupil mean", area="raw")
-                values = np.where(mask, raw - piston, 0.0)
-                codes = np.clip(np.floor(np.clip((values + limit) / (2 * limit), 0.0, 1.0) * (levels - 1) + 0.5), 0, levels - 1).astype(int)
-                expected = opd_lut[codes][::-1]
-                expected_alpha = np.where(mask, 255, 0)[::-1]
-                x, y, w, h = rects[position]
-                tile = atlas[y:y + h, x:x + w]
-                ok = np.array_equal(tile[..., 3], expected_alpha) and np.array_equal(tile[..., :3][expected_alpha > 0], expected[expected_alpha > 0])
-                self.check(ok, f"{case_id}: residual atlas tile at frame {frame} equals the declared {levels}-level mapping of the raw map minus its pupil mean (+y up, no other normalization)", area="raw")
+                maps = np.asarray(movie["pre_update_residual_opd_m"], dtype=float)
+            self.check(indices == list(c.display_indices), f"{case_id}: raw movie indices equal the frozen rule", area="raw")
+            raw_maps = {frame: maps[indices.index(frame)] for frame in c.raw_probe_frames if frame in indices and indices.index(frame) < len(maps)}
+        else:
+            stack = np.load(attempt / "frames" / "pre_update_residual_opd_m.npy", mmap_mode="r")
+            self.check(stack.ndim == 3 and stack.shape[0] == c.frames, f"{case_id}: raw residual stack holds {c.frames} frames (shape {list(stack.shape)})", area="raw")
+            mask = np.isfinite(np.asarray(stack[0]))
+            raw_maps = {frame: np.asarray(stack[frame], dtype=float) for frame in c.raw_probe_frames if frame < stack.shape[0]}
+        if retained_mask is not None:
+            self.check(bool(np.array_equal(mask, retained_mask)), f"{case_id}: raw pupil mask equals the retained mask", area="raw")
+        levels = c.opd_levels
+        positions = {frame: index for index, frame in enumerate(c.display_indices)}
+        for frame in c.raw_probe_frames:
+            if not self.check(frame in raw_maps, f"{case_id}: raw residual map of frame {frame} is in the archive", area="raw"):
+                continue
+            position = positions[frame]
+            raw = raw_maps[frame]
+            piston = float(np.mean(raw[mask]))
+            self.check(abs(piston * 1e9 - pistons[position]) <= 1e-9, f"{case_id}: residual display piston at frame {frame} equals the raw pupil mean", area="raw")
+            values = np.where(mask, raw - piston, 0.0)
+            codes = np.clip(np.floor(np.clip((values + limit) / (2 * limit), 0.0, 1.0) * (levels - 1) + 0.5), 0, levels - 1).astype(int)
+            expected = opd_lut[codes][::-1]
+            expected_alpha = np.where(mask, 255, 0)[::-1]
+            x, y, w, h = rects[position]
+            tile = atlas[y:y + h, x:x + w]
+            ok = tile.shape[:2] == expected_alpha.shape and np.array_equal(tile[..., 3], expected_alpha) and np.array_equal(tile[..., :3][expected_alpha > 0], expected[expected_alpha > 0])
+            self.check(ok, f"{case_id}: residual atlas tile at frame {frame} equals the declared {levels}-level mapping of the raw map minus its pupil mean (+y up, no other normalization)", area="raw")
 
     # Driver ----------------------------------------------------------------------
 
