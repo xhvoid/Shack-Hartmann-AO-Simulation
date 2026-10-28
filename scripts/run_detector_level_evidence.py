@@ -52,7 +52,8 @@ record exists stops unless one of the global options says what to do:
 ``--output NAME`` writes a fresh record under another file name (a name, not
 a directory), ``--overwrite`` replaces a one-shot record, and ``--resume``
 continues a gated series.  A resume that finds every planned run already
-recorded says so and leaves the record unchanged.  On
+recorded says so and leaves the record unchanged; it stops instead when the
+imported package cannot be digested (below), since it cannot verify them.  On
 resume every saved run must carry the protocol identity this invocation would
 give it (configuration hash with seed and frame count, burn-in, execution
 options, the code identity and the producing environment: Python, NumPy,
@@ -62,17 +63,20 @@ runs: a digest of the ``shwfs_ao`` package it imports (bytecode and hidden
 files left out) and of this script, with the Git HEAD and a digest of the
 uncommitted changes of the package's source directory when the repository
 that holds the package tracks it; otherwise those two are null and the code
-identity is unknown.  Every retained run, including the runs of other arms,
-must share the record's series protocol (version, frames, burn-in, execution
-options, code and environment), so arms of ``e3-recovery`` and
-``e3-excursion`` append to one record with ``--resume`` only under the same
-protocol.  Each run's protocol names the environment that produced it (series
-protocol version 3, 2026-10-18, GPT pre-refactor audit F-03); version-2
-records do not, so they cannot be continued, and nothing is attributed to
-them after the fact.  Series protocol version 4 (2026-10-20, OBS-07) takes
-the code identity from the imported package: a version-3 code identity named
-this script's repository, which need not hold the package a run imported, so
-version-3 records cannot be continued either and are never relabelled.  A
+identity is unknown.  It is unknown too, with a null package digest, when the
+package's files cannot bind the code imported from it (a zip import, a
+symlinked directory, unbound bytecode; OBS-15, 2026-10-20).  Every retained
+run, including the runs of other arms, must share the record's series
+protocol (version, frames, burn-in, execution options, code and environment),
+so arms of ``e3-recovery`` and ``e3-excursion`` append to one record with
+``--resume`` only under the same protocol.  Each run's protocol names the
+environment that produced it (series protocol version 3, 2026-10-18, GPT
+pre-refactor audit F-03); version-2 records do not, so they cannot be
+continued, and nothing is attributed to them after the fact.  Series
+protocol version 4 (2026-10-20, OBS-07) takes the code identity from the
+imported package: a version-3 code identity named this script's repository,
+which need not hold the package a run imported, so version-3 records cannot
+be continued either and are never relabelled.  A
 resume that would add runs also stops when the code identity is unknown.  A
 saved record must also agree with itself (GPT independent review AR-016,
 2026-10-20): every run's stored protocol hash is recomputed from its stored
@@ -85,8 +89,10 @@ is left byte for byte as it was.
 
 from __future__ import annotations
 
+import _imp
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 from pathlib import Path
@@ -182,19 +188,52 @@ def _write(name: str, record: dict[str, Any], *, resumed: bool = False) -> Path:
     return path
 
 
-def _package_sha256(package: Path) -> str:
+def _unchecked_bytecode(source: Path) -> bool:
+    """Whether Python would run cached bytecode of ``source`` without checking it against the source.
+
+    The cache is the one this interpreter reads: in ``__pycache__``, or under
+    ``sys.pycache_prefix`` (review RV-07).  An unchecked hash-based cache is
+    never checked (PEP 552), and under ``--check-hash-based-pycs never`` no
+    hash-based cache is.  A missing or unreadable cache is not run: Python
+    compiles the source instead (review RV-08).
+    """
+
+    try:
+        with Path(importlib.util.cache_from_source(str(source))).open("rb") as handle:
+            header = handle.read(8)
+    except (OSError, NotImplementedError):
+        return False
+    flags = int.from_bytes(header[4:8], "little") if len(header) == 8 else 0
+    # The switch importlib itself reads before it checks a hash-based cache.
+    never = getattr(_imp, "check_hash_based_pycs", "default") == "never"
+    return bool(flags & 0b01) and (not flags & 0b10 or never)
+
+
+def _package_sha256(package: Path) -> str | None:
     """SHA-256 over the files of a package: each relative name and content digest.
 
     Bytecode and hidden files or folders are left out, as in the S3 driver:
     Finder metadata (``.DS_Store``, ``._*``) and the like can appear without
-    any code change and must not change the identity.
+    any code change and must not change the identity.  None when the files
+    cannot bind the code Python imports from the package (OBS-15, review
+    RV-01, RV-05): it is not a directory with an ``__init__.py`` (a zip
+    import, a missing directory), or it holds a symlinked directory (not
+    followed), sourceless bytecode outside ``__pycache__`` (imported, never
+    digested) or a source whose cache Python would run unchecked.
     """
 
+    if not (package / "__init__.py").is_file():
+        return None
     digest = hashlib.sha256()
     for path in sorted(package.rglob("*")):
         relative = path.relative_to(package)
-        hidden = any(part.startswith(".") for part in relative.parts)
-        if path.is_file() and not hidden and "__pycache__" not in relative.parts and path.suffix != ".pyc":
+        if any(part.startswith(".") for part in relative.parts) or "__pycache__" in relative.parts:
+            continue
+        if (path.is_dir() and path.is_symlink()) or (path.is_file() and path.suffix == ".pyc"):
+            return None
+        if path.is_file():
+            if path.suffix == ".py" and _unchecked_bytecode(path):
+                return None
             digest.update(relative.as_posix().encode("utf-8") + b"\0")
             digest.update(hashlib.sha256(path.read_bytes()).digest())
     return digest.hexdigest()
@@ -207,12 +246,17 @@ def code_identity(package: Path | None = None) -> dict[str, Any]:
     imports, which need not lie in this script's repository: without
     PYTHONPATH a shared environment's editable install can supply another
     checkout's package (OBS-07, review CR-02).  ``package_sha256`` digests
-    that package and ``script_sha256`` this script, so two processes that run
-    different code never share an identity.  Git HEAD and the digest of the
-    uncommitted changes under the package's source directory are recorded
-    only when the repository that holds the package tracks it; for a copy in
-    an ignored or foreign directory, or without Git, they are null, and the
-    code identity counts as unknown.  This is the S3 driver's code identity.
+    that package and ``script_sha256`` this script, so two processes that
+    import different package files never share a known identity (bytecode
+    caches are not digested: LIM-11 names the stale-cache case).  Git HEAD
+    and the digest of the uncommitted changes under the package's source
+    directory are recorded only when the repository that holds the package
+    tracks it, its paths read literally (OBS-16); for a copy in an ignored or
+    foreign directory, or without Git, they are null, and the code identity
+    counts as unknown.  It is unknown too, with a null package digest, when
+    the package's files cannot bind the code imported from it (a zip import,
+    a symlinked directory, unbound bytecode; OBS-15).  The S3 driver records
+    the same code identity.
     """
 
     if package is None:
@@ -221,17 +265,21 @@ def code_identity(package: Path | None = None) -> dict[str, Any]:
         package = Path(shwfs_ao.__file__).parent
     package = package.resolve()
     source = package.parent
+    package_sha256 = _package_sha256(package)
     # Names only: a record must not carry the local checkout path.
     identity: dict[str, Any] = {
         "package_directory": source.name,
-        "package_sha256": _package_sha256(package),
+        "package_sha256": package_sha256,
         "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "git_head": None,
         "source_changes_sha256": None,
     }
+    if package_sha256 is None:
+        return identity
 
     def git(*arguments: str, cwd: Path) -> subprocess.CompletedProcess:
-        return subprocess.run(["git", *arguments], cwd=cwd, capture_output=True, check=True)
+        # Literal paths: a copy at ``copy[1]/`` must not match a tracked ``copy1/``.
+        return subprocess.run(["git", "--literal-pathspecs", *arguments], cwd=cwd, capture_output=True, check=True)
 
     try:
         top = Path(git("rev-parse", "--show-toplevel", cwd=package).stdout.decode().strip()).resolve()
@@ -698,12 +746,16 @@ def _gated_series(
             # the runner's repository, not the package the run imported, so
             # it cannot be compared with this one.  It is not relabelled.
             versions = sorted({_canonical(version) for _, version in superseded})
+            reason = (
+                "a version-3 code identity names the runner's repository, not the package the run "
+                "imported, so a resume cannot show the saved runs share this invocation's code"
+                if _canonical(3) in versions
+                else "a run of another series protocol cannot be compared with this runner's"
+            )
             raise EvidenceRecordExists(
                 f"{path}: saved runs {[key for key, _ in superseded]} were made under series "
                 f"protocol version {', '.join(versions)}, and this runner continues version "
-                f"{SERIES_PROTOCOL_VERSION} only: a version-3 code identity names the runner's "
-                "repository, not the package the run imported, so a resume cannot show the saved "
-                "runs share this invocation's code.  The record is neither continued nor "
+                f"{SERIES_PROTOCOL_VERSION} only: {reason}.  The record is neither continued nor "
                 "relabelled; pass --output NAME for a fresh record."
             )
         if mismatched:
@@ -729,8 +781,18 @@ def _gated_series(
     if resumed and pending and code.get("git_head") is None:
         raise EvidenceRecordExists(
             f"{path}: the code identity of this invocation is unknown (no Git repository "
-            "tracks the imported package), so runs added now could not be shown to use the "
-            "code of the saved runs.  Pass --output NAME for a fresh record."
+            "tracks the imported package, or its files cannot bind the code it runs), so runs "
+            "added now could not be shown to use the code of the saved runs.  Pass --output "
+            "NAME for a fresh record."
+        )
+    if resumed and not pending and "package_sha256" in code and code["package_sha256"] is None:
+        # Nothing to add, and nothing to verify with (review RV-06): every
+        # package without a digest has this identity, whatever its code.
+        raise EvidenceRecordExists(
+            f"{path}: all {len(plan)} planned runs are recorded, but the imported package's files "
+            "cannot be digested (a zip import, a symlinked directory or unbound bytecode), so this "
+            "invocation cannot verify that its code made them; nothing ran and the record is "
+            "unchanged."
         )
     if resumed and pending:
         record["resumed_enabled_by_user"] = [*resumed_notes, note]

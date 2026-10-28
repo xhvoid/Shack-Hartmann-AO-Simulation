@@ -11,10 +11,12 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import py_compile
 import re
 import shutil
 import subprocess
 import sys
+import zipfile
 
 import pytest
 
@@ -824,3 +826,164 @@ def test_the_committed_series_records_are_not_continued(isolated_runner: Path) -
         assert idle.calls == [] and copy.read_bytes() == original, source.name
         refusals[kind] = refusals.get(kind, 0) + 1
     assert refusals.get("no protocol") and refusals.get("version 2")
+
+
+# -- OBS-15..OBS-18 (review RV-01..RV-04, 2026-10-20): the identity fails closed --
+
+
+UNKNOWN_CODE = {"package_sha256": None, "git_head": None, "source_changes_sha256": None}
+
+
+def test_a_package_its_files_cannot_bind_has_an_unknown_identity(tmp_path: Path) -> None:
+    # OBS-15 (review RV-01): code Python imports but a file digest would miss.
+    repository, package = tracked_package(tmp_path)
+    tracked = REAL_CODE_IDENTITY(package)
+    vendor = repository / "vendor"
+    (vendor / "sub").mkdir(parents=True)
+    (vendor / "sub" / "__init__.py").write_text("")
+    (vendor / "linked.py").write_text("VALUE = 1\n")
+    (package / "linked.py").symlink_to("../../vendor/linked.py")  # a symlinked file is digested
+    _git(repository, "add", "-A")
+    _git(repository, "commit", "-q", "--no-verify", "-m", "a symlinked module")
+    linked = REAL_CODE_IDENTITY(package)
+    assert linked["git_head"] is not None and linked["package_sha256"] != tracked["package_sha256"]
+    (vendor / "linked.py").write_text("VALUE = 2\n")
+    assert REAL_CODE_IDENTITY(package)["package_sha256"] != linked["package_sha256"]
+    (package / "sub").symlink_to("../../vendor/sub", target_is_directory=True)  # not followed
+    assert {key: REAL_CODE_IDENTITY(package)[key] for key in UNKNOWN_CODE} == UNKNOWN_CODE
+    (package / "sub").unlink()
+    (package / "extra.pyc").write_bytes(b"sourceless bytecode")  # imported, never digested
+    assert {key: REAL_CODE_IDENTITY(package)[key] for key in UNKNOWN_CODE} == UNKNOWN_CODE
+    (package / "extra.pyc").unlink()
+    assert REAL_CODE_IDENTITY(package)["git_head"] == linked["git_head"]
+    archive = tmp_path / "packages.zip"
+    with zipfile.ZipFile(archive, "w") as handle:
+        handle.writestr("shwfs_ao/__init__.py", "VALUE = 1\n")
+    for missing in (tmp_path / "missing" / "shwfs_ao", archive / "shwfs_ao"):  # no directory to digest
+        assert {key: REAL_CODE_IDENTITY(missing)[key] for key in UNKNOWN_CODE} == UNKNOWN_CODE
+
+
+def test_a_copy_path_with_glob_characters_borrows_no_git_state(tmp_path: Path) -> None:
+    # OBS-16 (review RV-02): Git read copy[1]/... as a pattern matching the tracked copy1/...
+    repository = tmp_path / "repository"
+    tracked = repository / "copy1" / "src" / "shwfs_ao"
+    tracked.mkdir(parents=True)
+    (tracked / "__init__.py").write_text("VALUE = 1\n")
+    _git(repository, "init", "-q")
+    _git(repository, "add", "-A")
+    _git(repository, "commit", "-q", "--no-verify", "-m", "fixture")
+    assert REAL_CODE_IDENTITY(tracked)["git_head"] == _git(repository, "rev-parse", "HEAD")
+    copy = repository / "copy[1]" / "src" / "shwfs_ao"
+    shutil.copytree(tracked, copy)
+    (copy / "__init__.py").write_text("VALUE = 2\n")
+    copied = REAL_CODE_IDENTITY(copy)
+    assert copied["git_head"] is None and copied["source_changes_sha256"] is None
+
+
+def test_the_package_digest_binds_file_names(tmp_path: Path) -> None:
+    # OBS-17 (review RV-03): a module renamed or moved with the same content is other code.
+    _, package = tracked_package(tmp_path)
+    original = runner._package_sha256(package)
+    (package / "module.py").rename(package / "module_renamed.py")  # the same place in the file order
+    assert runner._package_sha256(package) != original
+    (package / "module_renamed.py").rename(package / "module.py")
+    assert runner._package_sha256(package) == original
+    (package / "sub").mkdir()
+    (package / "module.py").rename(package / "sub" / "module.py")
+    assert runner._package_sha256(package) != original
+
+
+@pytest.mark.parametrize("version", [3, 5])
+def test_the_version_refusal_gives_the_reason_for_its_version(isolated_runner: Path, version: int) -> None:
+    # OBS-18 (review RV-04): version 3's reason only for a version-3 run.
+    runner._gated_series("series.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=Recorder())
+    path = isolated_runner / "series.json"
+    record = json.loads(path.read_text())
+    record["series_protocol_version"] = version
+    for run in record["runs"]:
+        run["protocol"]["series_protocol_version"] = version
+        run["protocol_hash"] = runner.protocol_digest(run["protocol"])
+    path.write_text(json.dumps(record, indent=2) + "\n")
+    before = path.read_bytes()
+    start_fresh_invocation()
+    runner.OPTIONS.resume = True
+    idle = Recorder()
+    with pytest.raises(runner.EvidenceRecordExists, match=f"series protocol version {version}") as refusal:
+        runner._gated_series("series.json", "test", PLAN, n_steps=400, burn_in=100, execution=None, runner=idle)
+    message = str(refusal.value)
+    assert ("version-3 code identity names the runner's repository" in message) == (version == 3)
+    assert ("another series protocol" in message) == (version != 3)
+    assert idle.calls == [] and path.read_bytes() == before
+
+
+def test_an_unchecked_bytecode_cache_leaves_the_code_unbound(tmp_path: Path) -> None:
+    # Review RV-05: Python runs an unchecked hash-based cache without reading its source.
+    _, package = tracked_package(tmp_path)
+    tracked = REAL_CODE_IDENTITY(package)
+    source = package / "__init__.py"
+    cache = importlib.util.cache_from_source(str(source))
+    for mode in py_compile.PycInvalidationMode:
+        py_compile.compile(str(source), cfile=cache, invalidation_mode=mode, doraise=True)
+        identity = REAL_CODE_IDENTITY(package)
+        if mode is py_compile.PycInvalidationMode.UNCHECKED_HASH:
+            assert {key: identity[key] for key in UNKNOWN_CODE} == UNKNOWN_CODE
+        else:
+            assert identity == tracked, mode  # Python checks it against its source
+
+
+def test_an_idle_resume_does_not_verify_with_an_undigested_package(
+    isolated_runner: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Review RV-06: every package without a digest has one identity, whatever its code.
+    _, package = tracked_package(tmp_path)
+    (package / "extra.pyc").write_bytes(b"sourceless bytecode")
+    act_with_package(monkeypatch, package)
+    runner._gated_series("series.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=Recorder())
+    path = isolated_runner / "series.json"
+    before = path.read_bytes()
+    assert json.loads(before)["code_identity"]["package_sha256"] is None
+    runner.OPTIONS.resume = True
+    for plan, match in ((PLAN[:1], "cannot verify that its code made them"), (PLAN, "code identity of this invocation is unknown")):
+        start_fresh_invocation()
+        idle = Recorder()
+        with pytest.raises(runner.EvidenceRecordExists, match=match):
+            runner._gated_series("series.json", "test", plan, n_steps=400, burn_in=100, execution=None, runner=idle)
+        assert idle.calls == [] and path.read_bytes() == before
+
+
+def test_the_bytecode_cache_is_checked_where_python_reads_it(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Review RV-07, RV-08: a symlinked __pycache__, a PYTHONPYCACHEPREFIX cache,
+    # --check-hash-based-pycs never, and an unreadable cache.
+    _, package = tracked_package(tmp_path)
+    tracked = REAL_CODE_IDENTITY(package)
+    source = package / "__init__.py"
+
+    def cached(mode: py_compile.PycInvalidationMode) -> Path:
+        cache = Path(importlib.util.cache_from_source(str(source)))
+        py_compile.compile(str(source), cfile=str(cache), invalidation_mode=mode, doraise=True)
+        return cache
+
+    def unknown() -> bool:
+        identity = REAL_CODE_IDENTITY(package)
+        return {key: identity[key] for key in UNKNOWN_CODE} == UNKNOWN_CODE
+
+    elsewhere = tmp_path / "cache_elsewhere"
+    elsewhere.mkdir()
+    (package / "__pycache__").symlink_to(elsewhere, target_is_directory=True)
+    cached(py_compile.PycInvalidationMode.UNCHECKED_HASH)
+    assert unknown()
+    (package / "__pycache__").unlink()
+    monkeypatch.setattr(sys, "pycache_prefix", str(tmp_path / "prefix"))
+    assert cached(py_compile.PycInvalidationMode.UNCHECKED_HASH).is_relative_to(tmp_path / "prefix")
+    assert unknown()
+    cached(py_compile.PycInvalidationMode.CHECKED_HASH)
+    assert REAL_CODE_IDENTITY(package) == tracked
+    monkeypatch.setattr(runner._imp, "check_hash_based_pycs", "never")
+    assert unknown()  # no hash-based cache is checked then
+    monkeypatch.setattr(runner._imp, "check_hash_based_pycs", "default")
+    cache = cached(py_compile.PycInvalidationMode.UNCHECKED_HASH)
+    cache.chmod(0)
+    try:
+        assert REAL_CODE_IDENTITY(package) == tracked  # Python cannot read it either and compiles the source
+    finally:
+        cache.chmod(0o644)

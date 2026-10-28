@@ -39,9 +39,10 @@ is never repeated (rerunning the command resumes).
 Every run file is named by scale and setting (``full_s12_wfs2_sci2_r0``) and
 carries its run protocol: the planned setting, scale, frames, burn-in,
 wavelength, paired grid, band storage and configuration hash, and the
-producer -- the code identity (a digest of the imported package, the
-driver's digest, and Git where it tracks that package) and the numerical
-environment of the process that made the run -- with the protocol's SHA-256.
+producer -- the code identity (a digest of the imported package, null where
+its files cannot bind the imported code, the driver's digest, and Git where it
+tracks that package) and the numerical environment of the process that made
+the run -- with the protocol's SHA-256.
 Before any run is launched or any file written, every saved run of the plan
 must be its planned run: the stored hash must be its protocol's digest, the
 planned fields must equal this invocation's, the fields the row repeats must
@@ -76,9 +77,11 @@ machinery on the 5 m smoke tier.
 
 from __future__ import annotations
 
+import _imp
 import argparse
 from dataclasses import replace
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -233,19 +236,52 @@ def _run_child(scale: str, label: str, samples: int, wfs_pad: int, science_pad: 
     }
 
 
-def _package_sha256(package: Path) -> str:
+def _unchecked_bytecode(source: Path) -> bool:
+    """Whether Python would run cached bytecode of ``source`` without checking it against the source.
+
+    The cache is the one this interpreter reads: in ``__pycache__``, or under
+    ``sys.pycache_prefix`` (review RV-07).  An unchecked hash-based cache is
+    never checked (PEP 552), and under ``--check-hash-based-pycs never`` no
+    hash-based cache is.  A missing or unreadable cache is not run: Python
+    compiles the source instead (review RV-08).
+    """
+
+    try:
+        with Path(importlib.util.cache_from_source(str(source))).open("rb") as handle:
+            header = handle.read(8)
+    except (OSError, NotImplementedError):
+        return False
+    flags = int.from_bytes(header[4:8], "little") if len(header) == 8 else 0
+    # The switch importlib itself reads before it checks a hash-based cache.
+    never = getattr(_imp, "check_hash_based_pycs", "default") == "never"
+    return bool(flags & 0b01) and (not flags & 0b10 or never)
+
+
+def _package_sha256(package: Path) -> str | None:
     """SHA-256 over the files of a package: each relative name and content digest.
 
     Bytecode and hidden files or folders are left out: Finder metadata
     (``.DS_Store``, ``._*``) and the like can appear without any code change
-    and must not change the identity (review CR-07).
+    and must not change the identity (review CR-07).  None when the files
+    cannot bind the code Python imports from the package (OBS-15, review
+    RV-05): it is not a directory with an ``__init__.py`` (a zip import, a
+    missing directory), or it holds a symlinked directory (not followed),
+    sourceless bytecode outside ``__pycache__`` (imported, never digested) or
+    a source whose cache Python would run unchecked.
     """
 
+    if not (package / "__init__.py").is_file():
+        return None
     digest = hashlib.sha256()
     for path in sorted(package.rglob("*")):
         relative = path.relative_to(package)
-        hidden = any(part.startswith(".") for part in relative.parts)
-        if path.is_file() and not hidden and "__pycache__" not in relative.parts and path.suffix != ".pyc":
+        if any(part.startswith(".") for part in relative.parts) or "__pycache__" in relative.parts:
+            continue
+        if (path.is_dir() and path.is_symlink()) or (path.is_file() and path.suffix == ".pyc"):
+            return None
+        if path.is_file():
+            if path.suffix == ".py" and _unchecked_bytecode(path):
+                return None
             digest.update(relative.as_posix().encode("utf-8") + b"\0")
             digest.update(hashlib.sha256(path.read_bytes()).digest())
     return digest.hexdigest()
@@ -255,11 +291,16 @@ def _code_identity(package: Path | None = None) -> dict[str, object]:
     """The code a run executes: the imported package, this driver, and Git where it describes them.
 
     ``package_sha256`` digests the imported ``shwfs_ao`` package itself, so two
-    processes that import different code never share an identity, whatever Git
-    says (review CR-01 of GPT finding AR-014).  Git HEAD and the digest of the
-    uncommitted ``src`` changes are recorded only when the repository that
-    holds the package tracks it; for a copy in an ignored or foreign directory,
-    or without Git, they are null, and the code identity counts as unknown.
+    processes that import different package files never share a known
+    identity, whatever Git says (review CR-01 of GPT finding AR-014; bytecode
+    caches are not digested: LIM-11 names the stale-cache case).  Git HEAD
+    and the digest of the uncommitted ``src`` changes are recorded only when
+    the repository that holds the package tracks it, its paths read literally
+    (OBS-16); for a copy in an ignored or foreign directory, or without Git,
+    they are null, and the code identity counts as unknown.  It is unknown
+    too, with a null package digest, when the package's files cannot bind the
+    code imported from it (a zip import, a symlinked directory, unbound
+    bytecode; OBS-15).
     """
 
     if package is None:
@@ -268,17 +309,21 @@ def _code_identity(package: Path | None = None) -> dict[str, object]:
         package = Path(shwfs_ao.__file__).parent
     package = package.resolve()
     source = package.parent
+    package_sha256 = _package_sha256(package)
     # Names only: a record must not carry the local checkout path.
     identity: dict[str, object] = {
         "package_directory": source.name,
-        "package_sha256": _package_sha256(package),
+        "package_sha256": package_sha256,
         "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "git_head": None,
         "source_changes_sha256": None,
     }
+    if package_sha256 is None:
+        return identity
 
     def git(*arguments: str, cwd: Path) -> subprocess.CompletedProcess:
-        return subprocess.run(["git", *arguments], cwd=cwd, capture_output=True, check=True)
+        # Literal paths: a copy at ``copy[1]/`` must not match a tracked ``copy1/``.
+        return subprocess.run(["git", "--literal-pathspecs", *arguments], cwd=cwd, capture_output=True, check=True)
 
     try:
         top = Path(git("rev-parse", "--show-toplevel", cwd=package).stdout.decode().strip()).resolve()
