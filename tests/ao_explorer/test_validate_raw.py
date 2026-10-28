@@ -204,7 +204,7 @@ class RawFixture:
                      pre_update_residual_opd_m=np.stack([self.maps[k] for k in contract.display_indices]), pupil_mask=self.mask)
         self.means = {"mean_psf_uncorrected": _means((11, 13), 0), "mean_psf_corrected": _means((11, 13), 5)}
         self.write_means()
-        self.observation = {"roles": {role: {"parent": {"array_sha256": _sha(np.ascontiguousarray(self.means[f"mean_psf_{role}"]).tobytes())}}
+        self.observation = {"roles": {role: {"parent": {"array_sha256": _sha(np.ascontiguousarray(self.means[f"mean_psf_{role}"]).tobytes()), "file": "mean_psfs.npz"}}
                                       for role in ("uncorrected", "corrected")}}
         self.provenance = {"job_id": "case-baseline", "attempt": "attempt-01", "raw_evidence": {"files": {}}}
         for path in sorted(p for p in self.attempt.rglob("*") if p.is_file()):
@@ -222,7 +222,12 @@ class RawFixture:
         np.savez(self.attempt / "mean_psfs.npz", **arrays)
 
     def rebind(self, relative):
+        """Record a rewritten archive the way the producer does: in the provenance, and for the means in both parents."""
+
         self.provenance["raw_evidence"]["files"][relative] = _file_record(self.attempt / relative)
+        if relative == "mean_psfs.npz":
+            for role in ("uncorrected", "corrected"):
+                self.observation["roles"][role]["parent"]["file_sha256"] = self.provenance["raw_evidence"]["files"][relative]["sha256"]
 
     def run(self):
         """The validator's raw path for this case: (passed raw messages, failed raw messages)."""
@@ -260,8 +265,11 @@ def test_synthetic_raw_archives_verify_in_both_layouts(raw):
     assert failures == []
     raw_files = len(raw.provenance["raw_evidence"]["files"])
     assert raw_files == (4 if c.raw_layout == "frame_stacks" else 2)
-    # series directory, attempt, file digests, two parent means, analysis frames, stack length / movie indices, mask, 3 x (present, piston, tile)
-    assert raw.areas["raw"] == {"passed": 2 + raw_files + 2 + 1 + 1 + 1 + 9, "failed": 0} and len(passed) == raw.areas["raw"]["passed"], passed
+    # series directory, attempt, file digests, two parent files, two parent means, analysis frames, stack length / movie indices, mask,
+    # 3 x (present, piston, tile)
+    assert raw.areas["raw"] == {"passed": 2 + raw_files + 2 + 2 + 1 + 1 + 1 + 9, "failed": 0} and len(passed) == raw.areas["raw"]["passed"], passed
+    for role in ("uncorrected", "corrected"):
+        assert f"baseline: raw mean_psfs.npz is the file the {role} observation parent names (name and SHA-256 of its bytes)" in passed
     for frame in c.raw_probe_frames:
         assert f"baseline: residual atlas tile at frame {frame} equals the declared {c.opd_levels}-level mapping of the raw map minus its pupil mean (+y up, no other normalization)" in passed
         assert f"baseline: residual display piston at frame {frame} equals the raw pupil mean" in passed
@@ -406,6 +414,41 @@ def _recorded_digest_mismatch(raw):
     return ["baseline: raw mean_psfs.npz matches its provenance digest"]
 
 
+# Review R18-03: the observation parents' file digest is joined to the bytes of the archive raw mode verifies.
+PARENT_FILE = "baseline: raw mean_psfs.npz is the file the {} observation parent names (name and SHA-256 of its bytes)"
+
+
+def _wrong_parent_file_digest(raw):
+    # Both parents name other bytes than the retained archive; the provenance and the arrays still agree with it.
+    for role in ("uncorrected", "corrected"):
+        raw.observation["roles"][role]["parent"]["file_sha256"] = "a" * 64
+    return [PARENT_FILE.format("uncorrected"), PARENT_FILE.format("corrected")]
+
+
+def _one_parent_file_digest(raw):
+    raw.observation["roles"]["corrected"]["parent"]["file_sha256"] = "a" * 64
+    return [PARENT_FILE.format("corrected")]
+
+
+def _parent_names_another_file(raw):
+    raw.observation["roles"]["uncorrected"]["parent"]["file"] = "movie.npz"
+    return [PARENT_FILE.format("uncorrected")]
+
+
+def _archive_bytes_rebound_in_provenance_only(raw):
+    # The same arrays written as other bytes (compressed); a producer that rebinds the provenance but not the
+    # parents: the provenance digest passes, the parents' does not, and the array digests still pass (kept apart).
+    np.savez_compressed(raw.attempt / "mean_psfs.npz", **raw.means, analysis_frames=np.arange(raw.contract.burn_in, raw.contract.frames, dtype=np.int64), pupil_mask=raw.mask)
+    raw.provenance["raw_evidence"]["files"]["mean_psfs.npz"] = _file_record(raw.attempt / "mean_psfs.npz")
+    return [PARENT_FILE.format("uncorrected"), PARENT_FILE.format("corrected")]
+
+
+def _archive_bytes_altered(raw):
+    # The same arrays as other bytes, recorded nowhere: the provenance digest and both parents' digests fail.
+    np.savez_compressed(raw.attempt / "mean_psfs.npz", **raw.means, analysis_frames=np.arange(raw.contract.burn_in, raw.contract.frames, dtype=np.int64), pupil_mask=raw.mask)
+    return ["baseline: raw mean_psfs.npz matches its provenance digest", PARENT_FILE.format("uncorrected"), PARENT_FILE.format("corrected")]
+
+
 DEFECTS = [
     ("altered-mean", _alter_mean),
     ("altered-mean-digest", _alter_mean_digest),
@@ -421,6 +464,11 @@ DEFECTS = [
     ("other-level-count", _other_level_count),
     ("stale-file-digest", _stale_file_digest),
     ("recorded-digest-mismatch", _recorded_digest_mismatch),
+    ("wrong-parent-file-digest", _wrong_parent_file_digest),
+    ("one-parent-file-digest", _one_parent_file_digest),
+    ("parent-names-another-file", _parent_names_another_file),
+    ("archive-rebound-in-provenance-only", _archive_bytes_rebound_in_provenance_only),
+    ("archive-bytes-altered", _archive_bytes_altered),
 ]
 
 
@@ -593,6 +641,7 @@ def _attach_synthetic_archives(site, series, contract):
         provenance["raw_evidence"]["files"] = {p.relative_to(attempt).as_posix(): _file_record(p) for p in sorted(attempt.rglob("*")) if p.is_file()}
         for role in ("uncorrected", "corrected"):
             observation["roles"][role]["parent"]["array_sha256"] = _sha(np.ascontiguousarray(means[role]).tobytes())
+            observation["roles"][role]["parent"]["file_sha256"] = provenance["raw_evidence"]["files"]["mean_psfs.npz"]["sha256"]
         residual = case["images"]["residual"]
         atlas_path = base / prefix / posixpath.normpath(residual["atlas"]["href"])
         image = Image.open(atlas_path)
@@ -645,8 +694,9 @@ def test_end_to_end_raw_mode_on_the_committed_site(web_dir, scripts_dir, tmp_pat
     assert report["raw_evidence_checked"] is True and report["raw_evidence_layout"] == contract.raw_layout
     cases = len(json.loads((base / "manifest.json").read_text())["cases"])
     files = 4 if contract.raw_layout == "frame_stacks" else 2  # residual stack, frame index, times and means / movie and means
-    # series directory; per case: attempt, file digests, two means, analysis frames, stack length or movie indices, mask, 3 x (present, piston, tile)
-    assert cases == 8 and report["checks_by_area"]["raw"] == {"passed": 1 + cases * (1 + files + 2 + 1 + 1 + 1 + 9), "failed": 0}
+    # series directory; per case: attempt, file digests, two parent files, two means, analysis frames, stack length or movie indices, mask,
+    # 3 x (present, piston, tile)
+    assert cases == 8 and report["checks_by_area"]["raw"] == {"passed": 1 + cases * (1 + files + 2 + 2 + 1 + 1 + 1 + 9), "failed": 0}
 
     # A changed archive byte (not at a probe frame) is found by the digest binding alone.
     victim = series / ("cases/lower-gain/attempt-01/" + STACK if contract.raw_layout == "frame_stacks" else "jobs/case-lower-gain/attempt-01/mean_psfs.npz")
