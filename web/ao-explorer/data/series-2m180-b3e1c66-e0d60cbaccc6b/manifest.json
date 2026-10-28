@@ -1,0 +1,1505 @@
+{
+ "schema": "ao-explorer.manifest.v1",
+ "web_schema_version": "ao-explorer.web.v1",
+ "dataset_id": "series-2m180-b3e1c66-e0d60cbaccc6b",
+ "title": "AO Simulation Explorer",
+ "experiment_title": "2 m Interactive AO Experiment",
+ "default_case": "baseline",
+ "groups": [
+  {
+   "id": "atmosphere",
+   "label": "Atmosphere",
+   "nodes": [
+    "stronger-turbulence",
+    "baseline",
+    "weaker-turbulence"
+   ]
+  },
+  {
+   "id": "guide",
+   "label": "Guide brightness",
+   "nodes": [
+    "fainter-guide",
+    "baseline",
+    "brighter-guide"
+   ]
+  },
+  {
+   "id": "gain",
+   "label": "Gain",
+   "nodes": [
+    "lower-gain",
+    "baseline",
+    "higher-gain"
+   ]
+  },
+  {
+   "id": "delay",
+   "label": "Delay",
+   "nodes": [
+    "baseline",
+    "longer-delay"
+   ]
+  }
+ ],
+ "cases": {
+  "baseline": {
+   "label": "Baseline",
+   "group": null,
+   "case": {
+    "href": "cases/baseline/case.json",
+    "bytes": 27791,
+    "sha256": "bf94d58ca167cef8dfe0b80e674475589c8dfc3c32d2f51d66e45c14751bdd99",
+    "media_type": "application/json"
+   }
+  },
+  "weaker-turbulence": {
+   "label": "Weaker turbulence",
+   "group": "atmosphere",
+   "case": {
+    "href": "cases/weaker-turbulence/case.json",
+    "bytes": 28095,
+    "sha256": "202063cd748c020e25c0e3a9b9625513665abc652ff9738b10dda3e033fb853e",
+    "media_type": "application/json"
+   }
+  },
+  "stronger-turbulence": {
+   "label": "Stronger turbulence",
+   "group": "atmosphere",
+   "case": {
+    "href": "cases/stronger-turbulence/case.json",
+    "bytes": 28134,
+    "sha256": "d1faf9d86765eb9d3d737614012308742e011a427b238f1e7392ecc50039280a",
+    "media_type": "application/json"
+   }
+  },
+  "brighter-guide": {
+   "label": "Brighter guide source",
+   "group": "guide",
+   "case": {
+    "href": "cases/brighter-guide/case.json",
+    "bytes": 27996,
+    "sha256": "04056f92b86b6d40c9c1b3e61ad36e3792a4c31e751513562a663f7890ebf48e",
+    "media_type": "application/json"
+   }
+  },
+  "fainter-guide": {
+   "label": "Fainter guide source",
+   "group": "guide",
+   "case": {
+    "href": "cases/fainter-guide/case.json",
+    "bytes": 27996,
+    "sha256": "4fdb1ab686502fe6d33f86da84648a7b1aea50e3487d8e938f068f07e05d1699",
+    "media_type": "application/json"
+   }
+  },
+  "lower-gain": {
+   "label": "Lower gain",
+   "group": "gain",
+   "case": {
+    "href": "cases/lower-gain/case.json",
+    "bytes": 27941,
+    "sha256": "e00a70c06fbbc52a9299452f4cfde21ae4fadb511b6a634b00bb75ae804278d4",
+    "media_type": "application/json"
+   }
+  },
+  "higher-gain": {
+   "label": "Higher gain",
+   "group": "gain",
+   "case": {
+    "href": "cases/higher-gain/case.json",
+    "bytes": 27936,
+    "sha256": "a747a57400ba46a91c612796c94bec038f35dcfe645098c5c750626eb5a06d44",
+    "media_type": "application/json"
+   }
+  },
+  "longer-delay": {
+   "label": "Longer queued delay",
+   "group": "delay",
+   "case": {
+    "href": "cases/longer-delay/case.json",
+    "bytes": 27963,
+    "sha256": "3928dcb5b2e518b0d4f9ff724dadd55fb0cf488c2a31bfe0e8e81751315a3b95",
+    "media_type": "application/json"
+   }
+  }
+ },
+ "scene": {
+  "href": "scene/scene.json",
+  "bytes": 2843,
+  "sha256": "607dbfd98a5e0befa6f21a625b0667364bf1f2118109819aa7792f3866b96eee",
+  "media_type": "application/json"
+ },
+ "display": {
+  "href": "display.json",
+  "bytes": 8855,
+  "sha256": "a479a196b7add9fd5203edb053b95770c66515622f57d2615a3d77743f87f05b",
+  "media_type": "application/json"
+ },
+ "diagnostics": {
+  "href": "diagnostics.json",
+  "bytes": 1974,
+  "sha256": "771cf7f77328e6f6f220d2816e931c303022804e269a9031ba69515108b99946",
+  "media_type": "application/json"
+ },
+ "results": {
+  "href": "research/results.json",
+  "bytes": 234897,
+  "sha256": "71d0f81f7ebe92b6186d053e549a09fa837d2fd3fc969ddbbb0ca84eb7428484",
+  "media_type": "application/json"
+ },
+ "summaries": {
+  "baseline": {
+   "window": [
+    40,
+    180
+   ],
+   "sample_count": 140,
+   "mean_atmosphere_rms_nm": 464.76652253824466,
+   "mean_residual_rms_nm": 262.6420874308485,
+   "root_mean_square_residual_nm": 263.6003594607746,
+   "mean_instantaneous_peak_strehl_uncorrected": 0.24341043624881742,
+   "mean_instantaneous_peak_strehl_corrected": 0.4863168232848562,
+   "average_psf_peak_strehl_uncorrected": 0.20032582885114758,
+   "average_psf_peak_strehl_corrected": 0.4482541764663463,
+   "average_psf_on_axis_strehl_corrected": 0.3911784969550361,
+   "average_psf_fwhm_lambda_over_d_corrected": 1.0957594369446841,
+   "average_psf_fwhm_lambda_over_d_uncorrected": 1.1954343645721113,
+   "mean_valid_measurement_fraction": 1.0,
+   "min_valid_measurement_fraction": 1.0,
+   "reconstruction_usable_fraction": 1.0,
+   "mean_dm_saturation_fraction": 0.08736263736263734,
+   "max_dm_saturation_fraction": 0.15384615384615385
+  },
+  "weaker-turbulence": {
+   "window": [
+    40,
+    180
+   ],
+   "sample_count": 140,
+   "mean_atmosphere_rms_nm": 385.9015240963552,
+   "mean_residual_rms_nm": 215.69631943505917,
+   "root_mean_square_residual_nm": 216.47381430539045,
+   "mean_instantaneous_peak_strehl_uncorrected": 0.34622095385789137,
+   "mean_instantaneous_peak_strehl_corrected": 0.5999653580604067,
+   "average_psf_peak_strehl_uncorrected": 0.3132717482104147,
+   "average_psf_peak_strehl_corrected": 0.5532183336180876,
+   "average_psf_on_axis_strehl_corrected": 0.5222822667539679,
+   "average_psf_fwhm_lambda_over_d_corrected": 1.0961669075570035,
+   "average_psf_fwhm_lambda_over_d_uncorrected": 1.1564920377785664,
+   "mean_valid_measurement_fraction": 1.0,
+   "min_valid_measurement_fraction": 1.0,
+   "reconstruction_usable_fraction": 1.0,
+   "mean_dm_saturation_fraction": 0.02582417582417583,
+   "max_dm_saturation_fraction": 0.07692307692307693
+  },
+  "stronger-turbulence": {
+   "window": [
+    40,
+    180
+   ],
+   "sample_count": 140,
+   "mean_atmosphere_rms_nm": 559.748814099936,
+   "mean_residual_rms_nm": 331.3811969381456,
+   "root_mean_square_residual_nm": 332.8050126756058,
+   "mean_instantaneous_peak_strehl_uncorrected": 0.16449744585868642,
+   "mean_instantaneous_peak_strehl_corrected": 0.3551427444544856,
+   "average_psf_peak_strehl_uncorrected": 0.12366820193957356,
+   "average_psf_peak_strehl_corrected": 0.31539657117992387,
+   "average_psf_on_axis_strehl_corrected": 0.23729966158237917,
+   "average_psf_fwhm_lambda_over_d_corrected": 1.1074202232955397,
+   "average_psf_fwhm_lambda_over_d_uncorrected": 1.3224118720070792,
+   "mean_valid_measurement_fraction": 0.9965986394557823,
+   "min_valid_measurement_fraction": 0.9523809523809523,
+   "reconstruction_usable_fraction": 1.0,
+   "mean_dm_saturation_fraction": 0.14835164835164832,
+   "max_dm_saturation_fraction": 0.23076923076923078
+  },
+  "brighter-guide": {
+   "window": [
+    40,
+    180
+   ],
+   "sample_count": 140,
+   "mean_atmosphere_rms_nm": 464.76652253824466,
+   "mean_residual_rms_nm": 262.9310159509434,
+   "root_mean_square_residual_nm": 263.9063446935514,
+   "mean_instantaneous_peak_strehl_uncorrected": 0.24341043624881742,
+   "mean_instantaneous_peak_strehl_corrected": 0.4860680507085147,
+   "average_psf_peak_strehl_uncorrected": 0.20032582885114758,
+   "average_psf_peak_strehl_corrected": 0.4473220974037545,
+   "average_psf_on_axis_strehl_corrected": 0.39049200076393376,
+   "average_psf_fwhm_lambda_over_d_corrected": 1.0959364928408408,
+   "average_psf_fwhm_lambda_over_d_uncorrected": 1.1954343645721113,
+   "mean_valid_measurement_fraction": 1.0,
+   "min_valid_measurement_fraction": 1.0,
+   "reconstruction_usable_fraction": 1.0,
+   "mean_dm_saturation_fraction": 0.08131868131868131,
+   "max_dm_saturation_fraction": 0.15384615384615385
+  },
+  "fainter-guide": {
+   "window": [
+    40,
+    180
+   ],
+   "sample_count": 140,
+   "mean_atmosphere_rms_nm": 464.76652253824466,
+   "mean_residual_rms_nm": 267.6128801878045,
+   "root_mean_square_residual_nm": 268.9272158212121,
+   "mean_instantaneous_peak_strehl_uncorrected": 0.24341043624881742,
+   "mean_instantaneous_peak_strehl_corrected": 0.48892211617491727,
+   "average_psf_peak_strehl_uncorrected": 0.20032582885114758,
+   "average_psf_peak_strehl_corrected": 0.44042229010855904,
+   "average_psf_on_axis_strehl_corrected": 0.38015711680246844,
+   "average_psf_fwhm_lambda_over_d_corrected": 1.1018000480854553,
+   "average_psf_fwhm_lambda_over_d_uncorrected": 1.1954343645721113,
+   "mean_valid_measurement_fraction": 0.9268707482993197,
+   "min_valid_measurement_fraction": 0.8095238095238095,
+   "reconstruction_usable_fraction": 1.0,
+   "mean_dm_saturation_fraction": 0.08516483516483517,
+   "max_dm_saturation_fraction": 0.23076923076923078
+  },
+  "lower-gain": {
+   "window": [
+    40,
+    180
+   ],
+   "sample_count": 140,
+   "mean_atmosphere_rms_nm": 464.76652253824466,
+   "mean_residual_rms_nm": 273.54863308752186,
+   "root_mean_square_residual_nm": 274.9186247062604,
+   "mean_instantaneous_peak_strehl_uncorrected": 0.24341043624881742,
+   "mean_instantaneous_peak_strehl_corrected": 0.48379434865783255,
+   "average_psf_peak_strehl_uncorrected": 0.20032582885114758,
+   "average_psf_peak_strehl_corrected": 0.43648142621993685,
+   "average_psf_on_axis_strehl_corrected": 0.36324890298167356,
+   "average_psf_fwhm_lambda_over_d_corrected": 1.106792436808671,
+   "average_psf_fwhm_lambda_over_d_uncorrected": 1.1954343645721113,
+   "mean_valid_measurement_fraction": 1.0,
+   "min_valid_measurement_fraction": 1.0,
+   "reconstruction_usable_fraction": 1.0,
+   "mean_dm_saturation_fraction": 0.040109890109890106,
+   "max_dm_saturation_fraction": 0.15384615384615385
+  },
+  "higher-gain": {
+   "window": [
+    40,
+    180
+   ],
+   "sample_count": 140,
+   "mean_atmosphere_rms_nm": 464.76652253824466,
+   "mean_residual_rms_nm": 259.70038248604516,
+   "root_mean_square_residual_nm": 260.5630846702119,
+   "mean_instantaneous_peak_strehl_uncorrected": 0.24341043624881742,
+   "mean_instantaneous_peak_strehl_corrected": 0.4859799343836557,
+   "average_psf_peak_strehl_uncorrected": 0.20032582885114758,
+   "average_psf_peak_strehl_corrected": 0.44981361257632907,
+   "average_psf_on_axis_strehl_corrected": 0.39925353864671287,
+   "average_psf_fwhm_lambda_over_d_corrected": 1.0929301833821228,
+   "average_psf_fwhm_lambda_over_d_uncorrected": 1.1954343645721113,
+   "mean_valid_measurement_fraction": 1.0,
+   "min_valid_measurement_fraction": 1.0,
+   "reconstruction_usable_fraction": 1.0,
+   "mean_dm_saturation_fraction": 0.10439560439560439,
+   "max_dm_saturation_fraction": 0.15384615384615385
+  },
+  "longer-delay": {
+   "window": [
+    40,
+    180
+   ],
+   "sample_count": 140,
+   "mean_atmosphere_rms_nm": 464.76652253824466,
+   "mean_residual_rms_nm": 264.35626119650385,
+   "root_mean_square_residual_nm": 265.3536787406426,
+   "mean_instantaneous_peak_strehl_uncorrected": 0.24341043624881742,
+   "mean_instantaneous_peak_strehl_corrected": 0.48109297457936495,
+   "average_psf_peak_strehl_uncorrected": 0.20032582885114758,
+   "average_psf_peak_strehl_corrected": 0.44145377652025297,
+   "average_psf_on_axis_strehl_corrected": 0.385930484734229,
+   "average_psf_fwhm_lambda_over_d_corrected": 1.0982037999907281,
+   "average_psf_fwhm_lambda_over_d_uncorrected": 1.1954343645721113,
+   "mean_valid_measurement_fraction": 1.0,
+   "min_valid_measurement_fraction": 1.0,
+   "reconstruction_usable_fraction": 1.0,
+   "mean_dm_saturation_fraction": 0.08571428571428572,
+   "max_dm_saturation_fraction": 0.15384615384615385
+  }
+ },
+ "series": {
+  "series_id": "series-2m180-b3e1c66",
+  "plan_sha256": "5c518c11ea14cc8a0cc70b08eb186701b04d5261300a154ffba0d9ed08456f0d",
+  "source_sha": "b3e1c663a162abb1cebeb5ccecb2640346daa50a"
+ },
+ "members": [
+  {
+   "path": "cases/baseline/atlas-atmosphere.png",
+   "bytes": 149650,
+   "sha256": "162a1a091f8ff315bfa25fb27f193ca6a4ce65f749b438860e84d875e88219c4",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/baseline/atlas-correction.png",
+   "bytes": 82752,
+   "sha256": "261979f78659670dd6783dbf309e46f70ccb207f8a38859f2ee78421247999bc",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/baseline/atlas-psf-corrected.png",
+   "bytes": 315850,
+   "sha256": "3f1f76c85738a10f932b4ecbee6560b03dad4a9d4861def7e58b855ef0a69b76",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/baseline/atlas-psf-uncorrected.png",
+   "bytes": 313064,
+   "sha256": "21b59d417ea3a9fcc8f946255dafeb0c5045da227c395607c2b2e4098104b5db",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/baseline/atlas-residual.png",
+   "bytes": 143370,
+   "sha256": "4e55ae2b2312cfb1a5ea5981eac3fa2f061a0ff6c76d7096a161b8530bc06387",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/baseline/case.json",
+   "bytes": 27791,
+   "sha256": "bf94d58ca167cef8dfe0b80e674475589c8dfc3c32d2f51d66e45c14751bdd99",
+   "media_type": "application/json",
+   "role": "case"
+  },
+  {
+   "path": "cases/baseline/config.json",
+   "bytes": 6878,
+   "sha256": "ec4bcaf971a9e39b03ac7da662fd8b927099e4642df9873bde7c62fe7a56da22",
+   "media_type": "application/json",
+   "role": "config"
+  },
+  {
+   "path": "cases/baseline/metrics.csv",
+   "bytes": 20482,
+   "sha256": "b98b5b4e0e827e40e52dd741f506976a34aa93bd959a3ff11f23089a1cb79b2b",
+   "media_type": "text/csv",
+   "role": "metrics_csv"
+  },
+  {
+   "path": "cases/baseline/metrics.json",
+   "bytes": 49552,
+   "sha256": "b48280769fe900989ced65e6b8a09a4a8e3e8aef7187931a56c64da3ee4a71b3",
+   "media_type": "application/json",
+   "role": "metrics"
+  },
+  {
+   "path": "cases/baseline/observation-corrected.png",
+   "bytes": 7884,
+   "sha256": "c7a85545e41943fb78d1c054a872b8b737d1a71ba87890ab46a0397e8359d317",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/baseline/observation-uncorrected.png",
+   "bytes": 8005,
+   "sha256": "eac138515c4dbaab9d671b069e5d9d5fcd9d6cf4128d70bab01267a6c0f75c16",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/baseline/observation.json",
+   "bytes": 8387,
+   "sha256": "c9d4e0901429995108f7dec5ba4871e5008a24d7ed5dfdcf93ed27f79f682126",
+   "media_type": "application/json",
+   "role": "observation"
+  },
+  {
+   "path": "cases/baseline/provenance.json",
+   "bytes": 17975,
+   "sha256": "302f9c83710a4947cc12781871b98e738399993bf2825aee7389aa04d40a76e3",
+   "media_type": "application/json",
+   "role": "provenance"
+  },
+  {
+   "path": "cases/baseline/psf-average-corrected.png",
+   "bytes": 7217,
+   "sha256": "8a8641df9c98064b9be3a5e9fcf97c07db30235ec816b879210f8f6c32b0a907",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "cases/baseline/psf-average-uncorrected.png",
+   "bytes": 7373,
+   "sha256": "5df5530210d7e5176ef498b504581c89c0662e53c9a6353dab365a4f406bc535",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "cases/brighter-guide/atlas-atmosphere.png",
+   "bytes": 149650,
+   "sha256": "162a1a091f8ff315bfa25fb27f193ca6a4ce65f749b438860e84d875e88219c4",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/brighter-guide/atlas-correction.png",
+   "bytes": 82783,
+   "sha256": "963aa7590810bf7d21245439ff8295f0852c31ec22fbbbe52e73e3412f3856e5",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/brighter-guide/atlas-psf-corrected.png",
+   "bytes": 316205,
+   "sha256": "1a06af03542b51e4504c75bb571097c229b26eead1bfa1ef5e86bf6bd5d80d31",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/brighter-guide/atlas-psf-uncorrected.png",
+   "bytes": 313064,
+   "sha256": "21b59d417ea3a9fcc8f946255dafeb0c5045da227c395607c2b2e4098104b5db",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/brighter-guide/atlas-residual.png",
+   "bytes": 143376,
+   "sha256": "b1a1c70cdbeb46e93e34a53d4595ba6e02d9eed0a34453c869ef4c0b579f1456",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/brighter-guide/case.json",
+   "bytes": 27996,
+   "sha256": "04056f92b86b6d40c9c1b3e61ad36e3792a4c31e751513562a663f7890ebf48e",
+   "media_type": "application/json",
+   "role": "case"
+  },
+  {
+   "path": "cases/brighter-guide/config.json",
+   "bytes": 6908,
+   "sha256": "76e6da52ae70246a793a74dbb3dfcf96ab9d28f5e70c8f822278afd70f2869bd",
+   "media_type": "application/json",
+   "role": "config"
+  },
+  {
+   "path": "cases/brighter-guide/metrics.csv",
+   "bytes": 20307,
+   "sha256": "1490252ea1a75a81c563fdb5b26388c35b5348a46354e1351e588efb86419bba",
+   "media_type": "text/csv",
+   "role": "metrics_csv"
+  },
+  {
+   "path": "cases/brighter-guide/metrics.json",
+   "bytes": 49379,
+   "sha256": "c34d9767ecf8694b9d446d77264ce134218fcd13382851b03e214c45245d78ab",
+   "media_type": "application/json",
+   "role": "metrics"
+  },
+  {
+   "path": "cases/brighter-guide/observation-corrected.png",
+   "bytes": 7902,
+   "sha256": "3492cba7c98e669810617c9383a12ca9fd7ff6b19fe6a3dda595f5fb66ee4876",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/brighter-guide/observation-uncorrected.png",
+   "bytes": 8005,
+   "sha256": "eac138515c4dbaab9d671b069e5d9d5fcd9d6cf4128d70bab01267a6c0f75c16",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/brighter-guide/observation.json",
+   "bytes": 8440,
+   "sha256": "bdd84b59bea5a6846eb8801a77f504da265591634e9241ffd2ad3f037897c907",
+   "media_type": "application/json",
+   "role": "observation"
+  },
+  {
+   "path": "cases/brighter-guide/provenance.json",
+   "bytes": 18027,
+   "sha256": "c68dacbf2effbc6a352ffb89df6f82917d51c674a3240f46eb32b2b7d3d2a00c",
+   "media_type": "application/json",
+   "role": "provenance"
+  },
+  {
+   "path": "cases/brighter-guide/psf-average-corrected.png",
+   "bytes": 7203,
+   "sha256": "0c1167a40c81c833db288afc6abc237a58ee5a1cd90dd1e878ac9e260007679d",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "cases/brighter-guide/psf-average-uncorrected.png",
+   "bytes": 7373,
+   "sha256": "5df5530210d7e5176ef498b504581c89c0662e53c9a6353dab365a4f406bc535",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "cases/fainter-guide/atlas-atmosphere.png",
+   "bytes": 149650,
+   "sha256": "162a1a091f8ff315bfa25fb27f193ca6a4ce65f749b438860e84d875e88219c4",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/fainter-guide/atlas-correction.png",
+   "bytes": 84223,
+   "sha256": "fbfe85e466a797a96494f2cd05bd5e4027fc276d3b6278d6f085a22667802ca0",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/fainter-guide/atlas-psf-corrected.png",
+   "bytes": 316767,
+   "sha256": "c2ac017b39918c6975d8b1b9ad784df85669c7813936571a3fe74d7fb828fd05",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/fainter-guide/atlas-psf-uncorrected.png",
+   "bytes": 313064,
+   "sha256": "21b59d417ea3a9fcc8f946255dafeb0c5045da227c395607c2b2e4098104b5db",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/fainter-guide/atlas-residual.png",
+   "bytes": 144004,
+   "sha256": "54e66b6aeb4fc437cbca484ff876b2e1cb5f57164c8d5e4734d9b3f826451e75",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/fainter-guide/case.json",
+   "bytes": 27996,
+   "sha256": "4fdb1ab686502fe6d33f86da84648a7b1aea50e3487d8e938f068f07e05d1699",
+   "media_type": "application/json",
+   "role": "case"
+  },
+  {
+   "path": "cases/fainter-guide/config.json",
+   "bytes": 6907,
+   "sha256": "b104dd2ad0da5e38b8cfbf1ddb8b0c9da93f650674444bff9a6e190cda21880b",
+   "media_type": "application/json",
+   "role": "config"
+  },
+  {
+   "path": "cases/fainter-guide/metrics.csv",
+   "bytes": 24862,
+   "sha256": "f0bfe4f508f3d722fa303ab09ea3597f8978ced952a5d21cdd93f92780c7d480",
+   "media_type": "text/csv",
+   "role": "metrics_csv"
+  },
+  {
+   "path": "cases/fainter-guide/metrics.json",
+   "bytes": 53979,
+   "sha256": "7aebc372b23b3c661e3f13b509202f4ae0a95d2ffe20b21997bcee0f58820050",
+   "media_type": "application/json",
+   "role": "metrics"
+  },
+  {
+   "path": "cases/fainter-guide/observation-corrected.png",
+   "bytes": 7889,
+   "sha256": "97c9352484c74e3f97ac9158d91e3f18b3e41f697fe8cc1ec9bd763e44d481d3",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/fainter-guide/observation-uncorrected.png",
+   "bytes": 8005,
+   "sha256": "eac138515c4dbaab9d671b069e5d9d5fcd9d6cf4128d70bab01267a6c0f75c16",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/fainter-guide/observation.json",
+   "bytes": 8467,
+   "sha256": "413f1750756fe2908ce8ab4d0cda52d6610ef419b9e8d6a2bce1af76a6bbd0a4",
+   "media_type": "application/json",
+   "role": "observation"
+  },
+  {
+   "path": "cases/fainter-guide/provenance.json",
+   "bytes": 18223,
+   "sha256": "6123c55e6f02d2e4deff330587fd6cf47b3f512b7c9df0798a1582adad169615",
+   "media_type": "application/json",
+   "role": "provenance"
+  },
+  {
+   "path": "cases/fainter-guide/psf-average-corrected.png",
+   "bytes": 7267,
+   "sha256": "a55856e946847b67526fc7c6131bf600527b2cea5924c493caa8063bafef8245",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "cases/fainter-guide/psf-average-uncorrected.png",
+   "bytes": 7373,
+   "sha256": "5df5530210d7e5176ef498b504581c89c0662e53c9a6353dab365a4f406bc535",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "cases/higher-gain/atlas-atmosphere.png",
+   "bytes": 149650,
+   "sha256": "162a1a091f8ff315bfa25fb27f193ca6a4ce65f749b438860e84d875e88219c4",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/higher-gain/atlas-correction.png",
+   "bytes": 84951,
+   "sha256": "7ef024d82901e23d637091a145a94f7c4d64baf658985a33e80159393b006d6c",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/higher-gain/atlas-psf-corrected.png",
+   "bytes": 317082,
+   "sha256": "aeebc18577dd40562dd4863ce46427b723c8fc4ff51ed035011a01852110833c",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/higher-gain/atlas-psf-uncorrected.png",
+   "bytes": 313064,
+   "sha256": "21b59d417ea3a9fcc8f946255dafeb0c5045da227c395607c2b2e4098104b5db",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/higher-gain/atlas-residual.png",
+   "bytes": 143816,
+   "sha256": "42deeb77a3df5969b3c3693de56baaf0201b54983a883c6e74ce813c7560abad",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/higher-gain/case.json",
+   "bytes": 27936,
+   "sha256": "a747a57400ba46a91c612796c94bec038f35dcfe645098c5c750626eb5a06d44",
+   "media_type": "application/json",
+   "role": "case"
+  },
+  {
+   "path": "cases/higher-gain/config.json",
+   "bytes": 6897,
+   "sha256": "3a97484b301bef0a592057d6d30ba4146100868d2450d7aa765f24bb9cf69aba",
+   "media_type": "application/json",
+   "role": "config"
+  },
+  {
+   "path": "cases/higher-gain/metrics.csv",
+   "bytes": 20711,
+   "sha256": "b468140f0441ff7309b95869199f24ad950dd2de72aee198cbcfc1ffaac44480",
+   "media_type": "text/csv",
+   "role": "metrics_csv"
+  },
+  {
+   "path": "cases/higher-gain/metrics.json",
+   "bytes": 49785,
+   "sha256": "83e0814cd45b0ce9d37fbfa2b2ddc5f4788573ea51c3ef35255dd0841379da22",
+   "media_type": "application/json",
+   "role": "metrics"
+  },
+  {
+   "path": "cases/higher-gain/observation-corrected.png",
+   "bytes": 7869,
+   "sha256": "e66ad0ecfa080950b80e5543c097b037c507d9ea9c037ded0843925f7ca3482e",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/higher-gain/observation-uncorrected.png",
+   "bytes": 8005,
+   "sha256": "eac138515c4dbaab9d671b069e5d9d5fcd9d6cf4128d70bab01267a6c0f75c16",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/higher-gain/observation.json",
+   "bytes": 8397,
+   "sha256": "7b34e74a12301bd9c7bd04dfd6db8bc8f8e8a011cea5761f97031c2439e504f4",
+   "media_type": "application/json",
+   "role": "observation"
+  },
+  {
+   "path": "cases/higher-gain/provenance.json",
+   "bytes": 18089,
+   "sha256": "182a51bcd9652cefaeb6477b1a38d91ba39946f3578c59ca36b8e3e2f7db99e8",
+   "media_type": "application/json",
+   "role": "provenance"
+  },
+  {
+   "path": "cases/higher-gain/psf-average-corrected.png",
+   "bytes": 7248,
+   "sha256": "1efd116ee3c74979dfe7375c42461e2632d838d76b01c3c001a93f2eda9b51b0",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "cases/higher-gain/psf-average-uncorrected.png",
+   "bytes": 7373,
+   "sha256": "5df5530210d7e5176ef498b504581c89c0662e53c9a6353dab365a4f406bc535",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "cases/longer-delay/atlas-atmosphere.png",
+   "bytes": 149650,
+   "sha256": "162a1a091f8ff315bfa25fb27f193ca6a4ce65f749b438860e84d875e88219c4",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/longer-delay/atlas-correction.png",
+   "bytes": 84083,
+   "sha256": "98a364f97aaf346ad29ed461805c68b6ca7ca05867d895a7c9d65db05146c70f",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/longer-delay/atlas-psf-corrected.png",
+   "bytes": 316630,
+   "sha256": "ff1da683ef18ae72a419e01867586fa383b6f696fc903271f943c807b1932492",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/longer-delay/atlas-psf-uncorrected.png",
+   "bytes": 313064,
+   "sha256": "21b59d417ea3a9fcc8f946255dafeb0c5045da227c395607c2b2e4098104b5db",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/longer-delay/atlas-residual.png",
+   "bytes": 143920,
+   "sha256": "484ae87c2cee95ed8c9308cfeb494a8d1dea1239d07d08f62dede78c0dae5de4",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/longer-delay/case.json",
+   "bytes": 27963,
+   "sha256": "3928dcb5b2e518b0d4f9ff724dadd55fb0cf488c2a31bfe0e8e81751315a3b95",
+   "media_type": "application/json",
+   "role": "case"
+  },
+  {
+   "path": "cases/longer-delay/config.json",
+   "bytes": 6906,
+   "sha256": "17ae9c6b937d8543ade587504a4c4add70623b881b1af693b734777d018bfca8",
+   "media_type": "application/json",
+   "role": "config"
+  },
+  {
+   "path": "cases/longer-delay/metrics.csv",
+   "bytes": 20396,
+   "sha256": "a07eea40c1a9ccb22611adae839b9481895560008a11dd869df84fb386e1e5a9",
+   "media_type": "text/csv",
+   "role": "metrics_csv"
+  },
+  {
+   "path": "cases/longer-delay/metrics.json",
+   "bytes": 49472,
+   "sha256": "6a4e3fde1b7179f127ee97d39ffa629d5742c9e8e7a9c68c9c3ab4f41557d62f",
+   "media_type": "application/json",
+   "role": "metrics"
+  },
+  {
+   "path": "cases/longer-delay/observation-corrected.png",
+   "bytes": 7886,
+   "sha256": "a8c7f5fbd6d24b5011543bcb2e24f5b37a00a8683f6820cd0794a0ee56de38be",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/longer-delay/observation-uncorrected.png",
+   "bytes": 8005,
+   "sha256": "eac138515c4dbaab9d671b069e5d9d5fcd9d6cf4128d70bab01267a6c0f75c16",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/longer-delay/observation.json",
+   "bytes": 8398,
+   "sha256": "6c65edec0ce113d67e76fc75f7077de1fc35480f23c62a010fccd84282e405a1",
+   "media_type": "application/json",
+   "role": "observation"
+  },
+  {
+   "path": "cases/longer-delay/provenance.json",
+   "bytes": 18147,
+   "sha256": "91c25f83fc7cbd8842bd6d8b73f9a600a1efffd0d80086750ee4094647bd9658",
+   "media_type": "application/json",
+   "role": "provenance"
+  },
+  {
+   "path": "cases/longer-delay/psf-average-corrected.png",
+   "bytes": 7222,
+   "sha256": "021ea059f9f50f53d5a85153cee50664458cf619697b650486b086aaf350c7a1",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "cases/longer-delay/psf-average-uncorrected.png",
+   "bytes": 7373,
+   "sha256": "5df5530210d7e5176ef498b504581c89c0662e53c9a6353dab365a4f406bc535",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "cases/lower-gain/atlas-atmosphere.png",
+   "bytes": 149650,
+   "sha256": "162a1a091f8ff315bfa25fb27f193ca6a4ce65f749b438860e84d875e88219c4",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/lower-gain/atlas-correction.png",
+   "bytes": 78164,
+   "sha256": "8c876ecbfd383b8e6792ef7de71f0cd5766fef54e95b10f2d61767fd36aaaf43",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/lower-gain/atlas-psf-corrected.png",
+   "bytes": 315243,
+   "sha256": "3f87d3162ffe34a1be1c2cde59dd93c444fc3d70c3ad42d476ee8985b20fa60d",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/lower-gain/atlas-psf-uncorrected.png",
+   "bytes": 313064,
+   "sha256": "21b59d417ea3a9fcc8f946255dafeb0c5045da227c395607c2b2e4098104b5db",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/lower-gain/atlas-residual.png",
+   "bytes": 143385,
+   "sha256": "000a79ca9049ea74425d05cb019dfffe74146c43d32e23d9491b97829eda33eb",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/lower-gain/case.json",
+   "bytes": 27941,
+   "sha256": "e00a70c06fbbc52a9299452f4cfde21ae4fadb511b6a634b00bb75ae804278d4",
+   "media_type": "application/json",
+   "role": "case"
+  },
+  {
+   "path": "cases/lower-gain/config.json",
+   "bytes": 6896,
+   "sha256": "82fd50a2f6dd0b6e71adafc84ecc5377ad8b3bef2740c86f1214c93cbd2120d2",
+   "media_type": "application/json",
+   "role": "config"
+  },
+  {
+   "path": "cases/lower-gain/metrics.csv",
+   "bytes": 19384,
+   "sha256": "b70cbde5cfab2a68f384b43963008c74724c6196b0f7324bf318fdddf7b39887",
+   "media_type": "text/csv",
+   "role": "metrics_csv"
+  },
+  {
+   "path": "cases/lower-gain/metrics.json",
+   "bytes": 48465,
+   "sha256": "dbbbe1550b6ca744ca1a2a9d3878c15ff0282604ed274d24a0639994ea8d94fd",
+   "media_type": "application/json",
+   "role": "metrics"
+  },
+  {
+   "path": "cases/lower-gain/observation-corrected.png",
+   "bytes": 7892,
+   "sha256": "2175a2497b3daf82115b9bd84fc4d4da7627ff775933671d353c41cedf9eb942",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/lower-gain/observation-uncorrected.png",
+   "bytes": 8005,
+   "sha256": "eac138515c4dbaab9d671b069e5d9d5fcd9d6cf4128d70bab01267a6c0f75c16",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/lower-gain/observation.json",
+   "bytes": 8392,
+   "sha256": "e6ef53bb85e840ae47cec7cca6423b6173e91c13ebc37402135fbd0aa1d99243",
+   "media_type": "application/json",
+   "role": "observation"
+  },
+  {
+   "path": "cases/lower-gain/provenance.json",
+   "bytes": 18033,
+   "sha256": "f3cf97d579c967f45072e0d819b66cb0561513b5cf6c98cbb54b99d78388f8cd",
+   "media_type": "application/json",
+   "role": "provenance"
+  },
+  {
+   "path": "cases/lower-gain/psf-average-corrected.png",
+   "bytes": 7279,
+   "sha256": "e06aa875096cade6805a876736d967c3a04b9548c17a978a964a99cb7d9dcfb9",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "cases/lower-gain/psf-average-uncorrected.png",
+   "bytes": 7373,
+   "sha256": "5df5530210d7e5176ef498b504581c89c0662e53c9a6353dab365a4f406bc535",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "cases/stronger-turbulence/atlas-atmosphere.png",
+   "bytes": 163486,
+   "sha256": "98c98b932a7c378e586fd8c620e1b4b5374158c9b03e2166bb263cefd434854a",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/stronger-turbulence/atlas-correction.png",
+   "bytes": 88957,
+   "sha256": "b8611ed1d1b623c79102f12ee45c53294f6750e3d9d082404a0437d4ce04961e",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/stronger-turbulence/atlas-psf-corrected.png",
+   "bytes": 343197,
+   "sha256": "b2967faea56841739a71582562dd616701724fc4a6eb28deccbf746374596e40",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/stronger-turbulence/atlas-psf-uncorrected.png",
+   "bytes": 337623,
+   "sha256": "e9ea9125e505ee6c9baaa214ed43ce6356206b23aedc83e9d90154613a362180",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/stronger-turbulence/atlas-residual.png",
+   "bytes": 156662,
+   "sha256": "231eeb3e64baea1777cbf2a1f1590f06f2dfa4010f524366d3c7495933f527af",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/stronger-turbulence/case.json",
+   "bytes": 28134,
+   "sha256": "d1faf9d86765eb9d3d737614012308742e011a427b238f1e7392ecc50039280a",
+   "media_type": "application/json",
+   "role": "case"
+  },
+  {
+   "path": "cases/stronger-turbulence/config.json",
+   "bytes": 6911,
+   "sha256": "50cd809123e3efcae86e179ef5dbf07e84d8ce0894f9fe31dd71c4f095bd7475",
+   "media_type": "application/json",
+   "role": "config"
+  },
+  {
+   "path": "cases/stronger-turbulence/metrics.csv",
+   "bytes": 21316,
+   "sha256": "e521cf444a1741e4203faecbf5cd26d06538a3ef34aa4823dd1edd779257a11b",
+   "media_type": "text/csv",
+   "role": "metrics_csv"
+  },
+  {
+   "path": "cases/stronger-turbulence/metrics.json",
+   "bytes": 50909,
+   "sha256": "d8e753b9962a69aa470cf711d335a4a563e9cf6d93d9ab5bce01b3173c93083f",
+   "media_type": "application/json",
+   "role": "metrics"
+  },
+  {
+   "path": "cases/stronger-turbulence/observation-corrected.png",
+   "bytes": 8821,
+   "sha256": "d94f73c5e2678d0b9be67df5c838b6fe3bb2451b757b22f22f7f42ba61d22291",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/stronger-turbulence/observation-uncorrected.png",
+   "bytes": 9080,
+   "sha256": "84d844e0da0db25f3dcd45768d3c8ec40643fb8bae03bbfba319f0ded20ac1ad",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/stronger-turbulence/observation.json",
+   "bytes": 8454,
+   "sha256": "a7f26b47898c20b2411fabfce56f564decf3fa2e6ad0f7a636e564d805bfbd22",
+   "media_type": "application/json",
+   "role": "observation"
+  },
+  {
+   "path": "cases/stronger-turbulence/provenance.json",
+   "bytes": 18087,
+   "sha256": "615e953b2a57d6f3295aac9e75bd909950a529a9eb345e4dcfb2b96a3c111d39",
+   "media_type": "application/json",
+   "role": "provenance"
+  },
+  {
+   "path": "cases/stronger-turbulence/psf-average-corrected.png",
+   "bytes": 7735,
+   "sha256": "1e2abc9c788fdf58682b7be8e62bde259c620fb51379b50e4d90fc4f9d385158",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "cases/stronger-turbulence/psf-average-uncorrected.png",
+   "bytes": 7859,
+   "sha256": "a6ecd4bf5f3cb557968b718ea79d38980da89e2d1cfd7dc06e609468455fcec4",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "cases/weaker-turbulence/atlas-atmosphere.png",
+   "bytes": 136119,
+   "sha256": "e1d629ee56e72230bc5aeeaeb90ab5dcf5b4cd139a51cc61ad2ef51d8bfa0fad",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/weaker-turbulence/atlas-correction.png",
+   "bytes": 76948,
+   "sha256": "0e82e4d6a7d3ae12d561fa1a296a0f9a92ed74c0402e468847280e9c1d6ea0a4",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/weaker-turbulence/atlas-psf-corrected.png",
+   "bytes": 290508,
+   "sha256": "9c88d3b2fbfba86cbc8de91b22f53a378853b2977d0bd3ae8899772e96805df5",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/weaker-turbulence/atlas-psf-uncorrected.png",
+   "bytes": 289247,
+   "sha256": "50857397506becfa239393a2b8c95eb3812d2c857450b5a330a17affefe8bed1",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/weaker-turbulence/atlas-residual.png",
+   "bytes": 131501,
+   "sha256": "e141d8dfafc4445aa48051b456ede75ded72eb30ab69b8db1df9d9ff28ae2abd",
+   "media_type": "image/png",
+   "role": "display_atlas"
+  },
+  {
+   "path": "cases/weaker-turbulence/case.json",
+   "bytes": 28095,
+   "sha256": "202063cd748c020e25c0e3a9b9625513665abc652ff9738b10dda3e033fb853e",
+   "media_type": "application/json",
+   "role": "case"
+  },
+  {
+   "path": "cases/weaker-turbulence/config.json",
+   "bytes": 6910,
+   "sha256": "c203a58ea40eb98b876f5bc6c807dbf5ab57cdde5cfa423f5d0bacf8d5155ef0",
+   "media_type": "application/json",
+   "role": "config"
+  },
+  {
+   "path": "cases/weaker-turbulence/metrics.csv",
+   "bytes": 19234,
+   "sha256": "c01f78dbedd9518172b47553f60e9690d2a4dd4c814f4395c263f00b8b86b682",
+   "media_type": "text/csv",
+   "role": "metrics_csv"
+  },
+  {
+   "path": "cases/weaker-turbulence/metrics.json",
+   "bytes": 48308,
+   "sha256": "dba347b818d85a46fef7eb646ec0ccf23e6a85041d378a4940d837b0523d0bd4",
+   "media_type": "application/json",
+   "role": "metrics"
+  },
+  {
+   "path": "cases/weaker-turbulence/observation-corrected.png",
+   "bytes": 7190,
+   "sha256": "a98415ef67e50f6b1499c17a5bb741d1849a185c4702c5cbfae2dd725d25ae94",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/weaker-turbulence/observation-uncorrected.png",
+   "bytes": 7234,
+   "sha256": "c01befbc94c5f1dc8f3cc4a72949c3e87d557ba9f8c7f8a75e5b33e9e1d2fc6f",
+   "media_type": "image/png",
+   "role": "observation"
+  },
+  {
+   "path": "cases/weaker-turbulence/observation.json",
+   "bytes": 8480,
+   "sha256": "1b1410da58fb122a86162ab3d7c8e64352d3cc923222acb42b89ab446b92cdb0",
+   "media_type": "application/json",
+   "role": "observation"
+  },
+  {
+   "path": "cases/weaker-turbulence/provenance.json",
+   "bytes": 18251,
+   "sha256": "e64f9b94de84ccc4582290c9dae52e79c639d7354376655d0ee1aa7003b0e1c6",
+   "media_type": "application/json",
+   "role": "provenance"
+  },
+  {
+   "path": "cases/weaker-turbulence/psf-average-corrected.png",
+   "bytes": 6747,
+   "sha256": "a7ac1e30af2545df13bf23693ca3b49e80129f129c5abf192b68771eb940a208",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "cases/weaker-turbulence/psf-average-uncorrected.png",
+   "bytes": 6839,
+   "sha256": "72a0443463ad61381ac25694404afe21f682dc986f204dcd13185569213af26e",
+   "media_type": "image/png",
+   "role": "display_average"
+  },
+  {
+   "path": "diagnostics.json",
+   "bytes": 1974,
+   "sha256": "771cf7f77328e6f6f220d2816e931c303022804e269a9031ba69515108b99946",
+   "media_type": "application/json",
+   "role": "diagnostics"
+  },
+  {
+   "path": "display.json",
+   "bytes": 8855,
+   "sha256": "a479a196b7add9fd5203edb053b95770c66515622f57d2615a3d77743f87f05b",
+   "media_type": "application/json",
+   "role": "display"
+  },
+  {
+   "path": "research/assets/figures__canonical_closed_loop_control.png",
+   "bytes": 25590,
+   "sha256": "cb284f8ed6d67b8fe99764fb3a1bff21ff075c47f6b7c98b5aad05a8a817cdc5",
+   "media_type": "image/png",
+   "role": "research_figure"
+  },
+  {
+   "path": "research/assets/figures__canonical_correction_order.png",
+   "bytes": 42765,
+   "sha256": "e875977eee0e338ca3a24b8b308045fa543d487ab8e7ef2aa31dbcae22ddf6af",
+   "media_type": "image/png",
+   "role": "research_figure"
+  },
+  {
+   "path": "research/assets/figures__canonical_detector_centroiding.png",
+   "bytes": 48119,
+   "sha256": "29ed803439c9bf20047adea67595fa587d0b8879616cd21bdab7acf736269ebc",
+   "media_type": "image/png",
+   "role": "research_figure"
+  },
+  {
+   "path": "research/assets/figures__canonical_gain_latency.png",
+   "bytes": 50298,
+   "sha256": "422d849a76dc2c269a5b55ea3c0beaff115cdb58e16b9d10f8e39575515b0470",
+   "media_type": "image/png",
+   "role": "research_figure"
+  },
+  {
+   "path": "research/assets/figures__canonical_sensor_calibration.png",
+   "bytes": 21512,
+   "sha256": "a2c248b2b520e824d423d045dd9b1e157364a79458802488d55930120d18bfd1",
+   "media_type": "image/png",
+   "role": "research_figure"
+  },
+  {
+   "path": "research/assets/figures__canonical_tsvd_regularization.png",
+   "bytes": 43335,
+   "sha256": "ecc04e038ef6fce54bbf1f5857a23a7511003a255b30fd24315f04281be23bfe",
+   "media_type": "image/png",
+   "role": "research_figure"
+  },
+  {
+   "path": "research/assets/figures__eso_elt_turbulence__eso_elt_turbulence_demo.png",
+   "bytes": 198204,
+   "sha256": "333b3427e840d22a0e24d3ef235f493135e0597095aa0c5ec229b7045e018e64",
+   "media_type": "image/png",
+   "role": "research_figure"
+  },
+  {
+   "path": "research/assets/figures__tiptop_asterism_geometry.png",
+   "bytes": 122089,
+   "sha256": "23a27a938ff500a5e242956ac2d09b6f40903faae4c7f35dae383a167d222c44",
+   "media_type": "image/png",
+   "role": "research_figure"
+  },
+  {
+   "path": "research/assets/figures__tiptop_atmosphere_structure.png",
+   "bytes": 79934,
+   "sha256": "7d2cf4b258b86ff0f9141d932942e262ee065046770e4305be48e631fe0e6002",
+   "media_type": "image/png",
+   "role": "research_figure"
+  },
+  {
+   "path": "research/assets/figures__tiptop_baseline_psf.png",
+   "bytes": 151195,
+   "sha256": "f02f69a59e06d159186c99adbc99e0bb136737359fe0d8b8d0079dd3868eae0f",
+   "media_type": "image/png",
+   "role": "research_figure"
+  },
+  {
+   "path": "research/assets/figures__tiptop_error_budget.png",
+   "bytes": 75077,
+   "sha256": "4f8ed78ef3d2c4e5e954176f8f37815b85608c0cb9639b917809258c73a805c8",
+   "media_type": "image/png",
+   "role": "research_figure"
+  },
+  {
+   "path": "research/assets/figures__tiptop_seeing_sensitivity.png",
+   "bytes": 94797,
+   "sha256": "4c29e1932313939460084475a279d770139231d3cb82799b0484d4f54fd1e290",
+   "media_type": "image/png",
+   "role": "research_figure"
+  },
+  {
+   "path": "research/assets/notebooks__studies__native_vs_hcipy.ipynb__558504c2.png",
+   "bytes": 27678,
+   "sha256": "2910233ac4dd422f1bba3934099f96cfb8ec2ead4dbfc8fb06621d4f0a3103fb",
+   "media_type": "image/png",
+   "role": "research_figure"
+  },
+  {
+   "path": "research/evidence/R1__saved_notebook_outputs.json",
+   "bytes": 6264,
+   "sha256": "18dadeb3e0c59e1d0029ee4dd35031edf30c24f59c1fd294426e9cd40df8ab64",
+   "media_type": "application/json",
+   "role": "research_extract"
+  },
+  {
+   "path": "research/evidence/R2__saved_notebook_outputs.json",
+   "bytes": 15446,
+   "sha256": "6b64cef2617a8882eed35c56fe3f6b2110ccd67924e3624a7d67d99d73b3b4d5",
+   "media_type": "application/json",
+   "role": "research_extract"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_e3_magnitude_scan_12m.json",
+   "bytes": 23201,
+   "sha256": "016a45ed22d59bbe56650932bb5d7149f7f5d166291471c38d4e4753d1cac4f9",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_e3_magnitude_scan_12m_v2.json",
+   "bytes": 30162,
+   "sha256": "90152c5fe752b87b98176a96a845d674b33de762e2033132dc7d4bd7d9c005b2",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_e3_magnitude_scan_12m_v3_review.json",
+   "bytes": 58947,
+   "sha256": "58ef1998412471af7882cb12526893cf894a5043836dd93f5f1766495dc1adf6",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_e4_camera_comparison_12m_v3_review.json",
+   "bytes": 55501,
+   "sha256": "58e9d38c7eca3f3450a5954f1f40e19cf29cbf8f65ea8fea887e3ae452dfaaac",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_e5_42m_noise_on_current_2312502.json",
+   "bytes": 3177,
+   "sha256": "fde92e225e7ff4eae2905495b9a728c343639716640d3776c2eec0e5078f7077",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_noise_isolation_12m_v3.json",
+   "bytes": 42714,
+   "sha256": "3dd8d681bc22883c7eb21e0b697ac3a4d7dd5f94da637fbb9915ffbfc078ebf7",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_noise_isolation_2m.json",
+   "bytes": 66798,
+   "sha256": "655528b64e087b3f1e29322f4f6ef857b9a45afd5fe9597e173e2ad6c30ee05d",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_s2_42m_seed10.json",
+   "bytes": 3064,
+   "sha256": "912967b4a5d4657798dd57e68f2365dbb78845e4f9627afbdade8d28693322cb",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_s2_42m_seed11.json",
+   "bytes": 3057,
+   "sha256": "af1357bdfca585238ecc4175de75c6394e05ec1a81a58b2710c1f24f5eea1b83",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_s2_42m_seed2.json",
+   "bytes": 3056,
+   "sha256": "94d8a30aede3ad9df43e9edafa1cb8aec2fd2076ab6002a93281a7a0841d9616",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_s2_42m_seed3.json",
+   "bytes": 3055,
+   "sha256": "5d73eb2461996faaeff0c0d38936f7f49d4d58ed21d870fc8c0a45a9f382eed4",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_s2_42m_seed4.json",
+   "bytes": 3053,
+   "sha256": "8ad2ca2487d326c56d36d3522d21c87315cb669e542673ae7eb0ddd5a0686a93",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_s2_42m_seed5.json",
+   "bytes": 3054,
+   "sha256": "138c0231683de94e5a189e626de6d026dcac64c0ff9c0f2b3a0c82e61bc307a6",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_s2_42m_seed6.json",
+   "bytes": 3055,
+   "sha256": "c6eeb67c9f7e00d2517295f2886aab852ab8442bf9bd3e2b13e91cbf46ded6ca",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_s2_42m_seed7.json",
+   "bytes": 3057,
+   "sha256": "15f6f5fe9e0f3b8e4b84d6d5bd74a31c04c6f89db1b55bcb18b35b399878b49e",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_s2_42m_seed8.json",
+   "bytes": 3058,
+   "sha256": "53e38c18284d7605e7cbe5681fab40d6d459ec3a5fb9536672574551105ab95d",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__detector_level_evidence__det09_s2_42m_seed9.json",
+   "bytes": 3056,
+   "sha256": "e3a85abe8b827101f1e50adc8996a4f19d90811bb3f5e0fdc91150668c15c3d7",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__eso_scao_evidence__paired_convergence_full.json",
+   "bytes": 19801,
+   "sha256": "dcafa6139e763772f6241a18a189f14855df48e480313e2ec9cefe111ac1a067",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__eso_scao_evidence__paired_convergence_medium.json",
+   "bytes": 22517,
+   "sha256": "07e0a163313216ad5aee91a12f3e3750aa9ffd22096cc0d66b32a1f1fa056136",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__eso_scao_evidence__reference_tier_v2_manifest.json",
+   "bytes": 9759,
+   "sha256": "45769687c605d4cea3ab0c7e58f6f5b636d5121765d882386ab25e384d123b12",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__refactor__eso_scao_evidence__v2_manifest_atmosphere_record_erratum.txt",
+   "bytes": 1713,
+   "sha256": "16bfce5995799aeb831ba17869d70776f55b2ba309638bf62d740248a86a346f",
+   "media_type": "text/plain",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/docs__research__detector_noise_law__results.json",
+   "bytes": 154179,
+   "sha256": "b62fd20493a6d3611302ab9262a5372afdc098c66fafc98ceb8d58390e3d6942",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/figures__eso_elt_turbulence__eso_elt_closed_loop.csv",
+   "bytes": 230257,
+   "sha256": "672528c70512e1948ecb68529a2600ba613d476ac4a7a2f34e2a1b4140a8e9ab",
+   "media_type": "text/csv",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/figures__eso_elt_turbulence__eso_elt_structure_function.csv",
+   "bytes": 751,
+   "sha256": "d402a86f4b64db6ed2064559aa2a04b7001bc88c526d953b0996fd21baed627f",
+   "media_type": "text/csv",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/figures__eso_elt_turbulence__eso_elt_turbulence_profile.csv",
+   "bytes": 647,
+   "sha256": "324a88a258d17dc7cf47f43ac1a8231b834f9ec8184d96e6ec011f37f2197fdd",
+   "media_type": "text/csv",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/notebooks__studies__tiptop_validation.json",
+   "bytes": 9872,
+   "sha256": "5b0ab2f424613b1534c99af37c1b3e0dd76f1397c9604dd1f1000ea09db495c4",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/evidence/src__shwfs_ao__resources__reference_metrics__cross_backend__cross_backend_baseline.json",
+   "bytes": 171595,
+   "sha256": "6903d27e51b0ee641be97c515e1d98ab449079204da6979fb548dfe2a462d9bd",
+   "media_type": "application/json",
+   "role": "research_evidence"
+  },
+  {
+   "path": "research/results.json",
+   "bytes": 234897,
+   "sha256": "71d0f81f7ebe92b6186d053e549a09fa837d2fd3fc969ddbbb0ca84eb7428484",
+   "media_type": "application/json",
+   "role": "research_results"
+  },
+  {
+   "path": "scene/scene-reference.png",
+   "bytes": 374,
+   "sha256": "fd4aecef1c3b86fc0705aa34cc141f5ed5be30c3b7b9671d9adf17a473e33103",
+   "media_type": "image/png",
+   "role": "scene_reference"
+  },
+  {
+   "path": "scene/scene.json",
+   "bytes": 2843,
+   "sha256": "607dbfd98a5e0befa6f21a625b0667364bf1f2118109819aa7792f3866b96eee",
+   "media_type": "application/json",
+   "role": "scene"
+  }
+ ]
+}
