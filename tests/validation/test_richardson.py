@@ -119,3 +119,30 @@ def test_decreasing_refinement_ratios_admit_a_low_positive_order() -> None:
     # A negative order on the same ratios is refused at the zero-order limit.
     refused = richardson_estimate(h, [1.0 + 3.0 * x**-0.2 for x in h])
     assert refused.status == "NOT_ESTIMATED" and "zero-order limit" in (refused.reason or "")
+
+
+def test_an_exact_root_at_an_admitted_bound_is_accepted() -> None:
+    # Q(h) = h**8 on ratios 2: the residual at the upper bound is exactly zero (review T2-03).
+    result = richardson_estimate([1.0, 0.5, 0.25], [1.0, 2.0**-8, 2.0**-16])
+    assert result.status == "ESTIMATED", result.reason
+    assert result.observed_order == pytest.approx(8.0, abs=1.0e-12)
+    assert result.extrapolated_limit == pytest.approx(0.0, abs=1.0e-15)
+    # Order 9 on the same ratios still lies above the admitted range.
+    above = richardson_estimate([1.0, 0.5, 0.25], [1.0, 2.0**-9, 2.0**-18])
+    assert above.status == "NOT_ESTIMATED" and "above the admitted range" in (above.reason or "")
+
+
+def test_cancellation_near_unit_ratios_does_not_fake_an_endpoint_root() -> None:
+    # Review r2, T2-04: exact binary inputs whose true order is 9.000000001 (outside [0.1, 8]).
+    h = [1.0, 0.9999999900000002, 0.9999999800000006]
+    values = [0.0, 1.000000102204465, 2.000000102204465]
+    result = richardson_estimate(h, values)
+    assert result.status == "NOT_ESTIMATED" and "ill-conditioned" in (result.reason or "")
+    # Ratios within 1e-6 of one are refused outright: the order cannot be resolved.
+    close = richardson_estimate([1.0, 1.0 - 1.0e-9, 1.0 - 2.0e-9], [1.0, 1.1, 1.3])
+    assert close.status == "NOT_ESTIMATED" and "cannot resolve an order" in (close.reason or "")
+    # The stable residual keeps the legitimate interior and endpoint estimates.
+    exact = richardson_estimate([1.0, 0.5, 0.25], [1.0, 2.0**-8, 2.0**-16])
+    assert exact.status == "ESTIMATED" and exact.observed_order == pytest.approx(8.0, abs=1.0e-9)
+    interior = richardson_estimate([1.0, 0.6, 0.2], [-0.3 + 2.7 * x**0.12 for x in [1.0, 0.6, 0.2]])
+    assert interior.status == "ESTIMATED" and interior.observed_order == pytest.approx(0.12, abs=1.0e-9)

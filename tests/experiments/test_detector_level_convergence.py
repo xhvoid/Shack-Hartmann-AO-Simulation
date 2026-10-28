@@ -69,6 +69,9 @@ def synthetic_metric(run, arm: str, metric: str) -> float:
     return BASE_VALUES[metric] * (1.0 + 0.05 * synthetic_h_squared(run.parameters) + offset)
 
 
+PAIRING_ONLY_ATMOSPHERE_KEYS = ("band_limit_half_width_index", "reference_draw_normals_per_layer", "frequency_spacing_per_m")
+
+
 def stand_in_row(scale: str, run, made_by: dict, *, status: str = "completed") -> dict:
     """The row a child of ``made_by`` would publish for ``run``."""
 
@@ -84,14 +87,20 @@ def stand_in_row(scale: str, run, made_by: dict, *, status: str = "completed") -
         atmosphere_key = f"{run.config.pupil_pixels}:{planned['atmosphere_options']}:{planned['root_seed']}:{run.realization}"
         digest = _digest_text(atmosphere_key)
         atmosphere_hash = _digest_text("atmosphere:" + atmosphere_key)
+        expected = planned["expected"]
+        paired_options = planned["atmosphere_options"] is not None
         parameters = planned["parameters"]
         if parameters["exposure_rule"] == "left_point" and parameters["exposure_subsamples"] == 1:
             exposure = None
         else:
+            duration = planned["expected"]["exposure_s"]
             exposure = {
                 "scheme": "midpoint_uniform_held_dm.v1" if parameters["exposure_rule"] == "midpoint" else "left_point_uniform_held_dm.v1",
-                "subsamples": parameters["exposure_subsamples"], "duration_s": 0.002,
+                "subsamples": parameters["exposure_subsamples"], "duration_s": duration,
             }
+            if parameters["exposure_rule"] == "midpoint":
+                n = parameters["exposure_subsamples"]
+                exposure.update(sample_rule="midpoint", sample_time_offsets_s=[(j + 0.5) * duration / n for j in range(n)], mean_sample_time_offset_s=duration / 2.0)
         arms = {}
         for arm in planned["arms"]:
             arms[arm] = {
@@ -101,9 +110,11 @@ def stand_in_row(scale: str, run, made_by: dict, *, status: str = "completed") -
                 "open_loop_rms_m": 1.4e-6,
                 "reconstruction_usable_fraction": 1.0,
                 "open_loop_rms_series_sha256": digest,
+                "units": {"rms": "m", "mean_square": "m2", "fractions": "1"},
                 "science": [
                     {
                         "production": {
+                            "wavelength_m": planned["science_wavelengths_m"][0],
                             "peak_strehl": synthetic_metric(run, arm, "peak_strehl"),
                             "ee50_radius_rad": synthetic_metric(run, arm, "ee50_radius_rad"),
                             "ee80_radius_rad": synthetic_metric(run, arm, "ee80_radius_rad"),
@@ -116,10 +127,15 @@ def stand_in_row(scale: str, run, made_by: dict, *, status: str = "completed") -
                     }
                 ],
                 "geometry": {"retained_lenslet_count": 72, "retained_lenslet_ids_sha256": "a" * 64, "illuminated_area_fraction": {"mean": 0.93, "min": 0.5, "max": 1.0}},
-                "detector_budget": {"detected_e_full_subaperture_per_frame": 2523.0, "spectral_nodes_m": [6.4e-7, 7.5e-7, 8.6e-7][: parameters["spectral_nodes"]] + [8.7e-7] * max(0, parameters["spectral_nodes"] - 3)},
+                "detector_budget": {
+                    "detected_e_full_subaperture_per_frame": 2523.0,
+                    **{name: expected[name] for name in ("exposure_s", "oversampling", "configured_exposure_subsamples", "pixel_scale_rad", "diffusion_sigma_px")},
+                    "bandpass": dict(expected["bandpass"]), "spectral_nodes_m": list(expected["spectral_nodes_m"]),
+                },
                 "atmosphere": {
-                    "config_hash": atmosphere_hash, "screen_size": 2 * run.config.pupil_pixels, "screen_period_m": 10.0,
-                    "pairing_active": planned["atmosphere_options"] is not None, **(planned["atmosphere_options"] or {}),
+                    "config_hash": atmosphere_hash, "realization_index": run.realization,
+                    **{k: v for k, v in (expected["atmosphere"] or {}).items() if paired_options or k not in PAIRING_ONLY_ATMOSPHERE_KEYS},
+                    **(planned["atmosphere_options"] or {}), **({"band_power_retained_fraction": 0.99} if paired_options else {}),
                 },
                 "component_hashes": {"atmosphere": atmosphere_hash},
                 "system_component_hashes": {"atmosphere": atmosphere_hash},
@@ -139,6 +155,7 @@ def stand_in_row(scale: str, run, made_by: dict, *, status: str = "completed") -
                 "config_hash": planned["config_hash"], "root_seed": planned["root_seed"], "realization_index": run.realization,
                 "n_steps": planned["n_steps"], "burn_in_frames": planned["burn_in_frames"],
                 "atmosphere_options": planned["atmosphere_options"], "exposure_override": planned["exposure_override"],
+                "exposure_keywords": planned["expected"]["exposure_keywords"],
                 "execution": {**planned["execution"], "lenslet_batch_size": 512}, "science_wavelengths_m": planned["science_wavelengths_m"],
                 "arms": arms, "open_loop_rms_series_shared_by_arms": True, "paired_delta_v": paired,
                 "timing": {"wall_s": 1.0 + 0.1 * len(spec["arms"])},
@@ -343,8 +360,8 @@ CORRUPTIONS = {
     "another field set": (lambda row: (row["protocol"].update(extra=1), _rehash(row)), "other fields"),
     "repeated realization": (lambda row: row.update(realization=7), "disagree"),
     "repeated seed as boolean": (lambda row: row.update(root_seed=True), "disagree"),
-    "missing arm result": (lambda row: row["result"]["arms"]["noise_on"].pop("post_update_rms_m"), "missing or not numbers"),
-    "boolean result": (lambda row: row["result"]["arms"]["noise_on"].update(post_update_rms_m=True), "missing or not numbers"),
+    "missing arm result": (lambda row: row["result"]["arms"]["noise_on"].pop("post_update_rms_m"), "missing or not finite numbers"),
+    "boolean result": (lambda row: row["result"]["arms"]["noise_on"].update(post_update_rms_m=True), "missing or not finite numbers"),
     "arms out of order": (lambda row: row["result"].update(arms={k: row["result"]["arms"][k] for k in reversed(list(row["result"]["arms"]))}), "in order"),
     "different open-loop series per arm": (lambda row: row["result"]["arms"]["noise_on"].update(open_loop_rms_series_sha256="b" * 64), "different open-loop series"),
     "delta_v series length": (lambda row: row["result"]["paired_delta_v"]["delta_v_m2"].pop(), "finite numbers"),
@@ -373,6 +390,30 @@ CORRUPTIONS = {
         lambda row: [row["result"]["arms"]["noise_on"][part].update(**{field: "d" * 64}) for part, field in (("atmosphere", "config_hash"), ("component_hashes", "atmosphere"), ("system_component_hashes", "atmosphere"))],
         "different atmospheres",
     ),
+    "nonfinite residual": (lambda row: row["result"]["arms"]["noise_on"].update(post_update_rms_m=float("nan")), "missing or not finite numbers"),
+    "negative residual": (lambda row: row["result"]["arms"]["noise_on"].update(post_update_rms_m=-1.0e-7), "outside their domains"),
+    "contradictory units": (lambda row: row["result"]["arms"]["noise_on"].update(units={"rms": "nm", "mean_square": "m2", "fractions": "1"}), "canonical"),
+    "infinite science radius": (lambda row: row["result"]["arms"]["noise_on"]["science"][0]["production"].update(ee50_radius_rad=float("inf")), "incomplete production science metrics"),
+    "science radii out of order": (lambda row: row["result"]["arms"]["noise_on"]["science"][0]["production"].update(ee50_radius_rad=1.0, ee80_radius_rad=0.5), "outside their domains"),
+    "science wavelength": (lambda row: row["result"]["arms"]["noise_on"]["science"][0]["production"].update(wavelength_m=1.0e-6), "not the planned"),
+    "missing illuminated area": (lambda row: row["result"]["arms"]["noise_on"]["geometry"].pop("illuminated_area_fraction"), "illuminated-area"),
+    "illuminated area out of range": (lambda row: row["result"]["arms"]["noise_on"]["geometry"]["illuminated_area_fraction"].update(mean=1.5), "illuminated-area"),
+    "missing spectral nodes": (lambda row: row["result"]["arms"]["noise_on"]["detector_budget"].pop("spectral_nodes_m"), "spectral nodes"),
+    "spectral node count": (lambda row: row["result"]["arms"]["noise_on"]["detector_budget"]["spectral_nodes_m"].append(9.0e-7), "spectral nodes"),
+    "detector oversampling": (lambda row: row["result"]["arms"]["noise_on"]["detector_budget"].update(oversampling=99), "oversampling"),
+    "no exposure time": (lambda row: row["result"]["arms"]["noise_on"]["detector_budget"].pop("exposure_s"), "positive exposure time"),
+    "negative block standard error": (lambda row: row["result"]["paired_delta_v"].update(block_standard_error_m2=-1.0), "block standard error"),
+    "nonpositive wall time": (lambda row: row["result"]["timing"].update(wall_s=0.0), "positive timing"),
+    "missing screen period": (lambda row: row["result"]["arms"]["noise_on"]["atmosphere"].pop("screen_period_m"), "screen period"),
+    "wrong screen size": (lambda row: row["result"]["arms"]["noise_on"]["atmosphere"].update(screen_size=999), "screen size"),
+    "wrong atmosphere realization": (lambda row: row["result"]["arms"]["noise_on"]["atmosphere"].update(realization_index=7), "atmosphere realization"),
+    "coordinated wrong spectral band": (lambda row: row["result"]["arms"]["noise_on"]["detector_budget"].update(
+        spectral_nodes_m=[0.5 * v for v in row["result"]["arms"]["noise_on"]["detector_budget"]["spectral_nodes_m"]],
+        bandpass={**row["result"]["arms"]["noise_on"]["detector_budget"]["bandpass"], "band_min_m": 3.0e-7, "band_max_m": 4.5e-7},
+    ), "is not the plan's"),
+    "wrong pixel scale": (lambda row: row["result"]["arms"]["noise_on"]["detector_budget"].update(pixel_scale_rad=1.0e-6), "pixel scale"),
+    "wrong exposure keywords": (lambda row: row["result"].update(exposure_keywords={"exposure_s": 0.003}), "exposure keywords"),
+    "negative DeltaV series": (lambda row: row["result"]["paired_delta_v"].update(delta_v_m2=[-1.0e-16] * len(row["result"]["paired_delta_v"]["delta_v_m2"]), mean_m2=-1.0e-16), "negative elements"),
     "producer not an identity": (lambda row: (row["protocol"].update(code="head A"), _rehash(row)), "not a code identity"),
 }
 
@@ -536,6 +577,12 @@ def test_the_analysis_recovers_a_synthetic_order_on_the_medium_plan() -> None:
     pupil = analysis["axes"]["pupil"]["scans"]["common"]["metrics"]["operating_expectation/ee50_fourier_rad"]
     assert pupil["settings_coarse_to_fine"] == ["common_s12", "common_s16", "common_s20"]
     assert analysis["axes"]["pupil"]["pairing"]["common"]["adjacent_dilation"][0]["exact_physical_pairing"] is True
+    # Three realizations per setting: the pairing holds per realization (review T2-02).
+    for axis in ("detector", "spectrum", "exposure", "science"):
+        pairing = analysis["axes"][axis]["pairing"]
+        assert pairing["open_loop_series_shared_by_all_settings"] is True, (axis, pairing)
+        assert pairing["realizations"] == [0, 1, 2] and pairing["mismatched_realizations"] == [] and pairing["incomplete_realizations"] == []
+        assert pairing["distinct_digests_across_realizations"] is True
     json.dumps(analysis)
 
 
@@ -587,3 +634,79 @@ def test_the_arms_must_carry_exactly_the_planned_atmosphere_options(tmp_path: Pa
     row["result"]["arms"]["noise_on"]["atmosphere"].update(pairing_active=True, band_limit_screen_size=238)
     path.write_text(json.dumps(row))
     refused(second, controlled, "pairing options the plan did not ask for")
+
+
+def test_a_single_realization_mismatch_is_located_on_its_axis() -> None:
+    # Review T2-02 negative control: one setting's realization 1 sees another series.
+    plan = study.plan("medium")
+    rows = {key: stand_in_row("medium", item, PRODUCER_A) for key, item in plan.items()}
+    for arm in rows["medium_detector_k2_r1"]["result"]["arms"].values():
+        arm["open_loop_rms_series_sha256"] = "e" * 64
+    analysis = study.analyze("medium", rows, plan)
+    detector = analysis["axes"]["detector"]["pairing"]
+    assert detector["open_loop_series_shared_by_all_settings"] is False and detector["mismatched_realizations"] == [1]
+    for axis in ("spectrum", "exposure", "science"):
+        assert analysis["axes"][axis]["pairing"]["open_loop_series_shared_by_all_settings"] is True
+    # A setting missing one realization is incomplete, not paired.
+    del rows["medium_spectrum_nodes5_r2"]
+    analysis = study.analyze("medium", rows, plan)
+    spectrum = analysis["axes"]["spectrum"]["pairing"]
+    assert spectrum["open_loop_series_shared_by_all_settings"] is False and spectrum["incomplete_realizations"] == [2]
+
+
+def test_exposure_metadata_must_match_its_duration_rule_and_offsets(tmp_path: Path, controlled: Launcher) -> None:
+    # Review T2-01: the recorded exposure is bound to the detector budget's exposure time and the planned rule.
+    key = "ci_exposure_mid_n2_r0"
+    for change, match in (
+        (lambda exposure: exposure.update(duration_s=-0.002), "exposure duration"),
+        (lambda exposure: exposure.update(duration_s=0.003), "exposure duration"),
+        (lambda exposure: exposure.update(sample_time_offsets_s=[0.0, 0.001]), "centred sample offsets"),
+        (lambda exposure: exposure.pop("sample_rule"), "centred sample offsets"),
+    ):
+        directory = tmp_path / match.replace(" ", "_") / str(id(change))
+        directory.mkdir(parents=True)
+        save(directory, "ci", [key], PRODUCER_A)
+        path = directory / "runs" / f"{key}.json"
+        row = json.loads(path.read_text())
+        change(row["result"]["arms"]["noise_on"]["wfs_exposure"])
+        path.write_text(json.dumps(row))
+        refused(directory, controlled, match)
+    left = "ci_exposure_left_n2_r0"
+    directory = tmp_path / "left"
+    directory.mkdir()
+    save(directory, "ci", [left], PRODUCER_A)
+    path = directory / "runs" / f"{left}.json"
+    row = json.loads(path.read_text())
+    row["result"]["arms"]["noise_on"]["wfs_exposure"]["sample_rule"] = "left_point"
+    path.write_text(json.dumps(row))
+    refused(directory, controlled, "carries a sample rule")
+
+
+def test_a_coordinated_wrong_exposure_is_refused_against_the_plan(tmp_path: Path, controlled: Launcher) -> None:
+    # Review r2, T2-01: every retained exposure field changed consistently to 3 ms still contradicts the plan's 2 ms.
+    key = "ci_exposure_mid_n2_r0"
+    save(tmp_path, "ci", [key], PRODUCER_A)
+    path = tmp_path / "runs" / f"{key}.json"
+    row = json.loads(path.read_text())
+    planned_duration = row["protocol"]["expected"]["exposure_s"]
+    wrong = 1.5 * planned_duration
+    row["result"]["exposure_keywords"]["exposure_s"] = wrong
+    for arm in row["result"]["arms"].values():
+        arm["detector_budget"]["exposure_s"] = wrong
+        arm["wfs_exposure"].update(duration_s=wrong, sample_time_offsets_s=[0.25 * wrong, 0.75 * wrong], mean_sample_time_offset_s=0.5 * wrong)
+    path.write_text(json.dumps(row))
+    refused(tmp_path, controlled, "exposure keywords|is not the plan's")
+
+
+def test_the_protocol_carries_the_plan_derived_expectations() -> None:
+    # Protocol version 2: the expected physical records come from the plan alone and sit under the protocol hash.
+    plan = study.plan("ci")
+    protocol = study.planned_protocol("ci", plan["ci_pupil_common_s12_r0"])
+    assert protocol["run_protocol_version"] == 2
+    expected = protocol["expected"]
+    assert expected["exposure_s"] > 0.0 and len(expected["spectral_nodes_m"]) == protocol["parameters"]["spectral_nodes"]
+    assert expected["exposure_keywords"] == {} and expected["atmosphere"]["pairing_active"] is True
+    assert expected["atmosphere"]["screen_size"] == 238 and expected["atmosphere"]["screen_period_m"] == pytest.approx(10.0)
+    midpoint = study.planned_protocol("ci", plan["ci_exposure_mid_n2_r0"])["expected"]
+    assert midpoint["exposure_keywords"] == {"exposure_subsamples": 2, "exposure_s": expected["exposure_s"], "exposure_sample_rule": "midpoint"}
+    assert midpoint["atmosphere"]["pairing_active"] is False and midpoint["atmosphere"]["screen_size"] == 240

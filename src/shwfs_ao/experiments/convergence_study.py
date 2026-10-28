@@ -73,6 +73,7 @@ __all__ = (
     "ConvergenceStudyError",
     "scan_configuration",
     "fixed_physics_paired_run",
+    "planned_physics_record",
     "series_digest",
 )
 
@@ -307,6 +308,80 @@ def _budget_record(config: SystemConfig, wfs: Any) -> dict[str, Any]:
         "exposure_s": float(physics.exposure_s),
         "configured_exposure_subsamples": int(physics.exposure_subsamples),
     }
+
+
+def planned_physics_record(
+    config: SystemConfig,
+    *,
+    exposure: ExposureOverride | None = None,
+    atmosphere_options: Any = None,
+) -> dict[str, Any]:
+    """The physical inputs a run of ``config`` must record, derived from the plan alone.
+
+    No system is built.  The detector physics comes from the profile block, the
+    spectral nodes from its bandpass quadrature at the WFS wavelength (the call
+    :func:`physical_budget` makes), the exposure keywords from the override, and
+    the screen geometry from the layered-atmosphere configuration the native
+    factory builds (``None`` for another atmosphere model).  A study's row check
+    compares a retained row against this record, so a retained result cannot
+    carry a physical input the plan did not ask for, however consistent its own
+    fields are with one another.
+    """
+
+    physics = physical_detector_config(config)
+    quadrature = physics.bandpass.quadrature(config.wfs_wavelength_m)
+    pixel_scale = physics.sampling.pixel_scale_rad
+    record: dict[str, Any] = {
+        "exposure_s": float(physics.exposure_s),
+        "configured_exposure_subsamples": int(physics.exposure_subsamples),
+        "oversampling": int(physics.sampling.oversampling),
+        "pixel_scale_rad": None if pixel_scale is None else float(pixel_scale),
+        "diffusion_sigma_px": float(physics.sampling.diffusion_sigma_px),
+        "bandpass": {
+            "kind": physics.bandpass.kind, "band_min_m": physics.bandpass.band_min_m,
+            "band_max_m": physics.bandpass.band_max_m, "n_samples": physics.bandpass.n_samples,
+        },
+        "spectral_nodes_m": [float(value) for value in quadrature.wavelength_m],
+        "exposure_keywords": _jsonable(exposure_keywords(config, exposure)),
+        "atmosphere": None,
+    }
+    if config.atmosphere_model == "native_layered":
+        # Imported here: the experiment layer stays backend-neutral at import time.
+        from ..backends.native.layered_atmosphere import FrozenFlowLayer, LayeredFrozenFlowAtmosphereConfig
+
+        layers = tuple(
+            FrozenFlowLayer(
+                cn2_fraction=layer.cn2_fraction,
+                wind_m_per_s=(float(layer.wind_m_per_s[0]), float(layer.wind_m_per_s[1])),
+                altitude_m=layer.altitude_m,
+            )
+            for layer in config.atmosphere.layers
+        )
+        keywords = {} if atmosphere_options is None else atmosphere_options.factory_keywords()
+        layered = LayeredFrozenFlowAtmosphereConfig(
+            grid_size=int(config.pupil_pixels),
+            delta_m=float(config.telescope_diameter_m) / (int(config.pupil_pixels) - 1),
+            pupil_diameter_m=float(config.telescope_diameter_m),
+            r0_m=config.atmosphere.r0_m,
+            layers=layers,
+            outer_scale_m=config.atmosphere.outer_scale_m,
+            root_seed=1,
+            **keywords,
+        )
+        reference = layered.band_draw_reference_screen_size
+        record["atmosphere"] = {
+            "model_kind": "layered_fourier_frozen_flow",
+            "grid_shape": [int(config.pupil_pixels), int(config.pupil_pixels)],
+            "grid_delta_m": float(layered.delta_m),
+            "pupil_diameter_m": float(layered.pupil_diameter_m),
+            "screen_size": int(layered.screen_size),
+            "screen_period_m": float(layered.screen_period_m),
+            "pairing_active": bool(layered.pairing_active),
+            "band_limit_half_width_index": layered.band_limit_half_width_index,
+            "reference_draw_normals_per_layer": None if reference is None else 2 * reference * reference,
+            "frequency_spacing_per_m": 1.0 / float(layered.screen_period_m),
+        }
+    return record
 
 
 def _atmosphere_record(atmosphere: Any) -> dict[str, Any]:

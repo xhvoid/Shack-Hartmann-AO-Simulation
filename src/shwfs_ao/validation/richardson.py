@@ -46,6 +46,9 @@ __all__ = (
 )
 
 NOT_ESTIMATED = "NOT_ESTIMATED"
+# Refinement ratios closer to one than exp(1e-6) - 1 cannot resolve an order from
+# double-precision differences (review 2026-10-21, T2-04); such scans are refused.
+MINIMUM_LOG_REFINEMENT_RATIO = 1.0e-6
 ESTIMATED = "ESTIMATED"
 
 
@@ -263,7 +266,14 @@ def richardson_estimate(
     # equation, ln r21 / ln r32: one for equal ratios, below one when the ratios
     # decrease towards the fine end (a difference ratio below one is then still a
     # positive order), above one when they increase.
-    limit_at_zero = math.log(r21) / math.log(r32)
+    log_r21, log_r32 = math.log(r21), math.log(r32)
+    if min(log_r21, log_r32) < MINIMUM_LOG_REFINEMENT_RATIO:
+        return result(
+            NOT_ESTIMATED,
+            "ill-conditioned: a refinement ratio within "
+            f"{math.expm1(MINIMUM_LOG_REFINEMENT_RATIO):.1e} of one cannot resolve an order",
+        )
+    limit_at_zero = log_r21 / log_r32
     if ratio <= limit_at_zero * (1.0 + 1.0e-9):
         return result(
             NOT_ESTIMATED,
@@ -273,21 +283,32 @@ def richardson_estimate(
         )
 
     def residual(p: float) -> float:
-        return r32**p * (r21**p - 1.0) / (r32**p - 1.0) - ratio
+        # ``r**p - 1`` as ``expm1(p ln r)``: no cancellation for ratios close to
+        # one, so an endpoint residual near zero means a root, not lost digits.
+        return math.exp(p * log_r32) * math.expm1(p * log_r21) / math.expm1(p * log_r32) - ratio
 
     low, high = residual(low_bound), residual(high_bound)
-    if not (low < 0.0 < high):
+    # An exact root at an admitted bound is a solution, not an excursion beyond
+    # the range: accept it (to rounding of the residual) before requiring a
+    # strict bracket.
+    endpoint_tolerance = 1.0e-12 * max(1.0, abs(ratio))
+    if abs(low) <= endpoint_tolerance:
+        order = float(low_bound)
+    elif abs(high) <= endpoint_tolerance:
+        order = float(high_bound)
+    elif not (low < 0.0 < high):
         # The residual increases with p: both positive puts the root below
         # the range, both negative above it.
-        where = "below" if low >= 0.0 else "above"
+        where = "below" if low > 0.0 else "above"
         return result(NOT_ESTIMATED, f"ill-conditioned: the observed order lies {where} the admitted range {order_bounds}")
-    try:
-        order = float(optimize.brentq(residual, low_bound, high_bound, xtol=1.0e-12, maxiter=200))
-    except (RuntimeError, ValueError) as exc:  # pragma: no cover - brentq with a valid bracket converges
-        return result(NOT_ESTIMATED, f"ill-conditioned: the order solver failed ({exc})")
-    limit = q[-1] + e32 / (r32**order - 1.0)
+    else:
+        try:
+            order = float(optimize.brentq(residual, low_bound, high_bound, xtol=1.0e-12, maxiter=200))
+        except (RuntimeError, ValueError) as exc:  # pragma: no cover - brentq with a valid bracket converges
+            return result(NOT_ESTIMATED, f"ill-conditioned: the order solver failed ({exc})")
+    limit = q[-1] + e32 / math.expm1(order * log_r32)
     if not math.isfinite(limit):
         return result(NOT_ESTIMATED, "ill-conditioned: the extrapolated limit is not finite")
-    gci = None if q[-1] == 0.0 else 1.25 * abs(e32 / q[-1]) / (r32**order - 1.0)
+    gci = None if q[-1] == 0.0 else 1.25 * abs(e32 / q[-1]) / math.expm1(order * log_r32)
     flag = None if uncertainty_available else "uncertainty not available: differences compared with zero only"
     return result(ESTIMATED, flag, order=order, limit=limit, error=abs(q[-1] - limit), gci=gci)
