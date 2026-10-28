@@ -529,15 +529,18 @@ class TestValidation:
         with pytest.raises(HcipyAtmosphereError, match="kind"):
             HcipyAtmosphereLayerConfig(r0_m=0.15, kind="periodic")  # type: ignore[arg-type]
 
-    def test_infinite_outer_scale_normalizes_to_none(self):
-        assert HcipyAtmosphereLayerConfig(r0_m=0.15, outer_scale_m=None).outer_scale_m is None
-        assert (
+    @pytest.mark.parametrize("outer_scale_m", (None, float("inf")))
+    def test_unbounded_outer_scale_is_refused_at_layer_configuration(
+        self, outer_scale_m
+    ):
+        with pytest.raises(
+            HcipyAtmosphereError,
+            match="unbounded.*not constructible.*finite outer scale",
+        ):
             HcipyAtmosphereLayerConfig(
                 r0_m=0.15,
-                outer_scale_m=float("inf"),
-            ).outer_scale_m
-            is None
-        )
+                outer_scale_m=outer_scale_m,
+            )
 
     def test_model_configuration_rejects_invalid_composition(self):
         layer = HcipyAtmosphereLayerConfig(r0_m=0.15)

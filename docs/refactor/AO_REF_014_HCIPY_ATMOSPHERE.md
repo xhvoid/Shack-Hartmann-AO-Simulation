@@ -10,7 +10,8 @@ native backend changes.
 ## Public surface
 
 - `HcipyAtmosphereLayerConfig` — one unit-explicit layer: `r0_m`,
-  `outer_scale_m` (`None` or `inf` selects an unbounded outer scale),
+  finite positive `outer_scale_m` (`None` and positive infinity are rejected
+  because HCIPy's von Kármán covariance is singular in that limit),
   `wind_m_per_s`, `altitude_m`, `kind` (`"infinite"` or `"finite"`), plus the
   kind-specific numerics `stencil_length`/`use_interpolation` (infinite) and
   `oversampling` (finite).
@@ -30,6 +31,12 @@ Importing the module (or the lazy re-exports on
 runs before the dependency is resolved, so invalid configuration raises
 `HcipyAtmosphereError` even without HCIPy; only constructing or resetting a
 model raises `OptionalDependencyError` on lightweight installations.
+
+HCIPy cannot construct either layer kind at an unbounded outer scale: its
+covariance contains non-finite values before factorization. Layer configuration
+therefore fails closed with an actionable finite-outer-scale message. The
+native `subharmonic_von_karman_v2` spectrum remains the supported unbounded
+alternative.
 
 ## Physical conventions
 

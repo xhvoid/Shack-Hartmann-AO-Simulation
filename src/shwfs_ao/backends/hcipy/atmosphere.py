@@ -67,6 +67,13 @@ _WIND_NORMALIZATION_ID = "hcipy-0.7-layer-velocity-normalization-v1"
 _PHASE_CONVERSION_ID = "single-query-at-conversion-wavelength-v1"
 """Identifier of the phase→OPD construction (one query, one conversion)."""
 
+_UNBOUNDED_OUTER_SCALE_MESSAGE = (
+    "outer_scale_m=None or positive infinity (unbounded) is not constructible "
+    "with the HCIPy backend: its von Karman covariance is singular in that "
+    "limit. Use a finite outer scale, or the native "
+    "'subharmonic_von_karman_v2' spectrum, which does support it."
+)
+
 __all__ = (
     "WIND_CONVENTION",
     "HcipyAtmosphereError",
@@ -86,8 +93,12 @@ class HcipyAtmosphereLayerConfig:
 
     ``r0_m`` is this layer's own Fried parameter at the model-level
     ``r0_reference_wavelength_m``; layer strengths combine as
-    ``r0_total^(-5/3) = Σ r0_i^(-5/3)``.  ``outer_scale_m`` of ``None`` (or
-    positive infinity) selects an unbounded outer scale.  ``altitude_m`` is
+    ``r0_total^(-5/3) = Σ r0_i^(-5/3)``.  ``outer_scale_m`` must be finite for
+    this backend: HCIPy's von Karman covariance is singular in the unbounded
+    limit, so ``None`` (or positive infinity) is refused with
+    :class:`HcipyAtmosphereError` rather than failing inside the library.  The
+    native ``subharmonic_von_karman_v2`` spectrum does support an unbounded
+    outer scale.  ``altitude_m`` is
     carried to HCIPy and reported as metadata; without inter-layer
     propagation (no scintillation in this adapter) it does not change the
     returned OPD.  ``stencil_length`` and ``use_interpolation`` apply to the
@@ -506,6 +517,13 @@ def _build_hcipy_layer(
     outer_scale = (
         np.inf if layer_config.outer_scale_m is None else layer_config.outer_scale_m
     )
+    if not np.isfinite(outer_scale):
+        # HCIPy's von Karman layers build a covariance that is singular in the
+        # unbounded-outer-scale limit; the library fails deep inside a Cholesky
+        # factorisation with "array must not contain infs or NaNs".  Refuse
+        # here, where the cause is still visible, rather than passing an
+        # infinity down and surfacing that.
+        raise HcipyAtmosphereError(_UNBOUNDED_OUTER_SCALE_MESSAGE)
     velocity = np.asarray(_hcipy_velocity(layer_config), dtype=float)
     if layer_config.kind == "infinite":
         return hcipy.InfiniteAtmosphericLayer(
@@ -550,15 +568,13 @@ def _hcipy_velocity(
 
 
 def _optional_outer_scale(value: float | None) -> float | None:
-    if value is None:
-        return None
-    if (
+    if value is None or (
         isinstance(value, Real)
         and not isinstance(value, (bool, np.bool_))
         and math.isinf(float(value))
         and float(value) > 0.0
     ):
-        return None
+        raise HcipyAtmosphereError(_UNBOUNDED_OUTER_SCALE_MESSAGE)
     return _positive("outer_scale_m", value)
 
 

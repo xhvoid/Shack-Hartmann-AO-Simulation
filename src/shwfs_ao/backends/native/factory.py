@@ -35,6 +35,8 @@ from ...wfs.shack_hartmann.geometry import (
 )
 from ...wfs.shack_hartmann.measurement import DetectorShackHartmannSensor
 from .atmosphere import (
+    SPECTRUM_SUBHARMONIC_V2,
+    TRANSLATION_FOURIER_SUBPIXEL_V2,
     FrozenFlowAtmosphere,
     FrozenFlowAtmosphereConfig,
     StaticOpdAtmosphere,
@@ -47,7 +49,15 @@ __all__ = (
     "NativeScaoFactoryError",
     "NativeScaoComponentFactory",
     "NATIVE_SCAO_COMPONENT_FACTORY",
+    "SCREEN_OVERSIZE_FACTOR",
 )
+
+SCREEN_OVERSIZE_FACTOR = 3
+"""Generated-screen size as a multiple of the pupil array, for the v2 model.
+
+A factor of three gives a travel budget of exactly ``pupil_pixels`` pixels
+before the pupil window reaches the screen's non-periodic wrap boundary.
+"""
 
 
 class NativeScaoFactoryError(ValueError):
@@ -118,13 +128,52 @@ class NativeScaoComponentFactory:
                 pupil_mask=geometry.pupil_mask,
                 random_streams=random_streams.scoped("native-atmosphere"),
             ),
+            # The physically corrected screen: absolutely normalized von
+            # Karman spectrum with subharmonics, and exact sub-pixel frozen
+            # flow.  Selected by name so that existing profiles keep the
+            # frozen legacy numerics their accepted baselines were built from.
+            #
+            # The screen is generated at SCREEN_OVERSIZE_FACTOR times the pupil
+            # array.  Subharmonic modes have periods longer than the screen, so
+            # a v2 screen is not periodic and its wrap boundary is a real
+            # discontinuity; oversizing keeps that boundary outside the pupil
+            # window for `pupil_pixels` pixels of travel, which covers every
+            # shipped run.  A longer run fails at the first frame outside that
+            # budget, before the wrap seam can enter the pupil; the rejected
+            # attempt also leaves `atmosphere.exceeded_travel_budget` true.
+            # The oversize does not change the physics: the
+            # ensemble pupil RMS is screen-size independent and matches the von
+            # Karman aperture variance, because the subharmonics — not the grid
+            # extent — carry the low frequencies.
+            "native_frozen_flow_v2": lambda: FrozenFlowAtmosphere(
+                FrozenFlowAtmosphereConfig(
+                    grid_size=geometry.pupil_shape[0],
+                    screen_grid_size=(
+                        SCREEN_OVERSIZE_FACTOR * geometry.pupil_shape[0]
+                    ),
+                    delta_m=geometry.pupil_geometry.pixel_spacing_xy_m[0],
+                    pupil_diameter_m=geometry.telescope_diameter_m,
+                    r0_m=r0_m,
+                    outer_scale_m=outer_scale_m,
+                    phase_reference_wavelength_m=phase_reference_wavelength_m,
+                    wind_m_per_s=wind_m_per_s,
+                    root_seed=random_streams.root_seed,
+                    target_rms_rad=target_rms_rad,
+                    normalize_rms=normalize_rms,
+                    spectrum_model=SPECTRUM_SUBHARMONIC_V2,
+                    translation_model=TRANSLATION_FOURIER_SUBPIXEL_V2,
+                ),
+                pupil_mask=geometry.pupil_mask,
+                random_streams=random_streams.scoped("native-atmosphere"),
+            ),
         }
         try:
             builder = builders[model]
         except KeyError as exc:
             raise NativeScaoFactoryError(
                 f"native atmosphere model {model!r} is not registered; "
-                "expected 'static' or 'native_frozen_flow'."
+                "expected 'static', 'native_frozen_flow', or "
+                "'native_frozen_flow_v2'."
             ) from exc
         return builder()
 

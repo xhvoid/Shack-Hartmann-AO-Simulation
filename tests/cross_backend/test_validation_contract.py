@@ -338,6 +338,15 @@ class TestPhysicalEstimators:
         values[:, 4] = np.nan
         assert mean_square_column_difference(values, 3) == pytest.approx(2.25)
 
+    @pytest.mark.parametrize("infinite", (np.inf, -np.inf))
+    def test_mean_square_column_difference_rejects_infinite_samples(
+        self, infinite
+    ):
+        values = 0.5 * np.tile(np.arange(10.0), (4, 1))
+        values[0, 4] = infinite
+        with pytest.raises(PhysicalEstimatorError, match="infinite samples"):
+            mean_square_column_difference(values, 3)
+
     def test_mean_square_column_difference_rejects_bad_lags(self):
         values = np.zeros((3, 6))
         for lag in (0, 6, True):

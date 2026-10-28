@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 from dataclasses import fields, is_dataclass
 import importlib.util
 from pathlib import Path
@@ -81,6 +82,35 @@ def test_all_required_pages_and_positioning_are_present():
         assert path.is_file(), f"Missing AO-REF-022 page: {path}"
         assert path.stat().st_size > 500, f"AO-REF-022 page looks incomplete: {path}"
     assert POSITIONING in _normalized(README)
+
+
+def test_readme_error_budget_numbers_come_from_packaged_baselines():
+    """Do not let an ad-hoc run masquerade as a packaged accepted result."""
+
+    reference_dir = (
+        ROOT / "src" / "shwfs_ao" / "resources" / "reference_metrics"
+    )
+    readme = README.read_text(encoding="utf-8")
+    labels = {
+        "fast": "control-space proxy (`fast_*`)",
+        "physical": "von Kármán screen (`physical_*`)",
+    }
+    for prefix, label in labels.items():
+        path = reference_dir / f"{prefix}_error_budget_regression_baseline.csv"
+        with path.open(newline="", encoding="utf-8") as handle:
+            rows = {
+                row["scenario_name"]: row for row in csv.DictReader(handle)
+            }
+        row = rows["all_effects"]
+        expected = (
+            f"| {label} | {float(row['open_rms_nm']):.1f} nm | "
+            f"{float(row['closed_rms_nm']):.1f} nm | "
+            f"{float(row['closed_over_open_rms']):.2f} | "
+            f"{float(row['strehl_J']):.3f} / "
+            f"{float(row['strehl_H']):.3f} / "
+            f"{float(row['strehl_K']):.3f} |"
+        )
+        assert expected in readme
 
 
 def test_architecture_has_all_five_current_module_diagrams():

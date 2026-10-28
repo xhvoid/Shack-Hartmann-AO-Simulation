@@ -28,6 +28,7 @@ from ..core.provenance import (
     SourceClass,
 )
 from ..dm import DMConfig
+from ..core.wavefront import opd_to_phase
 from ..science.bandpass import ScienceBandpass, top_hat_bandpass
 
 # AO-REF-021 Phase A: the frozen scenario engine still consumes the
@@ -58,6 +59,34 @@ DEFAULT_SCENARIO_SOURCE_NOTE = (
     "Synthetic fast-mode error-budget scenario; uses local detector, DM, "
     "controller, and science-metric proxies rather than measured AO telemetry."
 )
+
+PHASE_SOURCE_CONTROL_SPACE = "control_space_proxy"
+"""Historical disturbance: a pattern synthesized *from the deformable mirror*.
+
+:func:`build_control_space_phase_sequence` builds its frames by driving the DM
+and reading back its own surface, so the disturbance lies entirely inside the
+mirror's controllable span.  A budget built on it therefore contains **no
+fitting error at all**: the DM reproduces the input to machine precision
+(measured residual ~1e-13 nm), where a von Karman screen of the same RMS on the
+same 5x5 actuator grid leaves about 43 % uncorrected.  There is also no r0 and
+no outer scale on this path — the amplitude is the free parameter
+``phase_amplitude_nm``.
+
+Retained because every accepted baseline was generated with it, and because it
+remains a legitimate way to isolate temporal and noise terms from fitting
+error.  It is not an atmosphere.
+"""
+
+PHASE_SOURCE_ATMOSPHERIC_SCREEN = "atmospheric_screen"
+"""Physical disturbance: a calibrated von Karman screen in frozen flow.
+
+Amplitude follows ``r0_m`` and ``outer_scale_m`` rather than a free parameter,
+the spatial spectrum is the corrected ``subharmonic_von_karman_v2`` model, and
+the screen advances sub-pixel between frames.  Fitting error, temporal error,
+and aliasing all appear on their own.
+"""
+
+_PHASE_SOURCES = (PHASE_SOURCE_CONTROL_SPACE, PHASE_SOURCE_ATMOSPHERIC_SCREEN)
 REQUIRED_SCENARIO_NAMES = (
     "ideal_static",
     "dynamic_multilayer_proxy",
@@ -158,6 +187,13 @@ class ScenarioConfig:
     ncpa_seed: int | None = None
     source_class: str = DEFAULT_SCENARIO_SOURCE_CLASS
     source_note: str = DEFAULT_SCENARIO_SOURCE_NOTE
+    # Appended after source_note on purpose: positional construction of every
+    # field that existed before the physical disturbance source must keep
+    # working, and tests/test_provenance_dependencies.py pins that order.
+    phase_source: str = PHASE_SOURCE_CONTROL_SPACE
+    r0_m: float | None = None
+    outer_scale_m: float = 25.0
+    r0_reference_wavelength_m: float = 500.0e-9
 
     def __post_init__(self) -> None:
         if not str(self.scenario_name).strip():
@@ -181,6 +217,24 @@ class ScenarioConfig:
         _require_finite("misregistration_shear", self.misregistration_shear)
         _require_positive("misregistration_magnification", self.misregistration_magnification)
         _require_nonnegative("ncpa_rms_nm", self.ncpa_rms_nm)
+        if self.phase_source not in _PHASE_SOURCES:
+            raise AOErrorBudgetError(
+                f"phase_source={self.phase_source!r} is not one of "
+                f"{list(_PHASE_SOURCES)}."
+            )
+        if self.r0_m is not None:
+            _require_positive("r0_m", self.r0_m)
+        _require_positive("outer_scale_m", self.outer_scale_m)
+        _require_positive(
+            "r0_reference_wavelength_m", self.r0_reference_wavelength_m
+        )
+        if (
+            self.phase_source == PHASE_SOURCE_ATMOSPHERIC_SCREEN
+            and self.r0_m is None
+        ):
+            raise AOErrorBudgetError(
+                f"phase_source={PHASE_SOURCE_ATMOSPHERIC_SCREEN!r} requires r0_m."
+            )
         _require_positive("tau0_s", self.tau0_s)
         _require_nonnegative("turbulence_speed_m_s", self.turbulence_speed_m_s)
         _validate_source(self.source_class, self.source_note)
@@ -308,11 +362,109 @@ class ScenarioResult:
         }
 
 
+def physical_error_budget_scenarios(
+    n_steps: int = 60,
+    r0_m: float = 0.1263371938263465,
+    outer_scale_m: float = 25.0,
+    frame_rate_hz: float = 1000.0,
+    latency_frames: int = 2,
+) -> tuple[ScenarioConfig, ...]:
+    """Return the 8-row scenario matrix driven by a real atmosphere.
+
+    Same eight scenarios as :func:`default_error_budget_scenarios`, but the
+    disturbance is a calibrated von Karman screen rather than a pattern
+    synthesized from the deformable mirror, and the loop carries a physical
+    two-frame latency instead of applying this frame's measurement to this
+    frame's mirror.
+
+    Both terms the proxy matrix cannot contain therefore appear here.  On the
+    shipped 2 m / 5x5-actuator scale the difference is not subtle: the packaged
+    proxy ``all_effects`` row reports J/H/K Strehl 0.915/0.950/0.971 and a
+    closed/open RMS ratio of 0.77, while the packaged atmospheric row reports
+    0.320/0.533/0.673 and 0.92.  The gap is expected because fitting error alone
+    leaves roughly 43 % of a von Karman screen uncorrected on that actuator
+    grid.
+
+    The default ``r0_m`` is the value the packaged observing conditions imply
+    at 500 nm; ``n_steps`` at 1 kHz covers about ten atmospheric coherence
+    times.
+    """
+
+    common: dict[str, Any] = {
+        "n_steps": int(n_steps),
+        "frame_rate_hz": float(frame_rate_hz),
+        "latency_frames": int(latency_frames),
+        "phase_source": PHASE_SOURCE_ATMOSPHERIC_SCREEN,
+        "r0_m": float(r0_m),
+        "outer_scale_m": float(outer_scale_m),
+        "phase_seed": 101,
+        "detector_noise_seed": 211,
+        "ncpa_seed": 307,
+        "source_class": DEFAULT_SCENARIO_SOURCE_CLASS,
+        "source_note": (
+            "Physically-conditioned error-budget scenario: von Karman screen "
+            "in frozen flow, amplitude set by r0 and the outer scale, with a "
+            "two-frame command latency."
+        ),
+    }
+    scenarios = []
+    for scenario in default_error_budget_scenarios():
+        overrides = dict(common)
+        row_latency = int(latency_frames)
+        if scenario.scenario_name == "ideal_static":
+            # "Ideal" still means no temporal and no latency term, but the
+            # spatial disturbance is now a real screen, so fitting error
+            # remains.  The screen is held at t=0 by ``dynamic_phase=False``.
+            row_latency = 0
+        elif scenario.scenario_name == "latency":
+            row_latency = int(latency_frames) + 2
+        overrides["latency_frames"] = row_latency
+        # The proxy matrix labels its disturbance "multi_component_dynamic_phase"
+        # and mentions latency only on the latency row, because every other row
+        # ran with none.  Here the baseline latency is physical, so each row
+        # must say so or the published table misreads.
+        effects = tuple(
+            "von_karman_screen" if effect in {
+                "multi_component_dynamic_phase",
+                "static_phase",
+            } else effect
+            for effect in scenario.enabled_effects
+            if effect not in {"zero_latency", "latency_2_frames"}
+        )
+        if not scenario.dynamic_phase:
+            effects = tuple(
+                f"{effect}_frozen" if effect == "von_karman_screen" else effect
+                for effect in effects
+            )
+        effects += (
+            ("zero_latency",) if row_latency == 0
+            else (f"latency_{row_latency}_frames",)
+        )
+        overrides["enabled_effects"] = effects
+        scenarios.append(
+            replace(
+                scenario,
+                **{
+                    key: value
+                    for key, value in overrides.items()
+                    if key not in {"phase_amplitude_nm"}
+                },
+            )
+        )
+    return tuple(scenarios)
+
+
 def default_error_budget_scenarios(
     n_steps: int = 24,
     phase_amplitude_nm: float = 400.0,
 ) -> tuple[ScenarioConfig, ...]:
-    """Return the required 8-row fast scenario matrix."""
+    """Return the required 8-row fast scenario matrix.
+
+    The disturbance is the :data:`PHASE_SOURCE_CONTROL_SPACE` proxy, which
+    carries no fitting error by construction.  Use
+    :func:`physical_error_budget_scenarios` for a budget built on a real
+    atmosphere.
+    """
 
     common: dict[str, Any] = {
         "n_steps": int(n_steps),
@@ -456,7 +608,7 @@ def run_error_budget_scenario(
 
     _validate_inputs(calibration, dm_model, poke_result)
     _validate_jhk_bandpasses(tuple(bandpasses))
-    phase_sequence = build_control_space_phase_sequence(calibration, dm_model, poke_result, scenario)
+    phase_sequence = build_phase_sequence(calibration, dm_model, poke_result, scenario)
     control_dm_model = _dm_with_stroke_limit(dm_model, scenario.stroke_limit_nm)
     loop_config = DetectorLoopConfig(
         n_steps=scenario.n_steps,
@@ -480,6 +632,166 @@ def run_error_budget_scenario(
         telescope_diameter_m=telescope_diameter_m,
         pad_factor=pad_factor,
     )
+
+
+def _scenario_hash_payload(scenario: ScenarioConfig) -> dict[str, Any]:
+    """Hash payload for one scenario, stable across the disturbance-source add.
+
+    The atmosphere selectors were appended to :class:`ScenarioConfig` after the
+    fast baselines were accepted.  Hashing ``scenario.__dict__`` directly would
+    therefore have moved the recorded identity of every frozen proxy row even
+    though none of their physics changed, so the four fields are omitted while
+    they hold their legacy defaults and included as soon as a scenario opts
+    into the atmospheric source.
+    """
+
+    payload = dict(scenario.__dict__)
+    selectors = {
+        "phase_source": PHASE_SOURCE_CONTROL_SPACE,
+        "r0_m": None,
+        "outer_scale_m": 25.0,
+        "r0_reference_wavelength_m": 500.0e-9,
+    }
+    if all(payload.get(key) == default for key, default in selectors.items()):
+        for key in selectors:
+            payload.pop(key, None)
+    return payload
+
+
+def calibration_grid_spacing_m(calibration: DetectorShwfsCalibration) -> float:
+    """Pixel spacing of a calibration's own pupil coordinate grid, in metres.
+
+    Read off the grid rather than re-derived from the diameter.  The grid is a
+    linspace spanning the full diameter, so its spacing is ``D/(pixels-1)``;
+    assuming ``D/pixels`` samples an atmosphere about 2 % too finely on the
+    packaged 52-pixel geometry and biases D/r0 by roughly 3 % in variance.
+    """
+
+    x_m = np.asarray(calibration.x_m, dtype=float)
+    if x_m.ndim != 2 or x_m.shape[1] < 2:
+        raise AOErrorBudgetError(
+            "calibration.x_m must be a 2-D grid with at least two columns."
+        )
+    spacing = float(x_m[0, 1] - x_m[0, 0])
+    if not spacing > 0.0:
+        raise AOErrorBudgetError(
+            "calibration grid spacing must be positive and increasing in x."
+        )
+    return spacing
+
+
+def build_phase_sequence(
+    calibration: DetectorShwfsCalibration,
+    dm_model: DMModel,
+    poke_result: PokeMtxResult,
+    scenario: ScenarioConfig,
+) -> np.ndarray:
+    """Build the disturbance a scenario asked for.
+
+    Dispatches on ``scenario.phase_source``.  The two sources answer different
+    questions and are not interchangeable: see
+    :data:`PHASE_SOURCE_CONTROL_SPACE` and
+    :data:`PHASE_SOURCE_ATMOSPHERIC_SCREEN`.
+    """
+
+    if scenario.phase_source == PHASE_SOURCE_ATMOSPHERIC_SCREEN:
+        return build_atmospheric_phase_sequence(
+            calibration, dm_model, poke_result, scenario
+        )
+    return build_control_space_phase_sequence(
+        calibration, dm_model, poke_result, scenario
+    )
+
+
+def build_atmospheric_phase_sequence(
+    calibration: DetectorShwfsCalibration,
+    dm_model: DMModel,
+    poke_result: PokeMtxResult,
+    scenario: ScenarioConfig,
+) -> np.ndarray:
+    """Build a frozen-flow von Karman phase sequence on the WFS pupil grid.
+
+    Amplitude comes from ``scenario.r0_m`` at
+    ``scenario.r0_reference_wavelength_m`` and from ``scenario.outer_scale_m``,
+    never from ``phase_amplitude_nm``.  The screen is generated by the
+    corrected ``subharmonic_von_karman_v2`` spectrum on an oversized grid and
+    advanced with exact sub-pixel frozen flow, so the returned frames carry
+    real fitting error, real temporal error, and a real wavelength scaling.
+
+    Returns phase in radians at the calibration WFS wavelength, matching the
+    contract of :func:`build_control_space_phase_sequence`.
+
+    Raises:
+        AOErrorBudgetError: if ``r0_m`` is unset, or if the requested run
+            outlives the generated screen and the wrap seam would cross the
+            pupil.
+    """
+
+    from ..backends.native.atmosphere import (
+        SPECTRUM_SUBHARMONIC_V2,
+        TRANSLATION_FOURIER_SUBPIXEL_V2,
+        FrozenFlowAtmosphere,
+        FrozenFlowAtmosphereConfig,
+        NativeAtmosphereError,
+    )
+    from ..backends.native.factory import SCREEN_OVERSIZE_FACTOR
+
+    _validate_inputs(calibration, dm_model, poke_result)
+    if scenario.r0_m is None:
+        raise AOErrorBudgetError(
+            f"phase_source={PHASE_SOURCE_ATMOSPHERIC_SCREEN!r} requires r0_m; "
+            "the disturbance amplitude is derived from it, not from "
+            "phase_amplitude_nm."
+        )
+
+    geometry = calibration.geometry
+    pupil_mask = np.asarray(calibration.pupil_mask, dtype=bool)
+    pixels = int(pupil_mask.shape[0])
+    delta_m = calibration_grid_spacing_m(calibration)
+
+    atmosphere = FrozenFlowAtmosphere(
+        FrozenFlowAtmosphereConfig(
+            grid_size=pixels,
+            screen_grid_size=SCREEN_OVERSIZE_FACTOR * pixels,
+            delta_m=delta_m,
+            pupil_diameter_m=float(geometry.telescope_diameter_m),
+            r0_m=float(scenario.r0_m),
+            outer_scale_m=float(scenario.outer_scale_m),
+            phase_reference_wavelength_m=float(scenario.r0_reference_wavelength_m),
+            wind_m_per_s=(float(scenario.turbulence_speed_m_s), 0.0),
+            root_seed=int(scenario.resolved_phase_seed),
+            normalize_rms=False,
+            spectrum_model=SPECTRUM_SUBHARMONIC_V2,
+            translation_model=TRANSLATION_FOURIER_SUBPIXEL_V2,
+        ),
+        pupil_mask=pupil_mask,
+    )
+    atmosphere.reset(realization_index=0)
+
+    wavelength_m = float(geometry.wfs_wavelength_m)
+    phase_maps: list[np.ndarray] = []
+    # ``dynamic_phase=False`` means a frozen atmosphere, not merely a slower
+    # one: the scenario is isolating spatial terms from temporal ones, so the
+    # screen is held at t=0 for every frame rather than advanced by the wind.
+    times = (
+        list(scenario.time_s)
+        if scenario.dynamic_phase
+        else [0.0] * int(scenario.n_steps)
+    )
+    for time_s in times:
+        try:
+            opd_m = np.asarray(atmosphere.opd_at(float(time_s)), dtype=float)
+        except NativeAtmosphereError as exc:
+            raise AOErrorBudgetError(
+                f"scenario {scenario.scenario_name!r} outlived its screen: {exc}"
+            ) from exc
+        phase_rad = opd_to_phase(opd_m, wavelength_m)
+        _assert_masked_finite(
+            phase_rad, pupil_mask, f"atmospheric phase step {len(phase_maps)}"
+        )
+        phase_maps.append(phase_rad)
+
+    return np.asarray(phase_maps, dtype=float)
 
 
 def build_control_space_phase_sequence(
@@ -511,7 +823,7 @@ def build_control_space_phase_sequence(
     jitter_state = rng.normal(scale=0.01 * scenario.phase_amplitude_nm, size=n_controlled)
     diameter_m = float(dm_model.config.telescope_diameter_m)
     wind_cycles_per_s = float(scenario.turbulence_speed_m_s) / diameter_m
-    phase_maps = []
+    phase_maps: list[np.ndarray] = []
     for step, t_s in enumerate(time_s):
         if scenario.dynamic_phase:
             coherence_phase = 2.0 * np.pi * t_s / (8.0 * float(scenario.tau0_s))
@@ -611,7 +923,7 @@ def summarize_scenario(
 
     settings = {
         "hash_schema": 2,
-        "scenario": scenario.__dict__,
+        "scenario": _scenario_hash_payload(scenario),
         "loop_config_hash": history.config_hash,
         "phase_sequence_rad": phase_sequence_rad,
         "bandpasses": [

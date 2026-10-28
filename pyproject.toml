@@ -32,6 +32,10 @@ test = [
     "pytest>=8.0",
     "setuptools>=77",
     "wheel",
+    # validation.regression validates artifacts against the packaged JSON
+    # schemas through jsonschema.  Without it here the schema tests silently
+    # importorskip, so the extra would advertise coverage it does not install.
+    "jsonschema>=4.21",
 ]
 hcipy = [
     "hcipy>=0.7,<0.8",

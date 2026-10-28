@@ -28,8 +28,16 @@ def test_high_order_radial_zernikes_preserve_continuous_orthogonality():
     radial_40 = zernike_radial(40, 0, rho)
     radial_42 = zernike_radial(42, 0, rho)
 
-    norm_40 = np.trapezoid(radial_40**2 * rho, rho)
-    cross = np.trapezoid(radial_40 * radial_42 * rho, rho)
+    # Keep the declared NumPy >=1.24 test lane executable: ``np.trapezoid``
+    # was added in NumPy 2.0.  Writing out the composite rule also avoids the
+    # deprecated ``np.trapz`` spelling on newer NumPy releases.
+    def trapezoid(values: np.ndarray) -> float:
+        return float(
+            np.sum(0.5 * (values[1:] + values[:-1]) * np.diff(rho))
+        )
+
+    norm_40 = trapezoid(radial_40**2 * rho)
+    cross = trapezoid(radial_40 * radial_42 * rho)
 
     assert norm_40 == pytest.approx(1.0 / (2.0 * 41.0), rel=2.0e-5)
     assert abs(cross) < 3.0e-7

@@ -1,0 +1,37 @@
+{
+  "closed_rms_nm": 595.268796,
+  "config_hash": "00f28fa6743727d2c0d7cfbd924ce78c19a6cd4f25ebd4d20fd9e17d74b35a88",
+  "h_strehl": 0.533341,
+  "kept_modes": 13,
+  "open_rms_nm": 645.444325,
+  "preset": "physical_2m",
+  "reference_scenario": "all_effects",
+  "runtime_band": "fast_over_60s",
+  "runtime_note": "Reference runtime band observed on a local machine; CI enforces functional completion of the fast integration, not a strict timing benchmark. tolerances.runtime_s_reference_max is a documented reference, not an enforced limit.",
+  "scenario_count": 8,
+  "scenario_names": [
+    "ideal_static",
+    "dynamic_multilayer_proxy",
+    "detector_noise",
+    "latency",
+    "stroke_limit",
+    "misregistration",
+    "ncpa",
+    "all_effects"
+  ],
+  "schema_version": 2,
+  "source_class": "synthetic_assumed",
+  "source_note": "Atmosphere-driven 2 m integration: calibrated von Karman screen with r0-set amplitude and a physical command latency; synthetic engineering configuration, not measured observatory telemetry.",
+  "tolerances": {
+    "closed_rms_nm_abs": 15.0,
+    "h_strehl_abs": 0.04,
+    "kept_modes_abs": 0,
+    "open_rms_nm_abs": 15.0,
+    "runtime_s_reference_max": 30.0,
+    "valid_centroid_fraction_abs": 1e-12
+  },
+  "valid_centroid_fraction": 1.0,
+  "validation_check_count": 6,
+  "validation_pass_count": 6,
+  "workflow": "physical_integration"
+}
