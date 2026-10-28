@@ -379,10 +379,13 @@ verified calibration takes about an hour. It holds a 173 nm residual and
 gives a long-exposure Strehl ratio of 0.78 at 2.2 µm in this noiseless,
 single-realization model.
 
-The 20-frame run demonstrates spatial-scale capability. The smoke-tier solver
-convergence check passed, but pupil sampling missed the declared **2%**
-Strehl/EE50 criterion. Medium/full sampling convergence and validation on an
-8 GiB host remain pending. The 4 s reference run also repeats the fastest
+The 20-frame run demonstrates spatial-scale capability. A paired sampling
+study at 12 m and 42 m found the Strehl ratio converged within the declared
+**2%** in pupil, wavefront-sensor and science sampling. EE50 at the default
+science sampling is pixel-limited (3.6–7.3% high against a twice finer image),
+so quote it as an upper estimate. The earlier smoke-tier scan, which missed
+the criterion, changed the sensor's field of view and used unpaired screens.
+Validation on an 8 GiB host remains pending. The 4 s reference run also repeats the fastest
 layers' periodic atmospheric bands, reducing statistical independence.
 
 <!-- readme-smoke: native -->
@@ -493,12 +496,15 @@ Further results:
     consistent sign.
   - Pixel integration with diffusion, and three-wavelength sensing, each
     cost about a third more time per frame.
-- **42 m, one realization.** The 2000-frame noise-on run:
+- **42 m.** The 2000-frame noise-on run:
   - corrects 1683 nm open loop to **173.2 nm**;
   - keeps at least 99.4 % of lenslets valid in every frame;
   - reaches a long-exposure K-band Strehl of **0.753**, against 0.78 for
     the noiseless reference profile;
   - took 1.75 s per frame and peaked at 1.61 GiB.
+  - Ten further realizations on the current code (new root seeds) give
+    **173.6 ± 0.9 nm** and a Strehl of **0.751 ± 0.002** (sample standard
+    deviations); none lost lock, so the first run is typical.
 - **Isolated detector noise.** A noise-on loop is paired with a noiseless
   twin: same atmosphere, calibration and gates, with every detector draw
   replaced by its mean. The difference isolates the detector-noise
@@ -538,7 +544,8 @@ Further results:
   - **42 m:** the result above was first produced on 2026-10-16 by an
     uncommitted development tree that predates these fixes. Its rerun on
     2026-10-18 at revision `2312502`, which contains them, reproduced every
-    recorded value bit for bit. It is still one realization.
+    recorded value bit for bit; ten further realizations on that code give
+    173.6 ± 0.9 nm.
 
 Both 12 m versions, the 42 m run and the diagnoses are recorded in the
 execution record.
