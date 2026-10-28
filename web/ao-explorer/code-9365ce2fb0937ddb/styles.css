@@ -290,14 +290,15 @@ tr.excluded th, tr.excluded td { color: var(--muted); font-style: italic; }
 #ngsr-seek { max-width:100%; width:220px; }
 @media(max-width:600px) { .ngsr-panel { scroll-margin-top:16px; } .ngsr-grid { gap:7px; } .ngsr-grid h3 { font-size:12px; } .ngsr-grid figcaption { font-size:10px; } }
 
-.orion-section { border-top:1px solid #d3cabb; margin-top:28px; padding-top:12px; scroll-margin-top:150px; }
-.orion-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:18px auto; }
-.orion-grid figure { margin:0; min-width:0; }
-.orion-grid h4 { font-size:14px; margin:0 0 8px; }
-.orion-grid canvas { display:block; width:100%; height:auto; aspect-ratio:1; background:#09111a; image-rendering:pixelated; }
-.orion-grid figcaption { font-size:12px; min-height:3.5em; margin-top:7px; }
-.orion-context { max-width:500px; margin:18px auto; }
-.orion-context canvas { display:block; width:100%; height:auto; }
-.orion-context figcaption { font-size:12px; }
-@media(max-width:800px) { .orion-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media(max-width:600px) { .orion-section { scroll-margin-top:16px; } .orion-grid { gap:8px; } .orion-grid h4 { font-size:13px; } .orion-grid figcaption { font-size:11px; } }
+/* Full-field NGC 602 context and linked native-sampling details. */
+.ngc602-section {border-top:1px solid var(--rule);margin-top:24px;padding-top:16px;scroll-margin-top:150px}
+.ngc602-overviews,.ngc602-grid {display:grid;gap:12px}
+.ngc602-overviews {grid-template-columns:repeat(2,minmax(0,1fr))}
+.ngc602-grid {grid-template-columns:repeat(4,minmax(0,1fr))}
+.ngc602-overviews figure,.ngc602-grid figure {margin:0;min-width:0}
+.ngc602-overviews canvas,.ngc602-grid canvas {display:block;width:100%;height:auto;background:#101318;border-radius:8px}
+.ngc602-grid figcaption {font-size:.8rem;line-height:1.45;margin-top:8px;min-height:3em;color:var(--muted)}
+.ngc602-section h4 {margin:10px 0}
+.ngc602-credit {font-size:.8rem;line-height:1.6}
+@media(max-width:800px){.ngc602-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.ngc602-overviews{grid-template-columns:1fr}.ngc602-section{scroll-margin-top:120px}.ngc602-grid{gap:8px}}
