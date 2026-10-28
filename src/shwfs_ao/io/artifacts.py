@@ -289,6 +289,19 @@ class ArtifactConfig:
         object.__setattr__(self, "runtime_formats", formats)
         if self.schema_version == 2 and self.artifact_kind != "run_result":
             raise ArtifactError("Schema-v2 output cannot claim candidate or accepted-baseline authority.")
+        if (
+            self.schema_version == 3
+            and self.write_reference_metrics
+            and self.reference_metrics_path is not None
+            and Path(self.reference_metrics_path).resolve().parent
+            != Path(self.output_dir).resolve()
+        ):
+            # The manifest records members by filename beside itself, so a
+            # reference written elsewhere could never be located from it.
+            raise ArtifactError(
+                "Schema-v3 reference_metrics_path must name a file directly in "
+                f"output_dir {self.output_dir}; got {self.reference_metrics_path}."
+            )
 
 
 def write_csv_rows(
