@@ -10,19 +10,29 @@ from __future__ import annotations
 
 import argparse
 import csv
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
 from pathlib import Path
 import shutil
 import tempfile
-from typing import Any
+from typing import Any, Callable, Sequence
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from shwfs_ao.legacy.ao_integration import IntegrationConfig, load_reference_metrics, run_fast_integration
-from shwfs_ao.io.artifacts import ArtifactConfig, write_integration_artifacts
+from shwfs_ao.legacy.ao_integration import IntegrationConfig, run_fast_integration
+from shwfs_ao.io.artifacts import (
+    ArtifactConfig,
+    ArtifactError,
+    SCENARIO_V2_HEADER,
+    VALIDATION_V2_HEADER,
+    read_scenario_table,
+    read_v2,
+    read_validation_table,
+    write_integration_artifacts,
+)
 from shwfs_ao.io.resources import render_resource_manifest
 
 
@@ -34,6 +44,7 @@ CANDIDATE_FILES = (
 )
 DIFF_JSON = "fast_baseline_diff.json"
 DIFF_MARKDOWN = "fast_baseline_diff.md"
+ACCEPTANCE_RECORD_NAME = "fast_baseline_acceptance.json"
 
 
 def main() -> None:
@@ -89,6 +100,8 @@ def main() -> None:
         parser.error("--reason is required when --accept-baseline-update is used.")
     if not args.review_reference or not args.review_reference.strip():
         parser.error("--review-reference is required when --accept-baseline-update is used.")
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        raise SystemExit("Baseline acceptance is forbidden while pytest is running.")
     _accept_reviewed_candidate(
         candidate_dir,
         reason=args.reason.strip(),
@@ -167,9 +180,55 @@ def _accept_reviewed_candidate(
             target = DESTINATION_DIR / target_name
             shutil.copyfile(source, target)
             print(f"Updated {target.relative_to(ROOT)} from {source}")
+    _write_acceptance_record(
+        reason=reason,
+        review_reference=review_reference,
+        accepted_names=sorted(
+            {name for names in destinations.values() for name in names}
+        ),
+        reviewed_diff_path=checked_diff_path,
+    )
     _refresh_resource_manifest()
     print(f"Acceptance reason: {reason}")
     print(f"Review reference: {review_reference}")
+
+
+def _write_acceptance_record(
+    *,
+    reason: str,
+    review_reference: str,
+    accepted_names: Sequence[str],
+    reviewed_diff_path: Path,
+) -> None:
+    """Persist the human acceptance evidence next to the accepted baselines.
+
+    The record binds the reason and review reference to the exact accepted
+    bytes (per-file SHA-256) and to the reviewed machine-readable diff, so a
+    later audit can establish what was accepted, when, why, and against
+    which review — not just that the files changed.
+    """
+
+    record = {
+        "schema_name": "shwfs_ao.fast_baseline_acceptance",
+        "schema_version": 1,
+        "accepted_at_utc": datetime.now(timezone.utc).isoformat(),
+        "reason": reason,
+        "review_reference": review_reference,
+        "accepted_files": [
+            {
+                "baseline_name": name,
+                "sha256": _sha256(DESTINATION_DIR / name),
+            }
+            for name in accepted_names
+        ],
+        "reviewed_diff_sha256": _sha256(reviewed_diff_path),
+    }
+    target = DESTINATION_DIR / ACCEPTANCE_RECORD_NAME
+    target.write_text(
+        json.dumps(record, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print(f"Recorded acceptance evidence in {target.relative_to(ROOT)}")
 
 
 def _refresh_resource_manifest() -> None:
@@ -199,35 +258,95 @@ def _refresh_resource_manifest() -> None:
 
 
 def _validate_candidate(candidate_dir: Path) -> None:
+    """Reject a candidate that violates the frozen schema-v2 contract.
+
+    The strict ``read_v2`` reader enforces the complete historical metric
+    set, finite metric values, the exact tolerance key inventory with
+    non-negative finite values, and internal scenario/validation-count
+    consistency; the strict table readers enforce the frozen CSV headers.
+    On top of that, the JSON and CSV members of one candidate must agree on
+    the scenario inventory and the distinct validation checks, so a
+    mismatched mixture of files can never be accepted as one baseline.
+    """
+
     for name in CANDIDATE_FILES:
         path = candidate_dir / name
         if not path.is_file() or path.stat().st_size <= 0:
             raise SystemExit(f"Missing or empty candidate artifact: {path}")
 
-    candidate_reference = candidate_dir / "fast_reference_metrics.json"
-    payload = load_reference_metrics(candidate_reference)
+    payload = _read_v2_reference(candidate_dir / "fast_reference_metrics.json")
     if payload["workflow"] != "fast_integration" or payload["preset"] != "fast":
         raise SystemExit("Candidate reference JSON is not the fast-integration contract.")
-    if payload.get("schema_version") != 2:
-        raise SystemExit("The compatibility baseline updater accepts only frozen schema-v2 candidates.")
-    # Parse tables and reject missing identity columns before any tracked write.
-    table_keys = {
-        "fast_error_budget.csv": "scenario_name",
-        "fast_validation.csv": "check_name",
-    }
-    for name, identity_key in table_keys.items():
-        with (candidate_dir / name).open(newline="", encoding="utf-8") as handle:
-            reader = csv.DictReader(handle)
-            rows = list(reader)
-        if not rows or reader.fieldnames is None or identity_key not in reader.fieldnames:
-            raise SystemExit(f"Candidate table {name} has no valid {identity_key!r} rows.")
+
+    scenario_rows = _read_v2_table(
+        candidate_dir / "fast_error_budget.csv",
+        SCENARIO_V2_HEADER,
+        read_scenario_table,
+        "scenario",
+    )
+    validation_rows = _read_v2_table(
+        candidate_dir / "fast_validation.csv",
+        VALIDATION_V2_HEADER,
+        read_validation_table,
+        "validation",
+    )
+
+    scenario_names = [row["scenario_name"] for row in scenario_rows]
+    if any(not name.strip() for name in scenario_names):
+        raise SystemExit("Candidate scenario table contains an empty scenario_name.")
+    if len(set(scenario_names)) != len(scenario_names):
+        raise SystemExit("Candidate scenario table contains duplicate scenario_name rows.")
+    if set(scenario_names) != set(payload["scenario_names"]):
+        raise SystemExit(
+            "Candidate scenario table and reference JSON disagree on the scenario inventory."
+        )
+    if payload["reference_scenario"] not in set(scenario_names):
+        raise SystemExit("Candidate reference_scenario is missing from the scenario table.")
+
+    check_names = [row["check_name"] for row in validation_rows]
+    if any(not name.strip() for name in check_names):
+        raise SystemExit("Candidate validation table contains an empty check_name.")
+    if len(set(check_names)) != int(payload["validation_check_count"]):
+        raise SystemExit(
+            "Candidate validation table and reference JSON disagree on the "
+            "distinct validation-check inventory."
+        )
+
+
+def _read_v2_reference(path: Path) -> dict[str, Any]:
+    try:
+        return read_v2(path)
+    except ArtifactError as exc:
+        raise SystemExit(
+            f"Reference metrics at {path} violate the frozen schema-v2 "
+            f"contract: {exc}"
+        ) from exc
+
+
+def _read_v2_table(
+    path: Path,
+    expected_header: Sequence[str],
+    reader: Callable[[Path], tuple[dict[str, str], ...]],
+    label: str,
+) -> tuple[dict[str, str], ...]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        header = tuple(next(csv.reader(handle), ()))
+    if header != tuple(expected_header):
+        raise SystemExit(
+            f"Candidate {label} CSV must carry the frozen schema-v2 header "
+            f"exactly; got {list(header)}."
+        )
+    try:
+        return reader(path)
+    except ArtifactError as exc:
+        raise SystemExit(f"Candidate {label} CSV is invalid: {exc}") from exc
 
 
 def _build_diff(candidate_dir: Path) -> dict[str, Any]:
-    current_reference = load_reference_metrics(
+    current_reference = _read_v2_reference(
         DESTINATION_DIR / "fast_reference_metrics_regression_baseline.json"
     )
-    candidate_reference = load_reference_metrics(candidate_dir / "fast_reference_metrics.json")
+    candidate_reference = _read_v2_reference(candidate_dir / "fast_reference_metrics.json")
     metric_names = (
         "open_rms_nm",
         "closed_rms_nm",
