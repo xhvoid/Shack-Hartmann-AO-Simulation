@@ -110,7 +110,16 @@ packaged resources and do not need a network connection after installation.
 Long physical regressions and full studies are separate from fast smoke tests.
 
 Write new experiment outputs under `outputs/`, `results/` or another disposable
-location. Do not overwrite the accepted packaged reference metrics: numerical
+location. Every example that writes figures or tables defaults to the tracked
+`figures/detector_level_SCAO/` directory, and its outputs are not bit-identical
+across platforms; set `AO_DEMO_OUTPUT_DIR` to redirect them, as the README
+quick start and CI do:
+
+```bash
+AO_DEMO_OUTPUT_DIR=outputs/examples python examples/run_psf_strehl_demo.py
+```
+
+Do not overwrite the accepted packaged reference metrics: numerical
 baseline changes use the candidate/diff/accept workflow described in
 [validation](validation.md). Figures linked from the README have explicit
 [notebook provenance](../figures/README.md).
