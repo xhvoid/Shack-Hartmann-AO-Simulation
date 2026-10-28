@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 import json
 from pathlib import PurePosixPath
 from types import MappingProxyType
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, cast, runtime_checkable
 
 import numpy as np
 
@@ -64,25 +64,77 @@ class ScaoConstructionError(ValueError):
 
 @runtime_checkable
 class ScaoBackendComponentFactory(Protocol):
-    """Structural backend construction boundary used by this experiment layer."""
+    """Structural backend construction boundary used by this experiment layer.
+
+    The method signatures are the exact keyword contract ``build_scao_system``
+    calls with, so both built-in factories (and any registered custom backend)
+    statically implement this protocol.  ``**kwargs`` signatures would let a
+    factory silently omit a required keyword, so they are deliberately not
+    used.  ``geometry`` is an opaque handle produced by :meth:`build_geometry`
+    and threaded into the other builders unchanged.
+    """
 
     @property
     def backend_name(self) -> str:
         ...
 
-    def build_geometry(self, **kwargs: Any) -> Any:
+    def build_geometry(
+        self,
+        *,
+        telescope_diameter_m: float,
+        pupil_pixels: int,
+        lenslets_across: int,
+        min_fill_fraction: float,
+        central_obstruction_ratio: float,
+        spider_width_m: float,
+    ) -> Any:
         ...
 
-    def build_atmosphere(self, **kwargs: Any) -> AtmosphereModel:
+    def build_atmosphere(
+        self,
+        *,
+        model: str,
+        geometry: Any,
+        random_streams: RandomStreams,
+        r0_m: float,
+        outer_scale_m: float | None,
+        phase_reference_wavelength_m: float,
+        wind_m_per_s: tuple[float, float],
+        target_rms_rad: float | None,
+        normalize_rms: bool,
+        static_opd_rms_m: float,
+    ) -> AtmosphereModel:
         ...
 
-    def build_wfs(self, **kwargs: Any) -> WavefrontSensor:
+    def build_wfs(
+        self,
+        *,
+        model: str,
+        geometry: Any,
+        wfs_wavelength_m: float,
+        pad_factor: int,
+        detector_window_px: int | None,
+        detector_config: DetectorConfig,
+        centroid_config: CentroidConfig,
+        validity_config: CentroidValidityConfig,
+        random_streams: RandomStreams,
+    ) -> WavefrontSensor:
         ...
 
-    def build_dm(self, **kwargs: Any) -> DeformableMirrorModel:
+    def build_dm(
+        self,
+        *,
+        geometry: Any,
+        config: DMConfig,
+    ) -> DeformableMirrorModel:
         ...
 
-    def build_science_propagator(self, **kwargs: Any) -> SciencePropagator:
+    def build_science_propagator(
+        self,
+        *,
+        geometry: Any,
+        sampling: PsfSampling,
+    ) -> SciencePropagator:
         ...
 
 
@@ -547,40 +599,60 @@ def _resolve_interaction_matrix(
     return resolver()
 
 
+def _require_reconstructor_parameter(
+    value: float | None,
+    kind: str,
+    name: str,
+) -> float:
+    # ``ReconstructorConfig`` already rejects a tsvd without rcond or a
+    # tikhonov without alpha, so this narrows ``float | None`` to ``float``
+    # for the constructor without a second reachable failure mode.
+    if value is None:
+        raise ScaoConstructionError(f"{kind} reconstructor requires {name}.")
+    return value
+
+
 def _build_reconstructor(
     config: SystemConfig,
     matrix: InteractionMatrix,
 ) -> Reconstructor:
     reconstructor = config.reconstructor
-    common = {
-        "min_valid_fraction": reconstructor.min_valid_fraction,
-        "min_rank": reconstructor.min_rank,
-        "max_cached_masks": reconstructor.max_cached_masks,
-    }
+    kind = reconstructor.kind
     builders: Mapping[str, Callable[[], Reconstructor]] = {
-        "least_squares": lambda: LeastSquaresReconstructor(matrix, **common),
+        "least_squares": lambda: LeastSquaresReconstructor(
+            matrix,
+            min_valid_fraction=reconstructor.min_valid_fraction,
+            min_rank=reconstructor.min_rank,
+            max_cached_masks=reconstructor.max_cached_masks,
+        ),
         "tsvd": lambda: TsvdReconstructor(
             matrix,
-            reconstructor.rcond,
-            **common,
+            _require_reconstructor_parameter(reconstructor.rcond, "tsvd", "rcond"),
+            min_valid_fraction=reconstructor.min_valid_fraction,
+            min_rank=reconstructor.min_rank,
+            max_cached_masks=reconstructor.max_cached_masks,
         ),
         "tikhonov": lambda: TikhonovReconstructor(
             matrix,
-            reconstructor.alpha,
-            **common,
+            _require_reconstructor_parameter(
+                reconstructor.alpha, "tikhonov", "alpha"
+            ),
+            min_valid_fraction=reconstructor.min_valid_fraction,
+            min_rank=reconstructor.min_rank,
+            max_cached_masks=reconstructor.max_cached_masks,
         ),
     }
     try:
-        builder = builders[reconstructor.kind]
+        builder = builders[kind]
     except KeyError as exc:
         raise ScaoConstructionError(
-            f"unknown reconstructor kind {reconstructor.kind!r}."
+            f"unknown reconstructor kind {kind!r}."
         ) from exc
     try:
         return builder()
     except (TypeError, ValueError) as exc:
         raise ScaoConstructionError(
-            f"cannot build reconstructor {reconstructor.kind!r}: {exc}"
+            f"cannot build reconstructor {kind!r}: {exc}"
         ) from exc
 
 
@@ -628,8 +700,8 @@ def _build_command_projector(
             raise ScaoConstructionError(
                 "modal mapping resource has unsupported schema or fields."
             )
-        input_ids = tuple(record["input_coordinate_ids"])
-        output_ids = tuple(record["output_actuator_ids"])
+        input_ids = tuple(cast("Sequence[str]", record["input_coordinate_ids"]))
+        output_ids = tuple(cast("Sequence[str]", record["output_actuator_ids"]))
         if input_ids != matrix.coordinate_ids:
             raise ScaoConstructionError(
                 "modal mapping input IDs must match interaction coordinates."
@@ -746,7 +818,12 @@ def _expected_component_hashes(
             {
                 "root_seed": random_streams.root_seed,
                 "derivation_scheme_id": random_streams.derivation_scheme_id,
-                "registered_domains": random_streams.registered_domains,
+                # The registered-domain tuple is part of the concrete stream
+                # provider's identity; the minimal protocol does not surface
+                # it, and every SCAO system is built on NamedRandomStreams.
+                "registered_domains": cast(
+                    "NamedRandomStreams", random_streams
+                ).registered_domains,
             },
         ),
         "pupil_geometry": interaction_matrix.geometry_hash,
