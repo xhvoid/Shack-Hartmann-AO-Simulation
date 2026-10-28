@@ -1416,12 +1416,15 @@ def _toggled_wfs(field: str, values: tuple[object, object]):
 # One alternative per detector and WFS setting, plus the WFS wavelength and
 # root seed.  A new field must be added here or to the exclusions below, so a
 # new input to the noiseless response cannot silently escape the identity.
+# Each value differs from every sweep base and reaches the sensor: the spider
+# is wider than a pupil sample, one base has dark current for the exposure to
+# scale, and validity thresholds move without rejecting a lenslet.
 _RESPONSE_INPUT_PERTURBATIONS = {
     "detector.photons_per_subap_frame": _with_detector(photons_per_subap_frame=5.0e5),
     "detector.read_noise_e": _with_detector(read_noise_e=3.0),
     "detector.dark_e_per_s": _with_detector(dark_e_per_s=1.0e6),
     "detector.background_e_per_pixel_frame": _with_detector(
-        background_e_per_pixel_frame=2.0e4
+        background_e_per_pixel_frame=2.0e3
     ),
     "detector.full_well_e": _with_detector(full_well_e=4.0e4),
     "detector.qe": _with_detector(qe=0.5),
@@ -1444,12 +1447,12 @@ _RESPONSE_INPUT_PERTURBATIONS = {
         threshold_fraction=0.35,
     ),
     "wfs.subtract_minimum": _with_wfs(subtract_minimum=True),
-    "wfs.min_flux_e": _with_wfs(min_flux_e=0.0),
-    "wfs.min_peak_snr": _with_wfs(min_peak_snr=0.0),
+    "wfs.min_flux_e": _with_wfs(min_flux_e=1.0),
+    "wfs.min_peak_snr": _with_wfs(min_peak_snr=1.0),
     "wfs.max_centroid_sigma_px": _with_wfs(max_centroid_sigma_px=10.0),
-    "wfs.max_window_clipping_fraction": _with_wfs(max_window_clipping_fraction=1.0),
+    "wfs.max_window_clipping_fraction": _with_wfs(max_window_clipping_fraction=0.5),
     "wfs.central_obstruction_ratio": _with_wfs(central_obstruction_ratio=0.2),
-    "wfs.spider_width_m": _with_wfs(spider_width_m=0.02),
+    "wfs.spider_width_m": _with_wfs(spider_width_m=0.15),
     "wfs.photon_allocation": _toggled_wfs(
         "photon_allocation",
         ("throughput_scaled", "unit_sum"),
@@ -1462,6 +1465,13 @@ _RESPONSE_INPUT_PERTURBATIONS = {
 }
 # ``enabled`` selects the geometric sensor, which carries its own identity.
 _RESPONSE_INPUT_EXCLUSIONS = {"detector.enabled"}
+
+
+def _setting(config: SystemConfig, name: str) -> object:
+    value: object = config
+    for part in name.split("."):
+        value = getattr(value, part)
+    return value
 
 
 def test_every_detector_and_wfs_setting_has_a_response_identity_perturbation() -> None:
@@ -1477,13 +1487,15 @@ def test_every_detector_and_wfs_setting_has_a_response_identity_perturbation() -
     (
         pytest.param(
             {
-                "background_e_per_pixel_frame": _PEDESTAL_E,
+                # Half of the pedestal is dark current over the 1 ms exposure.
+                "background_e_per_pixel_frame": 0.5 * _PEDESTAL_E,
+                "dark_e_per_s": 0.5 * _PEDESTAL_E / 1.0e-3,
                 "full_well_e": 2.0e4,
                 "prnu_rms": 0.05,
                 "prnu_mode": "persistent",
                 "bad_pixel_fraction": 0.02,
             },
-            id="pedestal-full-well-persistent-maps",
+            id="pedestal-dark-full-well-persistent-maps",
         ),
         pytest.param(
             {
@@ -1528,7 +1540,11 @@ def test_an_unchanged_response_identity_means_an_unchanged_response(
     base = scao.build_scao_system(base_config)
     accepted_but_moved = []
     for name, perturb in _RESPONSE_INPUT_PERTURBATIONS.items():
-        changed = scao.build_scao_system(perturb(base_config))
+        perturbed = perturb(base_config)
+        # The named setting moves and the sensor sees it, so it is exercised.
+        assert _setting(perturbed, name) != _setting(base_config, name), name
+        changed = scao.build_scao_system(perturbed)
+        assert changed.wfs.config_hash != base.wfs.config_hash, name
         if changed.wfs.response_hash != base.wfs.response_hash:
             continue
         old, new = base.interaction_matrix, changed.interaction_matrix
