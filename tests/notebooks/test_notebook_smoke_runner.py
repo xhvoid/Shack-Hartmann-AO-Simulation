@@ -68,6 +68,47 @@ def test_fast_smoke_requires_exactly_one_parameters_cell(tag_counts):
         runner._inject_fast_smoke_override(notebook)
 
 
+def test_network_guard_is_injected_as_the_first_executed_cell():
+    nbformat = pytest.importorskip("nbformat")
+    notebook = _notebook_with_parameter_tags(nbformat, 1)
+    # Mirror the runner's order: fast-smoke first, then the guard at index 0.
+    runner._inject_fast_smoke_override(notebook)
+    runner._inject_network_guard(notebook)
+    assert notebook.cells[0].source == runner.NETWORK_GUARD_SOURCE
+    assert notebook.cells[0].metadata["tags"] == ["injected-network-guard"]
+
+
+def test_network_guard_denies_outbound_ip_but_allows_loopback():
+    import socket
+
+    saved_connect = socket.socket.connect
+    saved_connect_ex = socket.socket.connect_ex
+    try:
+        # Install a recorder as the real connect so allowed addresses fall
+        # through to it instead of touching the network; the guard source
+        # captures this recorder when it runs.
+        recorded: list = []
+        socket.socket.connect = lambda self, address: recorded.append(address)
+        socket.socket.connect_ex = lambda self, address: recorded.append(address)
+        exec(runner.NETWORK_GUARD_SOURCE, {})
+
+        probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            with pytest.raises(OSError, match="denies outbound network"):
+                probe.connect(("93.184.216.34", 80))
+            with pytest.raises(OSError, match="denies outbound network"):
+                probe.connect_ex(("8.8.8.8", 53))
+            # Loopback by address and by name fall through to the recorder.
+            probe.connect(("127.0.0.1", 12345))
+            probe.connect(("localhost", 12345))
+        finally:
+            probe.close()
+        assert recorded == [("127.0.0.1", 12345), ("localhost", 12345)]
+    finally:
+        socket.socket.connect = saved_connect
+        socket.socket.connect_ex = saved_connect_ex
+
+
 def test_kernel_receives_the_isolated_environment_and_the_override(
     monkeypatch, tmp_path
 ):
