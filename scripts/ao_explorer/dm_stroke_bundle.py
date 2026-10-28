@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 import shutil
 import tempfile
@@ -82,7 +83,7 @@ performed for this addition. The 42 m stroke surrogate is an intentional
 approximation; the causal contribution of stroke to Strehl variability remains
 unresolved.
 '''
-        assert '/Users/' not in report and '.claude/' not in report
+        assert '/Users/' not in report and not re.search(r'(?<![\w.])\.[A-Za-z_][\w.-]*/', report)
         (out / 'README.md').write_text(report)
         types = {'.json': 'application/json', '.csv': 'text/csv', '.md': 'text/markdown',
                  '.png': 'image/png', '.pdf': 'application/pdf'}

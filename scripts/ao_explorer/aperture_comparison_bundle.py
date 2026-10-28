@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 import shutil
 import tempfile
@@ -133,7 +134,7 @@ RAW2, RAW42 = args.raw_2m.resolve(), args.raw_42m.resolve()
 ''' + source[stop:]
         source = source.replace('str(p.relative_to(ROOT)):digest(p)', 'str(p):digest(p)')
         source = source.replace("font_path='/System/Library/Fonts/Supplemental/Arial.ttf'", "from matplotlib.font_manager import findfont\nfont_path=findfont('DejaVu Sans')")
-        assert '/Users/' not in source and '.claude/' not in source
+        assert '/Users/' not in source and not re.search(r'(?<![\w.])\.[A-Za-z_][\w.-]*/', source)
         (out / 'analysis.py').write_text(source)
         notes = (out / 'README.md').read_text().replace('synchronized_comparison.gif', 'synchronized_comparison.webp')
         notes = notes.replace('`compare.py` is the postprocessing source.', '`analysis.py` is a portable adaptation of the postprocessing source, with input paths supplied as arguments; numerical operations are unchanged. The original source hash is retained in `comparison.json`.')
