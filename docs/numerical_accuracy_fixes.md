@@ -158,10 +158,10 @@ explicitly select v2, exact spectral translation, three-times padding, and
   valid components. The 500-photon point is explicitly unavailable (0%
   valid); the 1000-photon point anchors a finite inverse-square-root curve.
   RMS errors at 1000/5000/20000/100000 photons are
-  0.194624/0.090640/0.044227/0.019610 pixels. Invalid data is not presented as
+  0.198730/0.086447/0.044182/0.019437 pixels. Invalid data is not presented as
   a physical measurement.
 - Tutorial 03 scans actual truncation: cutoffs 0.8/0.5/0.35/0.3 retain
-  12/24/27/29 modes, with command errors 62.900/43.366/17.505/8.579 nm.
+  12/24/27/29 modes, with command errors 62.942/43.222/17.662/8.578 nm.
   Smaller cutoffs tie at full rank; the text reports that outcome instead
   of claiming an unobserved optimum or L-curve.
 - The mode-order study distinguishes mean variance ratios from mean
@@ -286,3 +286,46 @@ wheel checks outside the checkout passed 212 tests (two skips), covering
 cross-backend validation, packaged presets and science metrics.
 The complete cross-backend, resource and documentation test selection passed
 232 tests (one skip) after acceptance.
+
+### Host-independent detector noise
+
+The detector-level Shack-Hartmann sensor keyed each lenslet's temporal noise
+on the calibration hash, which binds reference centroids computed through the
+FFT. On Linux x86 those centroids differ from macOS in their last bits, so one
+seed drew unrelated noise: replacing `numpy.fft` by `scipy.fft` during
+calibration moved reference centroids by at most 5.3e-15 px but changed noisy
+centroids by up to 0.09 px. Tracked outputs that depend on that draw could
+not be reproduced on another host.
+
+Noise is now keyed by a declared sensor identity (schema
+`shwfs_ao.shack_hartmann_noise_stream_identity.v1`), described in
+[reproducibility](reproducibility.md). Tests show that a one-ULP shift of every
+reference centroid, or a reference calibrated through `scipy.fft`, keeps the
+identity, the runtime stream IDs and the noisy detector images bit for bit,
+while each declared input still changes the identity. The fast and physical
+error budgets pass explicit legacy per-frame seeds, which this change does not
+touch.
+
+The new keying selects a different, equally valid draw, so outputs that depend
+on measurement noise were regenerated:
+
+- Tutorial 02 RMS errors are listed above; the 500-photon point remains
+  unavailable.
+- Tutorial 03's minimum command error is 8.578 nm (previously 8.579 nm), with
+  the same tied cutoffs; `figures/canonical_tsvd_regularization.png` was
+  re-extracted from its plot cell.
+- The detector-level 2 m study's final-half closed-loop RMS is 354.592 nm
+  (previously 354.988 nm), residual fraction 0.899455 and H-band Maréchal
+  estimate 0.161497.
+- `figures/detector_level_SCAO/shwfs_centroid_demo.{csv,png}`.
+
+Re-executing the tutorials with the unchanged code first reproduced their
+tracked outputs exactly, including PNG bytes. With the new keying, tutorials 00, 01 and 04 and the high-order,
+gain/latency and mode-order studies are unchanged, as are all other example
+outputs. Two tracked outputs were stale before this change and were refreshed:
+`figures/detector_level_SCAO/science_psf_metrics.csv` now carries the FWHM
+values of the corrected canonical estimator (for example 1.109 rather than
+0.984 λ/D for the open-loop J band; every other column is unchanged), and the
+native-versus-HCIPy study now shows the complete 60-metric comparison report.
+Noisy interaction-matrix calibration still keys on float-derived context
+hashes and therefore replays exactly only within one host environment.
