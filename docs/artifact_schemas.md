@@ -43,7 +43,9 @@ no writer ever emitted; it was superseded by the runtime contract.
 
 The strict schema pins the complete thirteen-kind comparison inventory in
 canonical order, requires acceptance reason/review-reference/timestamp and
-generator identity, forbids unknown fields at every level, and constrains
+generator identity, forbids unknown fields everywhere except
+`comparison_config` — which is an open record of the comparison's own inputs
+and is pinned by its `config_hash` rather than by a field list — and constrains
 every gating criterion (finite JSON numerics, non-negative absolute
 tolerances, explicit range bounds, a `statistical_definition` on the
 statistical comparison). Consumers load the packaged executable baseline

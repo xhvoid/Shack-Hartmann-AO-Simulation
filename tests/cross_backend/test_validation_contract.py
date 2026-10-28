@@ -1236,18 +1236,21 @@ class TestEvaluationSemantics:
     def test_a_boolean_observation_never_satisfies_a_numeric_gate(
         self, packaged_baseline
     ):
-        # bool is a Python Real, so True would otherwise be measured as 1.0 and
-        # could land inside a Strehl range or a residual tolerance it never met.
-        for kind, name in (
-            ("strehl_ratio", "native_strehl"),
-            ("closed_loop_residual", "native_correction_effect"),
+        # bool is a Python Real, so a boolean observation would otherwise be
+        # measured as 1.0 or 0.0.  These cases are chosen because that number
+        # SATISFIES the gate: each one evaluated clean before the fix, so the
+        # test discriminates.  (A boolean whose numeric value happens to fall
+        # outside the gate was already caught and would prove nothing.)
+        for kind, name, observed in (
+            ("closed_loop_residual", "native_correction_effect", False),
+            ("wfs_tip_tilt_response", "hcipy_tilt_gain", True),
         ):
             report = _report_copy(packaged_baseline)
-            _set_metric_value(report, kind, name, True)
+            _set_metric_value(report, kind, name, observed)
             failures = evaluate_report_against_baseline(report, packaged_baseline)
-            assert len(failures) == 1
+            assert len(failures) == 1, (kind, name, failures)
             assert f"metric={name}" in failures[0]
-            assert "observed=True" in failures[0]
+            assert f"observed={observed}" in failures[0]
 
         # And the reverse: an equality gate on a count is not met by a flag.
         report = _report_copy(packaged_baseline)

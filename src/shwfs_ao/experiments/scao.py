@@ -270,13 +270,21 @@ def register_scao_backend_factory(
         raise ScaoConstructionError(
             f"a SCAO backend factory is already registered for {name!r}."
         )
+    # The registry is an input to what a configuration builds, so replacing a
+    # factory invalidates every remembered identity: keeping them would let
+    # verification answer from a build that can no longer happen — accepting a
+    # system this registry would not build, and rejecting one it would.
+    #
+    # Only a genuine replacement invalidates anything.  Registering a backend
+    # for the first time — which is how the built-in factories are loaded,
+    # lazily, on first use — cannot invalidate a remembered identity, because
+    # no configuration could have been built against a backend that was not yet
+    # registered.  Clearing there would throw away the memo mid-session and put
+    # back exactly the rebuild-and-recalibrate cost it exists to avoid.
+    superseded = _FACTORIES.get(name)
     _FACTORIES[name] = factory
-    # The registry is an input to what a configuration builds, so every
-    # remembered identity was derived under a factory set that no longer
-    # applies.  Keeping them would let verification answer from a build that
-    # can no longer happen — accepting a system this registry would not build,
-    # and rejecting one it would.
-    _BUILD_IDENTITY_MEMO.clear()
+    if superseded is not None and superseded is not factory:
+        _BUILD_IDENTITY_MEMO.clear()
 
 
 def build_scao_system(

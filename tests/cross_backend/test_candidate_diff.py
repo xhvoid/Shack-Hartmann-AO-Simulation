@@ -440,6 +440,65 @@ class TestEnvironmentVerification:
         fourth = script._source_patch_sha256()
         assert third is not None and fourth is not None and third != fourth
 
+    def test_the_diff_is_taken_with_every_flag_the_evidence_depends_on(self):
+        """Each flag on the tracked-diff command carries a distinct guarantee.
+
+        Read from the source, because the guarantees are only observable in
+        environments this test cannot create: ``--binary`` makes a modified
+        binary contribute its bytes rather than "Binary files differ";
+        ``--no-textconv`` stops a ``.gitattributes`` diff driver rewriting them;
+        ``--no-ext-diff`` stops an external driver replacing them entirely.
+        """
+
+        source = (ROOT / "scripts" / "generate_cross_backend_candidate.py").read_text(
+            encoding="utf-8"
+        )
+        start = source.index('["git", "diff", "HEAD"')
+        command = source[start : source.index("]", start) + 1]
+        for flag in ("--binary", "--no-ext-diff", "--no-textconv"):
+            assert flag in command, (flag, command)
+
+    def test_a_textconv_driver_cannot_rewrite_the_patch_evidence(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        # A .gitattributes textconv driver is repository content, not
+        # environment: a clone carrying one would rewrite every diff of the
+        # matched files, and the recorded evidence would describe the driver's
+        # output rather than the bytes the run read.
+        repository = tmp_path / "repo"
+        repository.mkdir()
+        _git_init(repository)
+        fixture = repository / "input.npy"
+        fixture.write_bytes(b"\x93NUMPY\x01\x00" + b"A" * 32)
+        (repository / ".gitattributes").write_text("*.npy diff=flat\n", encoding="utf-8")
+        subprocess.run(
+            ["git", "config", "diff.flat.textconv", "/usr/bin/true"],
+            cwd=repository,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "add", "-A"], cwd=repository, check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "commit", "--quiet", "--message", "fixture"],
+            cwd=repository,
+            check=True,
+            capture_output=True,
+        )
+        monkeypatch.setattr(script, "REPO_ROOT", repository)
+        assert script._source_patch_sha256() is None
+
+        fixture.write_bytes(b"\x93NUMPY\x01\x00" + b"B" * 32)
+        first = script._source_patch_sha256()
+        fixture.write_bytes(b"\x93NUMPY\x01\x00" + b"C" * 32)
+        second = script._source_patch_sha256()
+        # The driver collapses both revisions to nothing; the real bytes must
+        # still separate them.
+        assert first is not None and second is not None and first != second
+
     def test_an_external_diff_driver_cannot_empty_the_patch_evidence(
         self,
         tmp_path,
@@ -662,6 +721,69 @@ class TestEnvironmentVerification:
         profile.write_text("numpy==1.0\nhcipy==1.0\n", encoding="utf-8")
         with pytest.raises(SystemExit, match="does not declare its platform"):
             script._verified_constraint_identity()
+
+
+class TestGenerationOrdering:
+    def test_provenance_is_established_before_the_comparison_suite_runs(
+        self,
+        packaged_tree,
+        tmp_path,
+        monkeypatch,
+    ):
+        # Both provenance checks can refuse and the suite takes minutes, so a
+        # tree that cannot be recorded must be reported before the run, not
+        # after it has been paid for and discarded.
+        order: list[str] = []
+
+        def refusing_patch() -> str | None:
+            order.append("provenance")
+            raise SystemExit("refused for the test")
+
+        monkeypatch.setattr(script, "_source_patch_sha256", refusing_patch)
+        monkeypatch.setattr(
+            script, "_verified_constraint_identity", lambda: ("constraints/x.txt", "0" * 64)
+        )
+        monkeypatch.setattr(
+            script,
+            "_source_commit",
+            lambda: order.append("commit") or "a" * 40,  # type: ignore[func-returns-value]
+        )
+
+        import shwfs_ao.validation.cross_backend as cross_backend
+
+        def spy_suite(**kwargs: object) -> dict:
+            order.append("suite")
+            raise AssertionError("the suite must not run once provenance refuses")
+
+        monkeypatch.setattr(cross_backend, "run_cross_backend_report", spy_suite)
+
+        with pytest.raises(SystemExit, match="refused for the test"):
+            script._generate_candidate(tmp_path / "candidate")
+        assert order == ["commit", "provenance"]
+        assert "suite" not in order
+
+    def test_a_working_tree_that_changes_during_the_suite_is_refused(
+        self,
+        packaged_tree,
+        tmp_path,
+        monkeypatch,
+    ):
+        # Evidence that does not describe the tree the results came from is not
+        # evidence, so a suite that dirtied the tree invalidates the run.
+        answers = iter(["a" * 64, "b" * 64])
+        monkeypatch.setattr(script, "_source_patch_sha256", lambda: next(answers))
+        monkeypatch.setattr(
+            script, "_verified_constraint_identity", lambda: ("constraints/x.txt", "0" * 64)
+        )
+        monkeypatch.setattr(script, "_source_commit", lambda: "a" * 40)
+
+        import shwfs_ao.validation.cross_backend as cross_backend
+
+        monkeypatch.setattr(
+            cross_backend, "run_cross_backend_report", lambda **kwargs: {"comparisons": []}
+        )
+        with pytest.raises(SystemExit, match="changed while the comparison suite ran"):
+            script._generate_candidate(tmp_path / "candidate")
 
 
 class TestAcceptanceFreshness:
