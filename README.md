@@ -66,6 +66,12 @@ wavelengths are also in metres. The example above prints the residual after
 each command update. Explorer image metrics may refer to the wavefront
 before that update, as labelled on the site.
 
+## Optional computation service
+
+`scripts/ao_dynamic/service.py` runs new seeded 2 m experiments for the
+Explorer generation panel. See the [setup guide](docs/research/ao_dynamic_v1/DEPLOYMENT.md)
+for a local preview with a separate website checkout. No public service is hosted.
+
 ## Files
 
 - `src/shwfs_ao/`: simulation components and packaged resources.
