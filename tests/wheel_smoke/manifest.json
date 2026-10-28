@@ -460,6 +460,16 @@
       "source": "tests/control/test_exposure_subsamples.py",
       "kind": "test",
       "requires": []
+    },
+    {
+      "source": "tests/control/test_recovery.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/io/test_recovery_policy_config.py",
+      "kind": "test",
+      "requires": []
     }
   ]
 }

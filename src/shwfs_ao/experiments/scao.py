@@ -28,6 +28,7 @@ from ..calibration.sparse import (
     calibrate_sparse_interaction_matrix,
 )
 from ..control import (
+    ClosedLoopRecoveryPolicy,
     ControlledSubsetCommandProjector,
     FrameObserver,
     IdentityCommandProjector,
@@ -268,6 +269,9 @@ class ScaoSystem:
     component_hashes: Mapping[str, str]
     config_hash: str
     source_config: SystemConfig
+    # The opt-in loop supervisor of ``controller.recovery``; None keeps the
+    # freeze-on-rejection loop and leaves the component identities unchanged.
+    recovery_policy: ClosedLoopRecoveryPolicy | None = None
     # Set by :func:`build_scao_system` for the system it just built.  ``None``
     # means "not built here", which costs a rebuild at verification time and
     # never buys acceptance.  It is evidence about how this system came to be,
@@ -309,6 +313,12 @@ class ScaoSystem:
         # self-validating: dataclasses.replace() with a swapped component and
         # retained hashes cannot construct, so results can never be labeled
         # with a component identity that did not run.
+        if self.recovery_policy is not None and not isinstance(
+            self.recovery_policy, ClosedLoopRecoveryPolicy
+        ):
+            raise ScaoConstructionError(
+                "recovery_policy must be a ClosedLoopRecoveryPolicy or None."
+            )
         expected = _expected_component_hashes(
             random_streams=self.random_streams,
             atmosphere=self.atmosphere,
@@ -319,6 +329,7 @@ class ScaoSystem:
             command_projector=self.command_projector,
             controller=self.controller,
             science_propagator=self.science_propagator,
+            recovery_policy=self.recovery_policy,
         )
         if normalized != expected:
             drifted = sorted(
@@ -624,6 +635,7 @@ def build_scao_system(
         dm.actuator_ids,
         loop_config,
     )
+    recovery_policy = _build_recovery_policy(config, reconstructor)
 
     try:
         validate_closed_loop_components(
@@ -653,6 +665,7 @@ def build_scao_system(
         command_projector=command_projector,
         controller=controller,
         science_propagator=science_propagator,
+        recovery_policy=recovery_policy,
     )
     # Building is the authoritative — and only — way to learn which component
     # identities a configuration produces, so record the answer on the system
@@ -682,6 +695,7 @@ def build_scao_system(
         component_hashes=component_hashes,
         config_hash=config.config_hash,
         source_config=config,
+        recovery_policy=recovery_policy,
         build_attestation=attestation,
     )
 
@@ -736,6 +750,7 @@ def run_closed_loop(
         include_noise=config.controller.include_noise,
         realization_index=realization_index,
         observers=observers,
+        recovery=resolved.recovery_policy,
         **_exposure_keywords(config),
     )
 
@@ -799,6 +814,7 @@ def _verify_supplied_system(config: SystemConfig, system: ScaoSystem) -> None:
         command_projector=system.command_projector,
         controller=system.controller,
         science_propagator=system.science_propagator,
+        recovery_policy=system.recovery_policy,
     )
     if live != recorded:
         raise ScaoConstructionError(
@@ -1245,6 +1261,36 @@ def _require_reconstructor_parameter(
     return value
 
 
+def _build_recovery_policy(
+    config: SystemConfig,
+    reconstructor: Reconstructor,
+) -> ClosedLoopRecoveryPolicy | None:
+    """The opt-in ``controller.recovery`` supervisor, or None without the block."""
+
+    recovery = config.controller.recovery
+    if recovery is None:
+        return None
+    fallback_reconstructor = None
+    if recovery.fallback_min_valid_fraction is not None:
+        # SystemConfig already pairs the fallback with the sparse solver.
+        if not isinstance(reconstructor, SparseLsmrReconstructor):
+            raise ScaoConstructionError(
+                "controller.recovery fallback needs the sparse LSMR reconstructor."
+            )
+        fallback_reconstructor = reconstructor
+    try:
+        return ClosedLoopRecoveryPolicy(
+            rejected_frames_before_decay=recovery.rejected_frames_before_decay,
+            decay_per_rejected_frame=recovery.decay_per_rejected_frame,
+            fallback_min_valid_fraction=recovery.fallback_min_valid_fraction,
+            fallback_min_actuator_coverage=recovery.fallback_min_actuator_coverage,
+            gain_full_valid_fraction=recovery.gain_full_valid_fraction,
+            fallback_reconstructor=fallback_reconstructor,
+        )
+    except (TypeError, ValueError) as exc:
+        raise ScaoConstructionError(f"cannot build controller.recovery: {exc}") from exc
+
+
 def _build_reconstructor(
     config: SystemConfig,
     matrix: InteractionMatrix | SparseInteractionMatrix,
@@ -1460,8 +1506,12 @@ def _expected_component_hashes(
     command_projector: CommandProjector,
     controller: Controller,
     science_propagator: SciencePropagator,
+    recovery_policy: ClosedLoopRecoveryPolicy | None = None,
 ) -> dict[str, str]:
     """Derive the component identity record from the live components.
+
+    ``"recovery"`` exists only for a system with a recovery policy, so every
+    other system keeps exactly the identity map it was published with.
 
     ``pupil_geometry`` is anchored to the interaction matrix's geometry hash;
     :func:`build_scao_system` asserts that hash equals the constructed
@@ -1469,7 +1519,7 @@ def _expected_component_hashes(
     every component was calibrated against.
     """
 
-    return {
+    hashes = {
         "random_streams": component_config_hash(
             "scao.random_streams",
             {
@@ -1491,3 +1541,6 @@ def _expected_component_hashes(
         "controller": _component_hash(controller, "controller"),
         "science_propagator": _component_hash(science_propagator, "science_propagator"),
     }
+    if recovery_policy is not None:
+        hashes["recovery"] = _component_hash(recovery_policy, "recovery")
+    return hashes

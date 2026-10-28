@@ -1,0 +1,1929 @@
+{
+  "command": "e3-recovery --arm gain_schedule (profile @2)",
+  "argv": [
+    "scripts/run_detector_level_evidence.py",
+    "e3-recovery",
+    "--arm",
+    "gain_schedule"
+  ],
+  "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+  "numpy": "2.5.0",
+  "scipy": "1.18.0",
+  "machine": "arm64",
+  "started_unix_s": 1792138296.032486,
+  "enabled_by_user": "2026-10-16: the user's go-ahead for the recovery-policy task, which names these runs",
+  "n_steps": 400,
+  "burn_in_frames": 100,
+  "runs": [
+    {
+      "config_hash": "8a07df18b3c4b65730caf3f60ef8ebcd85233eb090adb381d925e93197c61c44",
+      "root_seed": 21,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.434654417447746,
+      "loop_s": 62.406863999553025,
+      "per_frame_s": 0.15601715999888255,
+      "process_peak_rss_bytes": 395116544,
+      "post_update_rms_m": 1.825032529444981e-07,
+      "open_loop_rms_m": 1.253364735822669e-06,
+      "final_post_update_rms_m": 1.9329079592286437e-07,
+      "valid_measurement_fraction": 0.9995432692307692,
+      "min_valid_measurement_fraction": 0.9951923076923077,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7313894676835649,
+          "on_axis_strehl": 0.7313894676835649,
+          "fwhm_lambda_over_d": 0.9325995068037319
+        }
+      ],
+      "label": "off m10"
+    },
+    {
+      "config_hash": "82fd036b3973c591b07b0be01864f3f0c0e2ce6aa14ad47bd79bff33a1bfdd68",
+      "root_seed": 22,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.913369958288968,
+      "loop_s": 62.20749608334154,
+      "per_frame_s": 0.15551874020835385,
+      "process_peak_rss_bytes": 427032576,
+      "post_update_rms_m": 1.9640391170032704e-07,
+      "open_loop_rms_m": 1.4334470625979902e-06,
+      "final_post_update_rms_m": 1.8775012680334175e-07,
+      "valid_measurement_fraction": 0.9957932692307694,
+      "min_valid_measurement_fraction": 0.9399038461538461,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7019228300414272,
+          "on_axis_strehl": 0.7019228300414272,
+          "fwhm_lambda_over_d": 0.9320802777823025
+        }
+      ],
+      "label": "off m10"
+    },
+    {
+      "config_hash": "666857d85f7e6e67fb04fab182fa535e706fa3ef331cdfb9b82d49aeb9c69fff",
+      "root_seed": 23,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.094760959036648,
+      "loop_s": 62.48759812489152,
+      "per_frame_s": 0.1562189953122288,
+      "process_peak_rss_bytes": 427032576,
+      "post_update_rms_m": 1.833478405906188e-07,
+      "open_loop_rms_m": 1.2215648839071448e-06,
+      "final_post_update_rms_m": 1.7629856791465646e-07,
+      "valid_measurement_fraction": 0.9996233974358975,
+      "min_valid_measurement_fraction": 0.9951923076923077,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7297963144702587,
+          "on_axis_strehl": 0.7297963144702587,
+          "fwhm_lambda_over_d": 0.9379203005727345
+        }
+      ],
+      "label": "off m10"
+    },
+    {
+      "config_hash": "62999d0a4e3e78cc7fea3a99d579a0a88a6db86f19b5cb5f7f048cd84f44bbfb",
+      "root_seed": 24,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.6073095835745335,
+      "loop_s": 63.13351016677916,
+      "per_frame_s": 0.1578337754169479,
+      "process_peak_rss_bytes": 427032576,
+      "post_update_rms_m": 1.941366206141952e-07,
+      "open_loop_rms_m": 1.4393801248458956e-06,
+      "final_post_update_rms_m": 1.8945892101321714e-07,
+      "valid_measurement_fraction": 0.9966266025641027,
+      "min_valid_measurement_fraction": 0.9567307692307693,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7076752263911626,
+          "on_axis_strehl": 0.7076752263911626,
+          "fwhm_lambda_over_d": 0.9338620783784031
+        }
+      ],
+      "label": "off m10"
+    },
+    {
+      "config_hash": "8f1b7027d5434d9d1ba354a20745a251da4c3b7b226d7efb69ca6553e5c942e6",
+      "root_seed": 25,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.292521792463958,
+      "loop_s": 62.93187891691923,
+      "per_frame_s": 0.15732969729229807,
+      "process_peak_rss_bytes": 427032576,
+      "post_update_rms_m": 1.900674634998278e-07,
+      "open_loop_rms_m": 1.2307001347004899e-06,
+      "final_post_update_rms_m": 1.6853164747745623e-07,
+      "valid_measurement_fraction": 0.9962500000000002,
+      "min_valid_measurement_fraction": 0.9302884615384616,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7183805739254431,
+          "on_axis_strehl": 0.7183805739254431,
+          "fwhm_lambda_over_d": 0.9337673999170651
+        }
+      ],
+      "label": "off m10"
+    },
+    {
+      "config_hash": "4cc8281452a97cf60be4b9c145bf88e393e19d2231f7ea446342e136ade2eae6",
+      "root_seed": 21,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.182202749885619,
+      "loop_s": 61.4178768331185,
+      "per_frame_s": 0.15354469208279625,
+      "process_peak_rss_bytes": 427032576,
+      "post_update_rms_m": 1.6855340418686926e-06,
+      "open_loop_rms_m": 1.253364735822669e-06,
+      "final_post_update_rms_m": 1.9178981403284043e-06,
+      "valid_measurement_fraction": 0.25919871794871796,
+      "min_valid_measurement_fraction": 0.22596153846153846,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.0022991418719530013,
+          "on_axis_strehl": 0.0015297759904477864,
+          "fwhm_lambda_over_d": 3.757344953205297
+        }
+      ],
+      "label": "off m11"
+    },
+    {
+      "config_hash": "9be41cec529e546f000c8a5f37f40824d7d49ecbc20b8bd745b7d580ce973715",
+      "root_seed": 22,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.141106417402625,
+      "loop_s": 62.17122441530228,
+      "per_frame_s": 0.15542806103825568,
+      "process_peak_rss_bytes": 427032576,
+      "post_update_rms_m": 2.091354479047183e-06,
+      "open_loop_rms_m": 1.4334470625979902e-06,
+      "final_post_update_rms_m": 2.302202166772935e-06,
+      "valid_measurement_fraction": 0.012852564102564103,
+      "min_valid_measurement_fraction": 0.002403846153846154,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.0009555144847016213,
+          "on_axis_strehl": 0.0004609995856803998,
+          "fwhm_lambda_over_d": 2.1467049861258456
+        }
+      ],
+      "label": "off m11"
+    },
+    {
+      "config_hash": "5137523c5159283f9738026fc36da496ba2e016d2da887e5e01d6c21e3a6aaba",
+      "root_seed": 23,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.2181576658040285,
+      "loop_s": 61.14360004197806,
+      "per_frame_s": 0.15285900010494516,
+      "process_peak_rss_bytes": 427032576,
+      "post_update_rms_m": 2.0650785189102637e-06,
+      "open_loop_rms_m": 1.2215648839071448e-06,
+      "final_post_update_rms_m": 2.151424479843803e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.00024039058521286232,
+          "on_axis_strehl": 0.00010006853897408072,
+          "fwhm_lambda_over_d": 1.5575835014903192
+        }
+      ],
+      "label": "off m11"
+    },
+    {
+      "config_hash": "377894491d86d771f5aa3e7a085c384c5d7d089159807581739b9fe909ee6350",
+      "root_seed": 24,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.275869708508253,
+      "loop_s": 61.03745437506586,
+      "per_frame_s": 0.15259363593766465,
+      "process_peak_rss_bytes": 427032576,
+      "post_update_rms_m": 1.9296109908408407e-06,
+      "open_loop_rms_m": 1.4393801248458956e-06,
+      "final_post_update_rms_m": 2.131994349764941e-06,
+      "valid_measurement_fraction": 0.3634134615384615,
+      "min_valid_measurement_fraction": 0.33653846153846156,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.004485215472906995,
+          "on_axis_strehl": 0.0012196546469280518,
+          "fwhm_lambda_over_d": 1.4996751570508424
+        }
+      ],
+      "label": "off m11"
+    },
+    {
+      "config_hash": "11352adfd258ba06b78d8e472c52f6c49621f1f207e6311877a6e3bf099cda0d",
+      "root_seed": 25,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.321350749582052,
+      "loop_s": 61.074158791452646,
+      "per_frame_s": 0.15268539697863162,
+      "process_peak_rss_bytes": 427032576,
+      "post_update_rms_m": 1.7135938604474368e-06,
+      "open_loop_rms_m": 1.2307001347004899e-06,
+      "final_post_update_rms_m": 2.1427599388349316e-06,
+      "valid_measurement_fraction": 0.014751602564102564,
+      "min_valid_measurement_fraction": 0.007211538461538462,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.0007064933200052365,
+          "on_axis_strehl": 0.0004982047403450595,
+          "fwhm_lambda_over_d": 1.1827692148949311
+        }
+      ],
+      "label": "off m11"
+    },
+    {
+      "config_hash": "d7e94a50ed7bb4ef5f923913dc9311c23a2cc12b302426f65467f1deed8dc644",
+      "root_seed": 21,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.136617041192949,
+      "loop_s": 60.9380189999938,
+      "per_frame_s": 0.1523450474999845,
+      "process_peak_rss_bytes": 427032576,
+      "post_update_rms_m": 1.253364735822669e-06,
+      "open_loop_rms_m": 1.253364735822669e-06,
+      "final_post_update_rms_m": 1.3266520223159024e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.017043770067252845,
+          "on_axis_strehl": 0.008509784371166887,
+          "fwhm_lambda_over_d": 1.7604001156408338
+        }
+      ],
+      "label": "off m12"
+    },
+    {
+      "config_hash": "4dd6d7b72a2582c04586ac7f77b725b49bb99f46f8868ad70cf9164105a5ca63",
+      "root_seed": 22,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.267465749755502,
+      "loop_s": 63.03842133283615,
+      "per_frame_s": 0.15759605333209037,
+      "process_peak_rss_bytes": 427032576,
+      "post_update_rms_m": 1.4334470625979902e-06,
+      "open_loop_rms_m": 1.4334470625979902e-06,
+      "final_post_update_rms_m": 8.370301413623234e-07,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.014936993939179095,
+          "on_axis_strehl": 0.007434371115804333,
+          "fwhm_lambda_over_d": 2.0950996129522634
+        }
+      ],
+      "label": "off m12"
+    },
+    {
+      "config_hash": "acc77f11ee35b2d976d02562507465c1d5b6a9aa316a4071e55b8960d6cc59ce",
+      "root_seed": 23,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.446808374486864,
+      "loop_s": 61.25374149996787,
+      "per_frame_s": 0.15313435374991968,
+      "process_peak_rss_bytes": 427032576,
+      "post_update_rms_m": 1.2215648839071448e-06,
+      "open_loop_rms_m": 1.2215648839071448e-06,
+      "final_post_update_rms_m": 1.0481077283297525e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.02015642485387655,
+          "on_axis_strehl": 0.006061622549517543,
+          "fwhm_lambda_over_d": 1.1735729174455676
+        }
+      ],
+      "label": "off m12"
+    },
+    {
+      "config_hash": "ae5c5f6b3cc71f70e53e008cf74fa8cb4bf264e8ec088a2a8af303932d855dac",
+      "root_seed": 24,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.437478458508849,
+      "loop_s": 62.5189459156245,
+      "per_frame_s": 0.15629736478906125,
+      "process_peak_rss_bytes": 427032576,
+      "post_update_rms_m": 1.4393801248458956e-06,
+      "open_loop_rms_m": 1.4393801248458956e-06,
+      "final_post_update_rms_m": 1.4334901141436685e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.018022908446452386,
+          "on_axis_strehl": 0.011124133882648995,
+          "fwhm_lambda_over_d": 1.6011478901060798
+        }
+      ],
+      "label": "off m12"
+    },
+    {
+      "config_hash": "c4a48ed4456ae8e3881f81ccf2fbbbb9fee85bf4705ceaece3f5e28b9a58f0fe",
+      "root_seed": 25,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.348553458228707,
+      "loop_s": 60.084171291440725,
+      "per_frame_s": 0.1502104282286018,
+      "process_peak_rss_bytes": 427032576,
+      "post_update_rms_m": 1.2307001347004899e-06,
+      "open_loop_rms_m": 1.2307001347004899e-06,
+      "final_post_update_rms_m": 1.0605599290641755e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.026994783374670456,
+          "on_axis_strehl": 0.015384595742106407,
+          "fwhm_lambda_over_d": 1.1846691501205289
+        }
+      ],
+      "label": "off m12"
+    },
+    {
+      "config_hash": "fd4221e0cdc3f4d611052614208bd7b0dd91c276d92d1b80104b0a63762f9ec7",
+      "root_seed": 21,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.331481374800205,
+      "loop_s": 62.158787249587476,
+      "per_frame_s": 0.1553969681239687,
+      "process_peak_rss_bytes": 392101888,
+      "post_update_rms_m": 1.825032529444981e-07,
+      "open_loop_rms_m": 1.253364735822669e-06,
+      "final_post_update_rms_m": 1.9329079592286437e-07,
+      "valid_measurement_fraction": 0.9995432692307692,
+      "min_valid_measurement_fraction": 0.9951923076923077,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7313894676835649,
+          "on_axis_strehl": 0.7313894676835649,
+          "fwhm_lambda_over_d": 0.9325995068037319
+        }
+      ],
+      "recovery": {
+        "config_hash": "c674aca856ad454cb421d013b1f6fa9a27e65af20592370a2bf708bbb67f4224",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "reset m10"
+    },
+    {
+      "config_hash": "d84d8579b7f7b55f60edae68390996006cfac5f6b59fda8e2a3100bf53fead00",
+      "root_seed": 22,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.046204750426114,
+      "loop_s": 61.89513516612351,
+      "per_frame_s": 0.15473783791530876,
+      "process_peak_rss_bytes": 423723008,
+      "post_update_rms_m": 1.9640391170032704e-07,
+      "open_loop_rms_m": 1.4334470625979902e-06,
+      "final_post_update_rms_m": 1.8775012680334175e-07,
+      "valid_measurement_fraction": 0.9957932692307694,
+      "min_valid_measurement_fraction": 0.9399038461538461,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7019228300414272,
+          "on_axis_strehl": 0.7019228300414272,
+          "fwhm_lambda_over_d": 0.9320802777823025
+        }
+      ],
+      "recovery": {
+        "config_hash": "c674aca856ad454cb421d013b1f6fa9a27e65af20592370a2bf708bbb67f4224",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "reset m10"
+    },
+    {
+      "config_hash": "a8269be96ba7ad6f2f33b0983221783325306137b4e1d8d6a5bc2868d4c7172d",
+      "root_seed": 23,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.288400084711611,
+      "loop_s": 61.79989174939692,
+      "per_frame_s": 0.1544997293734923,
+      "process_peak_rss_bytes": 423723008,
+      "post_update_rms_m": 1.833478405906188e-07,
+      "open_loop_rms_m": 1.2215648839071448e-06,
+      "final_post_update_rms_m": 1.7629856791465646e-07,
+      "valid_measurement_fraction": 0.9996233974358975,
+      "min_valid_measurement_fraction": 0.9951923076923077,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7297963144702587,
+          "on_axis_strehl": 0.7297963144702587,
+          "fwhm_lambda_over_d": 0.9379203005727345
+        }
+      ],
+      "recovery": {
+        "config_hash": "c674aca856ad454cb421d013b1f6fa9a27e65af20592370a2bf708bbb67f4224",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "reset m10"
+    },
+    {
+      "config_hash": "3c8dcf797c4563fe766b6647309b555f19e0969bd6765834e7b28e0549ae2e89",
+      "root_seed": 24,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.143206667155027,
+      "loop_s": 61.96872045844793,
+      "per_frame_s": 0.15492180114611984,
+      "process_peak_rss_bytes": 423723008,
+      "post_update_rms_m": 1.941366206141952e-07,
+      "open_loop_rms_m": 1.4393801248458956e-06,
+      "final_post_update_rms_m": 1.8945892101321714e-07,
+      "valid_measurement_fraction": 0.9966266025641027,
+      "min_valid_measurement_fraction": 0.9567307692307693,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7076752263911626,
+          "on_axis_strehl": 0.7076752263911626,
+          "fwhm_lambda_over_d": 0.9338620783784031
+        }
+      ],
+      "recovery": {
+        "config_hash": "c674aca856ad454cb421d013b1f6fa9a27e65af20592370a2bf708bbb67f4224",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "reset m10"
+    },
+    {
+      "config_hash": "029622226f5c81168e4e7ae8fe586de20a8f9a0a94cadff165049e8dffbec0ff",
+      "root_seed": 25,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.0680685406550765,
+      "loop_s": 62.373247374780476,
+      "per_frame_s": 0.15593311843695118,
+      "process_peak_rss_bytes": 423723008,
+      "post_update_rms_m": 1.900674634998278e-07,
+      "open_loop_rms_m": 1.2307001347004899e-06,
+      "final_post_update_rms_m": 1.6853164747745623e-07,
+      "valid_measurement_fraction": 0.9962500000000002,
+      "min_valid_measurement_fraction": 0.9302884615384616,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7183805739254431,
+          "on_axis_strehl": 0.7183805739254431,
+          "fwhm_lambda_over_d": 0.9337673999170651
+        }
+      ],
+      "recovery": {
+        "config_hash": "c674aca856ad454cb421d013b1f6fa9a27e65af20592370a2bf708bbb67f4224",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "reset m10"
+    },
+    {
+      "config_hash": "d29b61c82ba7d15595301446ccf3aae0a4635d5e92d64aacc90d73f7f4c79fcf",
+      "root_seed": 21,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.189213457517326,
+      "loop_s": 61.67524891719222,
+      "per_frame_s": 0.15418812229298054,
+      "process_peak_rss_bytes": 423723008,
+      "post_update_rms_m": 3.6182560736151965e-07,
+      "open_loop_rms_m": 1.253364735822669e-06,
+      "final_post_update_rms_m": 2.4582473009995224e-07,
+      "valid_measurement_fraction": 0.8771073717948719,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.9233333333333333,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.5131446538259401,
+          "on_axis_strehl": 0.5131446538259401,
+          "fwhm_lambda_over_d": 0.9404139085334104
+        }
+      ],
+      "recovery": {
+        "config_hash": "c674aca856ad454cb421d013b1f6fa9a27e65af20592370a2bf708bbb67f4224",
+        "fallback_frames": 0,
+        "decayed_frames": 7
+      },
+      "label": "reset m11"
+    },
+    {
+      "config_hash": "61dc5f1d8b6966a418deb34b41462da870e2886ce9bf530943d1ace655fcc6a9",
+      "root_seed": 22,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.166622208431363,
+      "loop_s": 83.36811958439648,
+      "per_frame_s": 0.2084202989609912,
+      "process_peak_rss_bytes": 423723008,
+      "post_update_rms_m": 4.2177778691576006e-07,
+      "open_loop_rms_m": 1.4334470625979902e-06,
+      "final_post_update_rms_m": 2.359994826356836e-07,
+      "valid_measurement_fraction": 0.8607852564102564,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.92,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.4667799168076517,
+          "on_axis_strehl": 0.4667799168076517,
+          "fwhm_lambda_over_d": 0.9562294965174016
+        }
+      ],
+      "recovery": {
+        "config_hash": "c674aca856ad454cb421d013b1f6fa9a27e65af20592370a2bf708bbb67f4224",
+        "fallback_frames": 0,
+        "decayed_frames": 9
+      },
+      "label": "reset m11"
+    },
+    {
+      "config_hash": "9c5db0afe272656e9e69c9c4c0b07a3af38d28f27aa024833807ee006b206a3b",
+      "root_seed": 23,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 11.323830207809806,
+      "loop_s": 89.133040625602,
+      "per_frame_s": 0.22283260156400503,
+      "process_peak_rss_bytes": 423723008,
+      "post_update_rms_m": 2.611974790782481e-07,
+      "open_loop_rms_m": 1.2215648839071448e-06,
+      "final_post_update_rms_m": 2.5197703545312044e-07,
+      "valid_measurement_fraction": 0.9265785256410256,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.97,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.6216459962522097,
+          "on_axis_strehl": 0.6216459962522097,
+          "fwhm_lambda_over_d": 0.9463956462644243
+        }
+      ],
+      "recovery": {
+        "config_hash": "c674aca856ad454cb421d013b1f6fa9a27e65af20592370a2bf708bbb67f4224",
+        "fallback_frames": 0,
+        "decayed_frames": 4
+      },
+      "label": "reset m11"
+    },
+    {
+      "config_hash": "d65ebafa273403fed430d8b71c0aa0fed50111f4310c3e4c6bdec9e74d31a3b2",
+      "root_seed": 24,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 13.856742832809687,
+      "loop_s": 129.94050591625273,
+      "per_frame_s": 0.3248512647906318,
+      "process_peak_rss_bytes": 423723008,
+      "post_update_rms_m": 4.963674944937834e-07,
+      "open_loop_rms_m": 1.4393801248458956e-06,
+      "final_post_update_rms_m": 1.9105575809527933e-07,
+      "valid_measurement_fraction": 0.8306730769230769,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.88,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.39619672282674434,
+          "on_axis_strehl": 0.39619672282674434,
+          "fwhm_lambda_over_d": 0.9623003870951072
+        }
+      ],
+      "recovery": {
+        "config_hash": "c674aca856ad454cb421d013b1f6fa9a27e65af20592370a2bf708bbb67f4224",
+        "fallback_frames": 0,
+        "decayed_frames": 12
+      },
+      "label": "reset m11"
+    },
+    {
+      "config_hash": "fd7ea788f59d8f6435e2e418b7bfe3cdd177d2c47c0792a7b91cc7802957bcdf",
+      "root_seed": 25,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 14.657994208857417,
+      "loop_s": 125.63396070897579,
+      "per_frame_s": 0.3140849017724395,
+      "process_peak_rss_bytes": 423723008,
+      "post_update_rms_m": 3.410931362847741e-07,
+      "open_loop_rms_m": 1.2307001347004899e-06,
+      "final_post_update_rms_m": 2.243413478757511e-07,
+      "valid_measurement_fraction": 0.8892708333333333,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.9466666666666667,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.5403488524899056,
+          "on_axis_strehl": 0.5403488524899056,
+          "fwhm_lambda_over_d": 0.9521736566678413
+        }
+      ],
+      "recovery": {
+        "config_hash": "c674aca856ad454cb421d013b1f6fa9a27e65af20592370a2bf708bbb67f4224",
+        "fallback_frames": 0,
+        "decayed_frames": 6
+      },
+      "label": "reset m11"
+    },
+    {
+      "config_hash": "bd7f70307ff764ad56cb8d6756601082f1a7cc627144a8ba01b4d9efdb844aad",
+      "root_seed": 21,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 15.009061167016625,
+      "loop_s": 67.26330258417875,
+      "per_frame_s": 0.16815825646044685,
+      "process_peak_rss_bytes": 423723008,
+      "post_update_rms_m": 1.253364735822669e-06,
+      "open_loop_rms_m": 1.253364735822669e-06,
+      "final_post_update_rms_m": 1.3266520223159024e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.017043770067252845,
+          "on_axis_strehl": 0.008509784371166887,
+          "fwhm_lambda_over_d": 1.7604001156408338
+        }
+      ],
+      "recovery": {
+        "config_hash": "c674aca856ad454cb421d013b1f6fa9a27e65af20592370a2bf708bbb67f4224",
+        "fallback_frames": 0,
+        "decayed_frames": 398
+      },
+      "label": "reset m12"
+    },
+    {
+      "config_hash": "ebc2ff19f9f4d31bc1181de6b330ae0787489bcc6582fe04de722a2d675607a8",
+      "root_seed": 22,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.568515541963279,
+      "loop_s": 63.1885693334043,
+      "per_frame_s": 0.15797142333351075,
+      "process_peak_rss_bytes": 423723008,
+      "post_update_rms_m": 1.4334470625979902e-06,
+      "open_loop_rms_m": 1.4334470625979902e-06,
+      "final_post_update_rms_m": 8.370301413623234e-07,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.014936993939179095,
+          "on_axis_strehl": 0.007434371115804333,
+          "fwhm_lambda_over_d": 2.0950996129522634
+        }
+      ],
+      "recovery": {
+        "config_hash": "c674aca856ad454cb421d013b1f6fa9a27e65af20592370a2bf708bbb67f4224",
+        "fallback_frames": 0,
+        "decayed_frames": 398
+      },
+      "label": "reset m12"
+    },
+    {
+      "config_hash": "87f2cb5e966d1a9e7156e162e863a3b6ddcc9ce8342e0236e6e7934d1c62930e",
+      "root_seed": 23,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.391132832504809,
+      "loop_s": 60.32907704170793,
+      "per_frame_s": 0.15082269260426984,
+      "process_peak_rss_bytes": 423723008,
+      "post_update_rms_m": 1.2215648839071448e-06,
+      "open_loop_rms_m": 1.2215648839071448e-06,
+      "final_post_update_rms_m": 1.0481077283297525e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.02015642485387655,
+          "on_axis_strehl": 0.006061622549517543,
+          "fwhm_lambda_over_d": 1.1735729174455676
+        }
+      ],
+      "recovery": {
+        "config_hash": "c674aca856ad454cb421d013b1f6fa9a27e65af20592370a2bf708bbb67f4224",
+        "fallback_frames": 0,
+        "decayed_frames": 398
+      },
+      "label": "reset m12"
+    },
+    {
+      "config_hash": "923cb62be50324ef765b8b7ddbc10e508da59c47ef97e2f74aeac6559846f9f2",
+      "root_seed": 24,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.099229499697685,
+      "loop_s": 60.83192249946296,
+      "per_frame_s": 0.1520798062486574,
+      "process_peak_rss_bytes": 423723008,
+      "post_update_rms_m": 1.4393801248458956e-06,
+      "open_loop_rms_m": 1.4393801248458956e-06,
+      "final_post_update_rms_m": 1.4334901141436685e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.018022908446452386,
+          "on_axis_strehl": 0.011124133882648995,
+          "fwhm_lambda_over_d": 1.6011478901060798
+        }
+      ],
+      "recovery": {
+        "config_hash": "c674aca856ad454cb421d013b1f6fa9a27e65af20592370a2bf708bbb67f4224",
+        "fallback_frames": 0,
+        "decayed_frames": 398
+      },
+      "label": "reset m12"
+    },
+    {
+      "config_hash": "ae642206202c7819bfd40f814c4efee82a31807cc07ae9be67ef4e1ef90f573a",
+      "root_seed": 25,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.200007665902376,
+      "loop_s": 60.22465950064361,
+      "per_frame_s": 0.15056164875160902,
+      "process_peak_rss_bytes": 423723008,
+      "post_update_rms_m": 1.2307001347004899e-06,
+      "open_loop_rms_m": 1.2307001347004899e-06,
+      "final_post_update_rms_m": 1.0605599290641755e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.026994783374670456,
+          "on_axis_strehl": 0.015384595742106407,
+          "fwhm_lambda_over_d": 1.1846691501205289
+        }
+      ],
+      "recovery": {
+        "config_hash": "c674aca856ad454cb421d013b1f6fa9a27e65af20592370a2bf708bbb67f4224",
+        "fallback_frames": 0,
+        "decayed_frames": 398
+      },
+      "label": "reset m12"
+    },
+    {
+      "config_hash": "537428d63d6c2347335f19ddc99c51be5e347e66160a5b449ce533c0089521d2",
+      "root_seed": 21,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.57704025041312,
+      "loop_s": 62.27525895833969,
+      "per_frame_s": 0.15568814739584924,
+      "process_peak_rss_bytes": 401670144,
+      "post_update_rms_m": 1.825032529444981e-07,
+      "open_loop_rms_m": 1.253364735822669e-06,
+      "final_post_update_rms_m": 1.9329079592286437e-07,
+      "valid_measurement_fraction": 0.9995432692307692,
+      "min_valid_measurement_fraction": 0.9951923076923077,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7313894676835649,
+          "on_axis_strehl": 0.7313894676835649,
+          "fwhm_lambda_over_d": 0.9325995068037319
+        }
+      ],
+      "recovery": {
+        "config_hash": "4409de39f71e7390c76bd0a7d95dc88ee5b680e4342521ca60e6ea0ec133f25a",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "guarded_fallback m10"
+    },
+    {
+      "config_hash": "fede952279f42683b24bf35d8eca8645299fa72313e972fcb320bc728d40a2d1",
+      "root_seed": 22,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.161782459355891,
+      "loop_s": 62.80392750073224,
+      "per_frame_s": 0.15700981875183062,
+      "process_peak_rss_bytes": 401670144,
+      "post_update_rms_m": 1.9640391170032704e-07,
+      "open_loop_rms_m": 1.4334470625979902e-06,
+      "final_post_update_rms_m": 1.8775012680334175e-07,
+      "valid_measurement_fraction": 0.9957932692307694,
+      "min_valid_measurement_fraction": 0.9399038461538461,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7019228300414272,
+          "on_axis_strehl": 0.7019228300414272,
+          "fwhm_lambda_over_d": 0.9320802777823025
+        }
+      ],
+      "recovery": {
+        "config_hash": "1440b7d5c67eb36eb1542973921236f73a7e148fcbef0b9a952d298675803884",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "guarded_fallback m10"
+    },
+    {
+      "config_hash": "6eda823b9a95bf421e01bc961c7caf7f037de036d86373950a0cdf3d2c1a96d0",
+      "root_seed": 23,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.26466029137373,
+      "loop_s": 65.7001351248473,
+      "per_frame_s": 0.16425033781211823,
+      "process_peak_rss_bytes": 401670144,
+      "post_update_rms_m": 1.833478405906188e-07,
+      "open_loop_rms_m": 1.2215648839071448e-06,
+      "final_post_update_rms_m": 1.7629856791465646e-07,
+      "valid_measurement_fraction": 0.9996233974358975,
+      "min_valid_measurement_fraction": 0.9951923076923077,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7297963144702587,
+          "on_axis_strehl": 0.7297963144702587,
+          "fwhm_lambda_over_d": 0.9379203005727345
+        }
+      ],
+      "recovery": {
+        "config_hash": "69eba1c69aefb220478c619d08d4e370bdfbbd556a8057b4cb7cce99bf138064",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "guarded_fallback m10"
+    },
+    {
+      "config_hash": "3bc06ca4d6d83db11738b8640fb4ce3ed14ba7d89e1cd4ee925b13d46498ba3e",
+      "root_seed": 24,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.572611041367054,
+      "loop_s": 64.2908585825935,
+      "per_frame_s": 0.16072714645648375,
+      "process_peak_rss_bytes": 401670144,
+      "post_update_rms_m": 1.941366206141952e-07,
+      "open_loop_rms_m": 1.4393801248458956e-06,
+      "final_post_update_rms_m": 1.8945892101321714e-07,
+      "valid_measurement_fraction": 0.9966266025641027,
+      "min_valid_measurement_fraction": 0.9567307692307693,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7076752263911626,
+          "on_axis_strehl": 0.7076752263911626,
+          "fwhm_lambda_over_d": 0.9338620783784031
+        }
+      ],
+      "recovery": {
+        "config_hash": "5a3b04ccf7f826953dd1c44085b93e9ccec4e062972c2a3f88795634c7862021",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "guarded_fallback m10"
+    },
+    {
+      "config_hash": "2dd4f6f638dbb9822d0bd5df17ea28077eac6d291919da0f28d53701b43e8463",
+      "root_seed": 25,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.4564434587955475,
+      "loop_s": 64.21564154233783,
+      "per_frame_s": 0.16053910385584458,
+      "process_peak_rss_bytes": 401670144,
+      "post_update_rms_m": 1.900674634998278e-07,
+      "open_loop_rms_m": 1.2307001347004899e-06,
+      "final_post_update_rms_m": 1.6853164747745623e-07,
+      "valid_measurement_fraction": 0.9962500000000002,
+      "min_valid_measurement_fraction": 0.9302884615384616,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7183805739254431,
+          "on_axis_strehl": 0.7183805739254431,
+          "fwhm_lambda_over_d": 0.9337673999170651
+        }
+      ],
+      "recovery": {
+        "config_hash": "d5d2921f346d4ddbf649ff54bb3af81e5de75ebd7ebed04a7d9a672ae17ddb8f",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "guarded_fallback m10"
+    },
+    {
+      "config_hash": "ca2caf5769d8223eafac919a8b1d7bbe293442c9712a2a76e3a99aa7849d2949",
+      "root_seed": 21,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 8.052138375118375,
+      "loop_s": 63.1656671250239,
+      "per_frame_s": 0.15791416781255976,
+      "process_peak_rss_bytes": 401670144,
+      "post_update_rms_m": 1.6398618650741065e-06,
+      "open_loop_rms_m": 1.253364735822669e-06,
+      "final_post_update_rms_m": 1.7255865543958335e-06,
+      "valid_measurement_fraction": 0.3601682692307692,
+      "min_valid_measurement_fraction": 0.3485576923076923,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.025309039191801625,
+          "on_axis_strehl": 0.025156517065264342,
+          "fwhm_lambda_over_d": 2.636972771953189
+        }
+      ],
+      "recovery": {
+        "config_hash": "7c4192284ea1f28be67cba540392324900f5c41de8e9bb427d7792bac0bfbfb0",
+        "fallback_frames": 353,
+        "decayed_frames": 0
+      },
+      "label": "guarded_fallback m11"
+    },
+    {
+      "config_hash": "4c813b8f5cb28234c86d23e62deb5d0cdcc8d921a3a02a7933d2eb31860db415",
+      "root_seed": 22,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.177819916978478,
+      "loop_s": 62.63316462561488,
+      "per_frame_s": 0.1565829115640372,
+      "process_peak_rss_bytes": 401670144,
+      "post_update_rms_m": 2.092412597331905e-06,
+      "open_loop_rms_m": 1.4334470625979902e-06,
+      "final_post_update_rms_m": 2.301807089068553e-06,
+      "valid_measurement_fraction": 0.012676282051282052,
+      "min_valid_measurement_fraction": 0.002403846153846154,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.0009217518057073148,
+          "on_axis_strehl": 0.0004912779369681853,
+          "fwhm_lambda_over_d": 2.221244829785097
+        }
+      ],
+      "recovery": {
+        "config_hash": "7eebc9406bb5763f80d6e6d7c96a9f0591553f86a821ff2910f519c58fede85b",
+        "fallback_frames": 1,
+        "decayed_frames": 0
+      },
+      "label": "guarded_fallback m11"
+    },
+    {
+      "config_hash": "d191ae791b301ffe34632bb1d3d305684018507a1a19e6bd62a95206a1e1d1a4",
+      "root_seed": 23,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.266460625454783,
+      "loop_s": 61.41752550005913,
+      "per_frame_s": 0.1535438137501478,
+      "process_peak_rss_bytes": 429752320,
+      "post_update_rms_m": 2.0658931378519186e-06,
+      "open_loop_rms_m": 1.2215648839071448e-06,
+      "final_post_update_rms_m": 2.1513983130552977e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.00024431110927826313,
+          "on_axis_strehl": 0.00010019211412770182,
+          "fwhm_lambda_over_d": 1.5562587642049945
+        }
+      ],
+      "recovery": {
+        "config_hash": "e148e3f0a9878b14a3201c40e366cd12f1639156c90e79725df3d0327515b730",
+        "fallback_frames": 1,
+        "decayed_frames": 0
+      },
+      "label": "guarded_fallback m11"
+    },
+    {
+      "config_hash": "c442b0edfe8295ced25e3b80915f4d3340a0033cc4bcc9066da018eba620f891",
+      "root_seed": 24,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.21628687530756,
+      "loop_s": 62.871052792295814,
+      "per_frame_s": 0.15717763198073953,
+      "process_peak_rss_bytes": 429752320,
+      "post_update_rms_m": 1.8248100489937146e-06,
+      "open_loop_rms_m": 1.4393801248458956e-06,
+      "final_post_update_rms_m": 1.9891252212265547e-06,
+      "valid_measurement_fraction": 0.28846955128205126,
+      "min_valid_measurement_fraction": 0.2548076923076923,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.01454560302788462,
+          "on_axis_strehl": 0.010487665256670232,
+          "fwhm_lambda_over_d": 2.120356331281724
+        }
+      ],
+      "recovery": {
+        "config_hash": "c1b3b5da516fbc8b3b291a6a3c4ba72bed9fb2f499d01a015c536a8f5cb31e65",
+        "fallback_frames": 369,
+        "decayed_frames": 0
+      },
+      "label": "guarded_fallback m11"
+    },
+    {
+      "config_hash": "f4b872db78c11808413dcf07de30f40efd17fe3a78ec53697b42936f8bf5a883",
+      "root_seed": 25,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.496398833580315,
+      "loop_s": 62.21172816678882,
+      "per_frame_s": 0.15552932041697204,
+      "process_peak_rss_bytes": 429752320,
+      "post_update_rms_m": 1.7135938604474368e-06,
+      "open_loop_rms_m": 1.2307001347004899e-06,
+      "final_post_update_rms_m": 2.1427599388349316e-06,
+      "valid_measurement_fraction": 0.014751602564102564,
+      "min_valid_measurement_fraction": 0.007211538461538462,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.0007064933200052365,
+          "on_axis_strehl": 0.0004982047403450595,
+          "fwhm_lambda_over_d": 1.1827692148949311
+        }
+      ],
+      "recovery": {
+        "config_hash": "0f547510ea531d94ed383f37c50a69d53440016be8da5d878672e3bc96b5a1e6",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "guarded_fallback m11"
+    },
+    {
+      "config_hash": "3088db5d458443f5a93db445756f72a3c634b8aecf6d638e725e451ec56a153d",
+      "root_seed": 21,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.230644582770765,
+      "loop_s": 61.770941459573805,
+      "per_frame_s": 0.1544273536489345,
+      "process_peak_rss_bytes": 429752320,
+      "post_update_rms_m": 1.253364735822669e-06,
+      "open_loop_rms_m": 1.253364735822669e-06,
+      "final_post_update_rms_m": 1.3266520223159024e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.017043770067252845,
+          "on_axis_strehl": 0.008509784371166887,
+          "fwhm_lambda_over_d": 1.7604001156408338
+        }
+      ],
+      "recovery": {
+        "config_hash": "ef4de91a733c707cf3edbf9bfb7072694bb2c51067c294d62f58f3c1e593cd3f",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "guarded_fallback m12"
+    },
+    {
+      "config_hash": "bf16d8c3d739337e8168be779b65dbd20c8bbbf84adc11a74fba1691d1c68c76",
+      "root_seed": 22,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.738259791396558,
+      "loop_s": 60.82190475054085,
+      "per_frame_s": 0.15205476187635214,
+      "process_peak_rss_bytes": 429752320,
+      "post_update_rms_m": 1.4334470625979902e-06,
+      "open_loop_rms_m": 1.4334470625979902e-06,
+      "final_post_update_rms_m": 8.370301413623234e-07,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.014936993939179095,
+          "on_axis_strehl": 0.007434371115804333,
+          "fwhm_lambda_over_d": 2.0950996129522634
+        }
+      ],
+      "recovery": {
+        "config_hash": "2a45c301d6a8cf021f3651e2d28241e6957dbff951186c4ff25f7aa8c0879f92",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "guarded_fallback m12"
+    },
+    {
+      "config_hash": "44beeea7316ad773d625c49435db472f9eae3eccfeee6db50d2f45a31f42b4ee",
+      "root_seed": 23,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.218706999905407,
+      "loop_s": 61.6621624995023,
+      "per_frame_s": 0.15415540624875576,
+      "process_peak_rss_bytes": 429752320,
+      "post_update_rms_m": 1.2215648839071448e-06,
+      "open_loop_rms_m": 1.2215648839071448e-06,
+      "final_post_update_rms_m": 1.0481077283297525e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.02015642485387655,
+          "on_axis_strehl": 0.006061622549517543,
+          "fwhm_lambda_over_d": 1.1735729174455676
+        }
+      ],
+      "recovery": {
+        "config_hash": "efc8caf890d03841e3f97cddc4769fca467ffe2392e771d5ea6881f972ac18cc",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "guarded_fallback m12"
+    },
+    {
+      "config_hash": "9ef94296e2b9ba275af02e90bf5673593c4411126d8bb8b42eeb39537bff5a2c",
+      "root_seed": 24,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.584859374910593,
+      "loop_s": 60.192811083979905,
+      "per_frame_s": 0.15048202770994976,
+      "process_peak_rss_bytes": 429752320,
+      "post_update_rms_m": 1.4393801248458956e-06,
+      "open_loop_rms_m": 1.4393801248458956e-06,
+      "final_post_update_rms_m": 1.4334901141436685e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.018022908446452386,
+          "on_axis_strehl": 0.011124133882648995,
+          "fwhm_lambda_over_d": 1.6011478901060798
+        }
+      ],
+      "recovery": {
+        "config_hash": "94e91e6b6bdd4db03b47d959fee1f73720354ca07e4e3e94a0010a32475beb0e",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "guarded_fallback m12"
+    },
+    {
+      "config_hash": "e617b33df310103b19fae07f375aa304e37ccb6d4315402daa3a8967dc8e3aec",
+      "root_seed": 25,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.097601791843772,
+      "loop_s": 59.607242457568645,
+      "per_frame_s": 0.1490181061439216,
+      "process_peak_rss_bytes": 429752320,
+      "post_update_rms_m": 1.2307001347004899e-06,
+      "open_loop_rms_m": 1.2307001347004899e-06,
+      "final_post_update_rms_m": 1.0605599290641755e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.026994783374670456,
+          "on_axis_strehl": 0.015384595742106407,
+          "fwhm_lambda_over_d": 1.1846691501205289
+        }
+      ],
+      "recovery": {
+        "config_hash": "42e6ed708e677ed900a715663222d5fe145abd2d9239a43e89ff85b4175dc202",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "guarded_fallback m12"
+    },
+    {
+      "config_hash": "fd1cf752fa283371147743e63062297d0389a9fe6440a650b63824c9bca10d80",
+      "root_seed": 21,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.4274391662329435,
+      "loop_s": 62.39194849971682,
+      "per_frame_s": 0.15597987124929205,
+      "process_peak_rss_bytes": 433635328,
+      "post_update_rms_m": 1.825032529444981e-07,
+      "open_loop_rms_m": 1.253364735822669e-06,
+      "final_post_update_rms_m": 1.9329079592286437e-07,
+      "valid_measurement_fraction": 0.9995432692307692,
+      "min_valid_measurement_fraction": 0.9951923076923077,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7313894676835649,
+          "on_axis_strehl": 0.7313894676835649,
+          "fwhm_lambda_over_d": 0.9325995068037319
+        }
+      ],
+      "recovery": {
+        "config_hash": "ea096e70c793a4a4a9dc577fc84903ff8c3aa938c49d6b51ba3051415781129c",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "gain_schedule m10"
+    },
+    {
+      "config_hash": "a84f63fc5633c943ff022d6490a0d0b33caea15bd73a8f3349eecc8064807117",
+      "root_seed": 22,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.039423791691661,
+      "loop_s": 61.49601154215634,
+      "per_frame_s": 0.15374002885539084,
+      "process_peak_rss_bytes": 436568064,
+      "post_update_rms_m": 1.9640391170032704e-07,
+      "open_loop_rms_m": 1.4334470625979902e-06,
+      "final_post_update_rms_m": 1.8775012680334175e-07,
+      "valid_measurement_fraction": 0.9957932692307694,
+      "min_valid_measurement_fraction": 0.9399038461538461,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7019228300414272,
+          "on_axis_strehl": 0.7019228300414272,
+          "fwhm_lambda_over_d": 0.9320802777823025
+        }
+      ],
+      "recovery": {
+        "config_hash": "043b443d7973b60ac02863680cf3c3dc90b7513d720890df7c34f74605cd43c3",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "gain_schedule m10"
+    },
+    {
+      "config_hash": "92b2376a670368f606a63d47359f32203bdfc9f52cb85f2f428f1ff020a20dee",
+      "root_seed": 23,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 6.912418291904032,
+      "loop_s": 61.65511487517506,
+      "per_frame_s": 0.15413778718793764,
+      "process_peak_rss_bytes": 453738496,
+      "post_update_rms_m": 1.833478405906188e-07,
+      "open_loop_rms_m": 1.2215648839071448e-06,
+      "final_post_update_rms_m": 1.7629856791465646e-07,
+      "valid_measurement_fraction": 0.9996233974358975,
+      "min_valid_measurement_fraction": 0.9951923076923077,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7297963144702587,
+          "on_axis_strehl": 0.7297963144702587,
+          "fwhm_lambda_over_d": 0.9379203005727345
+        }
+      ],
+      "recovery": {
+        "config_hash": "23783d20f73aa585a34cc97a4c4ae38f84080790b1724c7c51b47204e36fceef",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "gain_schedule m10"
+    },
+    {
+      "config_hash": "29baeb918ca8afbc87ec7b9a7341c91dfee899c898e5c4e7b96fc4365346e396",
+      "root_seed": 24,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.252262792550027,
+      "loop_s": 62.88628512527794,
+      "per_frame_s": 0.15721571281319485,
+      "process_peak_rss_bytes": 453738496,
+      "post_update_rms_m": 1.941366206141952e-07,
+      "open_loop_rms_m": 1.4393801248458956e-06,
+      "final_post_update_rms_m": 1.8945892101321714e-07,
+      "valid_measurement_fraction": 0.9966266025641027,
+      "min_valid_measurement_fraction": 0.9567307692307693,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7076752263911626,
+          "on_axis_strehl": 0.7076752263911626,
+          "fwhm_lambda_over_d": 0.9338620783784031
+        }
+      ],
+      "recovery": {
+        "config_hash": "f9ae1a294b0c05cdfbbc98c188e82b7a35e4c3f2e3112ebb94bb0a1a7d090478",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "gain_schedule m10"
+    },
+    {
+      "config_hash": "a1090e6e117ab7e49da05d9d9e8e425e982a3f8a409d15ab8e6591c277a9251b",
+      "root_seed": 25,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.536187124438584,
+      "loop_s": 63.223742708563805,
+      "per_frame_s": 0.1580593567714095,
+      "process_peak_rss_bytes": 453738496,
+      "post_update_rms_m": 1.900674634998278e-07,
+      "open_loop_rms_m": 1.2307001347004899e-06,
+      "final_post_update_rms_m": 1.6853164747745623e-07,
+      "valid_measurement_fraction": 0.9962500000000002,
+      "min_valid_measurement_fraction": 0.9302884615384616,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7183805739254431,
+          "on_axis_strehl": 0.7183805739254431,
+          "fwhm_lambda_over_d": 0.9337673999170651
+        }
+      ],
+      "recovery": {
+        "config_hash": "270a6a059daf5b2386f2fce1a2f1ae7f8945ed790c6faa443100da57a2b25a8e",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "gain_schedule m10"
+    },
+    {
+      "config_hash": "eaa8a0de40934abd66b301a63c5339aed6bcc7794b71b8cff72f4d7694250699",
+      "root_seed": 21,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.501177124679089,
+      "loop_s": 61.45088875014335,
+      "per_frame_s": 0.15362722187535838,
+      "process_peak_rss_bytes": 453738496,
+      "post_update_rms_m": 1.8622909137419688e-06,
+      "open_loop_rms_m": 1.253364735822669e-06,
+      "final_post_update_rms_m": 2.0543886434971886e-06,
+      "valid_measurement_fraction": 0.03287660256410256,
+      "min_valid_measurement_fraction": 0.021634615384615384,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.0009149723102554432,
+          "on_axis_strehl": 0.0002556857552359071,
+          "fwhm_lambda_over_d": 1.7836491075530394
+        }
+      ],
+      "recovery": {
+        "config_hash": "f72a03e5e8bafbb9a28b176a1bc71b94fe35ab9df745515041750b155493115d",
+        "fallback_frames": 5,
+        "decayed_frames": 0
+      },
+      "label": "gain_schedule m11"
+    },
+    {
+      "config_hash": "d5e53c6b493000ad8008785ccc119e998fe18f2b1e19ddbc457a20e6b2e256ab",
+      "root_seed": 22,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.16944666672498,
+      "loop_s": 60.89891920797527,
+      "per_frame_s": 0.15224729801993817,
+      "process_peak_rss_bytes": 454950912,
+      "post_update_rms_m": 2.119306718011531e-06,
+      "open_loop_rms_m": 1.4334470625979902e-06,
+      "final_post_update_rms_m": 2.3342859342574754e-06,
+      "valid_measurement_fraction": 0.008573717948717948,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.0007991962349345886,
+          "on_axis_strehl": 0.000399435865407602,
+          "fwhm_lambda_over_d": 2.266984974687715
+        }
+      ],
+      "recovery": {
+        "config_hash": "2bbe80efc1795ede0ee232c9448296e8f88e223ee1d94bba4e245e82c8cf1abc",
+        "fallback_frames": 14,
+        "decayed_frames": 0
+      },
+      "label": "gain_schedule m11"
+    },
+    {
+      "config_hash": "9f3bfc27653445b47dd2051c8c413fb7693fceec2e06ef92e24a2942921af818",
+      "root_seed": 23,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.286597958765924,
+      "loop_s": 61.971858624368906,
+      "per_frame_s": 0.15492964656092226,
+      "process_peak_rss_bytes": 460849152,
+      "post_update_rms_m": 1.838670217777569e-06,
+      "open_loop_rms_m": 1.2215648839071448e-06,
+      "final_post_update_rms_m": 1.9709796003578464e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.0004219015189417461,
+          "on_axis_strehl": 0.00023749257037759982,
+          "fwhm_lambda_over_d": 1.4384343451330492
+        }
+      ],
+      "recovery": {
+        "config_hash": "1748e93730add8a9b190cdfc060d83fc3fb465cbe553142cf055d31d5c2c5c01",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "gain_schedule m11"
+    },
+    {
+      "config_hash": "dc99071334269f1a8d0dba8dcb279c867546cd99c1b8c4c9205a97eff43aba68",
+      "root_seed": 24,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.360101041384041,
+      "loop_s": 60.47707670740783,
+      "per_frame_s": 0.15119269176851957,
+      "process_peak_rss_bytes": 460849152,
+      "post_update_rms_m": 2.1225714237310233e-06,
+      "open_loop_rms_m": 1.4393801248458956e-06,
+      "final_post_update_rms_m": 2.3096851142418115e-06,
+      "valid_measurement_fraction": 0.0007291666666666668,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.0005305179302863838,
+          "on_axis_strehl": 0.000219312207805958,
+          "fwhm_lambda_over_d": 1.1956050872786357
+        }
+      ],
+      "recovery": {
+        "config_hash": "065fc52940da21d39eb18aab56daae7bd1eaddeda67d215429b3014d6f1b4f8f",
+        "fallback_frames": 2,
+        "decayed_frames": 0
+      },
+      "label": "gain_schedule m11"
+    },
+    {
+      "config_hash": "3b877c052ca5ea3685fd1702afddcaa2bf5130c37431c07f9b32dcfe36fbd6bd",
+      "root_seed": 25,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.1130539160221815,
+      "loop_s": 61.36753450054675,
+      "per_frame_s": 0.15341883625136687,
+      "process_peak_rss_bytes": 460849152,
+      "post_update_rms_m": 1.6906778982127571e-06,
+      "open_loop_rms_m": 1.2307001347004899e-06,
+      "final_post_update_rms_m": 2.156353865742867e-06,
+      "valid_measurement_fraction": 0.011754807692307691,
+      "min_valid_measurement_fraction": 0.007211538461538462,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": true,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.0008793475956540987,
+          "on_axis_strehl": 0.0008407421871856528,
+          "fwhm_lambda_over_d": 1.2066278906405767
+        }
+      ],
+      "recovery": {
+        "config_hash": "a7721c270ee3fac4a74c90cda5da5bc7b44937299382e72eda089cc8f2983b76",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "gain_schedule m11"
+    },
+    {
+      "config_hash": "971a5e6256e10a8fbf544e17624f930ad09ecca3f33936c1d4584c114d47771c",
+      "root_seed": 21,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.078595291823149,
+      "loop_s": 60.74975149985403,
+      "per_frame_s": 0.15187437874963508,
+      "process_peak_rss_bytes": 460849152,
+      "post_update_rms_m": 1.253364735822669e-06,
+      "open_loop_rms_m": 1.253364735822669e-06,
+      "final_post_update_rms_m": 1.3266520223159024e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.017043770067252845,
+          "on_axis_strehl": 0.008509784371166887,
+          "fwhm_lambda_over_d": 1.7604001156408338
+        }
+      ],
+      "recovery": {
+        "config_hash": "0c4b28225ca3858826d6c98306ab8b98e3add72dde3ca35afa7fde7b1bfeb56a",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "gain_schedule m12"
+    },
+    {
+      "config_hash": "21328c64658d0c127080eecd5a8d8ed203b74c6e087d55d425715ed7c712a68a",
+      "root_seed": 22,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.123474458232522,
+      "loop_s": 61.565977582708,
+      "per_frame_s": 0.15391494395677,
+      "process_peak_rss_bytes": 460849152,
+      "post_update_rms_m": 1.4334470625979902e-06,
+      "open_loop_rms_m": 1.4334470625979902e-06,
+      "final_post_update_rms_m": 8.370301413623234e-07,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.014936993939179095,
+          "on_axis_strehl": 0.007434371115804333,
+          "fwhm_lambda_over_d": 2.0950996129522634
+        }
+      ],
+      "recovery": {
+        "config_hash": "52ed7227c85bf173e83ff6c9e3090d30eb8baf215c9df3e87879da698fc585b6",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "gain_schedule m12"
+    },
+    {
+      "config_hash": "35c8518d7076954f7fbbed0f2ebacd165cee6c6ffa4e9587e0165b33ab8105e4",
+      "root_seed": 23,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.4704861249774694,
+      "loop_s": 62.1973161669448,
+      "per_frame_s": 0.155493290417362,
+      "process_peak_rss_bytes": 460849152,
+      "post_update_rms_m": 1.2215648839071448e-06,
+      "open_loop_rms_m": 1.2215648839071448e-06,
+      "final_post_update_rms_m": 1.0481077283297525e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.02015642485387655,
+          "on_axis_strehl": 0.006061622549517543,
+          "fwhm_lambda_over_d": 1.1735729174455676
+        }
+      ],
+      "recovery": {
+        "config_hash": "317d7cda59f4ef0dadf44816071f27959007c4d2c76a27d5e2df5af2de28e378",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "gain_schedule m12"
+    },
+    {
+      "config_hash": "4d64e93ff443866ad61de78fdc019febe460cdf370fcf4a64f5a91c0a814e559",
+      "root_seed": 24,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 7.5012082094326615,
+      "loop_s": 63.43592862505466,
+      "per_frame_s": 0.15858982156263665,
+      "process_peak_rss_bytes": 460849152,
+      "post_update_rms_m": 1.4393801248458956e-06,
+      "open_loop_rms_m": 1.4393801248458956e-06,
+      "final_post_update_rms_m": 1.4334901141436685e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.018022908446452386,
+          "on_axis_strehl": 0.011124133882648995,
+          "fwhm_lambda_over_d": 1.6011478901060798
+        }
+      ],
+      "recovery": {
+        "config_hash": "7a87fdcd0863132425d54916d9d601b0b968c388415b682b9c00cd6c3423fa4d",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "gain_schedule m12"
+    },
+    {
+      "config_hash": "ce3a2e1ec1f0f20cadbf532c1c6dcfc66a02af6b51739382e9d99b3c92353920",
+      "root_seed": 25,
+      "n_steps": 400,
+      "burn_in_frames": 100,
+      "build_s": 8.26480345800519,
+      "loop_s": 61.989677749574184,
+      "per_frame_s": 0.15497419437393545,
+      "process_peak_rss_bytes": 460849152,
+      "post_update_rms_m": 1.2307001347004899e-06,
+      "open_loop_rms_m": 1.2307001347004899e-06,
+      "final_post_update_rms_m": 1.0605599290641755e-06,
+      "valid_measurement_fraction": 0.0,
+      "min_valid_measurement_fraction": 0.0,
+      "reconstruction_usable_fraction": 0.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.026994783374670456,
+          "on_axis_strehl": 0.015384595742106407,
+          "fwhm_lambda_over_d": 1.1846691501205289
+        }
+      ],
+      "recovery": {
+        "config_hash": "c2bf03501858a4118c65e5c82c7bed704dad2f273f371b4054404801fcf72b9b",
+        "fallback_frames": 0,
+        "decayed_frames": 0
+      },
+      "label": "gain_schedule m12"
+    }
+  ],
+  "resumed_from_started_unix_s": 1792137241.737157,
+  "summary": {
+    "off m10": {
+      "runs": 5,
+      "post_update_rms_mean_m": 1.8929181786989338e-07,
+      "post_update_rms_seed_std_m": 6.246420936627683e-09,
+      "valid_fraction_mean": 0.9975673076923076,
+      "valid_fraction_seed_std": 0.0018640927547090417,
+      "peak_strehl_mean": 0.7178328825023713,
+      "peak_strehl_seed_std": 0.013072035219349971,
+      "lost_lock_runs": 0
+    },
+    "off m11": {
+      "runs": 5,
+      "post_update_rms_mean_m": 1.8970343782228836e-06,
+      "post_update_rms_seed_std_m": 1.906850717367816e-07,
+      "valid_fraction_mean": 0.13004326923076923,
+      "valid_fraction_seed_std": 0.169617111632873,
+      "peak_strehl_mean": 0.0017373511469559431,
+      "peak_strehl_seed_std": 0.0017161872364176802,
+      "lost_lock_runs": 5
+    },
+    "off m12": {
+      "runs": 5,
+      "post_update_rms_mean_m": 1.315691388374838e-06,
+      "post_update_rms_seed_std_m": 1.1083007940577182e-07,
+      "valid_fraction_mean": 0.0,
+      "valid_fraction_seed_std": 0.0,
+      "peak_strehl_mean": 0.019430976136286266,
+      "peak_strehl_seed_std": 0.004626411654954268,
+      "lost_lock_runs": 0
+    },
+    "reset m10": {
+      "runs": 5,
+      "post_update_rms_mean_m": 1.8929181786989338e-07,
+      "post_update_rms_seed_std_m": 6.246420936627683e-09,
+      "valid_fraction_mean": 0.9975673076923076,
+      "valid_fraction_seed_std": 0.0018640927547090417,
+      "peak_strehl_mean": 0.7178328825023713,
+      "peak_strehl_seed_std": 0.013072035219349971,
+      "lost_lock_runs": 0
+    },
+    "reset m11": {
+      "runs": 5,
+      "post_update_rms_mean_m": 3.76452300826817e-07,
+      "post_update_rms_seed_std_m": 8.829204094441138e-08,
+      "valid_fraction_mean": 0.8768830128205127,
+      "valid_fraction_seed_std": 0.035417680491493485,
+      "peak_strehl_mean": 0.5076232284404903,
+      "peak_strehl_seed_std": 0.08394445551312989,
+      "lost_lock_runs": 0
+    },
+    "reset m12": {
+      "runs": 5,
+      "post_update_rms_mean_m": 1.315691388374838e-06,
+      "post_update_rms_seed_std_m": 1.1083007940577182e-07,
+      "valid_fraction_mean": 0.0,
+      "valid_fraction_seed_std": 0.0,
+      "peak_strehl_mean": 0.019430976136286266,
+      "peak_strehl_seed_std": 0.004626411654954268,
+      "lost_lock_runs": 0
+    },
+    "guarded_fallback m10": {
+      "runs": 5,
+      "post_update_rms_mean_m": 1.8929181786989338e-07,
+      "post_update_rms_seed_std_m": 6.246420936627683e-09,
+      "valid_fraction_mean": 0.9975673076923076,
+      "valid_fraction_seed_std": 0.0018640927547090417,
+      "peak_strehl_mean": 0.7178328825023713,
+      "peak_strehl_seed_std": 0.013072035219349971,
+      "lost_lock_runs": 0
+    },
+    "guarded_fallback m11": {
+      "runs": 5,
+      "post_update_rms_mean_m": 1.8673143019398163e-06,
+      "post_update_rms_seed_std_m": 2.044957171604687e-07,
+      "valid_fraction_mean": 0.13521314102564103,
+      "valid_fraction_seed_std": 0.17457175784781837,
+      "peak_strehl_mean": 0.008345439690935413,
+      "peak_strehl_seed_std": 0.011239424598288045,
+      "lost_lock_runs": 5
+    },
+    "guarded_fallback m12": {
+      "runs": 5,
+      "post_update_rms_mean_m": 1.315691388374838e-06,
+      "post_update_rms_seed_std_m": 1.1083007940577182e-07,
+      "valid_fraction_mean": 0.0,
+      "valid_fraction_seed_std": 0.0,
+      "peak_strehl_mean": 0.019430976136286266,
+      "peak_strehl_seed_std": 0.004626411654954268,
+      "lost_lock_runs": 0
+    },
+    "gain_schedule m10": {
+      "runs": 5,
+      "post_update_rms_mean_m": 1.8929181786989338e-07,
+      "post_update_rms_seed_std_m": 6.246420936627683e-09,
+      "valid_fraction_mean": 0.9975673076923076,
+      "valid_fraction_seed_std": 0.0018640927547090417,
+      "peak_strehl_mean": 0.7178328825023713,
+      "peak_strehl_seed_std": 0.013072035219349971,
+      "lost_lock_runs": 0
+    },
+    "gain_schedule m11": {
+      "runs": 5,
+      "post_update_rms_mean_m": 1.92670343429497e-06,
+      "post_update_rms_seed_std_m": 1.8912110397930894e-07,
+      "valid_fraction_mean": 0.010786858974358974,
+      "valid_fraction_seed_std": 0.01333515270693866,
+      "peak_strehl_mean": 0.0007091871180144521,
+      "peak_strehl_seed_std": 0.00022014737603644544,
+      "lost_lock_runs": 5
+    },
+    "gain_schedule m12": {
+      "runs": 5,
+      "post_update_rms_mean_m": 1.315691388374838e-06,
+      "post_update_rms_seed_std_m": 1.1083007940577182e-07,
+      "valid_fraction_mean": 0.0,
+      "valid_fraction_seed_std": 0.0,
+      "peak_strehl_mean": 0.019430976136286266,
+      "peak_strehl_seed_std": 0.004626411654954268,
+      "lost_lock_runs": 0
+    }
+  },
+  "refused": [],
+  "wall_s": 1044.5266661643982
+}

@@ -474,3 +474,59 @@ def test_a_sensor_that_breaks_its_declared_locality_is_caught(calibrated):
         calibrate_sparse_interaction_matrix(
             basis, _Leaky(sensor), 2e-8, random_streams=NamedRandomStreams(SEED)
         )
+
+
+def test_subset_fallback_solves_below_the_primary_threshold_and_guards_actuators():
+    # Recovery fallback (controller.recovery): reconstruct_subset is the same
+    # Tikhonov solve under a lower threshold; the coverage guard solves only for
+    # actuators the usable rows still see, and holds the rest at zero.
+    rng = np.random.default_rng(8)
+    dense = np.zeros((24, 6))
+    for column in range(6):
+        dense[4 * column : 4 * column + 4, column] = rng.normal(size=4) + 2.0
+    dense[:, 5] += 0.1 * rng.normal(size=24)  # one actuator seen weakly everywhere
+    matrix = _matrix_from_dense(dense)
+    reconstructor = SparseLsmrReconstructor(
+        matrix, damping_relative=1e-6, atol=1e-14, btol=1e-14,
+        max_iterations=10_000, min_valid_fraction=0.5,
+    )
+    identity = reconstructor.config_hash
+    b = rng.normal(size=24)
+    full = _measurement(matrix, b)
+    np.testing.assert_array_equal(
+        reconstructor.reconstruct_subset(full, min_valid_fraction=0.5).delta_coordinates_opd_m,
+        reconstructor.reconstruct(full).delta_coordinates_opd_m,
+    )
+    valid = np.zeros(24, dtype=bool)
+    valid[:8] = True  # rows of actuators 0 and 1 only: a third of the rows
+    partial = _measurement(matrix, b, valid)
+    assert reconstructor.reconstruct(partial) is None
+    assert reconstructor.reconstruct_subset(partial, min_valid_fraction=0.4) is None
+    plain = reconstructor.reconstruct_subset(partial, min_valid_fraction=0.3)
+    expected = _tikhonov(dense[valid], b[valid], reconstructor.damping_absolute)
+    np.testing.assert_allclose(plain.delta_coordinates_opd_m, expected, rtol=1e-6, atol=1e-9)
+    np.testing.assert_array_equal(plain.usable_rows, valid)
+
+    guarded = reconstructor.reconstruct_subset(
+        partial, min_valid_fraction=0.3, min_actuator_coverage=0.5
+    )
+    x = guarded.delta_coordinates_opd_m
+    assert np.count_nonzero(x[2:]) == 0  # unseen and weakly seen actuators hold
+    solved = _tikhonov(dense[valid][:, :2], b[valid], reconstructor.damping_absolute)
+    np.testing.assert_allclose(x[:2], solved, rtol=1e-6, atol=1e-9)
+    np.testing.assert_allclose(
+        guarded.reconstructed_signal[valid], dense[valid][:, :2] @ x[:2], rtol=1e-12, atol=1e-12
+    )
+    nothing_seen = np.zeros(24, dtype=bool)
+    nothing_seen[[0, 4, 8, 12, 16, 20, 1, 5]] = True
+    assert (
+        reconstructor.reconstruct_subset(
+            _measurement(matrix, b, nothing_seen), min_valid_fraction=0.1, min_actuator_coverage=0.9
+        )
+        is None
+    )
+    with pytest.raises(SparseCalibrationError, match="min_actuator_coverage"):
+        reconstructor.reconstruct_subset(partial, min_valid_fraction=0.3, min_actuator_coverage=0.0)
+    with pytest.raises(SparseCalibrationError, match="min_valid_fraction"):
+        reconstructor.reconstruct_subset(partial, min_valid_fraction=1.5)
+    assert reconstructor.config_hash == identity

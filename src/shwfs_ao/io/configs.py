@@ -959,6 +959,89 @@ class CommandProjectorConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class RecoveryPolicyConfig:
+    """Opt-in closed-loop recovery when frames are rejected (``controller.recovery``, schema v7).
+
+    Without this block the loop freezes the DM on every frame the reconstructor
+    rejects (usable fraction below ``reconstructor.min_valid_fraction``), so
+    with zero leak it holds its last shape indefinitely.  Each knob is ``None``
+    (off) or set; at least one must be set.
+
+    ``rejected_frames_before_decay`` / ``decay_per_rejected_frame``
+        After that many consecutive frames with no usable increment, every
+        further such frame multiplies the DM command by
+        ``1 - decay_per_rejected_frame`` (``1`` resets it to flat).  Set both
+        or neither.
+    ``fallback_min_valid_fraction``
+        A frame the reconstructor rejects is reconstructed from its usable
+        rows alone when their fraction is at least this.  Sparse LSMR only.
+    ``fallback_min_actuator_coverage``
+        Guard for that fallback: only actuators whose usable rows keep at least
+        this fraction of their calibrated response energy are solved for; the
+        rest hold.  Needs ``fallback_min_valid_fraction``.
+    ``gain_full_valid_fraction``
+        Gain schedule: every used increment is scaled by
+        ``min(1, valid_fraction / gain_full_valid_fraction)``.
+    """
+
+    rejected_frames_before_decay: int | None
+    decay_per_rejected_frame: float | None
+    fallback_min_valid_fraction: float | None
+    fallback_min_actuator_coverage: float | None
+    gain_full_valid_fraction: float | None
+
+    def __post_init__(self) -> None:
+        if (self.rejected_frames_before_decay is None) != (self.decay_per_rejected_frame is None):
+            raise SystemConfigError(
+                "recovery.rejected_frames_before_decay and "
+                "recovery.decay_per_rejected_frame are set together or not at all."
+            )
+        if self.rejected_frames_before_decay is not None:
+            object.__setattr__(
+                self,
+                "rejected_frames_before_decay",
+                _integer(self.rejected_frames_before_decay, "rejected_frames_before_decay", minimum=0),
+            )
+            decay = _positive(self.decay_per_rejected_frame, "decay_per_rejected_frame")
+            if decay > 1.0:
+                raise SystemConfigError("recovery.decay_per_rejected_frame must be at most 1.")
+            object.__setattr__(self, "decay_per_rejected_frame", decay)
+        if self.fallback_min_valid_fraction is not None:
+            fallback = _positive(self.fallback_min_valid_fraction, "fallback_min_valid_fraction")
+            if fallback > 1.0:
+                raise SystemConfigError("recovery.fallback_min_valid_fraction must be at most 1.")
+            object.__setattr__(self, "fallback_min_valid_fraction", fallback)
+        if self.fallback_min_actuator_coverage is not None:
+            if self.fallback_min_valid_fraction is None:
+                raise SystemConfigError(
+                    "recovery.fallback_min_actuator_coverage guards the fallback "
+                    "and needs recovery.fallback_min_valid_fraction."
+                )
+            coverage = _positive(self.fallback_min_actuator_coverage, "fallback_min_actuator_coverage")
+            if coverage > 1.0:
+                raise SystemConfigError("recovery.fallback_min_actuator_coverage must be at most 1.")
+            object.__setattr__(self, "fallback_min_actuator_coverage", coverage)
+        if self.gain_full_valid_fraction is not None:
+            full = _positive(self.gain_full_valid_fraction, "gain_full_valid_fraction")
+            if full > 1.0:
+                raise SystemConfigError("recovery.gain_full_valid_fraction must be at most 1.")
+            object.__setattr__(self, "gain_full_valid_fraction", full)
+        if (
+            self.rejected_frames_before_decay is None
+            and self.fallback_min_valid_fraction is None
+            and self.gain_full_valid_fraction is None
+        ):
+            raise SystemConfigError(
+                "recovery sets no policy; omit the block to keep the "
+                "freeze-on-rejection loop."
+            )
+
+    @property
+    def config_hash(self) -> str:
+        return component_config_hash("scao.recovery_policy_config", self)
+
+
+@dataclass(frozen=True, slots=True)
 class ControllerConfig:
     n_steps: int
     gain: float
@@ -966,6 +1049,9 @@ class ControllerConfig:
     latency_frames: int
     frame_rate_hz: float
     include_noise: bool
+    # Optional schema-v7 recovery policy.  Absent from a record when null, so
+    # every record without one keeps its identity.
+    recovery: RecoveryPolicyConfig | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "n_steps", _integer(self.n_steps, "n_steps", minimum=1))
@@ -977,10 +1063,42 @@ class ControllerConfig:
         object.__setattr__(self, "latency_frames", _integer(self.latency_frames, "latency_frames", minimum=0))
         object.__setattr__(self, "frame_rate_hz", _positive(self.frame_rate_hz, "frame_rate_hz"))
         object.__setattr__(self, "include_noise", _boolean(self.include_noise, "include_noise"))
+        if self.recovery is not None and not isinstance(self.recovery, RecoveryPolicyConfig):
+            raise SystemConfigError("controller.recovery must be a RecoveryPolicyConfig.")
 
     @property
     def config_hash(self) -> str:
+        if self.recovery is None:
+            return component_config_hash(
+                "scao.controller_config",
+                _ControllerConfigWithoutRecovery(
+                    n_steps=self.n_steps,
+                    gain=self.gain,
+                    leak=self.leak,
+                    latency_frames=self.latency_frames,
+                    frame_rate_hz=self.frame_rate_hz,
+                    include_noise=self.include_noise,
+                ),
+            )
         return component_config_hash("scao.controller_config", self)
+
+
+@dataclass(frozen=True, slots=True)
+class _ControllerConfigWithoutRecovery:
+    """Hash shape of a ``controller`` block without a recovery policy.
+
+    The same declared fields, order and schema id as before the optional
+    policy existed, so records without one keep their identity.
+    """
+
+    __hash_schema_id__ = "shwfs_ao.io.configs.ControllerConfig"
+
+    n_steps: int
+    gain: float
+    leak: float
+    latency_frames: int
+    frame_rate_hz: float
+    include_noise: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -1339,6 +1457,26 @@ class SystemConfig:
                 f"record_schema_version={record_version} cannot express the "
                 "detector_physics block; record this configuration under schema 7."
             )
+        recovery = self.controller.recovery
+        if recovery is not None:
+            if record_version < 7:
+                raise SystemConfigError(
+                    f"record_schema_version={record_version} cannot express "
+                    "controller.recovery; record this configuration under schema 7."
+                )
+            fallback = recovery.fallback_min_valid_fraction
+            if fallback is not None:
+                if self.reconstructor.kind != "sparse_lsmr_tikhonov":
+                    raise SystemConfigError(
+                        "controller.recovery.fallback_min_valid_fraction needs "
+                        "reconstructor.kind='sparse_lsmr_tikhonov'."
+                    )
+                if fallback >= self.reconstructor.min_valid_fraction:
+                    raise SystemConfigError(
+                        "controller.recovery.fallback_min_valid_fraction must be "
+                        "below reconstructor.min_valid_fraction, or the fallback "
+                        "never runs."
+                    )
         if record_version >= 7:
             _validate_schema7_rules(self)
         object.__setattr__(self, "record_schema_version", record_version)
@@ -1631,7 +1769,7 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
         calibration=_construct(CalibrationConfig, values["calibration"], _CALIBRATION_FIELDS, "calibration"),
         reconstructor=_construct(ReconstructorConfig, values["reconstructor"], _RECONSTRUCTOR_FIELDS, "reconstructor"),
         command_projector=_construct(CommandProjectorConfig, values["command_projector"], _PROJECTOR_FIELDS, "command_projector"),
-        controller=_construct(ControllerConfig, values["controller"], _CONTROLLER_FIELDS, "controller"),
+        controller=_controller_config(values["controller"], schema_version),
         science=_construct(ScienceConfig, values["science"], _SCIENCE_FIELDS, "science"),
         random=_construct(RandomSeedConfig, values["random"], _RANDOM_FIELDS, "random"),
         profile=profile,
@@ -1708,7 +1846,7 @@ def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
             "calibration": _dataclass_mapping(config.calibration),
             "reconstructor": _dataclass_mapping(config.reconstructor),
             "command_projector": _dataclass_mapping(config.command_projector),
-            "controller": _dataclass_mapping(config.controller),
+            "controller": _controller_mapping(config.controller),
             "science": _dataclass_mapping(config.science),
             "random": _dataclass_mapping(config.random),
         },
@@ -1754,6 +1892,7 @@ _CALIBRATION_FIELDS = {"source", "method", "probe_kind", "amplitude_m", "include
 _RECONSTRUCTOR_FIELDS = {"kind", "rcond", "alpha", "min_valid_fraction", "min_rank", "max_cached_masks"}
 _PROJECTOR_FIELDS = {"kind", "mapping_resource"}
 _CONTROLLER_FIELDS = {"n_steps", "gain", "leak", "latency_frames", "frame_rate_hz", "include_noise"}
+_RECOVERY_FIELDS = {"rejected_frames_before_decay", "decay_per_rejected_frame", "fallback_min_valid_fraction", "fallback_min_actuator_coverage", "gain_full_valid_fraction"}
 _SCIENCE_FIELDS = {"psf_pad_factor"}
 _SCALABLE_FIELDS = {"dm_operator", "wfs_geometry", "calibration_strategy", "solver", "solver_atol", "solver_btol", "solver_max_iterations", "nonconverged_policy"}
 _RANDOM_FIELDS = {"root_seed", "derivation_scheme_id"}
@@ -1805,6 +1944,27 @@ def _detector_physics_config(value: object) -> DetectorPhysicsConfig:
         if isinstance(exc, SystemConfigError):
             raise
         raise SystemConfigError(f"invalid detector_physics: {exc}") from exc
+
+
+def _controller_config(value: object, schema_version: int) -> ControllerConfig:
+    # Only a schema-v7 record may carry the optional recovery block.
+    if schema_version < 7:
+        return cast(ControllerConfig, _construct(ControllerConfig, value, _CONTROLLER_FIELDS, "controller"))
+    mapping = dict(_mapping(value, "controller"))
+    _keys(mapping, _CONTROLLER_FIELDS | {"recovery"}, "controller", optional={"recovery"})
+    if "recovery" in mapping:
+        mapping["recovery"] = _construct(
+            RecoveryPolicyConfig, mapping["recovery"], _RECOVERY_FIELDS, "controller.recovery"
+        )
+    return cast(ControllerConfig, _construct(ControllerConfig, mapping, _CONTROLLER_FIELDS | {"recovery"}, "controller", optional_fields={"recovery"}))
+
+
+def _controller_mapping(config: ControllerConfig) -> dict[str, object]:
+    mapping = _dataclass_mapping(config)
+    recovery = mapping.pop("recovery")
+    if recovery is not None:
+        mapping["recovery"] = _dataclass_mapping(recovery)
+    return mapping
 
 
 def _detector_physics_mapping(config: DetectorPhysicsConfig) -> dict[str, object]:
@@ -2053,6 +2213,7 @@ __all__ = (
     "CommandProjectorConfig",
     "ScalablePathConfig",
     "ControllerConfig",
+    "RecoveryPolicyConfig",
     "ScienceConfig",
     "RandomSeedConfig",
     "SystemConfig",

@@ -36,6 +36,7 @@ from ..core.types import (
 )
 from ..core.wavefront import masked_rms
 from .config import LoopConfig
+from .recovery import ClosedLoopRecoveryPolicy
 from .observation import (
     FrameObservation,
     FrameObservationError,
@@ -132,6 +133,7 @@ def run_closed_loop(
     observers: Sequence[FrameObserver] = (),
     exposure_subsamples: int = 1,
     exposure_s: float | None = None,
+    recovery: ClosedLoopRecoveryPolicy | None = None,
 ) -> LoopHistory:
     """Run one deterministic, fixed-length canonical AO control sequence.
 
@@ -142,6 +144,15 @@ def run_closed_loop(
     and applies detector noise once.  With ``n = 1`` the loop makes exactly one
     atmosphere call per frame at ``t``, as always.  The frame's residual metrics
     always use the ``j = 0`` sample.
+
+    ``recovery`` (opt-in, default ``None``) is a
+    :class:`~shwfs_ao.control.recovery.ClosedLoopRecoveryPolicy`.  It may
+    reconstruct a rejected frame from its usable rows, scale each used
+    increment by the frame's valid fraction, and decay the requested command
+    after consecutive frames with no usable increment.  Its identity joins the
+    run's component hashes, and the history metadata records how many frames
+    used the fallback or decayed.  Without it, every rejected frame holds the
+    DM apart from the controller's leak.
 
     Frame ``k`` samples the atmosphere exactly once at
     ``k / config.frame_rate_hz``.  Both residual metrics for that frame use
@@ -183,6 +194,18 @@ def run_closed_loop(
             raise ControlLoopError(
                 "exposure sub-samples need a WFS that provides measure_exposure."
             )
+    if recovery is not None:
+        if not isinstance(recovery, ClosedLoopRecoveryPolicy):
+            raise ControlLoopError("recovery must be a ClosedLoopRecoveryPolicy.")
+        fallback_reconstructor = recovery.fallback_reconstructor
+        if (
+            fallback_reconstructor is not None
+            and fallback_reconstructor.matrix_hash != interaction_matrix.matrix_hash
+        ):
+            raise ControlLoopError(
+                "recovery fallback reconstructor matrix hash must match the "
+                "interaction matrix."
+            )
     try:
         frame_observers, observed_fields = validate_frame_observers(observers)
     except FrameObservationError as exc:
@@ -199,6 +222,11 @@ def run_closed_loop(
         command_projector=command_projector,
         controller=controller,
     )
+    if recovery is not None:
+        component_hashes["recovery"] = _nonempty_text(
+            recovery.config_hash,
+            label="recovery.config_hash",
+        )
     random_derivation_scheme_id = _nonempty_text(
         random_streams.derivation_scheme_id,
         label="random_streams.derivation_scheme_id",
@@ -242,6 +270,8 @@ def run_closed_loop(
     if atmosphere_realization_stream_id is not None:
         random_stream_ids["atmosphere"] = atmosphere_realization_stream_id
     controller.reset()
+    if recovery is not None:
+        recovery.reset()
 
     initial_request = DmCommandVector(
         values_opd_m=np.zeros(n_actuators, dtype=float),
@@ -370,6 +400,8 @@ def run_closed_loop(
             )
 
         estimate = reconstructor.reconstruct(vector)
+        if estimate is None and recovery is not None:
+            estimate = recovery.fallback(vector)
         if estimate is None:
             projected_delta = None
             delta_norm = 0.0
@@ -386,6 +418,13 @@ def run_closed_loop(
                 expected_actuator_ids=actuator_ids,
                 label="projected command increment",
             )
+            if recovery is not None:
+                projected_delta = recovery.scaled_increment(
+                    projected_delta,
+                    valid_fraction=(
+                        float(np.count_nonzero(effective_rows)) / calibration_valid_count
+                    ),
+                )
             delta_norm = _l2_norm(projected_delta.values_opd_m)
             usable = True
 
@@ -395,6 +434,8 @@ def run_closed_loop(
             expected_actuator_ids=actuator_ids,
             label="controller requested command",
         )
+        if recovery is not None:
+            requested = recovery.supervised_request(requested, increment_used=usable)
         released = _released_delta(controller, expected_actuator_ids=actuator_ids)
         synthesis = _synthesize(
             dm,
@@ -494,6 +535,11 @@ def run_closed_loop(
         metadata["atmosphere_realization_stream_id"] = (
             atmosphere_realization_stream_id
         )
+    if recovery is not None:
+        metadata["recovery"] = {
+            "config_hash": recovery.config_hash,
+            **recovery.statistics,
+        }
     history = LoopHistory(
         time_s=time_s,
         open_loop_opd_rms_m=open_loop_rms,

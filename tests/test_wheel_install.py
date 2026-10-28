@@ -215,6 +215,10 @@ CONTROL_HISTORY_EXPORTS = (
     "LoopHistoryError",
     "LoopHistory",
 )
+CONTROL_RECOVERY_EXPORTS = (
+    "RecoveryPolicyError",
+    "ClosedLoopRecoveryPolicy",
+)
 CONTROL_LOOP_EXPORTS = (
     "ControlLoopError",
     "ControlLoopWarning",
@@ -241,6 +245,7 @@ CONTROL_EXPORTS = (
     *CONTROL_COMMAND_MAPPING_EXPORTS,
     *CONTROL_CONTROLLER_EXPORTS,
     *CONTROL_HISTORY_EXPORTS,
+    *CONTROL_RECOVERY_EXPORTS,
     *CONTROL_OBSERVATION_EXPORTS,
     *CONTROL_LOOP_EXPORTS,
     *CONTROL_SWEEP_EXPORTS,
@@ -454,6 +459,7 @@ CONFIG_EXPORTS = (
     "CommandProjectorConfig",
     "ScalablePathConfig",
     "ControllerConfig",
+    "RecoveryPolicyConfig",
     "ScienceConfig",
     "RandomSeedConfig",
     "SystemConfig",
@@ -754,6 +760,7 @@ def _assert_wheel_layout(
         "shwfs_ao/control/history.py",
         "shwfs_ao/control/loop.py",
         "shwfs_ao/control/observation.py",
+        "shwfs_ao/control/recovery.py",
         "shwfs_ao/control/sweeps.py",
         "shwfs_ao/core/__init__.py",
         "shwfs_ao/core/geometry.py",
@@ -1606,6 +1613,7 @@ def test_direct_wheel_and_sdist_wheel_have_identical_installed_contract(tmp_path
         "src/shwfs_ao/control/history.py",
         "src/shwfs_ao/control/loop.py",
         "src/shwfs_ao/control/observation.py",
+        "src/shwfs_ao/control/recovery.py",
         "src/shwfs_ao/control/sweeps.py",
         "src/shwfs_ao/core/__init__.py",
         "src/shwfs_ao/core/geometry.py",
