@@ -24,6 +24,7 @@ from shwfs_ao.io.configs import (
     ScienceConfig,
     SystemConfig,
     WfsConfig,
+    load_system_profile,
     system_config_from_mapping,
     system_config_to_mapping,
 )
@@ -206,6 +207,53 @@ def test_one_experiment_runner_executes_tiny_geometric_and_detector_systems(
     assert np.all(np.isfinite(history.post_update_residual_opd_rms_m))
     assert history.post_update_residual_opd_rms_m[-1] < (
         history.pre_update_residual_opd_rms_m[0]
+    )
+
+
+@pytest.mark.parametrize("realization_index", (0, 1))
+def test_portfolio_2m_detector_v4_reconstructs_every_frame(
+    realization_index: int,
+) -> None:
+    """``portfolio_2m_detector@4`` reconstructs every frame with clipping margin.
+
+    ``@3`` reads its lenslets through a 20 px window that the unpinned
+    atmosphere fills: its shipped run (realization 0) peaks at the 15 %
+    clipping limit, and on realization 1 of the same root seed lenslets clip
+    past it, so the ``min_valid_fraction=1.0`` reconstructor drops 14 of the
+    150 frames.  ``@4`` is the same profile with a 28 px window.
+    """
+
+    config = load_system_profile("portfolio_2m_detector", 4)
+    # One invalid lenslet makes its frame unreconstructable, so reconstructing
+    # every frame means no lenslet ever clips past the limit.
+    assert config.reconstructor.min_valid_fraction == 1.0
+    system = scao.build_scao_system(config)
+
+    history = scao.run_closed_loop(
+        config,
+        system=system,
+        realization_index=realization_index,
+    )
+
+    assert history.reconstruction_usable.all()
+    np.testing.assert_array_equal(history.valid_subaperture_fraction, 1.0)
+    settled = slice(history.n_steps // 2, None)
+    closed = float(np.mean(history.post_update_residual_opd_rms_m[settled]))
+    open_loop = float(np.mean(history.open_loop_opd_rms_m[settled]))
+    assert closed < 0.8 * open_loop
+
+    # Frame 0 is measured before any correction, so it is the open-loop state
+    # the loop acquires from; @3 already spends most of its clipping budget
+    # there.
+    system.atmosphere.reset(realization_index=realization_index)
+    first_frame = system.wfs.measure(
+        system.atmosphere.opd_at(0.0),
+        random_streams=system.random_streams,
+        include_noise=config.controller.include_noise,
+    ).detector_telemetry
+    assert first_frame is not None
+    assert np.max(first_frame.clipping_fraction) < (
+        0.5 * config.wfs.max_window_clipping_fraction
     )
 
 

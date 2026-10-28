@@ -116,6 +116,43 @@ detector conditions independently of numerical grid size and run length.
 Changing resolution therefore changes the full configuration hash without
 masquerading as a change in observing difficulty.
 
+## `portfolio_2m_detector@4`
+
+`portfolio_2m_detector@3` measures each 0.29 m lenslet through a 20 px
+detector window on its 33 px FFT canvas: 6.2 λ/d, or 4.1 λ/r0 at the 700 nm
+WFS wavelength, where its unpinned atmosphere gives d/r0 = 1.5.  That window
+leaves no clipping margin.  A flat wavefront already loses 4.5–8.5 % of each
+spot outside it, against a 15 % `max_window_clipping_fraction`, and the
+shipped run peaks at 0.150.  A lenslet over the limit is invalid, and with
+`min_valid_fraction = 1.0` its frame is not reconstructed.  Over root seeds
+1–10 × realizations 0–2, 20 of the 30 runs drop frames, up to 41 % of one
+run, and one run loses its first four frames.  Window clipping is the only
+criterion that ever rejects.  Against the same realization run with a wider
+window, the dropped frames cost at most 3.2 % of settled residual RMS, so `@3`
+lacks robustness rather than accuracy.  It never locks out and stays
+published unchanged.
+
+The window has to cover more than the open-loop spots.  The lenslets that clip
+most are the least-filled edge lenslets (41 % pupil fill, just above
+`min_fill_fraction = 0.35`), whose smaller apertures give the broadest spots,
+and closing the loop does not relieve them: they can clip more than on the
+uncorrected screen.  The largest excursion sampled is a convergence transient,
+during which the DM command peaks and an edge actuator reaches its stroke limit.
+Over 90 runs (root seeds 1–30 × realizations 0–2), a 24 px window still drops
+five frames of that run, clipping 0.184 where its uncorrected screen never
+exceeds 0.101, and 26 px drops none but reaches 0.134 in the same transient.
+
+`@4` is `@3` with a 28 px window (8.7 λ/d, 5.8 λ/r0) and nothing else
+changed.  Its observing-conditions hash equals `@3`'s, and only the `profile`
+and `wfs` component hashes move.  It is the narrowest even window that, over
+those 90 runs, rejects no frame in closed loop or on the uncorrected screen
+while keeping the worst lenslet within 80 % of the limit: clipping stays at or
+below 0.091 in closed loop and 0.069 on the uncorrected screen.  Peak SNR and
+centroid uncertainty stay far inside their limits (at least 8.5 against 3, at
+most 0.071 px against 0.5 px), and the settled residual RMS matches `@3`'s
+within 3 % on every shared realization.  Start new portfolio-scale work from
+`@4`.
+
 ## Fail-closed construction
 
 Interaction-matrix resolution policy is explicit:

@@ -52,6 +52,7 @@ _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
     ("portfolio_2m_detector", 1): "synthetic_presets/portfolio_2m_detector.v1.json",
     ("portfolio_2m_detector", 2): "synthetic_presets/portfolio_2m_detector.v2.json",
     ("portfolio_2m_detector", 3): "synthetic_presets/portfolio_2m_detector.v3.json",
+    ("portfolio_2m_detector", 4): "synthetic_presets/portfolio_2m_detector.v4.json",
     ("research_2m_detector", 1): "synthetic_presets/research_2m_detector.v1.json",
     ("research_2m_detector", 2): "synthetic_presets/research_2m_detector.v2.json",
     ("research_2m_detector", 3): "synthetic_presets/research_2m_detector.v3.json",

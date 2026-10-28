@@ -47,6 +47,7 @@ EXPECTED_PROFILES = (
     ("portfolio_2m_detector", 1),
     ("portfolio_2m_detector", 2),
     ("portfolio_2m_detector", 3),
+    ("portfolio_2m_detector", 4),
     ("research_2m_detector", 1),
     ("research_2m_detector", 2),
     ("research_2m_detector", 3),
@@ -315,6 +316,7 @@ def test_every_packaged_profile_identity_is_pinned() -> None:
         ("high_order_10m_geometric", 3): "4a7d80b09c861a78f45f5a3c472f63d1bff619bcaa891050b95487c6a8f9f0ca",
         ("high_order_10m_hcipy", 3): "bc73f30b8d37a1dcc5603f8d2007d9e69daf02e54ced8898eef53afb7153e65c",
         ("fast_2m_detector", 4): "8c2c96a97b464fee1cd26d3eecd665f31d0df4b4a036198c6a03d8cd4b898f46",
+        ("portfolio_2m_detector", 4): "52463b37fdba955c84faa639278a569234b4692f0bf3a5cc3e54a4c9693f8e13",
     }
     observed = {
         key: load_system_profile(*key).config_hash for key in available_system_profiles()
@@ -356,8 +358,10 @@ def test_every_packaged_nested_wfs_identity_is_pinned() -> None:
         ("research_2m_detector", 3): "241f18d74988683fab9b4e8d748a86d11e5482bc6020d338a0d66b24c0b6c469",
         ("high_order_10m_geometric", 3): "0dca580f4af5fccdf3ba0126a697f1549fd11753c93c97d121faa148aa72584a",
         ("high_order_10m_hcipy", 3): "45b4f2e0544cdab27e89ef1e88caed8b86c9012270cdfd1e1a7e4a45e64b6078",
-        # v4 widens the fast detector window, so its WFS identity moves.
+        # v4 widens the fast and portfolio detector windows, so their WFS
+        # identities move.
         ("fast_2m_detector", 4): "beec50d4ead5615c7ff5d19c71b26ffbe07540eafdcb991e0422fdf1010f34b6",
+        ("portfolio_2m_detector", 4): "cbe410044085adb9dc0d8b2c5535a36c54ce6e01f9b7b352d4ddf94ea49274e9",
     }
     observed = {
         key: load_system_profile(*key).component_config_hashes["wfs"]
@@ -491,6 +495,50 @@ def test_2m_profiles_change_scale_without_changing_observing_conditions() -> Non
     assert all(p.detector.photons_per_subap_frame == 8000.0 for p in profiles)
     assert all(p.detector.read_noise_e == 1.0 for p in profiles)
     assert all(p.atmosphere.r0_m == profiles[0].atmosphere.r0_m for p in profiles)
+
+
+def test_portfolio_2m_detector_v4_is_v3_with_only_a_wider_detector_window() -> None:
+    """@3 stays frozen as published; @4 changes exactly one reviewed value.
+
+    The 20 px window of @3 leaves no clipping margin under its unpinned
+    atmosphere: lenslets clip past the limit, and the
+    ``min_valid_fraction=1.0`` reconstructor drops frames in most sampled
+    atmosphere realizations (``docs/refactor/AO_REF_011_SCAO.md``).  Widening
+    it in place would relabel every result that cites @3, so the 28 px window
+    is a new version under otherwise identical physics, and
+    ``tests/experiments/test_scao.py`` checks that it reconstructs every frame.
+    """
+
+    v3 = load_system_profile("portfolio_2m_detector", 3)
+    v4 = load_system_profile("portfolio_2m_detector", 4)
+    assert (v3.wfs.detector_window_px, v4.wfs.detector_window_px) == (20, 28)
+
+    v3_record = system_config_to_mapping(v3)
+    v4_record = system_config_to_mapping(v4)
+    widened = copy.deepcopy(v3_record["config"])
+    widened["wfs"]["detector_window_px"] = 28
+    assert v4_record["config"] == widened
+    # Outside the configuration only the published identity and its account
+    # of the change differ: the record schema, the profile name, and the
+    # provenance's source class and note are @3's.
+    assert {key for key in v3_record if v4_record[key] != v3_record[key]} == {
+        "profile_version",
+        "baseline_rationale",
+        "provenance",
+        "config",
+    }
+    assert {
+        key
+        for key in v3_record["provenance"]
+        if v4_record["provenance"][key] != v3_record["provenance"][key]
+    } == {"source_id", "references"}
+
+    assert v4.observing_conditions_hash == v3.observing_conditions_hash
+    assert {
+        key
+        for key, value in v4.component_config_hashes.items()
+        if value != v3.component_config_hashes[key]
+    } == {"profile", "wfs"}
 
 
 def test_high_order_profile_matches_notebook_09_extreme_mode_in_si_units() -> None:
