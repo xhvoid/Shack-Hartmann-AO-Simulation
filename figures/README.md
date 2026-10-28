@@ -8,13 +8,22 @@ without recomputing or editing the image.
 
 | Figure | Source notebook | Source cell ID |
 | --- | --- | --- |
+| [Sensor calibration](canonical_sensor_calibration.png) | [Tutorial 01](../notebooks/tutorials/01_geometric_shwfs.ipynb) | `040f62ee` |
+| [Detector precision and availability](canonical_detector_centroiding.png) | [Tutorial 02](../notebooks/tutorials/02_detector_centroiding.ipynb) | `c9ff2808` |
 | [Closed-loop correction](canonical_closed_loop_control.png) | [Tutorial 04](../notebooks/tutorials/04_closed_loop_control.ipynb) | `f3661b4a` |
 | [TSVD reconstruction](canonical_tsvd_regularization.png) | [Tutorial 03](../notebooks/tutorials/03_tsvd_regularization.ipynb) | `8489efca` |
+| [Correction-order comparison](canonical_correction_order.png) | [High-order SCAO study](../notebooks/studies/high_order_scao.ipynb) | `2e99ae6f` |
+| [Gain and latency](canonical_gain_latency.png) | [Gain/delay study](../notebooks/studies/noise_latency_gain.ipynb) | `5f7971a4` |
 
-Both are taken directly from the sole `image/png` output in the named
-notebook's plot cell. The closed-loop example is a 12-frame noiseless native
+All six are taken directly from the sole `image/png` output in the named
+notebook's plot cell. No image is resized, recoloured or otherwise edited
+during extraction. The closed-loop example is a 12-frame noiseless native
 simulation; the TSVD scan uses one command and measurement-noise realization.
-Their captions and interpretation remain in the source notebooks.
+The detector scan uses 12 realizations per photon budget and reports precision
+only over valid components, alongside availability. The correction-order and
+gain/delay studies retain their full 14- and 16-frame configurations, respectively,
+with detector noise disabled. Their captions and interpretation remain in the
+source notebooks.
 
 ## Current TIPTOP study
 
