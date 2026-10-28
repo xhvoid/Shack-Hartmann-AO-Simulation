@@ -156,9 +156,15 @@ def test_the_statistical_comparison_documents_its_estimator(report):
     )
     definition = atmosphere["statistical_definition"]
     realizations = CrossBackendConfig().atmosphere_realizations
-    assert f"{realizations} independent realizations" in definition
-    assert "estimator" in definition
-    assert "uncertainty" in definition
+    # Read as fields rather than searched for as words: the suite must record
+    # the realization count it actually ran, not a number that happens to
+    # appear in a sentence beside it.
+    assert definition["sample_count"] == realizations
+    assert definition["estimator"].strip()
+    assert definition["uncertainty_method"].strip()
+    assert definition["bins_or_lags"]["kind"].strip()
+    assert definition["bins_or_lags"]["values"]
+    assert f"{realizations} independent realizations" in definition["narrative"]
 
 
 def test_recorded_fixtures_are_consumed_and_dispersion_is_recorded(report):
@@ -194,7 +200,9 @@ def test_recorded_fixtures_are_consumed_and_dispersion_is_recorded(report):
         for comparison in report["comparisons"]
         if comparison["comparison_kind"] == "atmosphere_statistics"
     )["statistical_definition"]
-    assert "three standard errors" in definition
+    assert "three" in definition["uncertainty_method"]
+    assert "standard error" in definition["uncertainty_method"]
+    assert "three standard errors" in definition["narrative"]
 
 
 def test_the_report_round_trips_into_a_valid_baseline_without_writing(

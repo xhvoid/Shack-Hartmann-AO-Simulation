@@ -101,6 +101,11 @@ def _candidate_document() -> dict:
         # exists, so a placeholder hash is no longer an acceptable stand-in.
         "source_commit": script._source_commit(),
         "source_tree_clean": True,
+        # Written unconditionally by generation — null is the recorded evidence
+        # that the tree matched HEAD, not the absence of evidence — so a
+        # fixture that omitted it would diff against every real baseline on a
+        # field neither document actually disagrees about.
+        "source_patch_sha256": None,
     }
     return document
 
@@ -216,10 +221,26 @@ class TestDiffContentCompleteness:
         self,
         packaged_tree,
     ):
-        # The synthetic candidate differs from the packaged baseline only in
-        # its generator commit, so the complete structural diff must contain
-        # exactly that path: everything else is covered and unchanged.
+        # Regenerating at the commit the packaged baseline was accepted at
+        # produces a candidate that differs from it in nothing at all, so the
+        # diff must be empty rather than reporting a change it cannot name.
         document = _candidate_document()
+        unchanged = script._build_diff(
+            document, script._canonical_bytes(document)
+        )
+        assert unchanged["changes"] == []
+
+        # Moved to a different real commit and otherwise untouched, the
+        # complete structural diff must contain exactly that one path:
+        # everything else is covered and genuinely unchanged.  A real commit,
+        # because acceptance verifies the object exists.
+        document["generator"]["source_commit"] = subprocess.run(
+            ["git", "rev-parse", "HEAD~1"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
         diff = script._build_diff(document, script._canonical_bytes(document))
         assert [entry["path"] for entry in diff["changes"]] == [
             "generator.source_commit"
