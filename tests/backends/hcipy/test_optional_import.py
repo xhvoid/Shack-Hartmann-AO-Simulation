@@ -28,6 +28,10 @@ from shwfs_ao.backends.hcipy.atmosphere import (
     HcipyAtmosphereError,
     HcipyVonKarmanAtmosphere,
 )
+from shwfs_ao.backends.hcipy.dm import (
+    HcipyDmError,
+    build_hcipy_deformable_mirror,
+)
 from shwfs_ao.core.geometry import build_pupil_geometry
 
 
@@ -35,6 +39,7 @@ HCIPY_INSTALLED = hcipy_installed()
 _HCIPY_MARKED_TEST_FILES = (
     Path(__file__).with_name("test_conversion.py"),
     Path(__file__).with_name("test_hcipy_atmosphere.py"),
+    Path(__file__).with_name("test_hcipy_dm.py"),
 )
 
 
@@ -57,7 +62,9 @@ def test_importing_shwfs_ao_never_imports_hcipy_eagerly():
         "import shwfs_ao.backends.hcipy\n"
         "import shwfs_ao.backends.hcipy.conversion\n"
         "import shwfs_ao.backends.hcipy.atmosphere\n"
+        "import shwfs_ao.backends.hcipy.dm\n"
         "from shwfs_ao.backends.hcipy import HcipyAtmosphereConfig\n"
+        "from shwfs_ao.backends.hcipy import HcipyDmError\n"
         "import shwfs_ao.experiments.scao\n"
         "import shwfs_ao.io.configs\n"
         "raise SystemExit(1 if 'hcipy' in sys.modules else 0)\n"
@@ -100,10 +107,14 @@ def test_hcipy_marked_tests_never_enter_the_native_selection(test_file):
     assert "::" not in result.stdout
 
 
-def test_atmosphere_module_never_imports_legacy_code():
-    import shwfs_ao.backends.hcipy.atmosphere as atmosphere_module
+@pytest.mark.parametrize("module_name", ("atmosphere", "dm"))
+def test_hcipy_backend_modules_never_import_legacy_code(module_name):
+    import importlib
 
-    source_file = inspect.getsourcefile(atmosphere_module)
+    module = importlib.import_module(
+        f"shwfs_ao.backends.hcipy.{module_name}"
+    )
+    source_file = inspect.getsourcefile(module)
     assert source_file is not None
     tree = ast.parse(Path(source_file).read_text(encoding="utf-8"))
     imported_modules = {
@@ -180,4 +191,38 @@ class TestWithoutHcipy:
                 HcipyAtmosphereConfig.single_layer(r0_m=0.15),
                 geometry,
                 pupil_mask=np.ones((4, 4), dtype=bool),
+            )
+
+    def test_dm_construction_raises_optional_dependency_error(self):
+        geometry = build_pupil_geometry(
+            telescope_diameter_m=1.0,
+            pupil_shape=(8, 8),
+        )
+        with pytest.raises(OptionalDependencyError) as excinfo:
+            build_hcipy_deformable_mirror(
+                geometry.x_m,
+                geometry.y_m,
+                geometry.pupil_mask,
+            )
+        assert "pip install 'shack-hartmann-ao-simulation[hcipy]'" in str(
+            excinfo.value
+        )
+
+    def test_dm_validation_precedes_the_dependency_requirement(self):
+        geometry = build_pupil_geometry(
+            telescope_diameter_m=1.0,
+            pupil_shape=(8, 8),
+        )
+        with pytest.raises(HcipyDmError, match="DMConfig"):
+            build_hcipy_deformable_mirror(
+                geometry.x_m,
+                geometry.y_m,
+                geometry.pupil_mask,
+                config=object(),
+            )
+        with pytest.raises(HcipyDmError, match="shape"):
+            build_hcipy_deformable_mirror(
+                geometry.x_m,
+                geometry.y_m,
+                np.ones((4, 4), dtype=bool),
             )

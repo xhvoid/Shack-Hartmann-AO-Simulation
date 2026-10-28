@@ -35,6 +35,11 @@ __all__ = (
     "HcipyAtmosphereLayerConfig",
     "HcipyAtmosphereConfig",
     "HcipyVonKarmanAtmosphere",
+    "SURFACE_COMMAND_CONVENTION",
+    "HcipyDmError",
+    "HcipyDmBackend",
+    "build_hcipy_gaussian_influence_basis",
+    "build_hcipy_deformable_mirror",
 )
 
 
@@ -48,6 +53,18 @@ _EXPORT_MODULE = {
         "HcipyVonKarmanAtmosphere",
     )
 }
+_EXPORT_MODULE.update(
+    {
+        name: "dm"
+        for name in (
+            "SURFACE_COMMAND_CONVENTION",
+            "HcipyDmError",
+            "HcipyDmBackend",
+            "build_hcipy_gaussian_influence_basis",
+            "build_hcipy_deformable_mirror",
+        )
+    }
+)
 
 
 def __getattr__(name: str) -> Any:
