@@ -99,7 +99,11 @@ Interaction-matrix resolution policy is explicit:
 Missing or invalid supplied/resource matrices are errors and never trigger a
 recalibration fallback.  Geometry, WFS row IDs, DM identity, reconstruction
 coordinates, projector layout, controller settings, and random-root identity
-are checked before the first frame.  An unavailable optional backend such as
+are checked before the first frame.  A supplied or resource matrix must also
+record a `sensor_response_hash` equal to the constructed WFS `response_hash`
+(optics backend, WFS wavelength, padding and window sampling, centroid
+estimator and threshold); photon and read-noise settings are outside that
+identity, and a matrix that records none is rejected rather than trusted.  An unavailable optional backend such as
 `hcipy` also raises a construction error; it never substitutes the native
 backend.
 

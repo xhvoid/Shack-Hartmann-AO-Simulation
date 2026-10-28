@@ -143,6 +143,27 @@ class DetectorShackHartmannSensor:
                 "noise_stream_identity": noise_stream_identity,
             },
         )
+        # The response identity binds only what shapes the noiseless
+        # OPD-to-centroid transfer: the optics (backend, WFS wavelength,
+        # padding and detector-window sampling) and the centroid estimator
+        # with its threshold.  Photometry, noise, and validity settings are
+        # deliberately absent, so photon and read-noise operating-point scans
+        # may reuse one interaction-matrix calibration while a sampling or
+        # estimator change cannot.
+        self._response_hash = component_config_hash(
+            "detector_shack_hartmann_response",
+            {
+                "geometry_hash": calibration.geometry.geometry_hash,
+                "backend_name": backend_name,
+                "backend_config_hash": backend_hash,
+                "wfs_wavelength_m": calibration.wfs_wavelength_m,
+                "detector_sampling_hash": (
+                    calibration.detector_sampling.sampling_hash
+                ),
+                "centroid_config": calibration.centroid_config,
+                "measurement_unit": calibration.measurement_unit,
+            },
+        )
 
     @classmethod
     def calibrate(
@@ -233,6 +254,16 @@ class DetectorShackHartmannSensor:
     @property
     def config_hash(self) -> str:
         return self._config_hash
+
+    @property
+    def response_hash(self) -> str:
+        """Identity of the optical response an interaction matrix calibrates.
+
+        Unlike :attr:`config_hash` it omits photometric and noise settings,
+        which leave the noiseless response unchanged.
+        """
+
+        return self._response_hash
 
     @property
     def row_ids(self) -> tuple[str, ...]:

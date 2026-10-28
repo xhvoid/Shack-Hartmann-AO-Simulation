@@ -524,6 +524,21 @@ def _preflight(
         raise ControlLoopError(
             "wfs.row_ids must exactly match interaction-matrix row IDs and ordering."
         )
+    # Photon and read-noise operating points may differ from the calibration
+    # sensor, but its optical response may not.  Both sides must declare a
+    # response identity for it to be compared; structural components that
+    # declare none keep the row-and-unit contract alone.
+    wfs_response_hash = getattr(wfs, "response_hash", None)
+    if (
+        interaction_matrix.sensor_response_hash is not None
+        and wfs_response_hash is not None
+        and wfs_response_hash != interaction_matrix.sensor_response_hash
+    ):
+        raise ControlLoopError(
+            "wfs.response_hash must equal interaction_matrix."
+            "sensor_response_hash; the runtime WFS may differ from the "
+            "calibration sensor only in detector photometry and noise."
+        )
     if command_projector.input_coordinate_ids != interaction_matrix.coordinate_ids:
         raise ControlLoopError(
             "projector input IDs must exactly match interaction-matrix coordinates."

@@ -172,10 +172,27 @@ class NativeGeometricShackHartmannSensor:
             },
             namespace="wavefront_sensor_config",
         )
+        # The reference slopes only offset the measurement, so the response
+        # an interaction matrix calibrates is fixed by geometry and algorithm.
+        self._response_hash = stable_hash(
+            {
+                "sensor": "native_geometric_shack_hartmann",
+                "geometry_hash": calibration.geometry.geometry_hash,
+                "algorithm": "masked_finite_difference_mean_v1",
+                "measurement_unit": "rad_wavefront_slope",
+            },
+            namespace="wavefront_sensor_response",
+        )
 
     @property
     def config_hash(self) -> str:
         return self._config_hash
+
+    @property
+    def response_hash(self) -> str:
+        """Identity of the optical response an interaction matrix calibrates."""
+
+        return self._response_hash
 
     @property
     def row_ids(self) -> tuple[str, ...]:

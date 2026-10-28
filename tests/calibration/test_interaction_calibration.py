@@ -554,6 +554,7 @@ def test_result_field_identity_hash_serialization_and_immutability() -> None:
         "dm_hash",
         "calibration_hash",
         "provenance",
+        "sensor_response_hash",
     )
     assert interaction_matrix_hash(result) == result.calibration_hash
 
@@ -603,3 +604,54 @@ def test_result_field_identity_hash_serialization_and_immutability() -> None:
     ambiguous_mask["row_valid"] = [1, 0, 1]
     with pytest.raises(InteractionMatrixError, match="row_valid"):
         InteractionMatrix.from_record(ambiguous_mask)
+
+
+def test_a_declared_sensor_response_identity_is_bound_and_serialized() -> None:
+    """The matrix records which optical response it calibrated, fail-closed.
+
+    A sensor that declares ``response_hash`` stamps it into the content hash;
+    one that declares none, like a record written before the field existed,
+    yields an unbound matrix whose historical content hash is unchanged.
+    """
+
+    basis = _orthogonal_modal_basis()
+    sensor = _projection_sensor(basis)
+    unbound = calibrate_interaction_matrix(
+        basis,
+        sensor,
+        5.0e-9,
+        random_streams=NamedRandomStreams(808),
+    )
+    sensor.response_hash = "projection-sensor-response-v1"  # type: ignore[attr-defined]
+    bound = calibrate_interaction_matrix(
+        basis,
+        sensor,
+        5.0e-9,
+        random_streams=NamedRandomStreams(808),
+    )
+
+    assert unbound.sensor_response_hash is None
+    assert bound.sensor_response_hash == "projection-sensor-response-v1"
+    # The identity changes no sample, only the content it is hashed with.
+    np.testing.assert_array_equal(bound.matrix, unbound.matrix)
+    assert bound.calibration_hash != unbound.calibration_hash
+    assert interaction_matrix_hash(bound) == bound.calibration_hash
+
+    restored = InteractionMatrix.from_record(bound.to_record())
+    assert restored.sensor_response_hash == bound.sensor_response_hash
+    assert restored.calibration_hash == bound.calibration_hash
+
+    tampered = bound.to_record()
+    tampered["sensor_response_hash"] = "another-sensor-response"
+    with pytest.raises(InteractionMatrixError, match="calibration_hash"):
+        InteractionMatrix.from_record(tampered)
+    stripped = bound.to_record()
+    del stripped["sensor_response_hash"]
+    with pytest.raises(InteractionMatrixError, match="calibration_hash"):
+        InteractionMatrix.from_record(stripped)
+
+    legacy = unbound.to_record()
+    assert legacy.pop("sensor_response_hash") is None
+    loaded = InteractionMatrix.from_record(legacy)
+    assert loaded.sensor_response_hash is None
+    assert loaded.calibration_hash == unbound.calibration_hash

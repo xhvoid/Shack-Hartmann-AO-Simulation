@@ -502,6 +502,7 @@ def build_scao_system(
             "interaction-matrix geometry_hash must match the constructed WFS "
             "geometry before the first frame."
         )
+    _validate_matrix_response(config, matrix, wfs)
     reconstructor = _build_reconstructor(config, matrix)
     command_projector = _build_command_projector(config, matrix, dm)
     loop_config = _loop_config(config)
@@ -925,6 +926,46 @@ def _resolve_interaction_matrix(
             f"unknown calibration source {calibration.source!r}."
         ) from exc
     return resolver()
+
+
+def _validate_matrix_response(
+    config: SystemConfig,
+    matrix: InteractionMatrix,
+    wfs: WavefrontSensor,
+) -> None:
+    """Fail closed unless a supplied or resource matrix fits this WFS response.
+
+    Geometry, row IDs, and units all survive a change of WFS wavelength,
+    padding, detector window, optics backend, or centroid estimator, so only
+    the sensor response identity can expose a stale matrix.  Photon and
+    read-noise operating points lie outside that identity and stay free.  A
+    built matrix is calibrated on this very sensor; a matrix without a
+    recorded identity cannot be verified and is rejected rather than trusted.
+    """
+
+    source = config.calibration.source
+    if source == "build":
+        return
+    expected = getattr(wfs, "response_hash", None)
+    if expected is None:
+        raise ScaoConstructionError(
+            f"calibration.source={source!r} requires a constructed WFS that "
+            "declares response_hash; the interaction matrix cannot be "
+            "verified against it."
+        )
+    if matrix.sensor_response_hash is None:
+        raise ScaoConstructionError(
+            f"calibration.source={source!r} requires an interaction matrix "
+            "that records sensor_response_hash; recalibrate it against a "
+            "sensor with the configured WFS response."
+        )
+    if matrix.sensor_response_hash != expected:
+        raise ScaoConstructionError(
+            "interaction-matrix sensor_response_hash must match the "
+            "constructed WFS response (optics backend, WFS wavelength, "
+            "padding and window sampling, centroid estimator and threshold) "
+            "before the first frame."
+        )
 
 
 def _require_reconstructor_parameter(

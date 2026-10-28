@@ -69,6 +69,15 @@ detector, DM, row-layout, coordinate-layout, and complete calibration content
 through immutable hashes and provenance. `to_record()` / `from_record()`
 revalidate the same layout, diagnostics, units, and content hash.
 
+When the sensor declares a `response_hash`, the matrix also records it as
+`sensor_response_hash` and binds it into the content hash. For a detector-level
+sensor it identifies the optics backend, WFS wavelength, padding and
+detector-window sampling, and centroid estimator and threshold, but not
+photometry, noise, or validity settings, which leave the noiseless response
+unchanged. A sensor that declares none, and a record written before the field
+existed, yields `sensor_response_hash=None` with the unchanged historical
+content hash.
+
 ## Randomness and noisy calibration
 
 An explicit named random-stream provider is required even for deterministic
