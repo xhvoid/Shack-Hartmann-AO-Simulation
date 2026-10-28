@@ -57,6 +57,8 @@ def _safe_relative_source(value: object) -> PurePosixPath:
             "bundle exists to prove the installed wheel works without the "
             "source tree."
         )
+    if path == PurePosixPath("README.md"):
+        return path
     if path.parts[0] not in _ALLOWED_SOURCE_PREFIXES:
         raise BundleManifestError(
             f"Bundle source {value!r} is outside the allowed prefixes "

@@ -132,3 +132,51 @@ retained, with no numerical-model changes. When Phase B lands, a tombstone
 section is appended here naming every removed import path and its last
 compatible release. See [`src/shwfs_ao/legacy/README.md`](../src/shwfs_ao/legacy/README.md)
 for the retained-code inventory.
+
+## Serialized artifact migration
+
+Import-path deprecation and artifact-schema evolution have independent clocks.
+Removing a Python shim never authorizes dropping an artifact reader, changing a
+CSV header, or rewriting an accepted baseline.
+
+- Schema-v2 fast-reference JSON remains readable through
+  `shwfs_ao.io.artifacts.read_v2()` and may be emitted byte-compatibly for old
+  consumers during the compatibility window.
+- Scenario, validation, and runtime CSV readers accept the exact frozen v2
+  header or its explicitly additive v3 header. They do not infer schemas from
+  similar column names or reorder historical columns.
+- `upgrade_v2_to_v3()` is the only supported fast-reference upgrade. The
+  caller must supply artifact authority, backend/profile identity, structured
+  provenance, component/layout hashes, unit/sign conventions, reproducibility,
+  and tolerance metadata. The upgrader preserves v2 values and refuses to
+  invent seeds, dependency versions, source evidence, candidate diffs, or
+  acceptance metadata.
+- Schema-3 CSV output appends its discriminator fields and emits named
+  sidecars plus a content-addressed artifact manifest; it does not mutate the
+  v2 file in place.
+- Native-versus-HCIPy comparison baselines are a separate version-1 family and
+  never masquerade as fast-integration records.
+
+Baseline generation always targets a separate candidate directory and writes
+a reviewable diff. Acceptance is a distinct command requiring a reason and
+review reference. Tests, examples, and notebooks cannot overwrite accepted
+resources. The complete field, authority, and command contract is in
+[`artifact_schemas.md`](artifact_schemas.md).
+
+## Current documentation map
+
+- [`architecture.md`](architecture.md) — current package dependencies,
+  runtime, calibration, backend, and artifact flows.
+- [`backends.md`](backends.md) — public protocols/result fields and the exact
+  native/HCIPy boundary.
+- [`provenance.md`](provenance.md) — source classes and public-data versus
+  synthetic interpretation.
+- [`reproducibility.md`](reproducibility.md) — named random domains, replay,
+  hashes, and environment evidence.
+- [`validation.md`](validation.md) — internal, regression, cross-backend, and
+  limitation claims.
+
+Historical notebook numbers and root modules remain useful migration evidence,
+but they are not the architecture. Current user-facing notebooks live under
+`notebooks/tutorials`, `notebooks/studies`, and `notebooks/experimental` and
+call installed package APIs.
