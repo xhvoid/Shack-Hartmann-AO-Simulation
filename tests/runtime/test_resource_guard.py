@@ -524,6 +524,29 @@ def test_a_child_ignoring_sigterm_is_killed_after_the_grace_period(tmp_path: Pat
     assert time.monotonic() - started < 10.0
 
 
+def _single_process_rss_bytes(pid: int) -> int:
+    """One process's RSS, read per PID rather than through group membership.
+
+    psutil is optional (the CI test environments do not install it); without
+    it, Linux's /proc/<pid>/status is read, and elsewhere ``ps`` for that PID.
+    """
+
+    try:
+        import psutil
+    except ImportError:
+        psutil = None
+    if psutil is not None:
+        return int(psutil.Process(pid).memory_info().rss)
+    status = Path(f"/proc/{pid}/status")
+    if status.exists():
+        for line in status.read_text().splitlines():
+            if line.startswith("VmRSS:"):
+                return int(line.split()[1]) * 1024
+        raise AssertionError(f"no VmRSS line in {status}")
+    output = subprocess.run(["ps", "-o", "rss=", "-p", str(pid)], capture_output=True, text=True, check=True)
+    return int(output.stdout.split()[0]) * 1024
+
+
 def test_group_rss_aggregates_every_process_in_the_group(tmp_path: Path, orphan_reaper):
     script = (
         "import subprocess, sys, time;"
@@ -543,10 +566,8 @@ def test_group_rss_aggregates_every_process_in_the_group(tmp_path: Path, orphan_
         time.sleep(0.2)
         total = process_group_rss_bytes(process.pid)
         assert total is not None
-        import psutil
-
-        parent_rss = psutil.Process(process.pid).memory_info().rss
-        child_rss = psutil.Process(grandchild).memory_info().rss
+        parent_rss = _single_process_rss_bytes(process.pid)
+        child_rss = _single_process_rss_bytes(grandchild)
         # Both processes are counted; RSS moves a little between reads.
         assert total >= 0.9 * (parent_rss + child_rss)
     finally:
