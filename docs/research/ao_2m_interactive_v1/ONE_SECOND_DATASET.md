@@ -565,6 +565,12 @@ the RMS derivative, is
   180-frame dataset's provenance under the v1 contract ([40, 180), 140 frames,
   the window read from each case record's time domain), exercised on a
   disposable v1 view; the committed entry still names this dataset.
+  **Follow-up 2026-10-28:** a case record whose `time_domain` is absent or not
+  an object is now a recorded failure of that case through the command line
+  (before, an uncaught error with an empty report); the preserved dataset's
+  three research-source failures in a full current-tree run are unchanged and
+  the v1 verification modes are set out in the cleanup status's follow-up of
+  2026-10-28.
 - The RMS diagnostic describes the saved wavefronts only. Fitted tilt is not
   image-centroid motion, and the decomposition does not attribute causes.
 
