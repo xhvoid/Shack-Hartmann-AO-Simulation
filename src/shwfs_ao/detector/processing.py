@@ -392,8 +392,9 @@ def without_sky_master(products: CalibrationProducts) -> CalibrationProducts:
     An internal calibration source is observed with the sky blocked, so its
     frames must not have the sky master subtracted.  The derived products keep
     the flat, the bad-pixel mask and the conversion; their additive master is
-    the bias plus dark master of the same realization, and their content hash
-    is derived from the operating products' hash.  Products without a sky
+    the bias plus dark master of the same realization, their frame counts
+    record no sky frames, and their content hash is derived from the operating
+    products' hash.  Products without a sky
     master already subtract bias and dark only and are returned unchanged.
     """
 
@@ -409,6 +410,7 @@ def without_sky_master(products: CalibrationProducts) -> CalibrationProducts:
         products,
         background_raw=_readonly(background),
         sky_raw=None,
+        frame_counts=tuple((name, 0 if name == "sky" else count) for name, count in products.frame_counts),
         content_sha256=digest.hexdigest(),
     )
 

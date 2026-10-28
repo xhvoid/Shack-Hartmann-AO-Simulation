@@ -206,11 +206,26 @@ class CameraConfig:
         if not isinstance(self.source_note, str) or not self.source_note.strip():
             raise CameraConfigError("source_note must be a non-empty string.")
         if coefficients:
-            _require_monotonic_nonlinearity(
-                coefficients,
-                self.max_output_signal_e,
-                NONLINEARITY_READ_NOISE_EXCURSION_SIGMA * float(self.read_noise_e),
-            )
+            self.require_monotonic_nonlinearity()
+
+    def require_monotonic_nonlinearity(self, max_read_noise_e: float | None = None) -> None:
+        """Require the declared non-linearity to rise over every reachable signal.
+
+        The range is the output signal range widened on both sides by
+        :data:`NONLINEARITY_READ_NOISE_EXCURSION_SIGMA` read-noise sigmas.
+        ``max_read_noise_e`` defaults to the scalar read noise; a CMOS
+        per-pixel read-noise map passes its realized maximum (re-review S3).
+        Raises :class:`CameraConfigError`.
+        """
+
+        if not self.nonlinearity_coefficients:
+            return
+        read = float(self.read_noise_e) if max_read_noise_e is None else float(max_read_noise_e)
+        _require_monotonic_nonlinearity(
+            self.nonlinearity_coefficients,
+            self.max_output_signal_e,
+            NONLINEARITY_READ_NOISE_EXCURSION_SIGMA * read,
+        )
 
     # -- derived quantities -------------------------------------------------
 

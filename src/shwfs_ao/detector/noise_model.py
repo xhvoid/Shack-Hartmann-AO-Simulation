@@ -277,7 +277,9 @@ def detector_covariance_quality(
         flat_values = np.ones(source.shape)
     else:
         assert products is not None
-        sky_subtracted = processing.mode == "oracle" or processing.n_sky_frames > 0
+        # The additive master holds a sky product only if these products do:
+        # an internal source's ``without_sky_master`` products do not.
+        sky_subtracted = products.sky_raw is not None
         bg_mu = dark_e_map + cic + (sky[:, None, None] * optical_response if sky_subtracted else 0.0)
         nominal_subtracted = coupled(bg_mu) / gain_left
         # Conditional on the fixed products: the processing subtracts the
@@ -351,7 +353,14 @@ def detector_covariance_quality(
         # Nominal linearization over regenerated products.
         nominal_z, nominal_y = processed_expectation(nominal_subtracted)
         _, _, nominal_jx, nominal_jy, _ = window_levers(nominal_y)
-        sky_frames = processing.n_sky_frames > 0
+        # The master protocol of the products actually used (re-review S1):
+        # without a sky product the background is the dark mean, shared with
+        # the flat.
+        assert products is not None
+        counts = dict(products.frame_counts)
+        sky_frames = products.sky_raw is not None and counts.get("sky", 0) > 0
+        n_dark_frames = int(counts.get("dark", processing.n_dark_frames))
+        n_flat_frames = int(counts.get("flat", processing.n_flat_frames))
         dark_mu = dark_e_map + cic
         dark_terms = noise_terms(camera, maps, dark_mu, gain_left_in_data=gain_left)
         if sky_frames:
@@ -361,10 +370,10 @@ def detector_covariance_quality(
                 dark_mu + sky[:, None, None] * optical_response,
                 gain_left_in_data=gain_left,
             )
-            n_bg = processing.n_sky_frames
+            n_bg = int(counts["sky"])
         else:
             bg_terms = dark_terms
-            n_bg = processing.n_dark_frames
+            n_bg = n_dark_frames
         level = processing.flat_level_e if flat_level_e is None else flat_level_e
         flat_terms = noise_terms(
             camera,
@@ -379,12 +388,12 @@ def detector_covariance_quality(
             # dZ_k/dF_raw_k = -Z_k / F_raw_k, so a = -u Z / F_raw = -v f Z / F_raw.
             a = -lever * flat_values * nominal_z / safe_flat_raw
             variance = quadratic_form(bg_terms, lever, lever) / n_bg
-            variance += quadratic_form(flat_terms, a, a) / processing.n_flat_frames
-            variance += quadratic_form(dark_terms, a, a) / processing.n_dark_frames
+            variance += quadratic_form(flat_terms, a, a) / n_flat_frames
+            variance += quadratic_form(dark_terms, a, a) / n_dark_frames
             if not sky_frames:
                 # Background = dark mean, flat subtracts the same dark mean:
                 # Cov(d bt, d F_raw) = -Cov(dark)/N_dark.
-                variance += 2.0 * quadratic_form(dark_terms, lever, a) / processing.n_dark_frames
+                variance += 2.0 * quadratic_form(dark_terms, lever, a) / n_dark_frames
             target[:] = np.sqrt(np.maximum(variance, 0.0))
 
     sigma_x = np.sqrt(np.maximum(var_x, 0.0))

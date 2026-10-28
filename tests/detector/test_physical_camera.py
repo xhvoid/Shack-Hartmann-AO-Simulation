@@ -22,7 +22,7 @@ from shwfs_ao.core.random import (
     with_detector_physics_domains,
 )
 from shwfs_ao.detector.camera import CameraConfig, CameraConfigError
-from shwfs_ao.detector.camera_maps import CameraMaps
+from shwfs_ao.detector.camera_maps import CameraMaps, CameraMapsError
 from shwfs_ao.detector.layout import DetectorLayout, DetectorLayoutError
 from shwfs_ao.detector.physical import (
     PhysicalCameraError,
@@ -279,6 +279,21 @@ def test_nonlinearity_is_checked_over_negative_read_noise_excursions() -> None:
         camera(full_well_e=1.0e3, read_noise_e=10.0, nonlinearity_coefficients=(0.02,))
     camera(full_well_e=1.0e3, read_noise_e=3.0, nonlinearity_coefficients=(0.02,))
 
+
+def test_cmos_nonlinearity_is_checked_against_the_realized_read_noise_map() -> None:
+    # The configuration check uses the median read noise (6 x 3 e- = 18 e-),
+    # but y + 0.02 y**2 turns over at -25 e-, inside six sigmas of the many
+    # pixels that a lognormal map with sigma 1.5 makes noisier (re-review S3).
+    nonlinear = dict(model="cmos", read_noise_e=3.0, full_well_e=1000.0, nonlinearity_coefficients=(0.02,))
+    wide = camera(cmos_read_noise_lognormal_sigma=1.5, **nonlinear)
+    with pytest.raises(CameraMapsError, match="not monotonic"):
+        CameraMaps.create(wide, layout(), ids(1), random_streams=streams())
+    # A narrow map keeps every pixel's six sigmas above the turnover.
+    narrow = camera(cmos_read_noise_lognormal_sigma=0.05, **nonlinear)
+    maps = CameraMaps.create(narrow, layout(), ids(1), random_streams=streams())
+    assert 6.0 * float(np.max(maps.read_noise_e(narrow))) < 25.0
+    # Linear cameras are never constrained by their map.
+    CameraMaps.create(camera(model="cmos", read_noise_e=3.0, cmos_read_noise_lognormal_sigma=1.5), layout(), ids(1), random_streams=streams())
 
 def test_the_adc_dither_is_part_of_the_deterministic_response_identity() -> None:
     # With the ADC on, the reference quantizer depends on read noise, so its

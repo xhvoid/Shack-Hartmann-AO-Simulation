@@ -24,10 +24,11 @@ from shwfs_ao.detector.camera import CameraConfig
 from shwfs_ao.detector.centroid import CentroidConfig
 from shwfs_ao.detector.noise_model import MIN_DENOMINATOR_SNR
 from shwfs_ao.detector.physical import apply_physical_camera
-from shwfs_ao.detector.processing import PixelProcessingConfig, process_frames
+from shwfs_ao.detector.processing import PixelProcessingConfig, process_frames, without_sky_master
 from shwfs_ao.experiments.detector_noise import (
     NoiseFixture,
     calibration_trials,
+    centre_of_gravity,
     fixture_products,
     gaussian_spot,
     model_prediction,
@@ -378,3 +379,52 @@ def test_zero_bias_clipping_departs_from_the_linear_model() -> None:
     quality = model_prediction(fix)
     measured = temporal_trials(fix, 10_000)["centroids_px"].std(axis=0, ddof=1)
     assert np.all(measured / quality.centroid_sigma_xy_px[0] < 0.85)
+
+
+# -- Re-review 2026-10-16: S1 (internal-source calibration protocol) ----------
+
+INTERNAL_SOURCE_MASTERS = PixelProcessingConfig(
+    mode="estimated", n_bias_frames=1, n_dark_frames=1, n_sky_frames=16, n_flat_frames=4,
+    flat_level_e=1.0e6, hot_pixel_threshold_e=1.0e9,
+)
+
+
+def internal_source_fixtures() -> tuple[NoiseFixture, NoiseFixture]:
+    """Operating fixture (100 e- sky) and the internal-source observation (no sky)."""
+
+    cam = camera(read_noise_e=8.0, dark_e_per_s=0.0, prnu_rms=0.0, offset_map_rms_adu=0.0, adc_bits=None, full_well_e=1.0e9)
+    operating = NoiseFixture(
+        camera=cam, processing=INTERNAL_SOURCE_MASTERS, source_e=gaussian_spot(7, 5000.0, 1.2),
+        window_px=7, sky_e_per_pixel=100.0, seed=1,
+    )
+    return operating, replace(operating, sky_e_per_pixel=0.0)
+
+
+def test_internal_source_calibration_uses_the_bias_and_dark_protocol() -> None:
+    # The source's products hold no sky master, so their calibration error is
+    # the one-frame dark mean shared with the flat, not a 16-frame sky master.
+    operating, source = internal_source_fixtures()
+    derived = without_sky_master(fixture_products(operating))
+    assert derived.sky_raw is None and dict(derived.frame_counts)["sky"] == 0
+    predicted = model_prediction(source, derived).calibration_sigma_xy_px[0]
+    dark_only = model_prediction(replace(source, processing=replace(INTERNAL_SOURCE_MASTERS, n_sky_frames=0)), derived)
+    np.testing.assert_allclose(predicted, dark_only.calibration_sigma_xy_px[0], rtol=1e-12)
+    # Version 2 as reviewed predicted 0.0056 px here; the ensemble measures 0.022 px.
+    assert np.all(predicted > 0.02)
+
+
+@pytest.mark.slow
+def test_internal_source_calibration_ensemble_matches_the_model() -> None:
+    # 400 regenerated derived masters: 3.5 % standard error, 15 % band.
+    operating, source = internal_source_fixtures()
+    predicted = model_prediction(source, without_sky_master(fixture_products(operating))).calibration_sigma_xy_px[0]
+    raw = apply_physical_camera(
+        source.source_e[None], 0.0, source.camera, source.maps().subset(np.arange(1)),
+        exposure_s=source.exposure_s, include_noise=False, generators=None, poisson_floor_e=0.0,
+    ).raw
+    centroids = np.array([
+        centre_of_gravity(process_frames(raw, without_sky_master(fixture_products(operating, realization=index)), INTERNAL_SOURCE_MASTERS))[0]
+        for index in range(1, 401)
+    ])
+    ratio = centroids.std(axis=0, ddof=1) / predicted
+    assert np.all(np.abs(ratio - 1.0) < 0.15), ratio
