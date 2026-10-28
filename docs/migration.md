@@ -59,7 +59,7 @@ aggregated diagnostic table or the nm-unit detector loop).
 | `ao_conditions` | `shwfs_ao.experiments.public_data_conditioned` |
 | `ao_diagnostics` | `shwfs_ao.science.metrics`, `shwfs_ao.science.bandpass` (or `shwfs_ao.legacy.ao_diagnostics`) |
 | `ao_error_budget` | `shwfs_ao.experiments.error_budget` |
-| `ao_integration` | `shwfs_ao.experiments.scao`, `shwfs_ao.io.artifacts` (or `shwfs_ao.legacy.ao_integration`) |
+| `ao_integration` | `shwfs_ao.experiments.integration`, `shwfs_ao.experiments.scao`, `shwfs_ao.io.artifacts` (or `shwfs_ao.legacy.ao_integration`) |
 | `ao_validation` | `shwfs_ao.validation` (or `shwfs_ao.legacy.ao_validation`) |
 | `atmosphere_profiles` | `shwfs_ao.backends.native.atmosphere`, `shwfs_ao.io.configs` (or `shwfs_ao.legacy.atmosphere_profiles`) |
 | `config_hashing` | `shwfs_ao.core.hashing` |

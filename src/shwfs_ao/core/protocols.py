@@ -35,6 +35,10 @@ class RandomStreams(Protocol):
     def derivation_scheme_id(self) -> str:
         ...
 
+    @property
+    def registered_domains(self) -> tuple[str, ...]:
+        """The persistent domains this provider seeds, in registration order."""
+
     def reset(self) -> None:
         """Recreate every persistent domain generator from the root seed."""
 
@@ -145,6 +149,10 @@ class DeformableMirrorModel(Protocol):
 
 @runtime_checkable
 class Reconstructor(Protocol):
+    @property
+    def config_hash(self) -> str:
+        ...
+
     @property
     def matrix_hash(self) -> str:
         ...

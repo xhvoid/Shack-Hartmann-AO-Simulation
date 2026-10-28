@@ -123,11 +123,13 @@ displacement and lets reflection produce `2 * surface` OPD exactly once.
 | `shwfs_ao.io` | strict profiles/public data/resources and explicit artifact writing |
 | `shwfs_ao.experimental.pwfs` | exploratory PWFS forward model outside the stable SH-WFS contract |
 
-The built-in turnkey profile factory is native. HCIPy component adapters are
-used directly by cross-backend validation and can be assembled through the
-public protocols, but the package does not currently register a complete
-HCIPy `SystemConfig` factory. `build_scao_system()` therefore rejects an
-unregistered `backend="hcipy"` instead of falling back to native.
+The built-in turnkey profile factory is native. Both the native and HCIPy
+backends are registered SCAO component factories, so a `backend="hcipy"`
+configuration builds the HCIPy system through the same public-protocol
+adapters that cross-backend validation uses. When the optional `hcipy` extra
+is not installed, `build_scao_system()` raises the canonical
+`OptionalDependencyError` with its install hint instead of silently falling
+back to native.
 
 Five current-module diagrams—package dependencies, runtime data flow,
 native/HCIPy boundary, calibration, and experiment/artifact flow—are in

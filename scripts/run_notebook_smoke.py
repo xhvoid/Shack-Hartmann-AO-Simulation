@@ -55,9 +55,12 @@ FAST_SMOKE_OVERRIDE_SOURCE = "FAST_SMOKE = True"
 # Injected as the first executed cell so it is active for every real cell.
 # Temporary-directory isolation and import scans do not stop a cell from
 # reaching the network (for example ``pandas.read_csv(url)``); this denies
-# outbound IPv4/IPv6 connections inside the kernel while leaving loopback —
-# the transport Jupyter's own ZMQ channels already use — and local Unix
-# sockets untouched, so a canonical notebook must run from packaged data.
+# outbound IPv4/IPv6 traffic inside the kernel while leaving loopback — the
+# transport Jupyter's own ZMQ channels already use — and local Unix sockets
+# untouched, so a canonical notebook must run from packaged data.  Connection-
+# oriented calls (connect/connect_ex) AND connectionless, address-bearing sends
+# (sendto/sendmsg) are all covered, so a UDP datagram cannot slip past a guard
+# that only watched connect().
 NETWORK_GUARD_SOURCE = '''\
 import ipaddress as _ipaddress
 import socket as _socket
@@ -66,10 +69,14 @@ import socket as _socket
 def _install_offline_guard():
     real_connect = _socket.socket.connect
     real_connect_ex = _socket.socket.connect_ex
+    real_sendto = _socket.socket.sendto
+    real_sendmsg = _socket.socket.sendmsg
     ip_families = (_socket.AF_INET, _socket.AF_INET6)
 
     def _denied(sock, address):
         if sock.family not in ip_families:
+            return False
+        if address is None:
             return False
         host = address[0] if isinstance(address, (tuple, list)) else address
         if host == "localhost":
@@ -79,22 +86,41 @@ def _install_offline_guard():
         except ValueError:
             return True
 
+    def _refuse(address):
+        raise OSError(
+            "notebook smoke denies outbound network: " + repr(address)
+        )
+
     def connect(self, address):
         if _denied(self, address):
-            raise OSError(
-                "notebook smoke denies outbound network: " + repr(address)
-            )
+            _refuse(address)
         return real_connect(self, address)
 
     def connect_ex(self, address):
         if _denied(self, address):
-            raise OSError(
-                "notebook smoke denies outbound network: " + repr(address)
-            )
+            _refuse(address)
         return real_connect_ex(self, address)
+
+    def sendto(self, data, *args):
+        # sendto(data, address) or sendto(data, flags, address): the destination
+        # is always the final positional argument.
+        address = args[-1] if args else None
+        if _denied(self, address):
+            _refuse(address)
+        return real_sendto(self, data, *args)
+
+    def sendmsg(self, *args):
+        # sendmsg(buffers[, ancdata[, flags[, address]]]): a datagram carries its
+        # destination as the optional fourth positional argument.
+        address = args[3] if len(args) >= 4 else None
+        if _denied(self, address):
+            _refuse(address)
+        return real_sendmsg(self, *args)
 
     _socket.socket.connect = connect
     _socket.socket.connect_ex = connect_ex
+    _socket.socket.sendto = sendto
+    _socket.socket.sendmsg = sendmsg
 
 
 _install_offline_guard()

@@ -194,7 +194,7 @@
       "module": "ao_integration",
       "source_path": "src/ao_integration.py",
       "import_path": "ao_integration",
-      "replacement": "shwfs_ao.experiments.scao with shwfs_ao.io.artifacts (canonical) or shwfs_ao.legacy.ao_integration (frozen fast-integration surface)",
+      "replacement": "shwfs_ao.experiments.integration or shwfs_ao.experiments.scao with shwfs_ao.io.artifacts (canonical) or shwfs_ao.legacy.ao_integration (frozen fast-integration surface)",
       "public_symbols": [
         "ALLOWED_SOURCE_CLASSES",
         "AOIntegrationError",

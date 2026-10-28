@@ -24,14 +24,18 @@ from .resources import read_text_resource
 
 
 PROFILE_SCHEMA_NAME = "shwfs_ao.system_profile"
-PROFILE_SCHEMA_VERSION = 1
+# Schema v2 makes wfs.photon_allocation an explicit, required field.  The v1
+# profiles omitted it and silently defaulted to "throughput_scaled" on load,
+# which changed their recorded WFS/system identity when the field was added; the
+# reviewed v2 profiles record it explicitly so their identity is unambiguous.
+PROFILE_SCHEMA_VERSION = 2
 _PROFILE_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
-    ("fast_2m_detector", 1): "synthetic_presets/fast_2m_detector.v1.json",
-    ("portfolio_2m_detector", 1): "synthetic_presets/portfolio_2m_detector.v1.json",
-    ("research_2m_detector", 1): "synthetic_presets/research_2m_detector.v1.json",
-    ("high_order_10m_geometric", 1): "synthetic_presets/high_order_10m_geometric.v1.json",
-    ("high_order_10m_hcipy", 1): "synthetic_presets/high_order_10m_hcipy.v1.json",
+    ("fast_2m_detector", 2): "synthetic_presets/fast_2m_detector.v2.json",
+    ("portfolio_2m_detector", 2): "synthetic_presets/portfolio_2m_detector.v2.json",
+    ("research_2m_detector", 2): "synthetic_presets/research_2m_detector.v2.json",
+    ("high_order_10m_geometric", 2): "synthetic_presets/high_order_10m_geometric.v2.json",
+    ("high_order_10m_hcipy", 2): "synthetic_presets/high_order_10m_hcipy.v2.json",
 }
 
 BackendName = Literal["native", "hcipy"]
@@ -590,7 +594,6 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
             values["wfs"],
             _WFS_FIELDS,
             "wfs",
-            optional_fields=_WFS_OPTIONAL_FIELDS,
         ),
         dm=_construct(DmSystemConfig, values["dm"], _DM_FIELDS, "dm", tuple_fields={"dead_actuator_indices", "stuck_actuator_indices"}),
         calibration=_construct(CalibrationConfig, values["calibration"], _CALIBRATION_FIELDS, "calibration"),
@@ -644,10 +647,9 @@ _SYSTEM_FIELDS = {"backend", "wfs_model", "atmosphere_model", "telescope_diamete
 _ATMOSPHERE_FIELDS = {"r0_m", "r0_reference_wavelength_m", "outer_scale_m", "wind_m_per_s", "target_rms_opd_m", "normalize_rms"}
 _DETECTOR_FIELDS = {"enabled", "photons_per_subap_frame", "read_noise_e", "dark_e_per_s", "background_e_per_pixel_frame", "full_well_e", "qe", "prnu_rms", "exposure_s", "prnu_mode", "bad_pixel_fraction"}
 _WFS_FIELDS = {"min_fill_fraction", "pad_factor", "detector_window_px", "centroid_estimator", "threshold_fraction", "subtract_minimum", "min_flux_e", "min_peak_snr", "max_centroid_sigma_px", "max_window_clipping_fraction", "central_obstruction_ratio", "spider_width_m", "photon_allocation"}
-# photon_allocation was added after the first profiles were written; it is
-# optional on load so those profiles still deserialize and default to the
-# compatibility policy, while serialization always records it.
-_WFS_OPTIONAL_FIELDS = frozenset({"photon_allocation"})
+# Schema v2 requires photon_allocation in every profile: it materially affects
+# the WFS photon budget and therefore the recorded identity, so it is never
+# defaulted silently on load.
 _DM_FIELDS = {"influence_model", "coupling_width_pitch", "stroke_limit_opd_m", "include_edge_actuators", "actuator_margin_fraction", "dead_actuator_indices", "stuck_actuator_indices", "stuck_command_opd_m"}
 _CALIBRATION_FIELDS = {"source", "method", "probe_kind", "amplitude_m", "include_noise", "repeats", "resource_name"}
 _RECONSTRUCTOR_FIELDS = {"kind", "rcond", "alpha", "min_valid_fraction", "min_rank", "max_cached_masks"}

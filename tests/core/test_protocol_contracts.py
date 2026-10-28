@@ -41,6 +41,7 @@ EXPECTED_MEMBERS = {
     RandomStreams: {
         "root_seed",
         "derivation_scheme_id",
+        "registered_domains",
         "reset",
         "generator",
         "keyed_generator",
@@ -61,7 +62,7 @@ EXPECTED_MEMBERS = {
         "controllable_actuator_ids",
         "opd_from_commands",
     },
-    Reconstructor: {"matrix_hash", "reconstruct"},
+    Reconstructor: {"config_hash", "matrix_hash", "reconstruct"},
     CommandProjector: {
         "config_hash",
         "input_coordinate_ids",
@@ -149,6 +150,10 @@ class _DmDouble:
 
 
 class _ReconstructorDouble:
+    @property
+    def config_hash(self):
+        return "reconstructor-hash"
+
     @property
     def matrix_hash(self):
         return "matrix-hash"

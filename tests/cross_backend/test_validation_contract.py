@@ -41,6 +41,7 @@ from shwfs_ao.validation.regression import (
     CROSS_BACKEND_BASELINE_SCHEMA_VERSION,
     CROSS_BACKEND_REPORT_SCHEMA_NAME,
     CROSS_BACKEND_BASELINE_SCHEMA_RESOURCE,
+    METRIC_CONTRACT,
     REQUIRED_COMPARISON_KINDS,
     REQUIRED_COMPONENT_HASH_KEYS,
     REQUIRED_FIXTURE_HASH_KEYS,
@@ -85,26 +86,47 @@ def _hash64(seed: str) -> str:
     return hashlib.sha256(seed.encode("utf-8")).hexdigest()
 
 
+def _probe_metric(kind: str, name: str) -> dict:
+    # Shape each probe metric to satisfy its pinned METRIC_CONTRACT (level,
+    # units, criterion type, and canonical expectation), so the synthetic report
+    # is a valid document under the scientific-meaning contract.
+    level, units, criterion_type, expected = METRIC_CONTRACT[kind][name]
+    metric = {
+        "name": name,
+        "level": level,
+        "units": units,
+        "rationale": "Contract-test probe metric.",
+    }
+    if criterion_type == "equals":
+        # A pinned universal expectation is a bool/int/str; a baseline-specific
+        # one (the sentinel) gets a neutral placeholder the equals gate accepts.
+        value = expected if isinstance(expected, (bool, int, str)) else 1
+        metric["value"] = value
+        metric["pass_criterion"] = {"type": "equals", "expected": value}
+    elif criterion_type == "abs_tolerance":
+        metric["value"] = 0.0
+        metric["pass_criterion"] = {
+            "type": "abs_tolerance",
+            "expected": 0.0,
+            "tolerance": 1.0,
+        }
+    elif criterion_type == "range":
+        metric["value"] = 1.0
+        metric["pass_criterion"] = {"type": "range", "low": 0.5, "high": 1.5}
+    else:  # informational
+        metric["value"] = 0.5
+        metric["pass_criterion"] = {"type": "informational"}
+    return metric
+
+
 def _probe_comparison(kind: str) -> dict:
-    # Emit exactly the required metric inventory for the kind so the synthetic
-    # report satisfies the completeness contract; every probe metric is a
-    # neutral physical-tolerance range that no structural test depends on.
+    # Emit exactly the required metric inventory for the kind, each metric shaped
+    # to satisfy its pinned scientific-meaning contract.
     return {
         "comparison_kind": kind,
         "attribution": "Synthetic comparison for contract tests.",
         "metrics": [
-            {
-                "name": name,
-                "level": "physical_tolerance",
-                "units": "ratio",
-                "value": 1.0,
-                "pass_criterion": {
-                    "type": "range",
-                    "low": 0.5,
-                    "high": 1.5,
-                },
-                "rationale": "Contract-test probe metric.",
-            }
+            _probe_metric(kind, name)
             for name in sorted(REQUIRED_METRIC_NAMES[kind])
         ],
     }
@@ -420,15 +442,70 @@ class TestDocumentContract:
             validate_cross_backend_report(report)
 
     def test_baseline_requires_equal_value_for_an_equals_criterion(self):
+        # mask_round_trip_identical is a pinned exact/equals(True) identity gate;
+        # recording a value that disagrees with the expectation must be rejected
+        # (the recorded value is the expectation the gate fires on).
         baseline = _minimal_baseline()
-        metric = baseline["comparisons"][0]["metrics"][0]
-        metric["level"] = "exact"
-        metric["value"] = 3
-        metric["pass_criterion"] = {"type": "equals", "expected": 4}
+        _set_metric_value(
+            baseline,
+            "pupil_mask_and_throughput",
+            "mask_round_trip_identical",
+            False,
+        )
         with pytest.raises(
             BaselineContractError,
             match="must equal the criterion expectation",
         ):
+            validate_cross_backend_baseline(baseline)
+
+    def test_metric_contract_forbids_gating_an_identity_on_the_wrong_value(self):
+        # both_loops_consumed_shared_opd_cube is a pinned exact/equals(True)
+        # gate; recording it as equals(False) — even self-consistently — must be
+        # rejected so a run that never consumed the shared cube cannot pass.
+        baseline = _minimal_baseline()
+        for comparison in baseline["comparisons"]:
+            if comparison["comparison_kind"] != "closed_loop_residual":
+                continue
+            for metric in comparison["metrics"]:
+                if metric["name"] == "both_loops_consumed_shared_opd_cube":
+                    metric["value"] = False
+                    metric["pass_criterion"] = {"type": "equals", "expected": False}
+        with pytest.raises(
+            BaselineContractError,
+            match="canonical expectation",
+        ):
+            validate_cross_backend_baseline(baseline)
+
+    def test_metric_contract_forbids_demoting_an_exact_gate_to_a_range(self):
+        # rank_difference is a pinned exact/equals(0) gate; it cannot be recorded
+        # as a wide range that a later edit could widen into an always-pass.
+        baseline = _minimal_baseline()
+        for comparison in baseline["comparisons"]:
+            if comparison["comparison_kind"] != "interaction_matrix_identity":
+                continue
+            for metric in comparison["metrics"]:
+                if metric["name"] == "rank_difference":
+                    metric["level"] = "physical_tolerance"
+                    metric["value"] = 0
+                    metric["pass_criterion"] = {
+                        "type": "range",
+                        "low": -1000,
+                        "high": 1000,
+                    }
+        with pytest.raises(BaselineContractError, match="pinned"):
+            validate_cross_backend_baseline(baseline)
+
+    def test_metric_contract_forbids_promoting_a_runtime_metric_to_a_gate(self):
+        # runtime_and_memory metrics are pinned informational; they cannot be
+        # promoted into a scientific correctness gate.
+        baseline = _minimal_baseline()
+        for comparison in baseline["comparisons"]:
+            if comparison["comparison_kind"] != "runtime_and_memory":
+                continue
+            metric = comparison["metrics"][0]
+            metric["level"] = "physical_tolerance"
+            metric["pass_criterion"] = {"type": "range", "low": 0.0, "high": 1.0}
+        with pytest.raises(BaselineContractError, match="pinned"):
             validate_cross_backend_baseline(baseline)
 
     def test_baseline_rejects_forged_or_unknown_source_commit(self):
@@ -447,6 +524,37 @@ class TestDocumentContract:
         with pytest.raises(
             BaselineContractError,
             match="source_tree_clean must be recorded",
+        ):
+            validate_cross_backend_baseline(baseline)
+
+    def test_baseline_requires_patch_evidence_when_the_tree_is_dirty(self):
+        # A dirty tree cannot masquerade as reproducible: it must carry the
+        # source_patch_sha256 hash of exactly what diverged from the commit.
+        baseline = _minimal_baseline()
+        baseline["generator"]["source_tree_clean"] = False
+        with pytest.raises(
+            BaselineContractError,
+            match="source_patch_sha256 must be the 64-character",
+        ):
+            validate_cross_backend_baseline(baseline)
+        for forged in ("", "not-a-hash", "abc123", "F" * 64):
+            baseline["generator"]["source_patch_sha256"] = forged
+            with pytest.raises(
+                BaselineContractError,
+                match="source_patch_sha256 must be the 64-character",
+            ):
+                validate_cross_backend_baseline(baseline)
+        # Valid 64-hex patch evidence is accepted for a dirty tree.
+        baseline["generator"]["source_patch_sha256"] = _hash64("patch-evidence")
+        validate_cross_backend_baseline(baseline)
+
+    def test_baseline_rejects_malformed_patch_evidence_when_clean(self):
+        baseline = _minimal_baseline()
+        assert baseline["generator"]["source_tree_clean"] is True
+        baseline["generator"]["source_patch_sha256"] = "not-a-hash"
+        with pytest.raises(
+            BaselineContractError,
+            match="source_patch_sha256 must be null or a 64-character",
         ):
             validate_cross_backend_baseline(baseline)
 
@@ -506,15 +614,20 @@ class TestDocumentContract:
             validate_cross_backend_report(report)
 
     def test_report_accepts_boolean_and_string_equality_expectations(self):
+        # The pinned contract includes boolean identity gates (e.g.
+        # mask_round_trip_identical == True) and string identity gates (e.g.
+        # native_backend_name == "native"); a conforming report validates and
+        # preserves both expectation types.
         report = _minimal_report()
-        metric = report["comparisons"][0]["metrics"][0]
-        metric["level"] = "exact"
-        metric["value"] = True
-        metric["pass_criterion"] = {"type": "equals", "expected": True}
         validate_cross_backend_report(report)
-        metric["value"] = "native"
-        metric["pass_criterion"] = {"type": "equals", "expected": "native"}
-        validate_cross_backend_report(report)
+        equals_expectations = {
+            metric["name"]: metric["pass_criterion"]["expected"]
+            for comparison in report["comparisons"]
+            for metric in comparison["metrics"]
+            if metric["pass_criterion"]["type"] == "equals"
+        }
+        assert equals_expectations["mask_round_trip_identical"] is True
+        assert equals_expectations["native_backend_name"] == "native"
 
     def test_a_baseline_rejects_a_non_finite_recorded_gating_value(self):
         # A fresh report may observe NaN — evaluation reports that as a
@@ -816,6 +929,29 @@ class TestPackagedBaseline:
         with pytest.raises(BaselineContractError, match="JSON Schema"):
             validate_baseline_against_schema(broken)
 
+    def test_schema_requires_a_content_hash_for_the_constraint_lock(self):
+        # The environment's dependency_constraint_sha256 must be a real content
+        # hash, not arbitrary text such as "unrecorded".
+        broken = _report_copy(load_cross_backend_baseline())
+        broken["environment"]["dependency_constraint_sha256"] = "unrecorded"
+        with pytest.raises(BaselineContractError, match="JSON Schema"):
+            validate_baseline_against_schema(broken)
+
+    def test_schema_pins_each_metric_meaning(self):
+        # Defence in depth: the JSON Schema mirrors METRIC_CONTRACT, so an exact
+        # identity gate recorded on the wrong side of the identity is rejected by
+        # the schema as well as the application contract.
+        broken = _report_copy(load_cross_backend_baseline())
+        for comparison in broken["comparisons"]:
+            if comparison["comparison_kind"] != "closed_loop_residual":
+                continue
+            for metric in comparison["metrics"]:
+                if metric["name"] == "both_loops_consumed_shared_opd_cube":
+                    metric["value"] = False
+                    metric["pass_criterion"] = {"type": "equals", "expected": False}
+        with pytest.raises(BaselineContractError, match="JSON Schema"):
+            validate_baseline_against_schema(broken)
+
 
 class TestEvaluationSemantics:
     def test_a_range_violation_reports_value_range_units_and_hashes(
@@ -897,23 +1033,25 @@ class TestEvaluationSemantics:
         assert "metric=strehl_abs_difference" in failure
         assert "observed=nan" in failure
 
-    def test_a_report_missing_a_required_metric_is_rejected(
+    def test_a_report_missing_a_required_metric_is_surfaced_with_full_context(
         self,
         packaged_baseline,
     ):
-        # A dropped gate is now a contract violation caught up front, not a
-        # soft evaluation failure: evaluation validates the report first.
+        # A dropped gate is surfaced as a rich per-metric failure carrying the
+        # same complete context a value violation would (expected value or
+        # range, tolerance, units, level, and hashes), not a terse inventory
+        # rejection that hides them (F8).
         report = _report_copy(packaged_baseline)
         _remove_metric(
             report,
             "strehl_ratio",
             "strehl_abs_difference",
         )
-        with pytest.raises(
-            BaselineContractError,
-            match="exactly its required metrics",
-        ):
-            evaluate_report_against_baseline(report, packaged_baseline)
+        (failure,) = evaluate_report_against_baseline(report, packaged_baseline)
+        assert "metric=strehl_abs_difference" in failure
+        assert "absent" in failure
+        assert "Strehl" in failure
+        assert "level=physical_tolerance" in failure
 
     def test_informational_metrics_never_gate(self, packaged_baseline):
         report = _report_copy(packaged_baseline)
@@ -926,6 +1064,27 @@ class TestEvaluationSemantics:
         assert (
             evaluate_report_against_baseline(report, packaged_baseline) == ()
         )
+
+    def test_evaluation_flags_convention_and_seed_drift(self, packaged_baseline):
+        # A report whose config_hash and metric values coincide with the
+        # baseline but whose measurement conventions or root seed differ is not
+        # comparable, so evaluation must surface the drift instead of passing.
+        report = _report_copy(packaged_baseline)
+        report["conventions"]["residual_sign_convention"] = "flipped convention"
+        convention_failures = evaluate_report_against_baseline(
+            report, packaged_baseline
+        )
+        assert any(
+            "conventions['residual_sign_convention']" in failure
+            for failure in convention_failures
+        )
+
+        seed_report = _report_copy(packaged_baseline)
+        seed_report["root_seed"] = int(packaged_baseline["root_seed"]) + 1
+        seed_failures = evaluate_report_against_baseline(
+            seed_report, packaged_baseline
+        )
+        assert any("root_seed mismatch" in failure for failure in seed_failures)
 
     def test_a_config_hash_mismatch_short_circuits_metric_checks(
         self,

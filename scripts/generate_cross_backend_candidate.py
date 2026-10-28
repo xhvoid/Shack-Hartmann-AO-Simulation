@@ -121,11 +121,13 @@ def _generate_candidate(candidate_dir: Path) -> None:
         dependency_constraint_sha256=constraint_sha256,
     )
     candidate: dict[str, Any] = dict(report)
+    source_patch = _source_patch_sha256()
     candidate["generator"] = {
         "generator_name": GENERATOR_NAME,
         "generator_version": GENERATOR_VERSION,
         "source_commit": _source_commit(),
-        "source_tree_clean": _source_tree_clean(),
+        "source_tree_clean": source_patch is None,
+        "source_patch_sha256": source_patch,
     }
     validate_cross_backend_report(candidate)
 
@@ -398,6 +400,19 @@ def _canonical_bytes(document: dict[str, Any]) -> bytes:
     )
 
 
+def _md_cell(value: object) -> str:
+    """Escape a value for safe interpolation into a Markdown table cell.
+
+    Structural characters in a recorded unit, path, or value (a literal ``|``,
+    or a newline) would otherwise split the row or inject extra Markdown into
+    the reviewed diff.  Backslash is escaped first so the other escapes are not
+    themselves re-escaped, ``|`` is escaped, and any newline becomes a ``<br>``.
+    """
+
+    text = str(value).replace("\\", "\\\\").replace("|", "\\|")
+    return text.replace("\r\n", "<br>").replace("\r", "<br>").replace("\n", "<br>")
+
+
 def _render_diff_markdown(diff: dict[str, Any]) -> str:
     lines = [
         "# Cross-backend baseline candidate diff",
@@ -415,8 +430,8 @@ def _render_diff_markdown(diff: dict[str, Any]) -> str:
     ]
     for entry in diff["metrics"]:
         lines.append(
-            f"| {entry['comparison_kind']} | {entry['metric']} | "
-            f"{entry['old_value']} | {entry['new_value']} |"
+            f"| {_md_cell(entry['comparison_kind'])} | {_md_cell(entry['metric'])} "
+            f"| {_md_cell(entry['old_value'])} | {_md_cell(entry['new_value'])} |"
         )
     lines.extend(
         (
@@ -440,7 +455,8 @@ def _render_diff_markdown(diff: dict[str, Any]) -> str:
         lines.extend(("| path | old | new |", "| --- | --- | --- |"))
         for entry in changes:
             lines.append(
-                f"| `{entry['path']}` | {entry['old']} | {entry['new']} |"
+                f"| `{_md_cell(entry['path'])}` | {_md_cell(entry['old'])} | "
+                f"{_md_cell(entry['new'])} |"
             )
     return "\n".join(lines) + "\n"
 
@@ -494,6 +510,39 @@ def _installed_distributions() -> dict[str, str]:
     return installed
 
 
+_LOCK_PLATFORMS = {"Linux": "linux", "macOS-arm64": "macos-arm64"}
+
+
+def _current_platform_tag() -> str:
+    """The reproducible-lock platform tag for the running interpreter."""
+
+    import platform as _platform
+
+    system = _platform.system()
+    machine = _platform.machine().lower()
+    if system == "Linux":
+        return "linux"
+    if system == "Darwin" and machine in ("arm64", "aarch64"):
+        return "macos-arm64"
+    raise SystemExit(
+        "Cross-backend baselines are only locked for Linux and macOS-arm64; "
+        f"the running platform {system}/{machine} has no reproducible lock, so "
+        "generating one here would record an unverifiable environment."
+    )
+
+
+def _lock_platform_tag(header_text: str, profile: str) -> str:
+    """The platform a constraint lock declares in its header prose."""
+
+    match = re.search(r"\bon (Linux|macOS-arm64)\b", header_text)
+    if match is None:
+        raise SystemExit(
+            f"Constraint profile {profile} does not declare its platform "
+            "(expected 'on Linux' or 'on macOS-arm64' in its header)."
+        )
+    return _LOCK_PLATFORMS[match.group(1)]
+
+
 def _verified_constraint_identity() -> tuple[str, str]:
     """Return the (file, sha256) constraint identity of this environment.
 
@@ -516,7 +565,20 @@ def _verified_constraint_identity() -> tuple[str, str]:
             "environment; freeze the maintainer environment into that file "
             "before generating a candidate."
         )
-    pins = _parse_constraint_pins(path.read_text(encoding="utf-8"))
+    text = path.read_text(encoding="utf-8")
+    # The lock is selected by Python version alone, but each lock is frozen for
+    # one platform (the py3.11 hcipy lane is Linux, the py3.14 one is
+    # macOS-arm64).  Require the lock's declared platform to match the running
+    # one, so a foreign-platform lock cannot silently generate the baseline.
+    declared_platform = _lock_platform_tag(text, profile)
+    current_platform = _current_platform_tag()
+    if declared_platform != current_platform:
+        raise SystemExit(
+            f"Constraint profile {profile} is frozen for {declared_platform}, "
+            f"but this environment is {current_platform}; a cross-platform lock "
+            "cannot reproduce the baseline."
+        )
+    pins = _parse_constraint_pins(text)
     for required in ("numpy", "hcipy"):
         if required not in pins:
             raise SystemExit(
@@ -584,25 +646,64 @@ def _source_commit() -> str:
     return commit
 
 
-def _source_tree_clean() -> bool:
-    """True when no tracked file is modified, matching git describe --dirty.
+def _source_patch_sha256() -> str | None:
+    """Content hash of the working tree's divergence from HEAD, or None if none.
 
-    Untracked files cannot change the packaged sources, so they do not make
-    the recorded provenance dirty; an unknown git state is recorded as not
-    clean rather than assumed clean.
+    Binds both tracked modifications (``git diff HEAD``) and the sorted paths
+    and contents of untracked, non-ignored files.  Untracked scientific inputs
+    can change a generated result just as much as a tracked edit, so a dirty
+    tree records verifiable evidence of exactly what diverged from the recorded
+    commit (the documented ``source_patch_sha256`` contract) instead of hiding
+    it.  Returns ``None`` only when the tree matches HEAD exactly.
     """
 
     try:
-        result = subprocess.run(
-            ["git", "status", "--porcelain", "--untracked-files=no"],
+        tracked = subprocess.run(
+            ["git", "diff", "HEAD"],
             cwd=ROOT,
             capture_output=True,
             text=True,
             check=True,
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return False
-    return result.stdout.strip() == ""
+        ).stdout
+        status = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise SystemExit(
+            "Cannot record source provenance: reading the working-tree "
+            "divergence from HEAD failed."
+        ) from exc
+    untracked = sorted(
+        line[3:] for line in status.splitlines() if line.startswith("?? ")
+    )
+    if not tracked and not untracked:
+        return None
+    hasher = hashlib.sha256()
+    hasher.update(b"tracked-diff\0")
+    hasher.update(tracked.encode("utf-8"))
+    for path in untracked:
+        hasher.update(b"\0untracked\0")
+        hasher.update(path.encode("utf-8"))
+        hasher.update(b"\0content\0")
+        try:
+            hasher.update((ROOT / path).read_bytes())
+        except OSError:
+            hasher.update(b"<unreadable>\0")
+    return hasher.hexdigest()
+
+
+def _source_tree_clean() -> bool:
+    """True only when the tree matches HEAD, counting untracked inputs as dirty.
+
+    An unknown git state surfaces as a refusal in :func:`_source_patch_sha256`
+    rather than being silently recorded as clean.
+    """
+
+    return _source_patch_sha256() is None
 
 
 def _reject_packaged_destination(

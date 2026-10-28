@@ -154,6 +154,38 @@ class TestDiffContentCompleteness:
         rendered = script._render_diff_markdown(diff)
         assert "pass_criterion.tolerance" in rendered
 
+    def test_markdown_diff_escapes_structural_characters_in_values(self):
+        # A recorded unit, path, or value containing a pipe or a newline must not
+        # split a table row or inject extra Markdown into the reviewed diff.
+        diff = {
+            "baseline_present": True,
+            "old_config_hash": "a" * 64,
+            "new_config_hash": "b" * 64,
+            "current_baseline_sha256": "c" * 64,
+            "candidate_sha256": "d" * 64,
+            "metrics": [
+                {
+                    "comparison_kind": "closed_loop_residual",
+                    "metric": "native_backend_name",
+                    "old_value": "native",
+                    "new_value": "a|b\nc",
+                }
+            ],
+            "changes": [
+                {
+                    "path": "comparisons[k].metrics[m].units",
+                    "old": "ratio",
+                    "new": "x | y",
+                }
+            ],
+        }
+        rendered = script._render_diff_markdown(diff)
+        assert "a\\|b<br>c" in rendered
+        assert "x \\| y" in rendered
+        # The raw, unescaped injected forms never reach the rendered table.
+        assert "a|b" not in rendered
+        assert "| y" not in rendered.replace("\\| y", "")
+
     def test_an_unchanged_candidate_reports_only_generator_changes(
         self,
         packaged_tree,
@@ -166,6 +198,16 @@ class TestDiffContentCompleteness:
         assert [entry["path"] for entry in diff["changes"]] == [
             "generator.source_commit"
         ]
+
+
+_PLATFORM_PROSE = {"linux": "Linux", "macos-arm64": "macOS-arm64"}
+
+
+def _lock_header(platform_tag: str | None = None) -> str:
+    """A lock header declaring a platform, as the verifier requires."""
+
+    tag = platform_tag or script._current_platform_tag()
+    return f"# Exact environment resolved for this interpreter on {_PLATFORM_PROSE[tag]}.\n"
 
 
 class TestEnvironmentVerification:
@@ -203,7 +245,7 @@ class TestEnvironmentVerification:
         monkeypatch.setattr(script, "ROOT", tmp_path)
         profile = tmp_path / script._constraint_profile_name()
         profile.parent.mkdir(parents=True)
-        profile.write_text("numpy==1.0\n", encoding="utf-8")
+        profile.write_text(_lock_header() + "numpy==1.0\n", encoding="utf-8")
         with pytest.raises(SystemExit, match="does not pin hcipy"):
             script._verified_constraint_identity()
 
@@ -218,7 +260,7 @@ class TestEnvironmentVerification:
         profile = tmp_path / script._constraint_profile_name()
         profile.parent.mkdir(parents=True)
         profile.write_text(
-            "numpy==0.0.0.dev0\nhcipy==9.9.9\n",
+            _lock_header() + "numpy==0.0.0.dev0\nhcipy==9.9.9\n",
             encoding="utf-8",
         )
         with pytest.raises(SystemExit, match="does not satisfy"):
@@ -240,7 +282,8 @@ class TestEnvironmentVerification:
         profile = tmp_path / script._constraint_profile_name()
         profile.parent.mkdir(parents=True)
         profile.write_text(
-            "".join(f"{name}=={version}\n" for name, version in sorted(pins.items())),
+            _lock_header()
+            + "".join(f"{name}=={version}\n" for name, version in sorted(pins.items())),
             encoding="utf-8",
         )
         recorded_name, recorded_sha = script._verified_constraint_identity()
@@ -264,7 +307,8 @@ class TestEnvironmentVerification:
         profile = tmp_path / script._constraint_profile_name()
         profile.parent.mkdir(parents=True)
         profile.write_text(
-            "".join(f"{name}=={version}\n" for name, version in sorted(pins.items())),
+            _lock_header()
+            + "".join(f"{name}=={version}\n" for name, version in sorted(pins.items())),
             encoding="utf-8",
         )
         with pytest.raises(SystemExit, match="is installed but"):
@@ -272,6 +316,41 @@ class TestEnvironmentVerification:
 
     def test_source_tree_cleanliness_is_reported_as_a_boolean(self):
         assert isinstance(script._source_tree_clean(), bool)
+
+    def test_generation_refuses_a_foreign_platform_lock(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        # A lock frozen for a different platform is refused even when its pins
+        # satisfy the running environment: the version-only selection cannot let
+        # a foreign-platform profile silently generate the baseline.
+        monkeypatch.setattr(script, "ROOT", tmp_path)
+        current = script._current_platform_tag()
+        other = "linux" if current != "linux" else "macos-arm64"
+        pins = dict(script._installed_distributions())
+        pins.setdefault("hcipy", "9.9.9")
+        profile = tmp_path / script._constraint_profile_name()
+        profile.parent.mkdir(parents=True)
+        profile.write_text(
+            _lock_header(other)
+            + "".join(f"{name}=={version}\n" for name, version in sorted(pins.items())),
+            encoding="utf-8",
+        )
+        with pytest.raises(SystemExit, match="frozen for"):
+            script._verified_constraint_identity()
+
+    def test_a_lock_without_a_platform_declaration_is_refused(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(script, "ROOT", tmp_path)
+        profile = tmp_path / script._constraint_profile_name()
+        profile.parent.mkdir(parents=True)
+        profile.write_text("numpy==1.0\nhcipy==1.0\n", encoding="utf-8")
+        with pytest.raises(SystemExit, match="does not declare its platform"):
+            script._verified_constraint_identity()
 
 
 class TestAcceptanceFreshness:

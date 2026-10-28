@@ -2,7 +2,7 @@
 
 # Data-Source Interface Notes
 
-The data-source interface adds the first reusable data-ingestion layer for the detector-level AO extension. The loaders currently live in `src/shwfs_ao/legacy/data_sources.py`, are re-exported through the installed `data_sources` compatibility module, and return typed Python objects rather than raw dictionaries or notebook-only parsing snippets.
+The data-source interface adds the first reusable data-ingestion layer for the detector-level AO extension. The loaders currently live in `src/shwfs_ao/io/public_data.py` (the canonical `shwfs_ao.io.public_data` module); the installed `data_sources` module is a compatibility facade that re-exports them. They return typed Python objects rather than raw dictionaries or notebook-only parsing snippets.
 
 The implementation keeps two tracks:
 
