@@ -22,21 +22,40 @@
     "acceptance": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["accepted_at_utc", "reason", "review_reference"],
+      "required": [
+        "accepted_at_utc",
+        "reason",
+        "review_reference"
+      ],
       "properties": {
-        "accepted_at_utc": {"$ref": "#/$defs/nonempty_string", "format": "date-time"},
-        "reason": {"$ref": "#/$defs/nonempty_string"},
-        "review_reference": {"$ref": "#/$defs/nonempty_string"}
+        "accepted_at_utc": {
+          "$ref": "#/$defs/nonempty_string",
+          "format": "date-time"
+        },
+        "reason": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "review_reference": {
+          "$ref": "#/$defs/nonempty_string"
+        }
       }
     },
-    "artifact_schema_name": {"const": "shwfs_ao.cross_backend_baseline"},
-    "artifact_schema_version": {"const": 1},
+    "artifact_schema_name": {
+      "const": "shwfs_ao.cross_backend_baseline"
+    },
+    "artifact_schema_version": {
+      "const": 1
+    },
     "comparison_config": {
       "type": "object",
       "minProperties": 2,
-      "required": ["config_hash"],
+      "required": [
+        "config_hash"
+      ],
       "properties": {
-        "config_hash": {"$ref": "#/$defs/content_hash"}
+        "config_hash": {
+          "$ref": "#/$defs/content_hash"
+        }
       }
     },
     "comparisons": {
@@ -46,61 +65,1072 @@
       "prefixItems": [
         {
           "$ref": "#/$defs/comparison",
-          "properties": {"comparison_kind": {"const": "pupil_mask_and_throughput"}}
+          "properties": {
+            "comparison_kind": {
+              "const": "pupil_mask_and_throughput"
+            },
+            "metrics": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "items": {
+                "$ref": "#/$defs/metric"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "hcipy_mean_window_capture"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "illuminated_sample_count"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "mask_round_trip_identical"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "native_mean_window_capture"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
         },
         {
           "$ref": "#/$defs/comparison",
-          "properties": {"comparison_kind": {"const": "zernike_modes"}}
+          "properties": {
+            "comparison_kind": {
+              "const": "zernike_modes"
+            },
+            "metrics": {
+              "type": "array",
+              "minItems": 10,
+              "maxItems": 10,
+              "items": {
+                "$ref": "#/$defs/metric"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "astig_0_alignment_defect"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "astig_0_relative_sign"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "astig_45_alignment_defect"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "astig_45_relative_sign"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "defocus_alignment_defect"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "defocus_relative_sign"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "tip_x_alignment_defect"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "tip_x_relative_sign"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "tip_y_alignment_defect"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "tip_y_relative_sign"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
         },
         {
           "$ref": "#/$defs/comparison",
-          "required": ["statistical_definition"],
-          "properties": {"comparison_kind": {"const": "atmosphere_statistics"}}
+          "required": [
+            "statistical_definition"
+          ],
+          "properties": {
+            "comparison_kind": {
+              "const": "atmosphere_statistics"
+            },
+            "metrics": {
+              "type": "array",
+              "minItems": 6,
+              "maxItems": 6,
+              "items": {
+                "$ref": "#/$defs/metric"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "hcipy_structure_function_lag_ratio"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "hcipy_structure_function_ratio_standard_error"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "native_structure_function_lag_ratio"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "native_structure_function_ratio_standard_error"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "rms_ratio_hcipy_over_native"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "rms_ratio_standard_error"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
         },
         {
           "$ref": "#/$defs/comparison",
-          "properties": {"comparison_kind": {"const": "wfs_tip_tilt_response"}}
+          "properties": {
+            "comparison_kind": {
+              "const": "wfs_tip_tilt_response"
+            },
+            "metrics": {
+              "type": "array",
+              "minItems": 8,
+              "maxItems": 8,
+              "items": {
+                "$ref": "#/$defs/metric"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "hcipy_cross_axis_fraction"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "hcipy_tilt_gain"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "hcipy_x_response_sign"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "native_cross_axis_fraction"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "native_tilt_gain"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "native_x_response_sign"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "tilt_gain_ratio_hcipy_over_native"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "y_gain_ratio_hcipy_over_native"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
         },
         {
           "$ref": "#/$defs/comparison",
-          "properties": {"comparison_kind": {"const": "lenslet_spot_morphology"}}
+          "properties": {
+            "comparison_kind": {
+              "const": "lenslet_spot_morphology"
+            },
+            "metrics": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "items": {
+                "$ref": "#/$defs/metric"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "centroid_gain_ratio_hcipy_over_native"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "ee50_ratio_hcipy_over_native"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "hcipy_ee50_over_diffraction"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "native_ee50_over_diffraction"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
         },
         {
           "$ref": "#/$defs/comparison",
-          "properties": {"comparison_kind": {"const": "dm_single_actuator_influence"}}
+          "properties": {
+            "comparison_kind": {
+              "const": "dm_single_actuator_influence"
+            },
+            "metrics": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": {
+                "$ref": "#/$defs/metric"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "actuator_ids_identical"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "max_in_pupil_command_surface_abs_diff_m"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "max_in_pupil_influence_abs_diff"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
         },
         {
           "$ref": "#/$defs/comparison",
-          "properties": {"comparison_kind": {"const": "dm_static_fitting"}}
+          "properties": {
+            "comparison_kind": {
+              "const": "dm_static_fitting"
+            },
+            "metrics": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "$ref": "#/$defs/metric"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "fitting_residual_relative_difference"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "native_fitting_residual_fraction"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
         },
         {
           "$ref": "#/$defs/comparison",
-          "properties": {"comparison_kind": {"const": "interaction_matrix_identity"}}
+          "properties": {
+            "comparison_kind": {
+              "const": "interaction_matrix_identity"
+            },
+            "metrics": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "items": {
+                "$ref": "#/$defs/metric"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "coordinate_ids_identical"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "matrix_shapes_identical"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "rank_difference"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "row_ids_identical"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
         },
         {
           "$ref": "#/$defs/comparison",
-          "properties": {"comparison_kind": {"const": "normalized_singular_spectrum"}}
+          "properties": {
+            "comparison_kind": {
+              "const": "normalized_singular_spectrum"
+            },
+            "metrics": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "$ref": "#/$defs/metric"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "max_normalized_sigma_abs_diff"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "spectrum_length_difference"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
         },
         {
           "$ref": "#/$defs/comparison",
-          "properties": {"comparison_kind": {"const": "psf_normalization"}}
+          "properties": {
+            "comparison_kind": {
+              "const": "psf_normalization"
+            },
+            "metrics": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "$ref": "#/$defs/metric"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "hcipy_total_flux_error"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "native_total_flux_error"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
         },
         {
           "$ref": "#/$defs/comparison",
-          "properties": {"comparison_kind": {"const": "strehl_ratio"}}
+          "properties": {
+            "comparison_kind": {
+              "const": "strehl_ratio"
+            },
+            "metrics": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": {
+                "$ref": "#/$defs/metric"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "hcipy_strehl"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "native_strehl"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "strehl_abs_difference"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
         },
         {
           "$ref": "#/$defs/comparison",
-          "properties": {"comparison_kind": {"const": "closed_loop_residual"}}
+          "properties": {
+            "comparison_kind": {
+              "const": "closed_loop_residual"
+            },
+            "metrics": {
+              "type": "array",
+              "minItems": 7,
+              "maxItems": 7,
+              "items": {
+                "$ref": "#/$defs/metric"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "both_loops_consumed_shared_opd_cube"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "executed_time_grid_matches_shared_fixture"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "hcipy_backend_name"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "hcipy_correction_effect"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "mean_residual_ratio_hcipy_over_native"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "native_backend_name"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "native_correction_effect"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
         },
         {
           "$ref": "#/$defs/comparison",
-          "properties": {"comparison_kind": {"const": "runtime_and_memory"}}
+          "properties": {
+            "comparison_kind": {
+              "const": "runtime_and_memory"
+            },
+            "metrics": {
+              "type": "array",
+              "minItems": 5,
+              "maxItems": 5,
+              "items": {
+                "$ref": "#/$defs/metric"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "comparison_peak_traced_memory_mb"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "hcipy_psf_propagation_s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "hcipy_wfs_propagation_s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "native_psf_propagation_s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "contains": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "const": "native_wfs_propagation_s"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
         }
       ],
       "items": false
     },
-    "component_hashes": {"$ref": "#/$defs/content_hash_map"},
+    "component_hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dm_actuator_ids",
+        "hcipy_dm",
+        "hcipy_science",
+        "hcipy_wfs_optics",
+        "native_dm",
+        "native_science",
+        "native_wfs_optics",
+        "pupil_geometry",
+        "shack_hartmann_geometry",
+        "wfs_row_ids"
+      ],
+      "properties": {
+        "dm_actuator_ids": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "hcipy_dm": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "hcipy_science": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "hcipy_wfs_optics": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "native_dm": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "native_science": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "native_wfs_optics": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "pupil_geometry": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "shack_hartmann_geometry": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "wfs_row_ids": {
+          "$ref": "#/$defs/content_hash"
+        }
+      }
+    },
     "conventions": {
       "type": "object",
       "additionalProperties": false,
@@ -111,10 +1141,18 @@
         "residual_sign_convention"
       ],
       "properties": {
-        "command_unit": {"$ref": "#/$defs/nonempty_string"},
-        "detector_column_sign_convention": {"$ref": "#/$defs/nonempty_string"},
-        "measurement_unit": {"$ref": "#/$defs/nonempty_string"},
-        "residual_sign_convention": {"$ref": "#/$defs/nonempty_string"}
+        "command_unit": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "detector_column_sign_convention": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "measurement_unit": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "residual_sign_convention": {
+          "$ref": "#/$defs/nonempty_string"
+        }
       }
     },
     "environment": {
@@ -130,91 +1168,241 @@
         "shwfs_ao_version"
       ],
       "properties": {
-        "dependency_constraint_file": {"$ref": "#/$defs/nonempty_string"},
-        "dependency_constraint_sha256": {"$ref": "#/$defs/nonempty_string"},
-        "hcipy_version": {"$ref": "#/$defs/nonempty_string"},
-        "numpy_version": {"$ref": "#/$defs/nonempty_string"},
-        "platform": {"$ref": "#/$defs/nonempty_string"},
-        "python_version": {"$ref": "#/$defs/nonempty_string"},
-        "shwfs_ao_version": {"$ref": "#/$defs/nonempty_string"}
+        "dependency_constraint_file": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "dependency_constraint_sha256": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "hcipy_version": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "numpy_version": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "platform": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "python_version": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "shwfs_ao_version": {
+          "$ref": "#/$defs/nonempty_string"
+        }
       }
     },
-    "fixture_hashes": {"$ref": "#/$defs/content_hash_map"},
+    "fixture_hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "atmosphere_opd_cube_m",
+        "command_fixture_opd_m",
+        "static_opd_m",
+        "tilt_x_opd_m",
+        "tilt_y_opd_m",
+        "time_grid_s"
+      ],
+      "properties": {
+        "atmosphere_opd_cube_m": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "command_fixture_opd_m": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "static_opd_m": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "tilt_x_opd_m": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "tilt_y_opd_m": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "time_grid_s": {
+          "$ref": "#/$defs/content_hash"
+        }
+      }
+    },
     "generator": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["generator_name", "generator_version", "source_commit"],
+      "required": [
+        "generator_name",
+        "generator_version",
+        "source_commit"
+      ],
       "properties": {
-        "generator_name": {"$ref": "#/$defs/nonempty_string"},
-        "generator_version": {"$ref": "#/$defs/nonempty_string"},
-        "source_commit": {"$ref": "#/$defs/nonempty_string"},
-        "source_tree_clean": {"type": "boolean"}
+        "generator_name": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "generator_version": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "source_commit": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "source_tree_clean": {
+          "type": "boolean"
+        }
       }
     },
-    "root_seed": {"type": "integer"}
+    "root_seed": {
+      "type": "integer"
+    }
   },
   "$defs": {
-    "nonempty_string": {"type": "string", "minLength": 1},
-    "content_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nonempty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
     "content_hash_map": {
       "type": "object",
       "minProperties": 1,
-      "propertyNames": {"minLength": 1},
-      "additionalProperties": {"$ref": "#/$defs/content_hash"}
+      "propertyNames": {
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/content_hash"
+      }
     },
     "comparison": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["attribution", "comparison_kind", "metrics"],
+      "required": [
+        "attribution",
+        "comparison_kind",
+        "metrics"
+      ],
       "properties": {
-        "attribution": {"$ref": "#/$defs/nonempty_string"},
-        "comparison_kind": {"$ref": "#/$defs/nonempty_string"},
+        "attribution": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "comparison_kind": {
+          "$ref": "#/$defs/nonempty_string"
+        },
         "metrics": {
           "type": "array",
           "minItems": 1,
-          "items": {"$ref": "#/$defs/metric"}
+          "items": {
+            "$ref": "#/$defs/metric"
+          }
         },
-        "statistical_definition": {"$ref": "#/$defs/nonempty_string"}
+        "statistical_definition": {
+          "$ref": "#/$defs/nonempty_string"
+        }
       }
     },
     "metric": {
       "oneOf": [
-        {"$ref": "#/$defs/gating_metric"},
-        {"$ref": "#/$defs/informational_metric"}
+        {
+          "$ref": "#/$defs/gating_metric"
+        },
+        {
+          "$ref": "#/$defs/informational_metric"
+        }
       ]
     },
     "gating_metric": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["level", "name", "pass_criterion", "rationale", "units", "value"],
+      "required": [
+        "level",
+        "name",
+        "pass_criterion",
+        "rationale",
+        "units",
+        "value"
+      ],
       "properties": {
-        "level": {"enum": ["exact", "tight_numerical", "physical_tolerance"]},
-        "name": {"$ref": "#/$defs/nonempty_string"},
-        "pass_criterion": {
-          "oneOf": [
-            {"$ref": "#/$defs/equals_criterion"},
-            {"$ref": "#/$defs/abs_tolerance_criterion"},
-            {"$ref": "#/$defs/range_criterion"}
+        "level": {
+          "enum": [
+            "exact",
+            "tight_numerical",
+            "physical_tolerance"
           ]
         },
-        "rationale": {"$ref": "#/$defs/nonempty_string"},
-        "units": {"$ref": "#/$defs/nonempty_string"},
-        "value": {"type": ["boolean", "number", "string"]}
+        "name": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "pass_criterion": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/equals_criterion"
+            },
+            {
+              "$ref": "#/$defs/abs_tolerance_criterion"
+            },
+            {
+              "$ref": "#/$defs/range_criterion"
+            }
+          ]
+        },
+        "rationale": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "units": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "value": {
+          "type": [
+            "boolean",
+            "number",
+            "string"
+          ]
+        }
       },
       "allOf": [
         {
           "if": {
             "properties": {
               "pass_criterion": {
-                "required": ["type"],
+                "required": [
+                  "type"
+                ],
                 "properties": {
-                  "type": {"enum": ["abs_tolerance", "range"]}
+                  "type": {
+                    "enum": [
+                      "abs_tolerance",
+                      "range"
+                    ]
+                  }
                 }
               }
             }
           },
           "then": {
-            "properties": {"value": {"type": "number"}}
+            "properties": {
+              "value": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "level": {
+                "const": "exact"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "pass_criterion": {
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "equals"
+                  }
+                }
+              }
+            }
           }
         }
       ]
@@ -222,48 +1410,103 @@
     "informational_metric": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["level", "name", "pass_criterion", "rationale", "units", "value"],
+      "required": [
+        "level",
+        "name",
+        "pass_criterion",
+        "rationale",
+        "units",
+        "value"
+      ],
       "properties": {
-        "level": {"const": "informational"},
-        "name": {"$ref": "#/$defs/nonempty_string"},
+        "level": {
+          "const": "informational"
+        },
+        "name": {
+          "$ref": "#/$defs/nonempty_string"
+        },
         "pass_criterion": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["type"],
-          "properties": {"type": {"const": "informational"}}
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "const": "informational"
+            }
+          }
         },
-        "rationale": {"$ref": "#/$defs/nonempty_string"},
-        "units": {"$ref": "#/$defs/nonempty_string"},
-        "value": {"type": "number"}
+        "rationale": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "units": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "value": {
+          "type": "number"
+        }
       }
     },
     "equals_criterion": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["expected", "type"],
+      "required": [
+        "expected",
+        "type"
+      ],
       "properties": {
-        "expected": {"type": ["boolean", "number", "string"]},
-        "type": {"const": "equals"}
+        "expected": {
+          "type": [
+            "boolean",
+            "number",
+            "string"
+          ]
+        },
+        "type": {
+          "const": "equals"
+        }
       }
     },
     "abs_tolerance_criterion": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["expected", "tolerance", "type"],
+      "required": [
+        "expected",
+        "tolerance",
+        "type"
+      ],
       "properties": {
-        "expected": {"type": "number"},
-        "tolerance": {"type": "number", "minimum": 0},
-        "type": {"const": "abs_tolerance"}
+        "expected": {
+          "type": "number"
+        },
+        "tolerance": {
+          "type": "number",
+          "minimum": 0
+        },
+        "type": {
+          "const": "abs_tolerance"
+        }
       }
     },
     "range_criterion": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["high", "low", "type"],
+      "required": [
+        "high",
+        "low",
+        "type"
+      ],
       "properties": {
-        "high": {"type": "number"},
-        "low": {"type": "number"},
-        "type": {"const": "range"}
+        "high": {
+          "type": "number"
+        },
+        "low": {
+          "type": "number"
+        },
+        "type": {
+          "const": "range"
+        }
       }
     }
   }
