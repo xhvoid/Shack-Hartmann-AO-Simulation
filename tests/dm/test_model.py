@@ -18,7 +18,7 @@ from shwfs_ao.dm import (
     DMModelError,
     DeformableMirror,
     DeformableMirrorError,
-    DmBackend,
+    DmBackend,  # noqa: F401 - export-surface import; resolvability is the assertion
     DmConfig,
     actuator_id,
     build_deformable_mirror,

@@ -8,7 +8,6 @@ candidate-and-acceptance workflow.  Requires the optional HCIPy dependency
 
 from __future__ import annotations
 
-import sys
 
 from shwfs_ao.validation.cross_backend import run_cross_backend_report
 from shwfs_ao.validation.regression import (

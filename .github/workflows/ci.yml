@@ -9,7 +9,10 @@ permissions:
 
 jobs:
   test:
-    name: Python ${{ matrix.python-version }}
+    # Source-development gate: editable install from the checkout, running the
+    # full native suite including the repository-structure tests.  It may use
+    # editable installation but cannot substitute for the wheel gate below.
+    name: Source development Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -33,6 +36,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
           cache-dependency-path: ${{ matrix.constraints }}
+
+      - name: Record canonical accepted-baseline hashes
+        run: |
+          find src/shwfs_ao/resources figures -type f -print0 | sort -z \
+            | xargs -0 sha256sum > "$RUNNER_TEMP/baselines-before.sha256"
 
       - name: Install dependencies
         run: python -m pip install -c "${{ matrix.constraints }}" -e ".[test]"
@@ -68,12 +76,116 @@ jobs:
         if: matrix.python-version == '3.14'
         run: git diff --exit-code -- src/shwfs_ao/resources/reference_metrics src/shwfs_ao/resources/resource_manifest.json figures/detector_level_SCAO
 
+      - name: Enforce accepted baselines and a clean worktree
+        # Both tracked edits and unexpected new files fail: no test, example,
+        # or CI command may overwrite an accepted baseline.
+        run: |
+          find src/shwfs_ao/resources figures -type f -print0 | sort -z \
+            | xargs -0 sha256sum > "$RUNNER_TEMP/baselines-after.sha256"
+          diff "$RUNNER_TEMP/baselines-before.sha256" "$RUNNER_TEMP/baselines-after.sha256"
+          test -z "$(git status --porcelain --untracked-files=all)"
+
+  wheel:
+    # Wheel gate (AO-REF-020): scientific/runtime smoke tests, examples, and
+    # packaging inspection must pass from a portable bundle against the built,
+    # non-editable wheel, outside the source checkout.
+    name: Wheel gate Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONPATH: ""
+      MPLBACKEND: Agg
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python-version: "3.10"
+            constraints: constraints/py310.txt
+          - python-version: "3.14"
+            constraints: constraints/py314.txt
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: ${{ matrix.constraints }}
+
+      - name: Record canonical accepted-baseline hashes
+        run: |
+          find src/shwfs_ao/resources figures -type f -print0 | sort -z \
+            | xargs -0 sha256sum > "$RUNNER_TEMP/baselines-before.sha256"
+
+      - name: Record the constraint profile hash
+        run: sha256sum "${{ matrix.constraints }}"
+
+      - name: Install build frontend
+        run: python -m pip install -c "${{ matrix.constraints }}" build
+
+      - name: Build wheel and sdist
+        # mkdir without -p: the directory must not pre-exist, so the wheel
+        # glob below resolves exactly once and build products never dirty
+        # the checkout.
+        run: |
+          mkdir "$RUNNER_TEMP/dist"
+          python -m build --outdir "$RUNNER_TEMP/dist"
+
+      - name: Install the test and notebook-test dependency profile
+        run: python -m pip install -c "${{ matrix.constraints }}" ".[test,notebook-test]"
+
+      - name: Replace the source install with the built wheel
+        run: |
+          python -m pip uninstall -y shack-hartmann-ao-simulation
+          python -m pip install --no-deps "$RUNNER_TEMP"/dist/*.whl
+          python -m pip check
+
+      - name: Rebuild a wheel from the sdist and inspect distribution contents
+        # Clean-directory rebuild; the inspector compares file lists and the
+        # canonical resource manifests, and asserts compatibility modules,
+        # schemas, fixtures, and runtime resources are packaged.
+        run: |
+          mkdir "$RUNNER_TEMP/sdist-rebuild" "$RUNNER_TEMP/sdist-dist"
+          tar -xf "$RUNNER_TEMP"/dist/*.tar.gz -C "$RUNNER_TEMP/sdist-rebuild" --strip-components=1
+          (cd "$RUNNER_TEMP/sdist-rebuild" && python -m build --wheel --outdir "$RUNNER_TEMP/sdist-dist")
+          python scripts/inspect_wheel_contents.py --wheel "$RUNNER_TEMP"/dist/*.whl --rebuilt-wheel "$RUNNER_TEMP"/sdist-dist/*.whl
+
+      - name: Prepare the portable wheel-smoke bundle
+        run: python scripts/prepare_wheel_smoke_bundle.py --output "$RUNNER_TEMP/wheel-smoke"
+
+      - name: Run bundle tests and examples from the wheel
+        # One step so `cd` persists.  The collection guard fails the job if
+        # the native selection would silently collect zero tests; the bundle
+        # is made read-only during pytest to prove resource loading needs
+        # neither a writable checkout nor a .git directory.
+        run: |
+          cd "$RUNNER_TEMP/wheel-smoke"
+          PYTHONPATH= python -m pytest -c pytest.ini -q --strict-markers -p no:cacheprovider --collect-only -m "not hcipy and not slow" tests > native-collection.txt
+          test "$(grep -c '::' native-collection.txt)" -ge 1
+          chmod -R a-w .
+          PYTHONPATH= python -m pytest -c pytest.ini -q --strict-markers -p no:cacheprovider -m "not hcipy and not slow" tests
+          chmod -R u+w .
+          PYTHONPATH= python examples/run_psf_strehl_demo.py
+          PYTHONPATH= python examples/run_shwfs_centroid_demo.py
+          AO_DEMO_OUTPUT_DIR="$RUNNER_TEMP/ao-generated" PYTHONPATH= python examples/run_fast_integration.py
+
+      - name: Enforce accepted baselines and a clean worktree
+        run: |
+          find src/shwfs_ao/resources figures -type f -print0 | sort -z \
+            | xargs -0 sha256sum > "$RUNNER_TEMP/baselines-after.sha256"
+          diff "$RUNNER_TEMP/baselines-before.sha256" "$RUNNER_TEMP/baselines-after.sha256"
+          test -z "$(git status --porcelain --untracked-files=all)"
+
   hcipy:
     name: HCIPy Python 3.11
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       PYTHONPATH: ""
+      MPLBACKEND: Agg
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -85,12 +197,17 @@ jobs:
           cache: pip
           cache-dependency-path: constraints/hcipy-py311.txt
 
+      - name: Record canonical accepted-baseline hashes
+        run: |
+          find src/shwfs_ao/resources figures -type f -print0 | sort -z \
+            | xargs -0 sha256sum > "$RUNNER_TEMP/baselines-before.sha256"
+
       - name: Install build frontend
         run: python -m pip install -c constraints/hcipy-py311.txt build
 
       - name: Build distributions
         run: |
-          mkdir -p "$RUNNER_TEMP/dist"
+          mkdir "$RUNNER_TEMP/dist"
           python -m build --outdir "$RUNNER_TEMP/dist"
 
       - name: Install test, HCIPy, and notebook-test dependencies
@@ -114,11 +231,20 @@ jobs:
           test "$(grep -c '::' hcipy-collection.txt)" -ge 1
           PYTHONPATH= python -m pytest -c pytest.ini -q --strict-markers -m "hcipy and not slow" tests
           PYTHONPATH= python -m pytest -c pytest.ini -q --strict-markers -m "not hcipy and not slow" tests
+          PYTHONPATH= python examples/run_native_hcipy_validation.py
 
-      - name: Register the kernel and smoke the HCIPy study notebook from the wheel
+      - name: Register the kernel and smoke the HCIPy study notebook from the bundle
         run: |
           python -m ipykernel install --user --name python3
+          cd "$RUNNER_TEMP/wheel-smoke"
           PYTHONPATH= python scripts/run_notebook_smoke.py --class hcipy
+
+      - name: Enforce accepted baselines and a clean worktree
+        run: |
+          find src/shwfs_ao/resources figures -type f -print0 | sort -z \
+            | xargs -0 sha256sum > "$RUNNER_TEMP/baselines-after.sha256"
+          diff "$RUNNER_TEMP/baselines-before.sha256" "$RUNNER_TEMP/baselines-after.sha256"
+          test -z "$(git status --porcelain --untracked-files=all)"
 
   notebooks:
     name: Notebook smoke (Python 3.14)
@@ -137,12 +263,17 @@ jobs:
           cache: pip
           cache-dependency-path: constraints/py314.txt
 
+      - name: Record canonical accepted-baseline hashes
+        run: |
+          find src/shwfs_ao/resources figures -type f -print0 | sort -z \
+            | xargs -0 sha256sum > "$RUNNER_TEMP/baselines-before.sha256"
+
       - name: Install build frontend
         run: python -m pip install -c constraints/py314.txt build
 
       - name: Build distributions
         run: |
-          mkdir -p "$RUNNER_TEMP/dist"
+          mkdir "$RUNNER_TEMP/dist"
           python -m build --outdir "$RUNNER_TEMP/dist"
 
       - name: Install test and notebook-test dependencies
@@ -156,13 +287,65 @@ jobs:
           python -m pip install --no-deps "$RUNNER_TEMP"/dist/*.whl
           python -m pip check
 
+      - name: Run notebook-governance tests
+        # Static layout/manifest/rules tests read the checkout, so they run
+        # here rather than from the bundle.
+        run: python -m pytest -q -m "not hcipy and not slow" tests/notebooks
+
+      - name: Prepare the portable wheel-smoke bundle
+        run: python scripts/prepare_wheel_smoke_bundle.py --output "$RUNNER_TEMP/wheel-smoke"
+
       - name: Register the kernel
         run: python -m ipykernel install --user --name python3
 
-      - name: Run notebook-governance tests
-        run: python -m pytest -q -m "not hcipy and not slow" tests/notebooks
-
-      - name: Execute the fast tutorial notebooks from the wheel
+      - name: Execute the fast tutorial notebooks from the bundle
         # MPLBACKEND=Agg, a fresh temporary working directory, and per-cell plus
-        # whole-notebook timeouts are enforced inside the smoke runner.
-        run: PYTHONPATH= python scripts/run_notebook_smoke.py --class fast
+        # whole-notebook timeouts are enforced inside the smoke runner; running
+        # from the bundle proves the notebooks need no source checkout.
+        run: |
+          cd "$RUNNER_TEMP/wheel-smoke"
+          PYTHONPATH= python scripts/run_notebook_smoke.py --class fast
+
+      - name: Enforce accepted baselines and a clean worktree
+        run: |
+          find src/shwfs_ao/resources figures -type f -print0 | sort -z \
+            | xargs -0 sha256sum > "$RUNNER_TEMP/baselines-after.sha256"
+          diff "$RUNNER_TEMP/baselines-before.sha256" "$RUNNER_TEMP/baselines-after.sha256"
+          test -z "$(git status --porcelain --untracked-files=all)"
+
+  lint:
+    name: Lint and static types (Python 3.14)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: ""
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: constraints/py314.txt
+
+      - name: Install lint tools
+        run: python -m pip install -c constraints/py314.txt ".[lint]"
+
+      - name: Ruff correctness gate
+        # Ruleset and per-file ignores are documented in [tool.ruff] in
+        # pyproject.toml.
+        run: python -m ruff check src examples scripts tests build_support
+
+      - name: Scoped static type gate
+        # [tool.mypy] checks the public protocols and unit-typed result
+        # contracts under shwfs_ao.core.
+        run: python -m mypy
+
+      - name: No sys.path.insert in runtime code
+        # Tests may insert temporary site directories for wheel validation and
+        # the archived legacy notebooks are frozen evidence; everything else
+        # must import the installed package.
+        run: |
+          ! git grep -n "sys\.path\.insert" -- '*.py' ':(exclude)tests' ':(exclude)notebooks/legacy'
