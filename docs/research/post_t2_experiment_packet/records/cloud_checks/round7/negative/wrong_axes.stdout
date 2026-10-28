@@ -1,1 +1,0 @@
-wrong_axes.npz: array noise_on__telemetry__centroids_xy_px is declared with units 'px', axes ['frame', 'xy', 'lenslet'] and meaning 'noisy processed centroid in window pixel coordinates (x = co'; the canonical layout is 'px', ['frame', 'lenslet', 'xy'], 'noisy processed centroid in window pixel coordinates (x = co'; the sidecar is not read as data.
