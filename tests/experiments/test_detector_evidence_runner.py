@@ -6,6 +6,7 @@ driven with a stand-in run function, so no simulation runs.
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import importlib.util
 import json
@@ -16,6 +17,8 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
+from typing import Any
 import zipfile
 
 import pytest
@@ -956,6 +959,7 @@ def test_the_bytecode_cache_is_checked_where_python_reads_it(tmp_path: Path, mon
     # --check-hash-based-pycs never, and an unreadable cache.
     _, package = tracked_package(tmp_path)
     tracked = REAL_CODE_IDENTITY(package)
+    assert tracked["package_sha256"] is not None and tracked["git_head"] is not None  # without a cache it is known
     source = package / "__init__.py"
 
     def cached(mode: py_compile.PycInvalidationMode) -> Path:
@@ -982,11 +986,85 @@ def test_the_bytecode_cache_is_checked_where_python_reads_it(tmp_path: Path, mon
     assert unknown()  # no hash-based cache is checked then
     monkeypatch.setattr(runner._imp, "check_hash_based_pycs", "default")
     cache = cached(py_compile.PycInvalidationMode.UNCHECKED_HASH)
+    assert _readable(cache) and unknown()  # a readable unchecked cache would run unchecked
+    # An unreadable cache is not run: Python cannot read it either and compiles the source.  What counts is whether
+    # the file can be opened, not its mode bits: mode 0 stops an ordinary user, but root (CAP_DAC_OVERRIDE) reads it.
     cache.chmod(0)
     try:
-        assert REAL_CODE_IDENTITY(package) == tracked  # Python cannot read it either and compiles the source
+        assert cache.stat().st_mode & 0o777 == 0
+        if _readable(cache):
+            # Mode bits do not stop this process, so a fixture scoped to this one file refuses the open instead.
+            # (test_an_unreadable_cache_is_refused_by_the_os_for_an_ordinary_user covers the OS refusal as root.)
+            real_open = Path.open
+
+            def refusing_open(self: Path, *args: Any, **kwargs: Any) -> Any:
+                if Path(self) == cache:
+                    raise PermissionError(errno.EACCES, "Permission denied (test fixture)", str(self))
+                return real_open(self, *args, **kwargs)
+
+            with monkeypatch.context() as scoped:
+                scoped.setattr(Path, "open", refusing_open)
+                assert not _readable(cache)
+                assert REAL_CODE_IDENTITY(package) == tracked
+        else:
+            assert REAL_CODE_IDENTITY(package) == tracked
     finally:
         cache.chmod(0o644)
+    assert _readable(cache) and unknown()  # readable again: the identity is refused again
+
+
+def _readable(path: Path) -> bool:
+    """Whether this process can open ``path`` for reading, whatever its mode bits say."""
+
+    try:
+        with path.open("rb"):
+            return True
+    except PermissionError:
+        return False
+
+
+NOBODY = 65534
+
+
+def test_an_unreadable_cache_is_refused_by_the_os_for_an_ordinary_user() -> None:
+    # Root reads a file of mode 0, so the OS refusal is shown by an ordinary-user child (uid and gid 65534) in a
+    # disposable world-readable tree; as an ordinary user the test above already meets the refusal itself.
+    if os.geteuid() != 0:
+        pytest.skip("not root: test_the_bytecode_cache_is_checked_where_python_reads_it meets the OS refusal directly")
+    disposable = Path(tempfile.mkdtemp(prefix="bytecode-readability-"))
+    try:
+        disposable.chmod(0o755)
+        source = disposable / "module.py"
+        source.write_text("VALUE = 1\n")
+        cache = Path(importlib.util.cache_from_source(str(source)))
+        py_compile.compile(str(source), cfile=str(cache), invalidation_mode=py_compile.PycInvalidationMode.UNCHECKED_HASH, doraise=True)
+        cache.parent.chmod(0o755)
+        probe = (
+            "import importlib.util, sys\n"
+            "from pathlib import Path\n"
+            "spec = importlib.util.spec_from_file_location('runner_probe', sys.argv[1])\n"
+            "module = importlib.util.module_from_spec(spec)\n"
+            "sys.modules[spec.name] = module\n"
+            "spec.loader.exec_module(module)\n"
+            "print(module._unchecked_bytecode(Path(sys.argv[2])))\n"
+        )
+
+        def as_nobody() -> str:
+            completed = subprocess.run(
+                [sys.executable, "-I", "-B", "-c", probe, str(ROOT / "scripts/run_detector_level_evidence.py"), str(source)],
+                user=NOBODY, group=NOBODY, extra_groups=[], cwd=disposable, capture_output=True, text=True, timeout=120, check=False,
+                env={"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8", **{name: "2" for name in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "NUMEXPR_NUM_THREADS")}},
+            )
+            assert completed.returncode == 0, completed.stderr[-2000:]
+            return completed.stdout.strip()
+
+        cache.chmod(0o644)
+        assert as_nobody() == "True"  # readable to the child: an unchecked cache would run unchecked
+        cache.chmod(0)
+        assert _readable(cache)  # this process (root) still reads it: the mode bits alone say nothing here
+        assert as_nobody() == "False"  # the OS refuses the child, so the cache is not run
+    finally:
+        shutil.rmtree(disposable, ignore_errors=True)
 
 
 # -- S4 traced family (ticket T1, 2026-10-20): gated commands, sidecars, protocols --
