@@ -433,7 +433,8 @@ function renderSummaryTable() {
     ["Max DM saturation of the commands issued in frames 40–179", "max_dm_saturation_fraction", "", 3],
   ];
   const isBase = state.case.id === state.manifest.default_case;
-  $("summary-table").innerHTML = `<table><caption>Frames 40–179, 140 equal-weight samples, one realization (no confidence intervals)</caption><thead><tr><th>Quantity</th><th>${state.case.json.label}</th>${isBase ? "" : "<th>Baseline</th><th>Difference</th>"}<th>Unit</th></tr></thead><tbody>${rows.map(([label, key, unit, d]) => `<tr><th scope="row">${label}</th><td class="num">${fmt(s[key], d)}</td>${isBase ? "" : `<td class="num">${fmt(b[key], d)}</td><td class="num">${s[key] - b[key] >= 0 ? "+" : ""}${fmt(s[key] - b[key], d)}</td>`}<td>${unit}</td></tr>`).join("")}</tbody></table>`;
+  $("summary-table-title").textContent = "Frames 40–179, 140 equal-weight samples, one realization (no confidence intervals)";
+  $("summary-table").innerHTML = `<table aria-labelledby="summary-table-title"><thead><tr><th>Quantity</th><th>${state.case.json.label}</th>${isBase ? "" : "<th>Baseline</th><th>Difference</th>"}<th>Unit</th></tr></thead><tbody>${rows.map(([label, key, unit, d]) => `<tr><th scope="row">${label}</th><td class="num">${fmt(s[key], d)}</td>${isBase ? "" : `<td class="num">${fmt(b[key], d)}</td><td class="num">${s[key] - b[key] >= 0 ? "+" : ""}${fmt(s[key] - b[key], d)}</td>`}<td>${unit}</td></tr>`).join("")}</tbody></table>`;
   const pairing = state.case.json.pairing;
   $("pairing-note").textContent = isBase
     ? "The baseline is the reference case for the comparisons."
@@ -466,10 +467,11 @@ function renderDownloads() {
 
 function renderFrameTable(force) {
   const details = $("frame-table").closest("details");
-  if (!force && !details.open) { $("frame-table").innerHTML = ""; return; }
+  if (!force && !details.open) { $("frame-table-title").textContent = ""; $("frame-table").innerHTML = ""; return; }
   const pf = state.case.metrics.per_frame;
   const rows = pf.frame_index.map((k) => `<tr><td class="num">${k}</td><td class="num">${fmt(pf.atmosphere_rms_nm.values[k], 3)}</td><td class="num">${fmt(pf.residual_rms_nm.values[k], 3)}</td><td class="num">${fmt(pf.peak_strehl_uncorrected.values[k], 4)}</td><td class="num">${fmt(pf.peak_strehl_corrected.values[k], 4)}</td><td class="num">${fmt(pf.valid_measurement_fraction.values[k], 4)}</td><td>${pf.reconstruction_usable[k] ? "yes" : "no"}</td><td class="num">${fmt(pf.dm_saturation_fraction.values[k], 3)}</td></tr>`);
-  $("frame-table").innerHTML = `<table><caption>${state.case.json.label}: all 180 frames (display rounding; full precision in the downloads)</caption><thead><tr><th>Frame</th><th>Atmosphere RMS (nm)</th><th>Residual RMS (nm)</th><th>Strehl, uncorrected</th><th>Strehl, AO</th><th>Valid fraction</th><th>Usable</th><th>DM saturation</th></tr></thead><tbody>${rows.join("")}</tbody></table>`;
+  $("frame-table-title").textContent = `${state.case.json.label}: all 180 frames (display rounding; full precision in the downloads)`;
+  $("frame-table").innerHTML = `<table aria-labelledby="frame-table-title"><thead><tr><th>Frame</th><th>Atmosphere RMS (nm)</th><th>Residual RMS (nm)</th><th>Strehl, uncorrected</th><th>Strehl, AO</th><th>Valid fraction</th><th>Usable</th><th>DM saturation</th></tr></thead><tbody>${rows.join("")}</tbody></table>`;
 }
 
 function renderModelNotes() {

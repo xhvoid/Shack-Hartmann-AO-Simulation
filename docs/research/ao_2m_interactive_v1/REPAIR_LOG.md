@@ -27,3 +27,15 @@ redundant environment protections, corrected historical wording and JSON/Python
 quoting conventions; none required a change. Full reports and mutation/browser
 fixtures remain in the local review archive. See [acceptance](ACCEPTANCE_REPORT.md)
 for the exact identities and limitations.
+
+## After publication
+
+A browser check of the published site at 375 px found three layout issues.
+The fix changes only page, script and style bytes (a new code build). The
+dataset, manifest and every recorded value are unchanged.
+
+| Findings | Resolution |
+| --- | --- |
+| PUB-F01 | Table titles were captions inside the horizontal scroll box, so a title wider than the screen was only readable by scrolling the table. Each title now sits above its box and wraps at the box width. |
+| PUB-F02 | A shaded-band label ("excluded from the window", "burn-in") was drawn inside the plot area and could overlap recorded curves. Band labels now have their own strip above the plot area. |
+| PUB-F03 | Table scroll boxes could not take keyboard focus where the browser does not provide it. Each box is now a focusable region named by its table title. |

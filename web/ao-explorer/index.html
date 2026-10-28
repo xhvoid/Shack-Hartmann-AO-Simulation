@@ -7,7 +7,7 @@
 <meta name="description" content="Precomputed native 2 m Shack-Hartmann SCAO experiment and the main results of the AO simulation project, with their evidence and limits.">
 <link rel="icon" href="data:,">
 <!-- Code and style come from the content-addressed build directory; see scripts/ao_explorer/site_build.py. -->
-<link rel="stylesheet" href="code-7c04e5cefab85e8b/styles.css">
+<link rel="stylesheet" href="code-08dc9a4b5688bf41/styles.css">
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script type="module" src="code-7c04e5cefab85e8b/app.js" onerror="aoCodeUnavailable()"></script>
+<script type="module" src="code-08dc9a4b5688bf41/app.js" onerror="aoCodeUnavailable()"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -128,13 +128,15 @@ function aoCodeUnavailable() {
     <details>
       <summary>Data table and downloads for this case</summary>
       <div id="downloads" class="downloads"></div>
-      <div id="frame-table" class="table-scroll"></div>
+      <p class="table-title" id="frame-table-title"></p>
+      <div id="frame-table" class="table-scroll" role="region" tabindex="0" aria-labelledby="frame-table-title"></div>
     </details>
   </section>
 
   <section class="panel" aria-labelledby="summary-title">
     <h2 id="summary-title">Post-burn-in summary and comparison with the baseline</h2>
-    <div id="summary-table" class="table-scroll"></div>
+    <p class="table-title" id="summary-table-title"></p>
+    <div id="summary-table" class="table-scroll" role="region" tabindex="0" aria-labelledby="summary-table-title"></div>
     <p class="hint" id="pairing-note"></p>
   </section>
 

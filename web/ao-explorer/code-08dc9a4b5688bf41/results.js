@@ -53,7 +53,11 @@ function renderTable(table, highlight) {
     }).join("")}</tr>`;
   }).join("");
   const notes = [table.uncertainty && `Uncertainty: ${table.uncertainty}.`, table.precision_note, table.notes].filter(Boolean).map(esc).join(" ");
-  return `<div class="table-scroll"><table><caption>${esc(table.title)}</caption><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>${notes ? `<p class="hint">${notes}</p>` : ""}`;
+  // The title sits outside the scroll box, so it wraps at the box's width
+  // rather than the table's; it names the box, a focusable region that a
+  // keyboard can scroll when the table is wider than the screen.
+  const titleId = esc(`table-${table.id}`);
+  return `<p class="table-title" id="${titleId}">${esc(table.title)}</p><div class="table-scroll" role="region" tabindex="0" aria-labelledby="${titleId}"><table aria-labelledby="${titleId}"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>${notes ? `<p class="hint">${notes}</p>` : ""}`;
 }
 
 function sourceList(items) {
@@ -257,6 +261,6 @@ export async function renderResults(results, resultsUrl, host, indexHost, result
   }
   for (const group of results.groups) host.append(renderGroup(group, resultsUrl));
   const coverage = document.createElement("details");
-  coverage.innerHTML = `<summary>Coverage of the eight required result groups</summary><div class="table-scroll"><table><thead><tr><th>Group</th><th>Figures</th><th>Tables</th><th>Charts</th><th>Key values</th><th>Downloads</th><th>Status</th></tr></thead><tbody>${results.coverage.map((c) => `<tr><td>${esc(c.group)} ${esc(c.title)}</td><td class="num">${c.figures}</td><td class="num">${c.tables}</td><td class="num">${c.charts}</td><td class="num">${c.key_values}</td><td class="num">${c.downloads}</td><td>${esc(c.status.map((s) => STATUS_LABELS[s] || s).join(", "))}</td></tr>`).join("")}</tbody></table></div>`;
+  coverage.innerHTML = `<summary>Coverage of the eight required result groups</summary><div class="table-scroll" role="region" tabindex="0" aria-label="Coverage of the eight required result groups"><table><thead><tr><th>Group</th><th>Figures</th><th>Tables</th><th>Charts</th><th>Key values</th><th>Downloads</th><th>Status</th></tr></thead><tbody>${results.coverage.map((c) => `<tr><td>${esc(c.group)} ${esc(c.title)}</td><td class="num">${c.figures}</td><td class="num">${c.tables}</td><td class="num">${c.charts}</td><td class="num">${c.key_values}</td><td class="num">${c.downloads}</td><td>${esc(c.status.map((s) => STATUS_LABELS[s] || s).join(", "))}</td></tr>`).join("")}</tbody></table></div>`;
   host.append(coverage);
 }
