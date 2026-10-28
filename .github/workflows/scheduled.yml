@@ -21,6 +21,7 @@ jobs:
     env:
       PYTHONPATH: ""
       MPLBACKEND: Agg
+      PIP_CONSTRAINT: ${{ github.workspace }}/constraints/py314.txt
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -55,6 +56,9 @@ jobs:
           python -m pip uninstall -y shack-hartmann-ao-simulation
           python -m pip install --no-deps "$RUNNER_TEMP"/dist/*.whl
           python -m pip check
+
+      - name: Verify the environment is exactly the constraint lock
+        run: python scripts/verify_environment_lock.py --constraints constraints/py314.txt
 
       - name: Run slow-marked native tests when any exist
         # The slow marker is registered but currently carried only by the
@@ -93,6 +97,7 @@ jobs:
     env:
       PYTHONPATH: ""
       MPLBACKEND: Agg
+      PIP_CONSTRAINT: ${{ github.workspace }}/constraints/hcipy-py311.txt
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -127,6 +132,9 @@ jobs:
           python -m pip uninstall -y shack-hartmann-ao-simulation
           python -m pip install --no-deps "$RUNNER_TEMP"/dist/*.whl
           python -m pip check
+
+      - name: Verify the environment is exactly the constraint lock
+        run: python scripts/verify_environment_lock.py --constraints constraints/hcipy-py311.txt
 
       - name: Run every HCIPy test including slow ones
         # The collection guard fails the job if the full hcipy selection
