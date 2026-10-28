@@ -1,0 +1,22 @@
+{
+  "name": "ao-simulation-research-validation",
+  "displayName": "AO Simulation Research & Validation",
+  "version": "0.1.0",
+  "description": "Evidence-based adaptive-optics research, physical validation, numerical verification, scientific code review, reproducibility and resource analysis.",
+  "author": {
+    "name": "AO Simulation"
+  },
+  "keywords": [
+    "adaptive-optics",
+    "scientific-computing",
+    "research",
+    "validation"
+  ],
+  "metadata": {
+    "port": "Claude Code edition of the Agent Plugins / Codex package ao-simulation-research-validation 0.1.0",
+    "originalSource": "plugins/ao-simulation-research-validation",
+    "category": "Education & Research",
+    "shortDescription": "AO research and validation",
+    "longDescription": "Seven focused skills connect AO definitions, numerical algorithms and code to independent checks and primary literature. Substantive findings trigger active research, with English evidence reports and read-only audit defaults."
+  }
+}
