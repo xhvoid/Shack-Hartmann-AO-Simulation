@@ -159,7 +159,10 @@ Every schema-3 CSV sidecar records:
 
 The artifact manifest lists each member's filename, schema identity, size, and
 content hash. It permits `source_commit = null` for an ordinary installed-wheel
-run; it does not force baseline-acceptance fields onto normal output.
+run; it does not force baseline-acceptance fields onto normal output. Members
+are recorded by filename beside the manifest, so a schema-3 configuration
+whose `reference_metrics_path` lies outside `output_dir` is rejected before
+anything is written.
 
 ## Explicit v2-to-v3 upgrade path
 
