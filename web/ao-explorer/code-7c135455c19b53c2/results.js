@@ -9,11 +9,11 @@ import { BundleError, fetchVerified, fetchVerifiedJson, require } from "./integr
 import { barChart, lineChart, redrawWhenResized } from "./charts.js";
 
 const STATUS_LABELS = {
-  executed: "Executed result",
-  accepted_domain: "Accepted comparison (tested domain)",
-  failed_hypothesis: "Recorded failed hypothesis",
-  summary_only: "Summary-only evidence",
-  pending: "Pending work",
+  executed: "Completed run",
+  accepted_domain: "Passed within the tested range",
+  failed_hypothesis: "Hypothesis not supported",
+  summary_only: "Summary records only",
+  pending: "Not yet completed",
   derived_analysis: "Saved-data reanalysis",
   analytic_model: "Analytical model output",
 };
@@ -136,14 +136,14 @@ function renderGroup(group, resultsUrl) {
 <header><h2>${esc(group.id)}. ${esc(group.title)}</h2><p class="question">${esc(group.question)}</p><div class="badges">${badges}</div></header>
 <dl class="context">${context}</dl>
 <div class="keyvals">${keyvals}</div>
-<p class="takeaway"><strong>Takeaway.</strong> ${esc(group.takeaway)}</p>
+<p class="takeaway"><strong>What I found.</strong> ${esc(group.takeaway)}</p>
 <div class="selector-host"></div>
 <div class="charts-host"></div>
 <div class="tables-host"></div>
 <div class="figures"></div>
 <h3>Limitations</h3><ul class="limits">${group.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>
-${group.evidence_notes.length ? `<h3>Evidence notes</h3><ul class="limits">${group.evidence_notes.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}
-<details><summary>Sources, producers and licence</summary>
+${group.evidence_notes.length ? `<h3>Notes on the source records</h3><ul class="limits">${group.evidence_notes.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}
+<details><summary>Sources, generation details and licence</summary>
 <p class="hint">Producer: ${esc(Object.entries(group.producer).map(([k, v]) => `${k}: ${v}`).join("; "))}.</p>
 <p class="hint">Licence: ${esc(group.licence)}</p>
 <ul class="limits">${sourceList([group.sources, group.context_sources, ...group.tables.map((t) => t.source), group.key_values.map((k) => k.source), group.limitation_locators, group.erratum, group.doc_contradiction, group.z4_summary, group.draft_status, group.licence_source])}</ul>
@@ -190,7 +190,7 @@ ${group.evidence_notes.length ? `<h3>Evidence notes</h3><ul class="limits">${gro
   for (const figure of group.figures) attachFigure(figure, resultsUrl, figures);
   if (group.downloads.length) {
     const host = card.querySelector(".downloads-host");
-    host.innerHTML = `<p class="downloads"><strong>Evidence downloads</strong> (verified against the manifest on download): </p>`;
+    host.innerHTML = `<p class="downloads"><strong>Data and analysis downloads</strong> (file hashes checked on download): </p>`;
     for (const item of group.downloads) {
       const extract = item.kind === "source_bound_extract";
       const link = document.createElement("a");
@@ -252,20 +252,20 @@ export async function renderResults(results, resultsUrl, host, indexHost, result
     const all = document.createElement("p");
     all.className = "downloads";
     const link = document.createElement("a");
-    link.textContent = "results.json (every group, value, locator and digest; verified)";
+    link.textContent = "results.json (complete records and source hashes)";
     link.href = URL.createObjectURL(new Blob([resultsBuffer], { type: "application/json" }));
     link.download = "research-results.json";
-    all.append(document.createTextNode("Complete Research Results record: "), link);
+    all.append(document.createTextNode("Download all experiment records: "), link);
     host.append(all);
   }
   const topics = {
     R4: ['12 m detector behaviour', 'Measurement availability, reconstruction policy and an unresolved noise-law discrepancy.'],
     R6: ['Separate analytical MCAO study', 'A separate model family using P3 and MASTSEL, with its own assumptions and checks.'],
-    R5: ['Historical 42 m runs and realization scatter', 'Earlier physical-camera records; their windows and producer identities differ from the new replay.'],
+    R5: ['Historical 42 m runs and realization scatter', 'Earlier detector-model runs, with different analysis windows and source versions from the replay above.'],
     R1: ['Sensing and centroid precision', 'Tutorial response calibration, photon budget and measurement availability.'],
     R2: ['Reconstruction and feedback experiments', 'Small-system correction, delay and controllable-order studies.'],
     R3: ['Ten-layer atmosphere: full records', 'Layer profile, structure function and the separate 2 m comparison.'],
-    R7: ['Independent backend comparisons', 'Accepted small-fixture results and reduced-scale exploratory evidence.'],
+    R7: ['Independent backend comparisons', 'Results from a small test configuration and a separate reduced-scale study.'],
     R8: ['Numerical sampling, provenance and open questions', 'Profile-specific convergence records and unresolved work.'],
   };
   indexHost.innerHTML = '';
@@ -281,7 +281,7 @@ export async function renderResults(results, resultsUrl, host, indexHost, result
     });host.append(detail);
   }
   const coverage = document.createElement("details");
-  coverage.innerHTML = `<summary>Archived evidence inventory</summary><div class="table-scroll" role="region" tabindex="0" aria-label="Archived evidence inventory"><table><thead><tr><th>Group</th><th>Figures</th><th>Tables</th><th>Charts</th><th>Key values</th><th>Downloads</th><th>Status</th></tr></thead><tbody>${results.coverage.map((c) => `<tr><td>${esc(c.group)} ${esc(c.title)}</td><td class="num">${c.figures}</td><td class="num">${c.tables}</td><td class="num">${c.charts}</td><td class="num">${c.key_values}</td><td class="num">${c.downloads}</td><td>${esc(c.status.map((s) => STATUS_LABELS[s] || s).join(", "))}</td></tr>`).join("")}</tbody></table></div>`;
+  coverage.innerHTML = `<summary>Index of archived results</summary><div class="table-scroll" role="region" tabindex="0" aria-label="Index of archived results"><table><thead><tr><th>Group</th><th>Figures</th><th>Tables</th><th>Charts</th><th>Key values</th><th>Downloads</th><th>Status</th></tr></thead><tbody>${results.coverage.map((c) => `<tr><td>${esc(c.group)} ${esc(c.title)}</td><td class="num">${c.figures}</td><td class="num">${c.tables}</td><td class="num">${c.charts}</td><td class="num">${c.key_values}</td><td class="num">${c.downloads}</td><td>${esc(c.status.map((s) => STATUS_LABELS[s] || s).join(", "))}</td></tr>`).join("")}</tbody></table></div>`;
   host.append(coverage);
 }
 
@@ -314,7 +314,7 @@ export function initNgs22(entry, entryUrl) {
   const labels = {original_2m:'Saved 2 m · ±1 µm OPD', draft_22m_v1:'2.2 m original draft · v1', repaired_22m_v2:'2.2 m revision · v2'};
   let ready, manifest, base, results, ledger;
   const member = name => { require(manifest?.files[name], `NGS evidence member missing: ${name}`); return {href:name,...manifest.files[name]}; };
-  const fail = error => {node('error').hidden=false;node('error').textContent=`NGS evidence unavailable: ${error.message}. Reload to retry.`;node('status').textContent='The saved NGS evidence could not be verified.';};
+  const fail = error => {node('error').hidden=false;node('error').textContent=`NGS results unavailable: ${error.message}. Reload to retry.`;node('status').textContent='The NGS results could not be loaded or checked.';};
   function showWindow(key) {
     require(['primary','secondary'].includes(key),'Unknown NGS interval');
     node('table-body').replaceChildren(...Object.entries(results[key]).map(([id,x]) => {
@@ -339,7 +339,7 @@ export function initNgs22(entry, entryUrl) {
   function showLedger() {
     const query=node('filter').value.trim().toLowerCase();
     const rows=ledger.parameters.filter(row=>JSON.stringify(row).toLowerCase().includes(query));
-    node('ledger-count').textContent=`${rows.length} of ${ledger.parameters.length} original field annotations shown. Revision overrides are listed above.`;
+    node('ledger-count').textContent=`${rows.length} of ${ledger.parameters.length} parameter notes shown. The changed settings are listed above.`;
     node('ledger-body').replaceChildren(...rows.map(row=>{
       const tr=document.createElement('tr'),path=document.createElement('th'),status=document.createElement('td'),note=document.createElement('td');
       path.scope='row';path.textContent=row.path;status.textContent=`${row.classification.replaceAll('_',' ')}${row.sources.length?' · '+row.sources.join(', '):''}`;note.textContent=row.note;
@@ -349,7 +349,7 @@ export function initNgs22(entry, entryUrl) {
   async function load() {
     if(ready)return ready;
     ready=(async()=>{
-      node('status').textContent='Checking saved NGS results and source identities…';
+      node('status').textContent='Loading the NGS results…';
       const e=entry.ngs22;require(e?.schema==='ao-explorer.ngs-entry.v1','No supported NGS entry');
       const m=await fetchVerifiedJson({href:e.manifest,bytes:e.manifest_bytes,sha256:e.manifest_sha256,media_type:'application/json'},entryUrl);
       manifest=m.value;base=m.url;require(manifest.schema==='ao-explorer.ngs-manifest.v1'&&manifest.id===e.id,'NGS evidence identity mismatch');
@@ -378,7 +378,7 @@ export function initNgs22(entry, entryUrl) {
           }catch(error){link.textContent=`${label} unavailable: ${error.message}`;}
         });node('downloads').append(link);
       }
-      node('status').textContent='Saved results verified · original draft preserved · no simulation run for publication';
+      node('status').textContent='';
     })();return ready;
   }
   buttons.forEach(button=>button.addEventListener('click',()=>{try{showWindow(button.dataset.ngsWindow);}catch(error){fail(error);}}));

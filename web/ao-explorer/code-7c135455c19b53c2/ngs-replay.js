@@ -16,7 +16,7 @@ export function initNgsReplay(entry, entryUrl) {
   function pause(){playing=false;clearTimeout(timer);$('play').textContent='Play';$('play').setAttribute('aria-pressed','false');$('ngc602-play').textContent='Play';$('ngc602-play').setAttribute('aria-pressed','false');}
   function fail(error){
     failed=true;pause();++ticket;busy=false;
-    $('error').hidden=false;$('error').textContent=`Replay unavailable: ${error.message}. Any visible images and cursor remain at the last verified frame. Reload to retry.`;
+    $('error').hidden=false;$('error').textContent=`Replay unavailable: ${error.message}. The viewer is paused at the last checked frame. Reload to try again.`;
     root.querySelectorAll('button,input,select').forEach(e=>e.disabled=true);
     $('status').textContent='The requested replay asset could not be verified.';
   }
@@ -94,7 +94,7 @@ export function initNgsReplay(entry, entryUrl) {
       shadeX:[[0,.2,'startup exclusion'],[data.loss_time_s,2,'v1 reconstruction unusable']],
       verticalLines:[{x:data.loss_time_s,color:'#a3324e',label:'v1 loss · 0.981333 s'}],cursorX:m.time_s[k],
       series:[{label:'Original v1',color:'#b3541e',points:m.v1.strehl.map((v,i)=>[m.time_s[i],v])},
-        {label:'Repaired v2',color:'#4d7a2a',points:m.v2.strehl.map((v,i)=>[m.time_s[i],v])},
+        {label:'Revised v2',color:'#4d7a2a',points:m.v2.strehl.map((v,i)=>[m.time_s[i],v])},
         {label:'Uncorrected',color:'#7d7d7d',style:'dashed',points:m.uncorrected_strehl.map((v,i)=>[m.time_s[i],v])}]});
   }
   function labels(){
@@ -113,15 +113,15 @@ export function initNgsReplay(entry, entryUrl) {
     $('psf-u-caption').textContent=`Uncorrected · Strehl ${m.uncorrected_strehl[k].toFixed(4)}`;
     for(const id of ['v1','v2']){
       const v=m[id];
-      $(`residual-${id}-caption`).textContent=`${id==='v1'?'Original v1':'Repaired v2'} residual · RMS ${v.rms_nm[k].toFixed(1)} nm`;
-      $(`psf-${id}-caption`).textContent=`${id==='v1'?'Original v1':'Repaired v2'} PSF · Strehl ${v.strehl[k].toFixed(4)}`;
-      $(`valid-${id}`).textContent=`${id==='v1'?'Original v1':'Repaired v2'}: ${v.usable[k]?'usable reconstruction':'RECONSTRUCTION REJECTED'} · ${(v.valid_fraction[k]*100).toFixed(2)}% valid rows`;
+      $(`residual-${id}-caption`).textContent=`${id==='v1'?'Original v1':'Revised v2'} residual · RMS ${v.rms_nm[k].toFixed(1)} nm`;
+      $(`psf-${id}-caption`).textContent=`${id==='v1'?'Original v1':'Revised v2'} PSF · Strehl ${v.strehl[k].toFixed(4)}`;
+      $(`valid-${id}`).textContent=`${id==='v1'?'Original v1':'Revised v2'}: ${v.usable[k]?'usable reconstruction':'reconstruction rejected'} · ${(v.valid_fraction[k]*100).toFixed(2)}% valid rows`;
     }
     const until=index+1<data.indices.length?m.time_s[data.indices[index+1]]:2;
     $('timing').textContent=`One pass: ${duration} s (${duration/2}× slower). This snapshot is held to ${until.toFixed(6)} s of recorded time. No interpolation; loading or background tabs may extend playback.`;
-    $('status').textContent='Synchronized wavefront, PSF and NGC 602 replay · all 1500 curve samples verified';
+    $('status').textContent='';
     $('ngc602-u-caption').textContent=`No correction · point-source Strehl ${m.uncorrected_strehl[k].toFixed(4)}`;
-    for(const id of ['v1','v2'])$(`ngc602-${id}-caption`).textContent=`${id==='v1'?'Original v1':'Repaired v2'} · point-source Strehl ${m[id].strehl[k].toFixed(4)}`;
+    for(const id of ['v1','v2'])$(`ngc602-${id}-caption`).textContent=`${id==='v1'?'Original v1':'Revised v2'} · point-source Strehl ${m[id].strehl[k].toFixed(4)}`;
     $('previous').disabled=index===0;$('next').disabled=index===data.indices.length-1;
   }
   async function show(next){
@@ -231,7 +231,7 @@ export function initNgsControl(entry, entryUrl) {
   if(!root)return;
   const $=name=>document.getElementById(`ngsc-${name}`);
   let data,manifest,base,loading,frame=736,view='focus';
-  const names={v1:'Original v1',v2:'Repaired v2'},colors={v1:'#b3541e',v2:'#4d7a2a'};
+  const names={v1:'Original v1',v2:'Revised v2'},colors={v1:'#b3541e',v2:'#4d7a2a'};
   const members=name=>{require(manifest.files[name],`Control member missing: ${name}`);return {href:name,...manifest.files[name]};};
   const limits=()=>view==='focus'?[690,780]:[0,1499];
   const fail=error=>{
@@ -315,7 +315,7 @@ export function initNgsControl(entry, entryUrl) {
       root.querySelectorAll('button,input').forEach(x=>x.disabled=false);show();
       for(const id of ['valid','increment','boundary','strehl'])redrawWhenResized($(id),charts);
       for(const [label,name] of [['All 3000 telemetry rows (CSV)','frames.csv'],['Native arrays (JSON)','data.json'],['Timing and definitions','README.md'],['Source identities and checks','provenance.json'],['Offline exporter','exporter.py']])download(label,name);
-      $('status').textContent='Both saved histories verified · all 1500 frames per run · DM occupancy aligned to exposure time';
+      $('status').textContent='';
     })();return loading;
   }
   $('seek').addEventListener('input',e=>show(Number(e.target.value)));

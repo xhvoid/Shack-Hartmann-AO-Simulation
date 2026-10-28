@@ -206,7 +206,7 @@ async function loadRequested() {
   const info = g.requested;
   const generation = ++g.generation;
   if (g.controller) { g.controller.abort(); g.controller = null; }
-  if (g.case && g.case.id === info.id) { hideError(); setStatus(`Showing the galaxy through “${g.case.label}”. All members verified against the galaxy manifest.`); render(); return; }
+  if (g.case && g.case.id === info.id) { hideError(); setStatus(""); render(); return; }
   const controller = new AbortController();
   g.controller = controller;
   showPending();
@@ -217,7 +217,7 @@ async function loadRequested() {
     if (generation !== g.generation) return;
     remember(info.id, data);
     install(data);
-    setStatus(`Showing the galaxy through “${data.label}”. All members verified against the galaxy manifest.`);
+    setStatus("");
   } catch (error) {
     if (error.name === "AbortError" || generation !== g.generation) return;
     showError(`Could not show the galaxy for “${info.label}”: ${error.message}`, "No galaxy image is shown for this case; the rest of the page is unaffected.");
@@ -303,11 +303,11 @@ function showPending() {
   if (g.sourceBitmap) { draw("galaxy-source", g.sourceBitmap); drawSaturatedBox("galaxy-source"); }
   for (const role of ROLES) { const canvas = $(`galaxy-${role}`); canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height); }
   const waiting = g.visible ? `Loading the galaxy observation for “${info.label}”…` : `The galaxy observation for “${info.label}” loads when this panel is in view.`;
-  $("galaxy-unc-title").textContent = "Observed template + uncorrected simulated PSF";
-  $("galaxy-ao-title").textContent = "Observed template + AO-corrected simulated PSF";
+  $("galaxy-unc-title").textContent = "HST image + uncorrected PSF";
+  $("galaxy-ao-title").textContent = "HST image + AO-corrected PSF";
   $("galaxy-unc-sub").textContent = waiting;
   $("galaxy-ao-sub").textContent = waiting;
-  $("galaxy-readout").textContent = `Not yet synchronized: no galaxy image is shown until the observations of “${info.label}” are verified. The panel then joins the shared frame and mode.`;
+  $("galaxy-readout").textContent = `Loading images for “${info.label}”. Once checked, they will follow the main viewer’s frame and image mode.`;
 }
 
 function updateLabels(p) {
@@ -316,16 +316,16 @@ function updateLabels(p) {
   if (p.mode === "average") {
     const mean = c.mean.roles;
     const frames = `frames ${START()}–${FRAMES() - 1}`;
-    $("galaxy-unc-title").textContent = "Observed template + uncorrected simulated PSF (analysis-window mean)";
-    $("galaxy-ao-title").textContent = "Observed template + AO-corrected simulated PSF (analysis-window mean)";
+    $("galaxy-unc-title").textContent = "HST image + uncorrected PSF (analysis-window mean)";
+    $("galaxy-ao-title").textContent = "HST image + AO-corrected PSF (analysis-window mean)";
     $("galaxy-unc-sub").textContent = `${g.case.label}: saved mean PSF of ${frames} (${COUNT()} PSFs); ${percent(mean.uncorrected.flux.window_fraction)} of the convolved template flux falls inside the native ±4.3″ window`;
     $("galaxy-ao-sub").textContent = `${g.case.label}: saved mean PSF of ${frames} (${COUNT()} PSFs); ${percent(mean.corrected.flux.window_fraction)} of the convolved template flux falls inside the native ±4.3″ window`;
     $("galaxy-readout").textContent = `Analysis-window mean · ${frames} · ${COUNT()} equal-weight PSFs per image · static (no timeline)`;
   } else {
     const k = s.frame_indices[p.position]; const t = s.time_s[p.position];
     const phase = k < START() ? `startup exclusion (frames 0–${START() - 1})` : "analysis window";
-    $("galaxy-unc-title").textContent = "Observed template + uncorrected simulated PSF";
-    $("galaxy-ao-title").textContent = "Observed template + AO-corrected simulated PSF";
+    $("galaxy-unc-title").textContent = "HST image + uncorrected PSF";
+    $("galaxy-ao-title").textContent = "HST image + AO-corrected PSF";
     $("galaxy-unc-sub").textContent = `${g.case.label}: same atmosphere, zero DM, frame ${k}; ${percent(s.roles.uncorrected.flux.displayed.window_fraction[p.position])} of the convolved template flux inside the native window`;
     $("galaxy-ao-sub").textContent = `${g.case.label}: pre-update residual, frame ${k}; ${percent(s.roles.corrected.flux.displayed.window_fraction[p.position])} of the convolved template flux inside the native window`;
     const until = p.position + 1 < SAMPLES() ? `held until the next displayed sample at ${ms(p.holdEnd)}` : `the last frame, held for its 1 ms period to ${ms(hi)}`;
@@ -365,8 +365,8 @@ function renderNotes() {
   const sc = g.scene.scene; const pr = sc.product; const h = pr.header; const q = sc.quality; const t = sc.target;
   const w = g.manifest.display.window; const res = sc.observational_psf.indicative_resolution;
   const fmt = (v, d = 0) => Number(v).toFixed(d);
-  $("galaxy-label").textContent = `Observed HST/WFC3 F814W (LEGUS) image of the central region of NGC 1705 at its real angular scale, seen through each case's recorded PSFs. The template keeps Hubble's resolution and residual image noise; the added simulated PSFs are monochromatic at 1.65 µm. One on-axis PSF is assumed over this compact ${fmt(w.extent_arcsec, 1)}″ field (no off-axis correction is modelled). Relative flux per cell; no added noise.`;
-  $("galaxy-source-caption").textContent = `HST F814W morphology at angular scale 1.0 (one cell = ${fmt(w.cell_mas, 1)} mas), north up, east left; fixed for every sample and case. White bar: ${g.manifest.display.scale_bar_arcsec}″. Dashed box: enlarged envelope around the saturated core of NGC 1705-1 (values there not faithful).`;
+  $("galaxy-label").textContent = `I convolved an HST/WFC3 F814W image of NGC 1705 (LEGUS) with the simulated 1.65 µm PSFs, keeping its angular scale. Hubble’s original resolution and noise remain. This illustration applies one on-axis PSF across the ${fmt(w.extent_arcsec, 1)}″ field; it uses relative flux and adds no noise.`;
+  $("galaxy-source-caption").textContent = `HST F814W morphology at angular scale 1.0 (one cell = ${fmt(w.cell_mas, 1)} mas), north up, east left; fixed for every sample and case. White bar: ${g.manifest.display.scale_bar_arcsec}″. Dashed box: enlarged envelope around the saturated core of NGC 1705-1 (the saturated values are unreliable).`;
   const rows = [
     ["Data product", `<a href="${escapeHtml(pr.url)}" rel="noopener">${escapeHtml(pr.name)}</a> (${escapeHtml(pr.version)}, ${escapeHtml(pr.collection)}); SHA-256 <code>${pr.sha256.slice(0, 16)}…</code>; retrieved ${escapeHtml(pr.retrieved_utc)}`],
     ["Instrument and band", `HST WFC3/UVIS, ${escapeHtml(h.PHOTMODE)} (pivot ${fmt(h.PHOTPLAM)} Å); programme ${h.PROPOSID} (PI ${escapeHtml(h.PR_INV_L)}); ${fmt(h.EXPTIME)} s in ${h.NCOMBINE} exposures; science HDU ${pr.science_hdu}, ${escapeHtml(pr.units)}`],
@@ -425,7 +425,7 @@ function syncControls(p) {
     ? `Analysis-window mean: both observations use the saved means of the ${COUNT()} PSFs of frames ${START()}–${FRAMES() - 1}, not the ${SAMPLES()} displayed samples. Playback is disabled here and in the main viewer; switch back to Sampled instantaneous (or Instantaneous above) to continue from the same frame.`
     : "";
   const [lo, hi] = p.interval;
-  $("galaxy-playback-note").textContent = `Presentation only: one pass over the recorded ${ms(lo)}–${ms(hi)} (${(hi - lo).toFixed(3)} s of simulated time) takes ${p.duration} s, ${p.slowdown.toFixed(0)}× slower than real time. ${SAMPLES()} of the ${FRAMES()} observations are shown; each is held until the next displayed timestamp. Nothing is interpolated and no sample is added. These controls and the main viewer's operate one shared timeline. The loop, for both panels, repeats the same recording from frame 0 and can jump at its boundary; it does not extend the simulation.`;
+  $("galaxy-playback-note").textContent = `Playback shows ${SAMPLES()} of ${FRAMES()} saved images over ${ms(lo)}–${ms(hi)} of simulated time. One pass takes ${p.duration} s (${p.slowdown.toFixed(0)}× slower), with no interpolation. These controls share the main viewer’s timeline. Looping repeats the same recording and may jump at the end.`;
 }
 
 function onPlayback(p) {

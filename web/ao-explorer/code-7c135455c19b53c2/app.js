@@ -355,11 +355,11 @@ async function selectCase(id) {
   }
 }
 
-// The status separates the verified core case data from the optional diagnostics.
+// Report unavailable optional diagnostics after the core case has loaded.
 function caseStatus(data) {
   return data.rms
-    ? `Showing “${data.json.label}”. All members verified against the manifest, including its RMS diagnostics.`
-    : `Showing “${data.json.label}”. Core case data verified against the manifest; the optional RMS diagnostics are unavailable: ${data.rmsError}.`;
+    ? ""
+    : `The selected case is loaded, but its optional RMS diagnostics are unavailable: ${data.rmsError}.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -429,14 +429,15 @@ function renderCaseSummary() {
   const c = state.case.json;
   const p = c.effective_parameters;
   const changes = Object.entries(c.override).map(([k, v]) => ({ r0_scale: `r0 × ${v}`, ab_magnitude: `guide AB magnitude ${v}`, gain: `gain ${v}`, latency_frames: `queued delay ${v} frames` }[k])).join(", ");
-  $("case-summary").innerHTML = `<p><strong>${c.label}</strong> — ${changes ? `changed from the baseline: <span class="changed">${changes}</span>` : "the baseline: profile det_emccd_2m_synthetic@1 with the explorer overrides only"}. ${c.question}</p><details><summary>Full selected-case parameters</summary><ul class="params">${paramRows(p, c.override)}</ul></details>`;
-  $("evidence-2m-title").textContent = `Parameters & evidence · 2 m ${c.label}`;
+  $("case-summary").innerHTML = `<p><strong>${c.label}</strong>${changes ? ` · changed from the baseline: <span class="changed">${changes}</span>` : ""}. ${c.question}</p>`;
+  $("case-parameters").innerHTML = paramRows(p, c.override);
+  $("evidence-2m-title").textContent = `Setup · 2 m ${c.label}`;
   $("e2-pupil").textContent = `${p.telescope_diameter_m} m; ${p.pupil_pixels}² pupil samples; ${p.lenslets_across} × ${p.lenslets_across} lenslet grid; ${p.actuators_across} × ${p.actuators_across} DM grid.`;
   $("e2-wavelength").textContent = `${(p.wfs_wavelength_m*1e9).toFixed(0)} nm WFS reference / ${(p.explorer_science_wavelength_m*1e6).toFixed(2)} µm science; on-axis.`;
   $("e2-atmosphere").textContent = `Single frozen-flow layer; r₀ = ${p.r0_m.toFixed(4)} m at ${(p.r0_reference_wavelength_m*1e9).toFixed(0)} nm; L₀ = ${p.outer_scale_m} m; wind ${p.wind_m_per_s[0]} m/s along +x.`;
   $("e2-source").textContent = `Synthetic AB ${p.source_ab_magnitude.toFixed(1)}, flat fν; ${p.camera_preset}; detector noise ${p.detector_noise_in_loop?'on':'off'}.`;
   $("e2-control").textContent = `${p.frame_rate_hz} Hz; gain ${p.controller_gain}; leak ${p.controller_leak}; ${p.queued_latency_frames} queued frames (${(p.queued_latency_frames/p.frame_rate_hz*1000).toFixed(1)} ms); ±${(p.dm_stroke_limit_opd_m*1e6).toFixed(1)} µm OPD.`;
-  $("e2-record").textContent = `Seed ${p.root_seed}; ${p.n_steps} frames, ${(p.n_steps/p.frame_rate_hz).toFixed(3)} s; analysis [0.2, 1.0) s. One realization, no confidence interval over realizations.`;
+  $("e2-record").textContent = `Seed ${p.root_seed}; ${p.n_steps} frames, ${(p.n_steps/p.frame_rate_hz).toFixed(3)} s; analysis [0.2, 1.0) s. One atmosphere realization; variation between realizations has not been measured.`;
 }
 
 function setupColorbars() {
@@ -447,7 +448,7 @@ function setupColorbars() {
   }
   const L = d.opd.limit_m * 1e9;
   $("cbar-opd-labels").innerHTML = [L, L / 2, 0, -L / 2, -L].map((v, i) => `<span style="top:${i * 25}%">${v > 0 ? "+" : ""}${v.toFixed(0)} nm</span>`).join("");
-  $("cbar-opd-note").textContent = `Fixed ±${L.toFixed(0)} nm for all cases and all three panels; values beyond are clipped to the end colours. Grey = outside the pupil (masked).`;
+  $("cbar-opd-note").textContent = `All cases and wavefront panels use ±${L.toFixed(0)} nm. Values beyond the range use the end colours; grey is outside the pupil.`;
   $("cbar-psf-labels").innerHTML = [0, -1, -2, -3, -4].map((v, i) => `<span style="top:${i * 25}%">10^${v}</span>`).join("");
   $("cbar-psf-note").textContent = "Intensity relative to the ideal (zero-OPD) peak, log scale, common to every image; display crop ±1.8″.";
 }
@@ -525,10 +526,7 @@ function renderRmsReadout(k, t, mode) {
     ["Residual RMS after tip/tilt removal", r ? "piston and fitted tilt removed" : `piston and fitted tilt removed; unavailable for this case: ${c.rmsError}`, values[2]],
   ];
   const markup = `<p class="rms-head">${head}</p><dl class="rms-values">${rows.map(([name, rule, value]) => `<div><dt>${name} <span>${escapeHtml(rule)}</span></dt><dd>${value === null ? "unavailable" : `${fmt(value)} nm OPD`}</dd></div>`).join("")}</dl>`;
-  for (const id of ["rms-readout", "galaxy-rms-readout"]) $(id).innerHTML = markup;
-  $("galaxy-rms-mode-note").textContent = average
-    ? "Temporal means of the per-frame RMS values over the analysis window, not the RMS of an averaged wavefront. Images retain their original tip/tilt."
-    : "The same recorded case and frame as the PSFs, galaxy animation and chart cursor. Tip/tilt removal applies only to the third RMS value; the images retain their original tip/tilt.";
+  $("rms-readout").innerHTML = markup;
   const third = r ? "" : " The residual RMS after tip/tilt removal is unavailable for this case, so only the two recorded series are shown.";
   $("rms-mode-note").textContent = average
     ? `Average mode: temporal means of the per-frame RMS values over frames ${START()}–${FRAMES() - 1} (${lo.toFixed(3)}–${hi.toFixed(3)} s, ${COUNT()} frames). They are not the RMS of an averaged wavefront and not inferred from the average PSF. The chart cursor only marks the paused frame ${k}; it is not part of these statistics.${third}`
@@ -647,7 +645,7 @@ function renderDownloads() {
     return `<a href="${url}" download="${state.case.id}-${name}">${name}</a>`;
   });
   const missing = state.case.rms ? "" : ` The optional RMS diagnostics of this case are unavailable and are not offered (${escapeHtml(state.case.rmsError)}).`;
-  $("downloads").innerHTML = `<p>Verified files of <strong>${state.case.json.label}</strong>: ${links.join(" ")}${missing}</p>`;
+  $("downloads").innerHTML = `<p>Downloads for <strong>${state.case.json.label}</strong>: ${links.join(" ")}${missing}</p>`;
 }
 
 function renderFrameTable(force) {
@@ -664,8 +662,8 @@ function renderModelNotes() {
   const p = state.case.json.effective_parameters;
   $("model-notes").innerHTML = `<ul>
 <li>Each frame samples the atmosphere once, at its start (t = k ms, k = 0–${FRAMES() - 1}, so the trajectory covers the physical interval [0.000, ${(td().physical_interval_s[1]).toFixed(3)}) s). The <em>residual seen by the WFS</em> is the atmosphere minus the DM correction held while that frame was measured (pre-update residual). The <em>held correction</em> is atmosphere minus that residual, in OPD-equivalent nm (not mirror surface height). Post-update residuals are a same-sample diagnostic and are not shown.</li>
-<li>The <em>uncorrected image</em> propagates the same recorded atmosphere with the DM at zero: an optical counterfactual, not a separate sensor/control run. The <em>AO-corrected image</em> propagates the frame's pre-update residual. Both are monochromatic at ${wavelengthText()} on the native 156 × 156 grid (shown cropped to ±32 cells); tilt is kept and nothing is recentred.</li>
-<li>The averaged images are the equal-weight mean of the ${COUNT()} instantaneous intensities of ${windowText()} (timestamps ${START()}–${FRAMES() - 1} ms; nominal quadrature ${COUNT()} × 1 ms). Frames 0–${START() - 1} are a startup exclusion chosen before the run, not a demonstrated settling time. The averages are of frame-start snapshots, not a finite-shutter exposure, and are never made from an averaged wavefront; they are correct for this window but are not shown to be converged long-exposure images.</li>
+<li>The <em>uncorrected image</em> propagates the same recorded atmosphere with the DM at zero: a reference image calculated without running a separate control loop. The <em>AO-corrected image</em> propagates the frame's pre-update residual. Both are monochromatic at ${wavelengthText()} on the native 156 × 156 grid (shown cropped to ±32 cells); tilt is kept and nothing is recentred.</li>
+<li>The averaged images are the equal-weight mean of the ${COUNT()} instantaneous intensities of ${windowText()} (timestamps ${START()}–${FRAMES() - 1} ms; nominal quadrature ${COUNT()} × 1 ms). Frames 0–${START() - 1} are a startup exclusion chosen before the run, not a demonstrated settling time. The averages are of frame-start snapshots, not a finite-shutter exposure, and are never made from an averaged wavefront; they describe this window, whose convergence to a long-exposure image has not been tested.</li>
 <li>The movie shows ${SHOWN()} of the ${FRAMES()} recorded frames (${td().display_rule}). The curves, tables, block summaries and averages use every frame.</li>
 <li>Queued command delay is ${p.queued_latency_frames} frames: a reconstruction from frame k is applied in the update of frame k + ${p.queued_latency_frames} and first seen by the WFS at frame k + ${p.wfs_visible_delay_frames}.</li>
 <li>The guide-source magnitude is a WFS photon-budget input (synthetic AB source at 700 nm), not the brightness of the science scene. Detector noise is on in the loop.</li>
@@ -712,10 +710,10 @@ function syncControls(p) {
   const note = $("mode-note");
   note.hidden = !average;
   note.textContent = average
-    ? `Analysis-window average: both images are the equal-weight means of ${windowText()} (${COUNT()} samples, every frame of the window, not only the displayed ones). Playback and time controls are disabled in this panel and in the galaxy panel; the wavefront maps stay frozen at the selected frame and the curves keep its cursor. Switch back to Instantaneous (or Sampled instantaneous in the galaxy panel) to continue from the same frame.`
+    ? `Both images average all ${COUNT()} frames in ${windowText()}, with equal weights. Playback is paused in both viewers; wavefront maps and the chart cursor stay at the selected frame. Choose Instantaneous to resume from there.`
     : "";
   const [lo, hi] = p.interval;
-  $("speed-note").textContent = `Presentation only: one pass over the recorded ${ms(lo)}–${ms(hi)} (${(hi - lo).toFixed(3)} s of simulated time, frames 0–${FRAMES() - 1} at 1 ms each) takes ${p.duration} s, ${p.slowdown.toFixed(0)}× slower than real time. The movie shows ${SHOWN()} of the ${FRAMES()} recorded frames; each is held until the next displayed timestamp. Nothing is interpolated and no frame is added. These controls and the galaxy panel's operate one shared timeline, so both panels show the same case and frame.${p.loop ? " Loop (set in the galaxy panel) is on: it repeats the same recording from frame 0 and does not extend the simulation." : ""}`;
+  $("speed-note").textContent = `Playback takes ${p.duration} s to show ${ms(lo)}–${ms(hi)} of simulated time (${p.slowdown.toFixed(0)}× slower). It shows ${SHOWN()} of ${FRAMES()} saved frames, held until the next displayed timestamp without interpolation. The galaxy viewer shares this timeline.${p.loop ? " Loop is on: both viewers repeat the same recording from frame 0." : ""}`;
 }
 
 function onPlayback(p) {
@@ -745,7 +743,7 @@ function escapeHtml(text) { return String(text).replace(/[&<>"]/g, (c) => ({ "&"
 function wantsResults() { return ["#project", "#appendix", "#results", "#methods"].includes(location.hash) || location.hash.startsWith("#result-"); }
 
 function revealHash() {
-  if (!location.hash.startsWith("#result-") && location.hash !== "#methods") return;
+  if (!location.hash.startsWith("#result-") && location.hash !== "#methods" && !["#evidence-2m", "#evidence-42m", "#evidence-ngs22"].includes(location.hash)) return;
   const target = document.getElementById(location.hash.slice(1));
   if (target) { if (target.tagName === "DETAILS") target.open = true; target.scrollIntoView({ behavior: "instant", block: "start" }); }
 }
@@ -754,7 +752,7 @@ async function loadResults() {
   if (state.resultsLoaded) { revealHash(); return; }
   if (state.resultsLoaded || state.resultsLoading || !state.manifest) return;
   state.resultsLoading = true;
-  $("results-status").textContent = "Loading Research Results…";
+  $("results-status").textContent = "Loading earlier experiment records…";
   try {
     const { url, value, buffer } = await fetchVerifiedJson(state.manifest.results, state.manifestUrl);
     require(value.schema === "ao-explorer.research-results.v1", `unsupported research schema ${value.schema}`);
@@ -764,7 +762,7 @@ async function loadResults() {
     renderMethodsStatus(value);
     state.resultsLoaded = true;
     revealHash();
-    $("results-status").textContent = `Eight result groups from saved evidence at source ${value.source_sha.slice(0, 12)}; figures and evidence files are verified against the manifest as they load.`;
+    $("results-status").textContent = "";
   } catch (error) {
     $("results-status").textContent = "";
     showResultsError(error);
@@ -776,13 +774,13 @@ async function loadResults() {
 function showResultsError(error) {
   const box = document.createElement("div");
   box.className = "error"; box.setAttribute("role", "alert");
-  box.innerHTML = `<strong>Research Results could not be shown.</strong> ${escapeHtml(error.message)}`;
+  box.innerHTML = `<strong>The experiment records could not be loaded.</strong> ${escapeHtml(error.message)}`;
   $("results-body").replaceChildren(box);
 }
 
 function renderMethodsStatus(results) {
   $("methods-status").innerHTML = Object.entries(results.status_vocabulary).map(([key, text]) => `<li><strong>${key}</strong>: ${text}.</li>`).join("")
-    + "<li>No status is a general “validated” badge: each one names what kind of evidence stands behind a result.</li>";
+    + "<li>These labels describe the records available for each result. They do not imply that the model has been validated against a real instrument.</li>";
   const open = results.groups.find((g) => g.id === "R8").open_questions;
   $("methods-open").innerHTML = open.map((q) => `<li><strong>${q.id}</strong> — ${q.question} (${q.status}; <code>${q.source.path}</code> lines ${q.source.lines.join("–")}).</li>`).join("");
 }
@@ -791,15 +789,15 @@ function renderMethods() {
   const m = state.manifest; const d = state.diagnostics; const t = td(); const sc = m.screen;
   $("methods-2m").innerHTML = `
 <li>Profile <code>det_emccd_2m_synthetic@1</code> (native optics, 2 m, 52 pupil samples, 5 × 5 lenslets and actuators, 700 nm WFS, synthetic EMCCD with noise on, TSVD reconstructor, leaky integrator). Explorer overrides: ${t.frames} frames at 1 kHz (the physical interval [0.000, ${t.physical_interval_s[1].toFixed(3)}) s), root seed 1, realization 0, science at 1.65 µm. The profile resource is unchanged.</li>
-<li>Eight recorded cases: baseline; r0 × 1.25 and × 0.80; guide AB magnitude 6 and 8; gain 0.10 and 0.30; queued delay 4 frames. Every other parameter is fixed and equals the recorded configuration of the earlier 180-frame series. Only these nodes exist.</li>
+<li>Eight recorded cases: baseline; r0 × 1.25 and × 0.80; guide AB magnitude 6 and 8; gain 0.10 and 0.30; queued delay 4 frames. Every other parameter is fixed and equals the recorded configuration of the earlier 180-frame series. Only these eight cases were run.</li>
 <li>Atmosphere: <code>native_frozen_flow_v2</code>, generated at ${sc.generated_screen_px} × ${sc.generated_screen_px} pixels through an explicit construction option (the historical default is ${sc.historical_default_px} × ${sc.historical_default_px}); the size is part of every atmosphere identity. With the ${sc.pupil_px}-pixel pupil (${(sc.delta_m * 100).toFixed(2)} cm per pixel) and ${sc.wind_m_per_s[0]} m/s wind the screen supports ${sc.travel_budget_px} px of travel, ${sc.supported_travel_duration_s.toFixed(3)} s. Before any trajectory ran, every request time was checked against that budget: the last frame start (${ms(t.sample_times_s[1])}) travels ${sc.max_requested_travel_px.toFixed(3)} px, and the runtime travel equalled the admitted value. The larger screen is a different realization of the same seed, so this dataset does not reproduce the earlier 180-frame trajectory.</li>
-<li>Frames 0–${START() - 1} are a startup exclusion declared before the run, an analysis choice rather than a demonstrated settling time. The averages use the half-open window [${START()}, ${t.frames}), exactly ${COUNT()} equal-weight frames; they are the correctly computed averages for that 0.200–1.000 s window, which by itself does not establish convergence to a long-exposure ensemble result.</li>
+<li>Frames 0–${START() - 1} are a startup exclusion declared before the run, an analysis choice rather than a demonstrated settling time. The averages use the half-open window [${START()}, ${t.frames}), exactly ${COUNT()} equal-weight frames; they describe this 0.200–1.000 s window, whose convergence to a long-exposure ensemble result has not been established.</li>
 <li>Within each case r0, the outer scale and the wind are fixed. The frozen-flow realization moves across the pupil, so the realized wavefront RMS inside the pupil can change substantially although the configured turbulence strength does not change with time. A working AO loop keeps tracking that changing input, so residual fluctuations, or a late rise, do not by themselves show controller divergence or a failure to settle.</li>
 <li>The late residual increase accompanies stronger realized wavefront variations within the pupil, especially residual tip/tilt. It does not by itself demonstrate controller divergence. The records do not separate the contributions of fitting error, delay, controller leakage and actuator saturation; saturation may limit the correction but is not shown to be the cause. The saved ${COUNT()}-frame mean is the valid average for the declared 0.200–1.000 s window, but this single-realization record does not establish a converged long-exposure PSF. A nearly unchanged scalar mean can coexist with a mean image that still depends on the chosen interval (the implementation record gives a baseline example for the two halves of the window). The peak Strehl of an averaged PSF is not the average of the instantaneous peak Strehl values.</li>
 <li>All ${t.frames} instantaneous PSF pairs and pupil maps are kept at full precision outside this site; the page shows ${SHOWN()} of them (${t.display_rule}).</li>
 <li>${d.passivity.note} ${d.seed2_sensitivity.note}</li>
 <li>The binary observation convolves one fixed scene with each case's two ${COUNT()}-sample mean PSFs (exact linear convolution, zero extension, crop to the native angular window by coordinates). One on-axis PSF is assumed across the scene: an illustration, not field-dependent imaging.</li>
-<li>The galaxy view convolves one fixed observed template, the central region of NGC 1705 from the LEGUS HST/WFC3 F814W mosaic at its real angular scale, with all ${t.frames} instantaneous PSF pairs of each case (${SHOWN()} shown) and with its ${COUNT()}-frame mean PSFs, by the same linear-convolution rule. The template keeps Hubble's resolution, its residual noise and the saturated core of the central cluster; F814W morphology is used as a relative-intensity template with the 1.65 µm PSFs, not as an H-band image or an intrinsic, deconvolved galaxy. It makes no surface-brightness, photon-count, sensitivity, signal-to-noise or off-axis claim.</li>`;
+<li>The galaxy view convolves one fixed observed template, the central region of NGC 1705 from the LEGUS HST/WFC3 F814W mosaic at its real angular scale, with all ${t.frames} instantaneous PSF pairs of each case (${SHOWN()} shown) and with its ${COUNT()}-frame mean PSFs, by the same linear-convolution rule. The template keeps Hubble's resolution, its residual noise and the saturated core of the central cluster; F814W morphology is used as a relative-intensity template with the 1.65 µm PSFs, not as an H-band image or an intrinsic, deconvolved galaxy. This illustration cannot be used to estimate surface brightness, photon counts, sensitivity, signal-to-noise ratio or off-axis performance.</li>`;
   $("methods-identity").innerHTML = `
 <li>Dataset <code>${m.dataset_id}</code>; plan SHA-256 <code>${m.series.plan_sha256.slice(0, 16)}…</code>; production identity <code>${m.series.production_sha256.slice(0, 16)}…</code>, which binds the producer files and the core package by content because the working tree was uncommitted at production (base commit <code>${m.series.source_sha?.slice(0, 12) ?? "unknown"}</code>); page code build <code>${CODE_BUILD}</code> (recorded by the dataset entry).</li>
 <li>The earlier 180-frame dataset <code>${m.previous_dataset.dataset_id}</code> is preserved unchanged and is not combined with this one. The Research Results are its byte-identical files, referenced in place; they do not depend on either explorer trajectory.</li>
@@ -808,7 +806,7 @@ ${state.rms ? `<li>RMS diagnostics <code>${state.rms.manifest.derived_id}</code>
 <li>Raw numerical evidence (pupil maps and PSFs of every frame, full-precision mean PSFs, histories, the galaxy observations of every frame) stays in the producer's output directories and is not part of this site.</li>`;
   $("footer-identity").textContent = `Dataset ${m.dataset_id}.`;
   const lede = $("explore-lede");
-  if (lede) lede.textContent = `A precomputed native 2 m Shack-Hartmann SCAO loop with a synthetic on-axis guide source: one seed, ${t.frames} frames at 1 kHz (${t.physical_interval_s[1].toFixed(3)} s of simulated time), averages over ${windowText()}. Your browser replays ${SHOWN()} of the recorded frames, slowed down, and selects recorded cases; it does not simulate, interpolate or draw noise.`;
+  if (lede) lede.textContent = `I use this 2 m Shack-Hartmann model to explore how turbulence, guide-star brightness and controller settings affect a single-conjugate adaptive-optics (SCAO) loop. Each case contains ${t.frames} frames at 1 kHz (${t.physical_interval_s[1].toFixed(3)} s), using a synthetic on-axis guide star. The viewer replays ${SHOWN()} saved frames; averages use ${windowText()}.`;
   const hint = $("curves-hint");
   if (hint) hint.textContent = `All ${t.frames} frames, including the startup exclusion (shaded, frames 0–${START() - 1}). Summaries use ${windowText()} only (${COUNT()} equal-weight samples). The cursor marks the displayed frame.`;
 }
@@ -820,7 +818,11 @@ function buildGroups() {
   const m = state.manifest;
   const host = $("groups");
   host.innerHTML = "";
-  for (const group of m.groups) {
+  const groups = [
+    { label: "Reference", nodes: [m.default_case] },
+    ...m.groups.map(group => ({ ...group, nodes: group.nodes.filter(id => id !== m.default_case) })),
+  ];
+  for (const group of groups) {
     const box = document.createElement("div");
     box.className = "group";
     box.innerHTML = `<h3>${group.label}</h3>`;
@@ -861,12 +863,13 @@ function bindControls() {
     const observer = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) loadResults(); }, { rootMargin: "200px" });
     observer.observe($("project")); observer.observe($("appendix"));
   }
-  window.addEventListener("hashchange", () => { if (wantsResults()) loadResults(); });
+  window.addEventListener("hashchange", () => { revealHash(); if (wantsResults()) loadResults(); });
 }
 
 async function start() {
   const initialHash = location.hash;
   bindControls();
+  revealHash();
   for (const id of ["btn-restart", "btn-prev", "btn-play", "btn-next", "seek", "duration"]) $(id).disabled = true;
   try {
     const { manifest, manifestUrl, entry, entryUrl: galaxyEntryUrl } = await loadEntry();
