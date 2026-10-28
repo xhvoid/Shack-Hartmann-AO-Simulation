@@ -1057,8 +1057,11 @@ def _witness_comparison(
     """Sample-level comparison of a witness present and decodable on both sides.
 
     ``passes_contract`` and ``contract_failure`` are ``numerical_input_failure``
-    verbatim, so the verdict is the evaluator's — configuration hash, shape, NaN
-    mask and tolerance — rather than a re-derivation of it.  The magnitudes are
+    verbatim, its message formatted as numpy 1 formats it, so the verdict is
+    the evaluator's — configuration hash, shape, NaN mask and tolerance —
+    rather than a re-derivation of it.  It is that comparison only: the
+    raw-hash binding and, for a DM, ``dm_source_failure``, which the evaluator
+    runs on the observed record first, are not run here.  The magnitudes are
     taken over the samples finite on both sides with the tolerance expression
     that function applies; where the NaN masks agree that is exactly the set it
     checks, and where they do not the magnitudes still describe the rest.
@@ -1066,6 +1069,8 @@ def _witness_comparison(
 
     if reference is None or observed is None:
         return None
+    import contextlib
+
     import numpy as np
 
     from shwfs_ao.validation.numerical_identity import (
@@ -1099,7 +1104,19 @@ def _witness_comparison(
                     (difference / allowed).max()
                 )
     if contract is not None:
-        failure = numerical_input_failure(name, new, old)
+        # The message names a failing sample by its numpy index tuple, which
+        # numpy 2 reprs as ``(np.int64(0), np.int64(3))`` and numpy 1 as
+        # ``(0, 3)`` (NEP 51).  pyproject admits both, and acceptance recomputes
+        # this diff wherever it runs and requires it unchanged, so the message
+        # is always formatted with numpy 1's plain scalar repr, which numpy 2
+        # restores under its "1.25" legacy print mode.
+        plain_scalar_repr = (
+            np.printoptions(legacy="1.25")
+            if np.lib.NumpyVersion(np.__version__).major >= 2
+            else contextlib.nullcontext()
+        )
+        with plain_scalar_repr:
+            failure = numerical_input_failure(name, new, old)
         comparison["passes_contract"] = failure is None
         comparison["contract_failure"] = failure
     return comparison
