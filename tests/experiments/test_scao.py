@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import time
 
 import numpy as np
 import pytest
@@ -1074,3 +1075,89 @@ def test_component_identity_mismatch_fails_during_construction_preflight() -> No
             incompatible,
             interaction_matrix=built.interaction_matrix,
         )
+
+
+class _ProbeFactory:
+    """A registrable factory that builds nothing; only its identity matters."""
+
+    def __init__(self, backend_name: str) -> None:
+        self.backend_name = backend_name
+
+    def build_geometry(self, **kwargs: object) -> object:
+        raise AssertionError("probe factory must never build")
+
+    def build_atmosphere(self, **kwargs: object) -> object:
+        raise AssertionError("probe factory must never build")
+
+    def build_wfs(self, **kwargs: object) -> object:
+        raise AssertionError("probe factory must never build")
+
+    def build_dm(self, **kwargs: object) -> object:
+        raise AssertionError("probe factory must never build")
+
+    def build_science_propagator(self, **kwargs: object) -> object:
+        raise AssertionError("probe factory must never build")
+
+
+def test_a_registration_decides_occupancy_and_writes_under_one_lock():
+    """The duplicate check and the write are one decision, or neither is safe.
+
+    Taken apart, they are a check-then-act race: a registration that reads the
+    key as empty, blocks, and writes afterwards replaces a factory while
+    believing it installed a new one — so no epoch moves, and every attestation
+    describing what the superseded factory built stays valid while the registry
+    now builds something else.  The interleaving is forced here rather than
+    hoped for: the racing thread is started while another holds the lock, so it
+    must reach its occupancy test at a moment when the key is still empty and
+    only becomes occupied while it waits.
+    """
+
+    import threading
+
+    key = "probe_registry_race"
+    scao._FACTORIES.pop(key, None)
+    scao._FACTORY_EPOCHS.pop(key, None)
+    first, second = _ProbeFactory(key), _ProbeFactory(key)
+    holding = threading.Event()
+    may_finish = threading.Event()
+    outcome: list[str] = []
+
+    def hold_then_register() -> None:
+        with scao._REGISTRY_LOCK:
+            holding.set()
+            may_finish.wait(10.0)
+            scao.register_scao_backend_factory(key, first)
+
+    def race() -> None:
+        try:
+            scao.register_scao_backend_factory(key, second)
+            outcome.append("registered")
+        except scao.ScaoConstructionError:
+            outcome.append("refused")
+
+    holder = threading.Thread(target=hold_then_register)
+    racer = threading.Thread(target=race)
+    try:
+        holder.start()
+        assert holding.wait(10.0)
+        racer.start()
+        # The racer is now inside register_scao_backend_factory with the key
+        # still empty. Its occupancy test must not have been taken yet.
+        time.sleep(0.2)
+        assert outcome == [], "the racer decided occupancy without the lock"
+        may_finish.set()
+        holder.join(10.0)
+        racer.join(10.0)
+
+        # The holder won. The racer must see an occupied key and refuse, rather
+        # than overwrite a factory it never observed.
+        assert outcome == ["refused"]
+        assert scao._FACTORIES[key] is first
+        # Nothing was replaced, so nothing was retired.
+        assert scao._factory_epoch(key) == 0
+    finally:
+        may_finish.set()
+        holder.join(10.0)
+        racer.join(10.0)
+        scao._FACTORIES.pop(key, None)
+        scao._FACTORY_EPOCHS.pop(key, None)

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import contextlib
 import importlib.util
+import os
 import signal
 import subprocess
 import sys
@@ -807,6 +808,9 @@ def test_the_budget_kill_is_reissued_through_sudo_for_a_root_owned_group(monkeyp
         escalated.append(list(command))
         return subprocess.CompletedProcess(list(command), 0, "", "")
 
+    # The descendant sweep has its own tests; stubbed here so what is asserted
+    # is the escalation, not the process table of the machine running this.
+    monkeypatch.setattr(runner, "_descendant_pids", lambda pid: [])
     monkeypatch.setattr(
         runner, "os", types.SimpleNamespace(name="posix", killpg=refuse_killpg)
     )
@@ -838,6 +842,114 @@ def test_the_budget_kill_is_reissued_through_sudo_for_a_root_owned_group(monkeyp
     assert escalated == []
 
 
+_SESSION_LEADER_PARENT = """
+import pathlib, subprocess, sys, time
+
+# start_new_session mirrors what jupyter_client does when it launches a kernel:
+# the child becomes a session and process-group leader, so a signal to *this*
+# process's group never reaches it.
+child = subprocess.Popen(
+    [sys.executable, "-c", "import time; time.sleep(120)"],
+    start_new_session=True,
+)
+pathlib.Path(sys.argv[1]).write_text(str(child.pid), encoding="utf-8")
+time.sleep(120)
+"""
+
+
+def _process_is_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+@pytest.mark.skipif(os.name != "posix", reason="process groups are POSIX-only")
+def test_the_budget_kill_reaches_a_kernel_in_its_own_session(tmp_path):
+    """The notebook kernel is not in the runner's process group.
+
+    jupyter_client launches the kernel with ``start_new_session=True``, so it
+    leads a session of its own.  Killing the runner's group therefore ended the
+    runner and left the kernel executing the notebook the budget was supposed to
+    stop — the timeout reported success while the work continued.  This spawns
+    the same shape for real, checks that the group signal genuinely cannot reach
+    the grandchild, and requires the budget kill to end it anyway.
+    """
+
+    pid_file = tmp_path / "grandchild.pid"
+    parent = subprocess.Popen(
+        [sys.executable, "-c", _SESSION_LEADER_PARENT, str(pid_file)],
+        start_new_session=True,
+    )
+    grandchild = -1
+    try:
+        deadline = time.monotonic() + 30.0
+        while time.monotonic() < deadline:
+            if pid_file.exists() and pid_file.read_text(encoding="utf-8").strip():
+                break
+            time.sleep(0.02)
+        grandchild = int(pid_file.read_text(encoding="utf-8").strip())
+        assert _process_is_alive(grandchild)
+
+        # The defect, stated as a fact about the processes rather than by
+        # letting a kill race: the grandchild is in a different process group,
+        # so the group signal the budget sends cannot be delivered to it.
+        assert os.getpgid(grandchild) != os.getpgid(parent.pid)
+
+        runner._kill_process_group(parent, [])
+
+        # Its parent is gone, so it is reparented and reaped; poll rather than
+        # assume the transition is instantaneous.
+        deadline = time.monotonic() + 30.0
+        while time.monotonic() < deadline and _process_is_alive(grandchild):
+            time.sleep(0.02)
+        assert not _process_is_alive(grandchild), (
+            "the kernel outlived the whole-notebook budget"
+        )
+    finally:
+        for pid in (grandchild, parent.pid):
+            if pid > 0:
+                with contextlib.suppress(ProcessLookupError, PermissionError):
+                    os.kill(pid, signal.SIGKILL)
+        with contextlib.suppress(Exception):
+            parent.wait(timeout=10)
+
+
+def test_descendants_are_enumerated_before_the_group_is_signalled(monkeypatch):
+    """Order matters: after the runner dies the kernel cannot be found.
+
+    A reparented grandchild's ppid becomes init's, so nothing connects it to
+    this run. Enumerating after the group kill would reliably find nothing,
+    which is indistinguishable from there being nothing to find.
+    """
+
+    order: list[str] = []
+    monkeypatch.setattr(
+        runner,
+        "_descendant_pids",
+        lambda pid: order.append("enumerate") or [4322],  # type: ignore[func-returns-value]
+    )
+    killed: list[int] = []
+    monkeypatch.setattr(
+        runner,
+        "os",
+        types.SimpleNamespace(
+            name="posix",
+            killpg=lambda pgid, sig: order.append("killpg"),
+            kill=lambda pid, sig: (order.append("kill"), killed.append(pid)),
+        ),
+    )
+    process = types.SimpleNamespace(pid=4321, wait=lambda: None, kill=lambda: None)
+
+    runner._kill_process_group(process, [])
+
+    assert order == ["enumerate", "killpg", "kill"]
+    assert killed == [4322]
+
+
 def test_a_successful_killpg_still_gets_the_privileged_pass(monkeypatch):
     """Success from killpg does not mean the group is gone.
 
@@ -853,6 +965,7 @@ def test_a_successful_killpg_still_gets_the_privileged_pass(monkeypatch):
     escalated: list[list[str]] = []
     waited: list[str] = []
 
+    monkeypatch.setattr(runner, "_descendant_pids", lambda pid: [])
     monkeypatch.setattr(
         runner,
         "os",
