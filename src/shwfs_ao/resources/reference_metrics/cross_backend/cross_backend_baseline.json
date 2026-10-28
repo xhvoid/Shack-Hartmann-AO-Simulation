@@ -1,8 +1,8 @@
 {
   "acceptance": {
-    "accepted_at_utc": "2026-08-05T06:22:50.828159+00:00",
-    "reason": "Regenerate under generator version 3 and the structured statistical_definition contract, which records the sample count, estimator, lag pair and uncertainty method as individually validated fields and retains the reviewed paragraph as its narrative. Every physical gating value is bit-identical to the superseded baseline; only the informational runtime and memory figures differ.",
-    "review_reference": "P1-4 and P1-7 of the pre-sign-off review of f919fd4; code fixes committed as a0ec41d"
+    "accepted_at_utc": "2026-08-12T19:33:05.223725+00:00",
+    "reason": "Regenerate under generator version 4, which runs from a controlled bytecode cache, samples provenance ahead of every repository import, and brackets each source-identity sample. Every physical gating value is bit-identical to the superseded baseline; only the informational runtime and memory figures differ.",
+    "review_reference": "P1-2 and P1-3 of the second sign-off review; code fixes committed as 15c1612"
   },
   "artifact_schema_name": "shwfs_ao.cross_backend_baseline",
   "artifact_schema_version": 1,
@@ -775,7 +775,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.0056488194192449255
+          "value": 0.005591333378106356
         },
         {
           "level": "informational",
@@ -785,7 +785,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.002473930362612009
+          "value": 0.0023539443500339985
         },
         {
           "level": "informational",
@@ -795,7 +795,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.0010976249662538369
+          "value": 0.0010877915968497593
         },
         {
           "level": "informational",
@@ -805,7 +805,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.0010495140838126342
+          "value": 0.000902930274605751
         },
         {
           "level": "informational",
@@ -815,7 +815,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "mebibytes",
-          "value": 2.527777671813965
+          "value": 2.527651786804199
         }
       ]
     }
@@ -857,8 +857,8 @@
   },
   "generator": {
     "generator_name": "scripts/generate_cross_backend_candidate.py",
-    "generator_version": "3",
-    "source_commit": "a0ec41d2a42a9d33a63f91392667603a1082e22a",
+    "generator_version": "4",
+    "source_commit": "15c16121b194e358c1512c73e334f2255e9d6489",
     "source_patch_sha256": null,
     "source_tree_clean": true
   },
