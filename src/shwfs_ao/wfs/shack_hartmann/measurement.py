@@ -519,11 +519,18 @@ class DetectorShackHartmannSensor:
                     frame.image_e,
                     self._calibration.centroid_config,
                 )
+                # Frozen adapters keep the historical spot-width proxy; the
+                # public path propagates noise from every window pixel.
                 quality = centroid_quality(
                     captured_spot,
                     normalized_spot,
                     self._calibration.detector_config,
                     source_spot_norm=transmitted_spot,
+                    uncertainty_model=(
+                        "first_order"
+                        if compatibility_mode is None
+                        else "legacy_spot_width"
+                    ),
                 )
                 decision = evaluate_centroid_validity(
                     estimate,

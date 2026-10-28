@@ -259,7 +259,7 @@ below are authoritative.
 | `valid_by_clipping` | bool vector | detector-window clipping criterion |
 | `peak_snr` | vector, dimensionless | peak-pixel SNR or NaN when not applicable |
 | `total_snr` | vector, dimensionless | integrated SNR or NaN when not applicable |
-| `centroid_sigma_px` | vector, px | estimated centroid uncertainty |
+| `centroid_sigma_px` | vector, px | first-order centroid uncertainty (larger axis; see `detector.CentroidQuality`) |
 | `clipping_fraction` | vector in `[0, 1]` | estimated flux outside the finite window |
 | `detector_frames` | tuple of `DetectorFrame` or `None` | optional per-lenslet detector details |
 | `optical_spots` | `SpotIntensityResult` or `None` | optional noiseless backend spots |
@@ -477,8 +477,22 @@ The detector layer also returns detector-state and detector-local records;
 | `total_flux_e` | electrons or NaN | expected source signal; NaN on an ideal detector path where electrons are not applicable |
 | `background_e` | electrons | finite non-negative background expectation |
 | `peak_snr`, `total_snr` | dimensionless or NaN | peak and integrated SNR; NaN when the diagnostic is not applicable |
-| `centroid_sigma_px` | px | finite non-negative centroid-uncertainty estimate |
+| `centroid_sigma_px` | px | finite non-negative first-order centroid uncertainty, the larger per-axis value |
 | `clipping_fraction` | `[0, 1]` | estimated flux outside the finite detector window |
+
+`centroid_sigma_px` propagates source shot noise, background/dark shot noise,
+and read noise from every window pixel through a plain center of gravity,
+weighting each pixel by its own distance from the expected source centroid:
+`Var(c_x) = sum((x_i - c_x)^2 * (S_i + B + RN^2)) / sum(S_i)^2`. It is a
+source-position uncertainty, so a raw-frame estimate that keeps the
+background pedestal scatters less (by `sum(S) / sum(S + B)` for a spot centred
+in the window, somewhat more off centre) while its response to spot motion
+shrinks by that same factor. Negative clipping and thresholding
+usually reduce the scatter further, and PRNU, saturation, and bad pixels are
+not modelled, so the value is a conservative first-order bound. At
+read-noise-dominated low flux it can therefore exceed `max_centroid_sigma_px`
+before the clipped detector frames scatter that much. The frozen legacy
+facades keep the historical spot-width-over-SNR proxy.
 
 ### `detector.CentroidValidity`
 

@@ -259,6 +259,133 @@ def test_zero_photon_quality_uses_legacy_uncertainty_sentinel() -> None:
     assert quality.centroid_sigma_px == UNDEFINED_CENTROID_SIGMA_PX
 
 
+def _gaussian_spot(
+    shape: tuple[int, int],
+    center_xy_px: tuple[float, float],
+    sigma_px: float,
+) -> np.ndarray:
+    y_px, x_px = np.indices(shape, dtype=float)
+    spot = np.exp(
+        -0.5
+        * (
+            (x_px - center_xy_px[0]) ** 2
+            + (y_px - center_xy_px[1]) ** 2
+        )
+        / sigma_px**2
+    )
+    return spot / np.sum(spot)
+
+
+def test_uncertainty_weights_window_read_noise_by_pixel_lever_arm() -> None:
+    # A point source has no shot-noise lever arm, so only window-wide read
+    # noise moves its center of gravity: Var(c) = RN**2 sum((x - c)**2) / F**2.
+    spot = np.zeros((24, 8))
+    spot[12, 3] = 1.0
+    detector = DetectorConfig(photons_per_subap_frame=1.0e4, read_noise_e=3.0)
+    y_px, x_px = np.indices(spot.shape, dtype=float)
+    sigma_x = 3.0 * math.sqrt(float(np.sum((x_px - 3.0) ** 2))) / 1.0e4
+    sigma_y = 3.0 * math.sqrt(float(np.sum((y_px - 12.0) ** 2))) / 1.0e4
+
+    quality = centroid_quality(spot, spot, detector)
+
+    # The tall window gives y the longer lever arm; the larger axis is reported.
+    assert sigma_x < 0.01 < sigma_y
+    assert quality.centroid_sigma_px == pytest.approx(sigma_y, rel=1.0e-12)
+    decision = evaluate_centroid_validity(
+        _finite_estimate(),
+        quality,
+        CentroidValidityConfig(max_centroid_sigma_px=0.01),
+    )
+    assert decision.valid_by_flux
+    assert decision.valid_by_snr
+    assert not decision.valid_by_uncertainty
+    assert not decision.valid
+
+
+def test_uncertainty_matches_monte_carlo_center_of_gravity_scatter() -> None:
+    spot = _gaussian_spot((18, 18), (8.0, 9.0), 1.0)
+    photons, read_noise_e, background_e = 2000.0, 3.0, 2.0
+    detector = DetectorConfig(
+        photons_per_subap_frame=photons,
+        read_noise_e=read_noise_e,
+        background_e_per_pixel_frame=background_e,
+    )
+    quality = centroid_quality(spot, spot, detector)
+
+    # Independent oracle: NumPy Poisson source/background, Gaussian read
+    # noise, no clipping, and a vectorized center of gravity.
+    rng = np.random.default_rng(20261009)
+    frames = rng.poisson(
+        photons * spot + background_e,
+        size=(4000, *spot.shape),
+    ) + rng.normal(0.0, read_noise_e, size=(4000, *spot.shape))
+    y_px, x_px = np.indices(spot.shape, dtype=float)
+
+    def scatter_px(images: np.ndarray) -> float:
+        flux = np.sum(images, axis=(1, 2))
+        x_c = np.sum(images * x_px, axis=(1, 2)) / flux
+        y_c = np.sum(images * y_px, axis=(1, 2)) / flux
+        return float(max(np.std(x_c), np.std(y_c)))
+
+    # The pedestal-free estimate scatters by the reported source sigma.
+    assert scatter_px(frames - background_e) == pytest.approx(
+        quality.centroid_sigma_px,
+        rel=0.05,
+    )
+    # A raw-frame estimate keeps the pedestal, which dilutes its scatter and
+    # its response to spot motion by the same flux ratio.
+    pedestal_gain = photons / (photons + background_e * spot.size)
+    assert scatter_px(frames) == pytest.approx(
+        pedestal_gain * quality.centroid_sigma_px,
+        rel=0.05,
+    )
+
+
+def test_legacy_spot_width_model_keeps_the_frozen_proxy() -> None:
+    spot = _gaussian_spot((18, 18), (8.0, 9.0), 1.0)
+    detector = DetectorConfig(
+        photons_per_subap_frame=300.0,
+        read_noise_e=3.0,
+        background_e_per_pixel_frame=0.2,
+    )
+    y_px, x_px = np.indices(spot.shape, dtype=float)
+    x_c = float(np.sum(spot * x_px))
+    y_c = float(np.sum(spot * y_px))
+    spot_rms_px = math.sqrt(
+        float(np.sum(spot * ((x_px - x_c) ** 2 + (y_px - y_c) ** 2))) / 2.0
+    )
+
+    legacy = centroid_quality(
+        spot,
+        spot,
+        detector,
+        uncertainty_model="legacy_spot_width",
+    )
+    current = centroid_quality(spot, spot, detector)
+
+    assert legacy.centroid_sigma_px == pytest.approx(
+        spot_rms_px / legacy.total_snr,
+        rel=1.0e-12,
+    )
+    assert replace(current, centroid_sigma_px=legacy.centroid_sigma_px) == legacy
+    # Read noise across the window outweighs the proxy several times over.
+    assert current.centroid_sigma_px > 4.0 * legacy.centroid_sigma_px
+
+    # Under pure photon noise both models reduce to the spot RMS over
+    # sqrt(flux) for this round spot; the current model takes the larger axis.
+    photon_only = DetectorConfig(photons_per_subap_frame=300.0)
+    assert centroid_quality(
+        spot,
+        spot,
+        photon_only,
+    ).centroid_sigma_px == pytest.approx(
+        spot_rms_px / math.sqrt(300.0),
+        rel=1.0e-12,
+    )
+    with pytest.raises(ValueError, match="uncertainty_model"):
+        centroid_quality(spot, spot, detector, uncertainty_model="spot_width")
+
+
 def test_noise_free_reference_reports_not_applicable_snr() -> None:
     spot = np.full((2, 2), 0.25)
     quality = centroid_quality(spot, spot, DetectorConfig())
