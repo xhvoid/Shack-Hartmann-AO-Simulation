@@ -1373,8 +1373,9 @@ class TestPackagedBaseline:
         # each sample so its two git reads describe one state; version 5 is the
         # first to establish those interpreter conditions by checking them
         # rather than by trusting the marker that claims them, which a v4
-        # candidate could have been produced without.
-        assert generator["generator_version"] == "5"
+        # candidate could have been produced without. Version 6 additionally
+        # records complete numerical input witnesses and their hash preimages.
+        assert generator["generator_version"] == "6"
         assert generator["source_tree_clean"] is True
         commit = generator["source_commit"]
         assert len(commit) == 40

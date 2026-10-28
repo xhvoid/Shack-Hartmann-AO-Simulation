@@ -269,3 +269,15 @@ Notebook governance and runner checks passed 106 tests, with three Linux-only
 cases skipped on macOS. Ruff passed and mypy checked 102 source files. Linux
 execution is recorded after the publication checks finish; these local results
 alone do not establish cross-platform success.
+
+The schema-v2 cross-backend baseline was then regenerated from clean commit
+`20e0e38a8af7d6baafe38551f95af475573cdd0c` in the exact HCIPy Python 3.14 lock
+environment and accepted through the normal candidate/diff workflow. Every
+scientific comparison, acceptance criterion and original raw input hash
+matches the previous baseline; only informational runtime/memory values and
+the added numerical identity evidence differ. The direct wheel and the wheel
+rebuilt from the source archive have matching contents and resources. Installed
+wheel checks outside the checkout passed 212 tests (two skips), covering
+cross-backend validation, packaged presets and science metrics.
+The complete cross-backend, resource and documentation test selection passed
+232 tests (one skip) after acceptance.
