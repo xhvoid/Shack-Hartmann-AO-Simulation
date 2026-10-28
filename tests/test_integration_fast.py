@@ -14,7 +14,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from ao_integration import IntegrationConfig, load_reference_metrics, run_fast_integration
+from shwfs_ao.legacy.ao_integration import IntegrationConfig, load_reference_metrics, run_fast_integration
 from shwfs_ao.legacy import ao_integration as legacy_integration
 
 

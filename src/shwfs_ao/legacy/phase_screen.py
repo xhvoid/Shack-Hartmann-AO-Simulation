@@ -14,6 +14,9 @@ from __future__ import annotations
 
 import numpy as np
 
+from ..backends.native.atmosphere import (
+    fourier_von_karman_phase_realization as _fourier_von_karman_phase_realization,
+)
 from ..core import wavefront as _wavefront
 
 
@@ -161,26 +164,23 @@ def fourier_phase_screen(
 
     rng = np.random.default_rng(seed)
 
-    fx = np.fft.fftfreq(N, d=delta)
-    fy = np.fft.fftfreq(N, d=delta)
-    FX, FY = np.meshgrid(fx, fy)
-    f = np.sqrt(FX**2 + FY**2)
-
     if L0 is None or np.isinf(L0):
-        f0 = 0.0
+        outer_scale_m = None
     else:
         if L0 <= 0:
             raise ValueError("L0 must be positive, np.inf, or None.")
-        f0 = 1.0 / L0
+        outer_scale_m = float(L0)
 
-    with np.errstate(divide="ignore", invalid="ignore"):
-        psd = 0.023 * r0 ** (-5.0 / 3.0) * (f**2 + f0**2) ** (-11.0 / 6.0)
-    psd[0, 0] = 0.0
-    psd[~np.isfinite(psd)] = 0.0
-
-    random_complex = rng.normal(size=(N, N)) + 1j * rng.normal(size=(N, N))
-    fourier_coeff = random_complex * np.sqrt(psd)
-    phase = np.fft.ifft2(fourier_coeff).real
+    # The spectrum and coefficient draw live in the canonical native-backend
+    # kernel; this wrapper only keeps the historical argument surface, the
+    # legacy normalization guards, and the (phase, X, Y, mask) return shape.
+    phase = _fourier_von_karman_phase_realization(
+        N,
+        delta,
+        r0,
+        outer_scale_m,
+        rng=rng,
+    )
 
     x = (np.arange(N) - N // 2) * delta
     X, Y = np.meshgrid(x, x)

@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from atmosphere_profiles import (
+from shwfs_ao.legacy.atmosphere_profiles import (
     ARCSEC_PER_RAD,
     PHASE_RMS_REL_TOL,
     AtmosphereConfig,
@@ -21,7 +21,7 @@ from atmosphere_profiles import (
     seeing_to_r0_m,
     shift_full_phase_pixels,
 )
-from data_sources import load_eso_asm_snapshot, load_literature_atmosphere_profile
+from shwfs_ao.io.public_data import load_eso_asm_snapshot, load_literature_atmosphere_profile
 
 
 ROOT = Path(__file__).resolve().parents[1]

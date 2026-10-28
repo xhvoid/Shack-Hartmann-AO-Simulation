@@ -16,8 +16,8 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from atmosphere_profiles import atmosphere_config_from_eso_asm_snapshot
-from data_sources import load_eso_asm_snapshot, load_svo_filter_curve
+from shwfs_ao.legacy.atmosphere_profiles import atmosphere_config_from_eso_asm_snapshot
+from shwfs_ao.io.public_data import load_eso_asm_snapshot, load_svo_filter_curve
 from shwfs_ao.io.artifacts import write_csv_rows
 from shwfs_ao.io.resources import open_text_resource
 

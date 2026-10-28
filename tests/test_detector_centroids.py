@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from shwfs_detector import centroid, crop_center
-from synthetic_instrument_data import (
+from shwfs_ao.legacy.shwfs_detector import centroid, crop_center
+from shwfs_ao.legacy.synthetic_instrument_data import (
     DETECTOR_PRESETS,
     CentroidValidityConfig,
     DetectorConfig,

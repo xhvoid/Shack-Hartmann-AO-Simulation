@@ -6,7 +6,7 @@ import math
 
 import pytest
 
-from data_sources import (
+from shwfs_ao.io.public_data import (
     ALLOWED_SOURCE_CLASSES,
     DataSourceError,
     load_eso_asm_snapshot,

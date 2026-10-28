@@ -639,6 +639,7 @@ def _assert_wheel_layout(
     }
     expected_package_code = {
         "shwfs_ao/__init__.py",
+        "shwfs_ao/_deprecation.py",
         "shwfs_ao/backends/__init__.py",
         "shwfs_ao/backends/hcipy/__init__.py",
         "shwfs_ao/backends/hcipy/atmosphere.py",
@@ -872,12 +873,36 @@ def _install_and_smoke(
             shwfs_geometric = importlib.import_module(
                 "shwfs_ao.wfs.shack_hartmann.geometric"
             )
-            shims = [importlib.import_module(name) for name in expected["modules"]]
             implementations = [
                 importlib.import_module(f"shwfs_ao.legacy.{name}")
                 for name in expected["modules"]
             ]
         assert caught == [], [(str(item.message), item.category.__name__) for item in caught]
+
+        # AO-REF-021 Phase A: the canonical and shwfs_ao.legacy imports above
+        # are silent, but importing a root-level shim for the first time emits
+        # exactly one DeprecationWarning that names the shim and a canonical
+        # shwfs_ao replacement.  The shims are cold here (nothing above imports
+        # them), so each first import runs its module body and warns once.
+        shims = []
+        for name in expected["modules"]:
+            with warnings.catch_warnings(record=True) as shim_caught:
+                warnings.simplefilter("always")
+                shim_module = importlib.import_module(name)
+            shims.append(shim_module)
+            deprecations = [
+                item
+                for item in shim_caught
+                if issubclass(item.category, DeprecationWarning)
+            ]
+            assert len(deprecations) == 1, (
+                name,
+                [(str(item.message), item.category.__name__) for item in shim_caught],
+            )
+            message = str(deprecations[0].message)
+            assert name in message, (name, message)
+            assert "deprecated" in message.lower(), (name, message)
+            assert "shwfs_ao" in message, (name, message)
 
         installed_modules = [
             package,
@@ -1289,11 +1314,32 @@ def _install_and_smoke(
         assert installed_system.config_hash == profile_configs[0].config_hash
         assert all(len(value) == 64 for value in installed_system.component_hashes.values())
 
-        data_package = importlib.import_module("ao_simulation_data")
+        with warnings.catch_warnings(record=True) as alias_caught:
+            warnings.simplefilter("always")
+            data_package = importlib.import_module("ao_simulation_data")
+        alias_deprecations = [
+            item
+            for item in alias_caught
+            if issubclass(item.category, DeprecationWarning)
+        ]
+        assert len(alias_deprecations) == 1, [
+            (str(item.message), item.category.__name__) for item in alias_caught
+        ]
+        alias_message = str(alias_deprecations[0].message)
+        assert "ao_simulation_data" in alias_message
+        assert "deprecated" in alias_message.lower()
+        assert "shwfs_ao" in alias_message
         assert pathlib.Path(data_package.__file__).resolve().is_relative_to(site)
         data_schemas = importlib.import_module("ao_simulation_data.schemas")
         assert pathlib.Path(data_schemas.__file__).resolve().is_relative_to(site)
-        canonical_package = importlib.import_module("shwfs_ao.resources")
+        with warnings.catch_warnings(record=True) as canonical_caught:
+            warnings.simplefilter("always")
+            canonical_package = importlib.import_module("shwfs_ao.resources")
+        assert [
+            item
+            for item in canonical_caught
+            if issubclass(item.category, DeprecationWarning)
+        ] == []
         assert pathlib.Path(canonical_package.__file__).resolve().is_relative_to(site)
         canonical_schemas = importlib.import_module("shwfs_ao.resources.schemas")
         assert pathlib.Path(canonical_schemas.__file__).resolve().is_relative_to(site)
@@ -1377,6 +1423,7 @@ def test_direct_wheel_and_sdist_wheel_have_identical_installed_contract(tmp_path
             for name in expected_resource_hashes
         ),
         "src/shwfs_ao/__init__.py",
+        "src/shwfs_ao/_deprecation.py",
         "src/shwfs_ao/backends/__init__.py",
         "src/shwfs_ao/backends/native/__init__.py",
         "src/shwfs_ao/backends/native/atmosphere.py",
@@ -1584,9 +1631,19 @@ def test_pep660_editable_install_generates_resource_alias_only_in_environment(
         import json
         import pathlib
         import sys
+        import warnings
 
         source_root = pathlib.Path(sys.argv[1]).resolve()
-        alias = importlib.import_module("ao_simulation_data")
+        with warnings.catch_warnings(record=True) as alias_caught:
+            warnings.simplefilter("always")
+            alias = importlib.import_module("ao_simulation_data")
+        alias_deprecations = [
+            item for item in alias_caught
+            if issubclass(item.category, DeprecationWarning)
+        ]
+        assert len(alias_deprecations) == 1, [str(w.message) for w in alias_caught]
+        assert "ao_simulation_data" in str(alias_deprecations[0].message)
+        assert "shwfs_ao" in str(alias_deprecations[0].message)
         alias_schemas = importlib.import_module("ao_simulation_data.schemas")
         canonical = importlib.import_module("shwfs_ao.resources")
         schemas = importlib.import_module("shwfs_ao.resources.schemas")
@@ -1616,5 +1673,5 @@ def test_pep660_editable_install_generates_resource_alias_only_in_environment(
         capture_output=True,
         text=True,
     )
-    assert result.stdout.strip() == "editable-resource-alias-ok:35"
+    assert result.stdout.strip() == "editable-resource-alias-ok:37"
     assert not source_alias.exists()

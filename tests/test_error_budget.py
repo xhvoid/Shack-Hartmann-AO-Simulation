@@ -5,8 +5,8 @@ from dataclasses import replace
 import numpy as np
 import pytest
 
-from ao_diagnostics import top_hat_bandpass
-from ao_error_budget import (
+from shwfs_ao.science.bandpass import top_hat_bandpass
+from shwfs_ao.experiments.error_budget import (
     AOErrorBudgetError,
     REQUIRED_SCENARIO_NAMES,
     ScenarioConfig,
@@ -15,9 +15,9 @@ from ao_error_budget import (
     run_error_budget_scenarios,
     scenario_results_as_dicts,
 )
-from dm_model import DMConfig, build_dm_model
-from interaction_matrix import PokeMatrixConfig, build_detector_dm_poke_matrix
-from synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build_detector_shwfs_calibration
+from shwfs_ao.legacy.dm_model import DMConfig, build_dm_model
+from shwfs_ao.legacy.interaction_matrix import PokeMatrixConfig, build_detector_dm_poke_matrix
+from shwfs_ao.legacy.synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build_detector_shwfs_calibration
 
 
 @pytest.fixture(scope="module")

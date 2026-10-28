@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from psf_tools import (
+from shwfs_ao.legacy.psf_tools import (
     compute_psf_from_phase,
     marechal_strehl,
     phase_for_science_wavelength,

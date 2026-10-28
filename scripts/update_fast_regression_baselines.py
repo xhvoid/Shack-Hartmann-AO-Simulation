@@ -21,7 +21,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from ao_integration import IntegrationConfig, load_reference_metrics, run_fast_integration
+from shwfs_ao.legacy.ao_integration import IntegrationConfig, load_reference_metrics, run_fast_integration
 from shwfs_ao.io.artifacts import ArtifactConfig, write_integration_artifacts
 from shwfs_ao.io.resources import render_resource_manifest
 

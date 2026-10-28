@@ -5,8 +5,8 @@ from dataclasses import replace
 import numpy as np
 import pytest
 
-from dm_model import DMConfig, build_dm_model
-from interaction_matrix import (
+from shwfs_ao.legacy.dm_model import DMConfig, build_dm_model
+from shwfs_ao.legacy.interaction_matrix import (
     DEFAULT_POKE_AMPLITUDE_GRID_NM,
     InteractionMatrixError,
     PokeMatrixConfig,
@@ -21,7 +21,7 @@ from interaction_matrix import (
     tikhonov_reconstruct_commands,
     tsvd_reconstruct_commands,
 )
-from synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build_detector_shwfs_calibration
+from shwfs_ao.legacy.synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build_detector_shwfs_calibration
 
 
 @pytest.fixture(scope="module")

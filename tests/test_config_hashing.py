@@ -1,6 +1,6 @@
 import numpy as np
 
-from config_hashing import stable_array_descriptor
+from shwfs_ao.core.hashing import stable_array_descriptor
 
 
 def test_array_descriptor_is_layout_stable_and_content_sensitive():

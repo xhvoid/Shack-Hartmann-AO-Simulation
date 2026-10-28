@@ -14,13 +14,13 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from ao_diagnostics import (
+from shwfs_ao.legacy.ao_diagnostics import (
     bandpass_from_filter_curve,
     science_case_metrics_table,
     science_metrics_as_dicts,
     top_hat_bandpass,
 )
-from data_sources import load_svo_filter_curve
+from shwfs_ao.io.public_data import load_svo_filter_curve
 from shwfs_ao.io.resources import resource_exists
 
 

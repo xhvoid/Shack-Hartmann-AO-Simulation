@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 
-from ao_integration import IntegrationConfig, run_fast_integration
+from shwfs_ao.legacy.ao_integration import IntegrationConfig, run_fast_integration
 from shwfs_ao.io.artifacts import ArtifactConfig, write_integration_artifacts
 
 
