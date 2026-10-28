@@ -98,11 +98,11 @@ def canonicalize_for_hash(value: Any) -> Any:
             return {"$float": "+inf" if number > 0.0 else "-inf"}
         return 0.0 if number == 0.0 else number
     if isinstance(value, (complex, np.complexfloating)):
-        number = complex(value)
+        complex_number = complex(value)
         return {
             "$complex": [
-                canonicalize_for_hash(number.real),
-                canonicalize_for_hash(number.imag),
+                canonicalize_for_hash(complex_number.real),
+                canonicalize_for_hash(complex_number.imag),
             ]
         }
     if isinstance(value, np.ndarray):

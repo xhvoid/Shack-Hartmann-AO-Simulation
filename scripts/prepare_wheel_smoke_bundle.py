@@ -2,11 +2,12 @@
 """Prepare a portable wheel-smoke bundle from the checked manifest.
 
 The bundle is a temporary directory containing only manifest-listed portable
-tests (plus, in later tickets, offline fixtures and example scripts) and a
-root ``pytest.ini``.  Running pytest inside it exercises the *installed*
-wheel: the preparer refuses to copy ``src/``, ``.git/``, or any packaged
-resource source tree, so an import that silently falls back to the checkout
-cannot pass.
+tests, offline fixtures, canonical notebooks, example scripts, support
+scripts, and a root ``pytest.ini``.  Running pytest (or an example, or the
+notebook smoke runner) inside it exercises the *installed* wheel: the
+preparer refuses to copy ``src/``, ``.git/``, the archived
+``notebooks/legacy`` evidence, or any packaged resource source tree, so an
+import that silently falls back to the checkout cannot pass.
 
 Usage:
 
@@ -30,9 +31,9 @@ MANIFEST_PATH = REPOSITORY_ROOT / "tests" / "wheel_smoke" / "manifest.json"
 MANIFEST_SCHEMA_NAME = "shwfs_ao.wheel_smoke_bundle_manifest"
 MANIFEST_SCHEMA_VERSION = 1
 
-_ALLOWED_SOURCE_PREFIXES = ("tests", "examples")
+_ALLOWED_SOURCE_PREFIXES = ("tests", "examples", "notebooks", "scripts")
 _FORBIDDEN_SOURCE_PREFIXES = ("src", ".git")
-_KNOWN_KINDS = frozenset({"test", "example", "fixture"})
+_KNOWN_KINDS = frozenset({"test", "example", "fixture", "notebook", "support"})
 _KNOWN_REQUIREMENTS = frozenset({"hcipy"})
 
 
@@ -65,6 +66,11 @@ def _safe_relative_source(value: object) -> PurePosixPath:
         raise BundleManifestError(
             "Bundle entries must not copy tests/wheel_smoke itself; the "
             "pytest_ini field owns that file."
+        )
+    if path.parts[:2] == ("notebooks", "legacy"):
+        raise BundleManifestError(
+            "Bundle entries must not copy notebooks/legacy: the archived "
+            "originals are evidence and are never executed."
         )
     return path
 

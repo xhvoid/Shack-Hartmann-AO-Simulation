@@ -477,10 +477,11 @@ python3 scripts/run_notebook_smoke.py --class fast
 
 ## Reproducibility and validation
 
-Notebook reproducibility is enforced at several levels rather than by hand:
+Reproducibility is enforced at several levels rather than by hand:
 
 * Unit tests validate the numerical core: PSF normalization, Strehl sanity checks, phase/OPD conversion, detector centroiding edge cases, phase-screen RMS scaling, and modal reconstruction.
 * Command-line examples regenerate small PNG and CSV artifacts from deterministic seeds.
+* A CI wheel gate on Python 3.10 and 3.14 builds the wheel and sdist, rebuilds a wheel from the sdist and compares the packaged resources, then runs the portable scientific tests and examples from a read-only smoke bundle against the installed wheel — never the source tree. A lint lane (Ruff plus a scoped mypy check of the `shwfs_ao.core` protocols) and a before/after baseline-hash guard with a clean-worktree check keep accepted baselines unwritable by any test, example, notebook, or CI command.
 * Static notebook-governance tests (`tests/notebooks/`) assert that every canonical notebook imports only the installed package, defines no AO engine of its own, ships captured error-free outputs, and that the disposition manifest covers every AO-REF-000 original exactly once.
 * The fast tutorial notebooks are executed in CI from the built wheel in a throwaway working directory (`MPLBACKEND=Agg`, fixed seeds, per-cell and whole-notebook timeouts) via `scripts/run_notebook_smoke.py`; the slower studies run in scheduled/manual jobs and the cross-backend study runs in the HCIPy lane, each guarded by the same governance tests.
 * The fast 2 m detector-level integration path is additionally smoke-tested through `examples/run_fast_integration.py`, which compares generated metrics against the packaged regression references without overwriting them.
