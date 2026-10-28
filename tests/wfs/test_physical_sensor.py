@@ -503,3 +503,126 @@ def test_the_operating_expectation_observes_the_star_not_the_calibration_source(
     # Noiseless: the same exposure twice is identical, whatever the streams.
     again = sensor.measure_operating_expectation((zero,), random_streams=streams).detector_telemetry
     np.testing.assert_array_equal(again.centroids_xy_px, expectation.centroids_xy_px)
+
+
+# -- S4 traced telemetry (T1, 2026-10-20): per-axis model sigma and expected centroids --
+
+
+def _independent_cog(windows: np.ndarray) -> np.ndarray:
+    """A plain centre of gravity written apart from the sensor's helper."""
+
+    result = np.full((windows.shape[0], 2), math.nan)
+    for index, window in enumerate(windows):
+        total = float(np.sum(window))
+        if not total > 0.0:
+            continue
+        rows, columns = np.indices(window.shape)
+        result[index, 0] = float(np.sum(window * columns)) / total
+        result[index, 1] = float(np.sum(window * rows)) / total
+    return result
+
+
+def test_expected_centroids_are_the_plain_cog_of_the_expected_processed_window() -> None:
+    sensor, streams = build(physical())
+    geometry_ = sensor.geometry
+    tilt = np.where(np.asarray(geometry_.pupil_mask), 3.0e-7 * np.asarray(geometry_.x_m), 0.0)
+    measurement = sensor.measure(tilt, random_streams=streams, include_noise=True)
+    telemetry = measurement.detector_telemetry
+    assert telemetry.expected_centroids_xy_px is not None and telemetry.centroid_sigma_xy_px is not None
+    # The gates' expected frame, computed apart from the measurement path.
+    quality = sensor.noise_model(tilt)
+    rows, cols = sensor.layout.window_slice
+    expected = _independent_cog(np.asarray(quality.expected_processed_e)[:, rows, cols])
+    np.testing.assert_allclose(telemetry.expected_centroids_xy_px, expected, rtol=0.0, atol=1.0e-12)
+    # The per-axis model sigma is the gates' own, NaN where the model does not
+    # support the lenslet; the scalar sigma keeps its undefined-sentinel rule.
+    supported = np.asarray(quality.supported, dtype=bool)
+    assert np.all(supported == telemetry.uncertainty_supported)
+    np.testing.assert_array_equal(
+        telemetry.centroid_sigma_xy_px[supported], np.asarray(quality.centroid_sigma_xy_px)[supported]
+    )
+    assert np.all(np.isnan(telemetry.centroid_sigma_xy_px[~supported]))
+    assert np.all(np.isfinite(telemetry.centroid_sigma_xy_px[supported]))
+    # Same window coordinates as the measured centroid: the noiseless operating
+    # expectation measures the expected frame itself, so its centroid equals
+    # the expected centroid up to the ADC quantization of the noiseless frame.
+    expectation = sensor.measure_operating_expectation((tilt,), random_streams=streams).detector_telemetry
+    valid = expectation.valid_subapertures
+    assert np.any(valid)
+    np.testing.assert_allclose(
+        expectation.centroids_xy_px[valid], expectation.expected_centroids_xy_px[valid], rtol=0.0, atol=0.01
+    )
+    # The noisy centroid residual is of the order of the model sigma, not of
+    # the centroid itself (a coordinate-convention mismatch would be pixels).
+    residual = telemetry.centroids_xy_px[valid] - telemetry.expected_centroids_xy_px[valid]
+    assert np.all(np.abs(residual) < 8.0 * telemetry.centroid_sigma_xy_px[valid])
+
+
+def test_expected_centroids_are_none_for_a_thresholded_estimator_and_nan_for_a_zero_window() -> None:
+    from shwfs_ao.detector.centroid import CentroidConfig
+    from shwfs_ao.wfs.shack_hartmann.physical_measurement import _window_centroids
+
+    thresholded = CentroidConfig(estimator="thresholded_center_of_gravity", threshold_fraction=0.2)
+    sensor, streams = build(physical(), centroid_config=thresholded)
+    zero = np.zeros(sensor.geometry.pupil_shape)
+    telemetry = sensor.measure(zero, random_streams=streams, include_noise=True).detector_telemetry
+    assert telemetry.expected_centroids_xy_px is None  # explicitly unavailable, never a fabricated value
+    # The model does not support a thresholded estimator: every per-axis sigma is NaN.
+    assert telemetry.centroid_sigma_xy_px is not None
+    assert not np.any(telemetry.uncertainty_supported)
+    assert np.all(np.isnan(telemetry.centroid_sigma_xy_px))
+    # A zero-total window has no centroid.
+    windows = np.zeros((2, 5, 5))
+    windows[1, 2, 3] = 4.0
+    result = _window_centroids(windows, CentroidConfig())
+    assert np.all(np.isnan(result[0]))
+    np.testing.assert_allclose(result[1], [3.0, 2.0])
+
+
+def test_an_undefined_expected_centroid_never_refuses_a_measurement() -> None:
+    """Independent review T1-01 (2026-10-20): the reviewer's zero-expectation fixture.
+
+    A zero detected operating source with a positive internal calibration
+    source, no background, read noise 1 e, ADC off, oracle processing and
+    permissive gates: the expected processed windows total zero (no
+    expected centroid) while the noisy realization has finite centroids that
+    the gates keep.  The measurement must return as it did before the
+    diagnostic existed, with NaN expectations where none is defined, both
+    directly and through the observer snapshot the loop hands out.
+    """
+
+    from shwfs_ao.control.observation import immutable_detector_telemetry
+    from shwfs_ao.detector.physical_config import SourceBudgetConfig
+    from shwfs_ao.detector.validity import CentroidValidityConfig
+
+    config = physical(
+        camera(
+            adc_bits=None, read_noise_e=1.0, dark_e_per_s=0.0, hot_pixel_fraction=0.0,
+            hot_pixel_dark_e_per_s=0.0, prnu_rms=0.0, dead_pixel_fraction=0.0, offset_map_rms_adu=0.0,
+        ),
+        proc=processing("oracle"),
+        sky=None,
+    )
+    config = replace(
+        config,
+        source=SourceBudgetConfig(kind="detected_electrons", detected_e_per_full_subap_frame=0.0),
+        calibration_source_detected_e_per_full_subap_frame=10000.0,
+    )
+    permissive = CentroidValidityConfig(
+        min_flux_e=0.0, min_peak_snr=0.0, max_centroid_sigma_px=1.0e6, max_window_clipping_fraction=1.0
+    )
+    sensor, streams = build(config, seed=4, validity_config=permissive)
+    zero = np.zeros(sensor.geometry.pupil_shape)
+    quality = sensor.noise_model(zero)
+    assert np.all(np.asarray(quality.total_flux_e) == 0.0) and not np.any(quality.supported)
+    measurement = sensor.measure(zero, random_streams=streams, include_noise=True)
+    telemetry = measurement.detector_telemetry
+    valid = np.asarray(measurement.valid_subapertures, dtype=bool)
+    assert np.count_nonzero(valid) == 5 and np.count_nonzero(measurement.vector.valid_rows) == 10
+    assert np.all(np.isfinite(measurement.vector.values[measurement.vector.valid_rows]))
+    # The diagnostics say "undefined" on their own terms and gate nothing.
+    assert np.all(np.isnan(telemetry.expected_centroids_xy_px))
+    assert np.all(np.isnan(telemetry.centroid_sigma_xy_px))
+    np.testing.assert_array_equal(telemetry.valid_subapertures, valid)
+    snapshot = immutable_detector_telemetry(telemetry)  # the active-observer path
+    assert np.all(np.isnan(snapshot.expected_centroids_xy_px)) and snapshot.valid_subapertures.sum() == 5

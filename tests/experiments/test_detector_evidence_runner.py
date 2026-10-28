@@ -987,3 +987,481 @@ def test_the_bytecode_cache_is_checked_where_python_reads_it(tmp_path: Path, mon
         assert REAL_CODE_IDENTITY(package) == tracked  # Python cannot read it either and compiles the source
     finally:
         cache.chmod(0o644)
+
+
+# -- S4 traced family (ticket T1, 2026-10-20): gated commands, sidecars, protocols --
+
+
+import time as _time  # noqa: E402
+
+import numpy as np  # noqa: E402
+
+from shwfs_ao.experiments import scao as _scao  # noqa: E402
+from shwfs_ao.experiments import detector_level as _detector_level  # noqa: E402
+
+TRACED_SETTINGS = {
+    "profile": ("det_emccd_2m_synthetic", 1), "magnitudes": (7.0,), "seeds": (21, 22), "n_steps": 20, "burn_in": 5,
+    "record": "traced.json", "map_seeds": {"m7": 22},
+}
+TRACED_PLAN = [("m7", CONFIG, 21), ("m7", CONFIG, 22)]
+
+
+def _never(*arguments, **keywords):
+    raise AssertionError("a simulation or system build was reached by a refused or inert invocation")
+
+
+@pytest.fixture
+def no_simulation(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Every builder and simulation boundary a traced command could reach: the
+    # factory in scao, its alias imported into detector_level at import time,
+    # and the three paired-run entry points.
+    monkeypatch.setattr(_scao, "build_scao_system", _never)
+    monkeypatch.setattr(_detector_level, "build_scao_system", _never)
+    monkeypatch.setattr(_detector_level, "paired_noise_run", _never)
+    monkeypatch.setattr(_detector_level, "paired_noise_run_traced", _never)
+    monkeypatch.setattr(_detector_level, "paired_noise_run_mask_locked", _never)
+    monkeypatch.setattr(_detector_level, "science_run", _never)
+
+
+from _trace_fixtures import fake_traced_run  # noqa: E402
+
+
+@pytest.fixture
+def inert_traced(monkeypatch: pytest.MonkeyPatch, no_simulation: None) -> None:
+    monkeypatch.setattr(_detector_level, "paired_noise_run_traced", fake_traced_run)
+    monkeypatch.setattr(_detector_level, "paired_noise_run_mask_locked", lambda *a, **k: fake_traced_run(*a, allow_partial_lock=k.pop("allow_partial_lock", False), **k))
+
+
+def traced_series(settings: dict = TRACED_SETTINGS, plan: list = TRACED_PLAN, *, mode: str = "traced", name: str | None = None) -> None:
+    runner._gated_series(
+        settings["record"] if name is None else name, "traced test", plan, n_steps=settings["n_steps"], burn_in=settings["burn_in"],
+        execution=None, runner=runner.traced_run_factory(settings, mode=mode), run_context=True,
+        validate_retained=runner.traced_record_validator(settings, mode=mode), header_extra={"record_family": runner.TRACE_FAMILY},
+    )
+
+
+def _snapshot(directory: Path) -> dict:
+    return {path.name: (path.read_bytes(), path.stat().st_mtime_ns) for path in directory.iterdir()}
+
+
+def test_the_traced_12m_commands_refuse_before_any_profile_or_system_without_the_note(isolated_runner: Path, no_simulation: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    from shwfs_ao.io import configs as _configs
+
+    monkeypatch.setattr(_configs, "load_system_profile", _never)
+    for command in ("noise-isolation-12m-traced", "noise-isolation-12m-masklocked"):
+        with pytest.raises(SystemExit) as refusal:
+            runner.main([command])
+        assert refusal.value.code == 2  # argparse: --enabled-by-user is required
+    assert list(isolated_runner.iterdir()) == []
+
+
+def test_the_traced_commands_reach_the_gated_series_with_their_own_settings(isolated_runner: Path, no_simulation: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def record_only(name, command, plan, **keywords):
+        seen.append({"name": name, "command": command, "labels": sorted({label for label, _, _ in plan}), "seeds": sorted({seed for _, _, seed in plan}), **{k: v for k, v in keywords.items() if k in ("n_steps", "burn_in", "enabled_by_user", "run_context")}})
+
+    monkeypatch.setattr(runner, "_gated_series", record_only)
+    assert runner.main(["noise-isolation-2m-traced"]) == 0
+    assert runner.main(["noise-isolation-12m-traced", "--enabled-by-user", "test note"]) == 0
+    assert runner.main(["noise-isolation-12m-masklocked", "--enabled-by-user", "test note"]) == 0
+    assert seen[0]["name"] == "det09_noise_isolation_2m_traced.json" and seen[0]["enabled_by_user"].startswith("not gated")
+    assert seen[0]["labels"] == ["m5", "m6", "m7", "m8"] and seen[0]["seeds"] == list(range(61, 69)) and seen[0]["n_steps"] == 200 and seen[0]["burn_in"] == 50
+    assert seen[1]["name"] == "det09_noise_isolation_12m_traced.json" and seen[1]["enabled_by_user"] == "test note"
+    assert seen[1]["labels"] == ["m10", "m11", "m8", "m9"] and seen[1]["seeds"] == list(range(71, 76)) and seen[1]["n_steps"] == 400
+    assert seen[2]["name"] == "det09_noise_isolation_12m_masklocked.json" and seen[2]["labels"] == ["m11"] and seen[2]["seeds"] == list(range(71, 81))
+    assert all(entry["run_context"] is True for entry in seen)
+    assert list(isolated_runner.iterdir()) == []
+
+
+def test_a_traced_series_publishes_one_verified_sidecar_per_run_and_a_no_op_resume_changes_nothing(isolated_runner: Path, inert_traced: None) -> None:
+    traced_series()
+    record = json.loads((isolated_runner / "traced.json").read_text())
+    assert record["record_family"] == runner.TRACE_FAMILY and record["series_protocol_version"] == 4
+    assert sorted(path.name for path in isolated_runner.iterdir()) == ["traced.json", "traced__m7__seed21.npz", "traced__m7__seed22.npz"]
+    for run in record["runs"]:
+        reference = run["sidecar"]
+        path = isolated_runner / reference["file"]
+        assert reference["file"] == runner.sidecar_name("traced", "m7", run["root_seed"]) and reference["schema"] == runner.TRACE_SIDECAR_SCHEMA
+        assert path.stat().st_size == reference["bytes"] and hashlib.sha256(path.read_bytes()).hexdigest() == reference["sha256"]
+        metadata, arrays = runner.read_sidecar(path, expected_sha256=reference["sha256"])
+        assert metadata["label"] == "m7" and metadata["root_seed"] == run["root_seed"] and metadata["protocol_hash"] == run["protocol_hash"]
+        assert metadata["diagnostic_protocol_hash"] == run["diagnostic_protocol_hash"] == runner.protocol_digest(run["diagnostic_protocol"])
+        assert metadata["code"] == run["protocol"]["code"] and metadata["environment"] == run["protocol"]["environment"]
+        assert set(metadata["arrays"]) == set(arrays) and arrays["delta_v_m2"].shape == (15,)
+        assert arrays["noise_on__telemetry__centroids_xy_px"].shape == (20, 3, 2) and arrays["row_ids"].dtype.kind == "U"
+        # The sidecar digest is output integrity: it appears in no protocol payload.
+        assert reference["sha256"] not in json.dumps(run["protocol"]) and reference["sha256"] not in json.dumps(run["diagnostic_protocol"])
+        assert run["diagnostic_protocol"]["map_retention"] == {"label": "m7", "root_seed": run["root_seed"], "retained": run["root_seed"] == 22}
+    assert "residual_maps__noise_on" in runner.read_sidecar(isolated_runner / "traced__m7__seed22.npz")[1]
+    assert "residual_maps__noise_on" not in runner.read_sidecar(isolated_runner / "traced__m7__seed21.npz")[1]
+    # The physical protocol is the series protocol 4 payload, unchanged by tracing.
+    expected = runner.run_protocol("m7", CONFIG, 21, n_steps=20, burn_in=5, execution=None, code=runner.code_identity())
+    assert record["runs"][0]["protocol_hash"] == expected["protocol_hash"]
+    assert runner._inconsistencies(record) == []
+    # A complete, compatible no-op invocation reads and compares only.
+    before = _snapshot(isolated_runner)
+    _time.sleep(0.01)
+    start_fresh_invocation()
+    runner.OPTIONS.resume = True
+    traced_series()
+    assert _snapshot(isolated_runner) == before
+    # Without --resume the existing record is refused as always.
+    start_fresh_invocation()
+    runner.OPTIONS.resume = False
+    with pytest.raises(runner.EvidenceRecordExists, match="--resume"):
+        traced_series()
+    assert _snapshot(isolated_runner) == before
+
+
+def test_an_interrupted_traced_series_resumes_the_missing_run_only(isolated_runner: Path, inert_traced: None) -> None:
+    traced_series(plan=TRACED_PLAN[:1])
+    start_fresh_invocation()
+    runner.OPTIONS.resume = True
+    traced_series()
+    record = json.loads((isolated_runner / "traced.json").read_text())
+    assert [run["root_seed"] for run in record["runs"]] == [21, 22]
+    assert sorted(path.name for path in isolated_runner.iterdir()) == ["traced.json", "traced__m7__seed21.npz", "traced__m7__seed22.npz"]
+
+
+SIDECAR_TAMPERING = {
+    "corrupt byte": "corrupt",
+    "missing file": "missing",
+    "orphan sidecar": "orphan",
+    "interrupted temporary": "temporary",
+    "renamed reference": "rename",
+    "diagnostic hash": "diagnostic",
+    "mixed producer": "producer",
+    "size": "size",
+}
+
+
+@pytest.mark.parametrize("tampering", sorted(SIDECAR_TAMPERING))
+def test_a_traced_resume_refuses_damaged_or_ambiguous_evidence_unchanged(isolated_runner: Path, inert_traced: None, tampering: str) -> None:
+    traced_series(plan=TRACED_PLAN[:1])
+    record_path = isolated_runner / "traced.json"
+    record = json.loads(record_path.read_text())
+    sidecar = isolated_runner / record["runs"][0]["sidecar"]["file"]
+    kind = SIDECAR_TAMPERING[tampering]
+    if kind == "corrupt":
+        data = sidecar.read_bytes()
+        sidecar.write_bytes(data[:-1] + bytes([data[-1] ^ 1]))
+        match = "SHA-256"
+    elif kind == "missing":
+        sidecar.unlink()
+        match = "missing"
+    elif kind == "orphan":
+        (isolated_runner / runner.sidecar_name("traced", "m7", 99)).write_bytes(b"orphan")
+        match = "not referenced"
+    elif kind == "temporary":
+        (isolated_runner / f"{sidecar.name}{runner._SIDECAR_TEMP_MARK}123-abcd").write_bytes(b"partial")
+        match = "not referenced"
+    elif kind == "rename":
+        record["runs"][0]["sidecar"]["file"] = "traced__m7__seed21_renamed.npz"
+        record_path.write_text(json.dumps(record, indent=2) + "\n")
+        match = "another name or schema"
+    elif kind == "diagnostic":
+        record["runs"][0]["diagnostic_protocol"]["frame_domain"] = "other"
+        record_path.write_text(json.dumps(record, indent=2) + "\n")
+        match = "not the digest of its payload"
+    elif kind == "producer":
+        metadata, arrays = runner.read_sidecar(sidecar)
+        metadata["code"] = {**metadata["code"], "git_head": "other"}
+        sidecar.unlink()
+        reference = runner.publish_sidecar(sidecar, arrays, metadata)
+        record["runs"][0]["sidecar"] = reference
+        record_path.write_text(json.dumps(record, indent=2) + "\n")
+        match = "mixed producers"
+    else:
+        record["runs"][0]["sidecar"]["bytes"] += 1
+        record_path.write_text(json.dumps(record, indent=2) + "\n")
+        match = "bytes"
+    before = _snapshot(isolated_runner)
+    for plan in (TRACED_PLAN, TRACED_PLAN[:1]):  # with a run to add, and with nothing left to run
+        start_fresh_invocation()
+        runner.OPTIONS.resume = True
+        with pytest.raises(runner.EvidenceRecordExists, match=match):
+            traced_series(plan=plan)
+        assert _snapshot(isolated_runner) == before
+
+
+def test_an_old_traced_record_is_refused_under_other_diagnostic_semantics_although_its_physical_hash_matches(isolated_runner: Path, inert_traced: None) -> None:
+    traced_series()
+    record = json.loads((isolated_runner / "traced.json").read_text())
+    physical = [run["protocol_hash"] for run in record["runs"]]
+    before = _snapshot(isolated_runner)
+    # Another map retention is another diagnostic protocol for that run.
+    other_retention = {**TRACED_SETTINGS, "map_seeds": {"m7": 21}}
+    start_fresh_invocation()
+    runner.OPTIONS.resume = True
+    with pytest.raises(runner.EvidenceRecordExists, match="retained residual maps"):
+        traced_series(settings=other_retention)
+    # Another mode (arm order, mask source) is another diagnostic protocol too.
+    start_fresh_invocation()
+    with pytest.raises(runner.EvidenceRecordExists, match="other diagnostic semantics"):
+        traced_series(mode="mask_locked")
+    assert _snapshot(isolated_runner) == before
+    # The physical protocol of those runs is the one an untraced series gives:
+    # tracing semantics live beside it, never in it.
+    for run, digest in zip(record["runs"], physical):
+        plain = runner.run_protocol(run["label"], CONFIG, run["root_seed"], n_steps=20, burn_in=5, execution=None, code=runner.code_identity())
+        assert plain["protocol_hash"] == digest
+
+
+def test_sidecar_publication_is_atomic_and_never_clobbers(isolated_runner: Path) -> None:
+    destination = isolated_runner / "family__m7__seed1.npz"
+    arrays = {"delta_v_m2": np.arange(3.0)}
+    metadata = {"schema": runner.TRACE_SIDECAR_SCHEMA, "arrays": {"delta_v_m2": {"dtype": "float64", "shape": [3]}}}
+    reference = runner.publish_sidecar(destination, arrays, metadata)
+    assert reference["file"] == destination.name and destination.stat().st_size == reference["bytes"]
+    first = destination.read_bytes()
+    with pytest.raises(runner.TraceSidecarError, match="exists"):
+        runner.publish_sidecar(destination, {"delta_v_m2": np.zeros(3)}, metadata)
+    assert destination.read_bytes() == first
+    assert [path.name for path in isolated_runner.iterdir()] == [destination.name]  # no temporary left behind
+    # Reading refuses undeclared or mis-declared content and pickles are never allowed.
+    loaded_metadata, loaded = runner.read_sidecar(destination, expected_sha256=reference["sha256"])
+    np.testing.assert_array_equal(loaded["delta_v_m2"], arrays["delta_v_m2"])
+    with pytest.raises(runner.TraceSidecarError, match="SHA-256"):
+        runner.read_sidecar(destination, expected_sha256="0" * 64)
+    undeclared = isolated_runner / "undeclared.npz"
+    np.savez(undeclared, metadata_json=np.array(json.dumps(metadata)), delta_v_m2=np.arange(3.0), extra=np.zeros(2))
+    with pytest.raises(runner.TraceSidecarError, match="declared arrays"):
+        runner.read_sidecar(undeclared)
+    wrong_shape = isolated_runner / "shape.npz"
+    np.savez(wrong_shape, metadata_json=np.array(json.dumps(metadata)), delta_v_m2=np.arange(4.0))
+    with pytest.raises(runner.TraceSidecarError, match="declared"):
+        runner.read_sidecar(wrong_shape)
+    pickled = isolated_runner / "pickled.npz"
+    np.savez(pickled, metadata_json=np.array(json.dumps(metadata)), delta_v_m2=np.array([object()], dtype=object), allow_pickle=True)
+    with pytest.raises(runner.TraceSidecarError):
+        runner.read_sidecar(pickled)
+
+
+def test_an_orphan_sidecar_from_an_interrupted_publication_is_refused_before_a_fresh_series(isolated_runner: Path, inert_traced: None) -> None:
+    # The sidecar was published, the process died before its row was appended.
+    orphan = isolated_runner / runner.sidecar_name("traced", "m7", 21)
+    runner.publish_sidecar(orphan, {"x": np.zeros(1)}, {"schema": runner.TRACE_SIDECAR_SCHEMA, "arrays": {"x": {"dtype": "float64", "shape": [1]}}})
+    before = _snapshot(isolated_runner)
+    with pytest.raises(runner.EvidenceRecordExists, match="not referenced"):
+        traced_series()
+    assert _snapshot(isolated_runner) == before and not (isolated_runner / "traced.json").exists()
+
+
+def test_a_mask_locked_series_records_the_lock_and_its_own_diagnostic_protocol(isolated_runner: Path, inert_traced: None) -> None:
+    settings = {**TRACED_SETTINGS, "record": "locked.json", "map_seeds": {"m7": 21}}
+    traced_series(settings=settings, plan=TRACED_PLAN[:1], mode="mask_locked")
+    record = json.loads((isolated_runner / "locked.json").read_text())
+    run = record["runs"][0]
+    assert run["lock"] == {"exact": True} and run["diagnostic_protocol"]["mode"] == "mask_locked"
+    assert run["diagnostic_protocol"]["arm_order"] == list(_detector_level.MASK_LOCKED_NOISE_ARMS)
+    assert run["diagnostic_protocol"]["forced_row_policy"] == "refuse_nonfinite_forced_rows"
+    metadata, arrays = runner.read_sidecar(isolated_runner / run["sidecar"]["file"], expected_sha256=run["sidecar"]["sha256"])
+    assert metadata["lock"] == {"exact": True} and "mask_lock__rows_added" in arrays
+    assert "noise_on_mask_locked__measurement_row_masks" in arrays and "residual_maps__noise_on_mask_locked" in arrays
+
+
+# -- Independent review of 2026-10-20 (T1-02, T1-03): payload semantics and refusals --
+
+
+def _inert_metadata(diagnostic: dict, protocol: dict, *, n_steps: int = 20, burn_in: int = 5) -> dict:
+    return {
+        "schema": runner.TRACE_SIDECAR_SCHEMA, "family": runner.TRACE_FAMILY, "record_stem": "traced", "label": "m7", "root_seed": 21,
+        "config_hash": protocol["protocol"]["config_hash"], "protocol_hash": protocol["protocol_hash"],
+        "diagnostic_protocol_hash": runner.protocol_digest(diagnostic), "code": protocol["protocol"]["code"],
+        "environment": protocol["protocol"]["environment"], "n_steps": n_steps, "burn_in_frames": burn_in,
+        "diagnostic_protocol": diagnostic, "trace_schema": diagnostic["trace_schema"], "arm_order": diagnostic["arm_order"],
+        "noisy_arm": "noise_on", "twin_arm": "operating_expectation",
+        "arms": {arm: {"telemetry_unavailable": []} for arm in diagnostic["arm_order"]},
+        "propagation_weights": {"available": True},
+    }
+
+
+def _write_record(directory: Path, rows: list[dict]) -> Path:
+    record = {
+        "record_family": runner.TRACE_FAMILY, "series_protocol_version": 4, "code_identity": runner.code_identity(),
+        **runner.producer_environment(), "n_steps": 20, "burn_in_frames": 5, "enabled_by_user": "test go-ahead", "runs": rows,
+    }
+    path = directory / "traced.json"
+    path.write_text(json.dumps(record, indent=2) + "\n")
+    return path
+
+
+MALFORMED_SIDECARS = {
+    # The reviewer's first case: a correctly hashed archive holding only an empty series.
+    "empty_series_only": (lambda arrays, meta: ({"delta_v_m2": np.empty(0)}, {**meta, "arrays": {"delta_v_m2": {"dtype": "float64", "shape": [0], "units": "m2", "axes": ["analysed_frame"], "meaning": "x"}}}), "no row layout|exactly the protocol's arrays"),
+    # The reviewer's second case: contradictory embedded frame counts, schema, arm order and diagnostic payload.
+    "inconsistent_metadata": (lambda arrays, meta: (arrays, {**meta, "n_steps": 999, "burn_in_frames": 998, "trace_schema": "wrong.trace.schema", "arm_order": ["wrong_arm"], "diagnostic_protocol": {"other_semantics": True}}), "n_steps"),
+    "wrong_frame_domain": (lambda arrays, meta: ({**arrays, "analysed_frame_index": np.arange(0, 15, dtype=np.int64)}, meta), "analysed_frame_index"),
+    "missing_telemetry_array": (lambda arrays, meta: ({k: v for k, v in arrays.items() if k != "noise_on__telemetry__centroids_xy_px"}, {**meta, "arrays": {k: v for k, v in meta["arrays"].items() if k != "noise_on__telemetry__centroids_xy_px"}}), "exactly the protocol's arrays"),
+    "undeclared_extra_array": (lambda arrays, meta: ({**arrays, "extra": np.zeros(3)}, {**meta, "arrays": {**meta["arrays"], "extra": {"dtype": "float64", "shape": [3], "units": "1", "axes": ["x"], "meaning": "x"}}}), "exactly the protocol's arrays"),
+    "wrong_dtype": (lambda arrays, meta: ({**arrays, "noise_on__measurement_row_masks": arrays["noise_on__measurement_row_masks"].astype(np.int64)}, {**meta, "arrays": {**meta["arrays"], "noise_on__measurement_row_masks": {**meta["arrays"]["noise_on__measurement_row_masks"], "dtype": "int64"}}}), "dtype"),
+    "odd_row_count": (lambda arrays, meta: ({**arrays, "row_ids": np.array(["a", "b", "c", "d", "e"]), "calibration_valid_rows": np.ones(5, dtype=bool)}, {**meta, "arrays": {**meta["arrays"], "row_ids": {**meta["arrays"]["row_ids"], "shape": [5], "dtype": "<U1"}, "calibration_valid_rows": {**meta["arrays"]["calibration_valid_rows"], "shape": [5]}}}), "two rows per lenslet"),
+    "other_run_embedded": (lambda arrays, meta: (arrays, {**meta, "root_seed": 99}), "another label or seed"),
+}
+
+
+@pytest.mark.parametrize("case", sorted(MALFORMED_SIDECARS))
+def test_a_digest_bound_malformed_or_inconsistent_sidecar_is_refused_before_reuse(isolated_runner: Path, inert_traced: None, case: str) -> None:
+    # A real inert series supplies a correct archive; each case rewrites the
+    # archive with a correct digest and reference, so only the semantics are wrong.
+    traced_series(plan=TRACED_PLAN[:1])
+    record_path = isolated_runner / "traced.json"
+    record = json.loads(record_path.read_text())
+    row = record["runs"][0]
+    sidecar = isolated_runner / row["sidecar"]["file"]
+    metadata, arrays = runner.read_sidecar(sidecar)
+    mutate, match = MALFORMED_SIDECARS[case]
+    new_arrays, new_metadata = mutate(dict(arrays), json.loads(json.dumps(metadata)))
+    if case == "inconsistent_metadata":
+        new_metadata["diagnostic_protocol_hash"] = runner.protocol_digest(new_metadata["diagnostic_protocol"])
+        row["diagnostic_protocol_hash"] = row["diagnostic_protocol_hash"]  # the row stays correct
+    sidecar.unlink()
+    row["sidecar"] = runner.publish_sidecar(sidecar, new_arrays, new_metadata)
+    record_path.write_text(json.dumps(record, indent=2) + "\n")
+    before = _snapshot(isolated_runner)
+    for plan in (TRACED_PLAN, TRACED_PLAN[:1]):  # with a run to add, and the complete no-op
+        start_fresh_invocation()
+        runner.OPTIONS.resume = True
+        with pytest.raises(runner.EvidenceRecordExists, match=match):
+            traced_series(plan=plan)
+        assert _snapshot(isolated_runner) == before
+    # The published archive itself is checked the same way at publication time.
+    with pytest.raises(runner.TraceSidecarError, match=match):
+        protocol = runner.run_protocol("m7", CONFIG, 21, n_steps=20, burn_in=5, execution=None, code=runner.code_identity())
+        runner.validate_trace_payload(
+            new_metadata, new_arrays, label="m7", root_seed=21, n_steps=20, burn_in=5,
+            diagnostic=row["diagnostic_protocol"], diagnostic_hash=row["diagnostic_protocol_hash"], where="check",
+        )
+        del protocol
+
+
+def test_a_sidecar_that_only_claims_the_right_arrays_is_refused_on_its_own(isolated_runner: Path) -> None:
+    # The reviewer's probe without a series: a self-consistent archive of one
+    # empty array, published under a correct identity, fails the semantic check.
+    diagnostic = runner.diagnostic_protocol(mode="traced", label="m7", root_seed=21, retain_residual_maps=False, propagation_weights=True, allow_partial_lock=None)
+    protocol = runner.run_protocol("m7", CONFIG, 21, n_steps=20, burn_in=5, execution=None, code=runner.code_identity())
+    metadata = _inert_metadata(diagnostic, protocol)
+    metadata["arrays"] = {"delta_v_m2": {"dtype": "float64", "shape": [0], "units": "m2", "axes": ["analysed_frame"], "meaning": "x"}}
+    destination = isolated_runner / runner.sidecar_name("traced", "m7", 21)
+    reference = runner.publish_sidecar(destination, {"delta_v_m2": np.empty(0)}, metadata)
+    loaded_metadata, loaded_arrays = runner.read_sidecar(destination, expected_sha256=reference["sha256"])
+    with pytest.raises(runner.TraceSidecarError, match="no row layout"):
+        runner.validate_trace_payload(loaded_metadata, loaded_arrays, label="m7", root_seed=21, n_steps=20, burn_in=5, diagnostic=diagnostic, diagnostic_hash=runner.protocol_digest(diagnostic), where="probe")
+    row = {"label": "m7", "root_seed": 21, "config_hash": protocol["protocol"]["config_hash"], **protocol, "diagnostic_protocol": diagnostic, "diagnostic_protocol_hash": runner.protocol_digest(diagnostic), "sidecar": reference}
+    path = _write_record(isolated_runner, [row])
+    before = _snapshot(isolated_runner)
+    with pytest.raises(runner.EvidenceRecordExists, match="no row layout"):
+        runner.traced_record_validator(TRACED_SETTINGS, mode="traced")(path, [row])
+    assert _snapshot(isolated_runner) == before
+
+
+@pytest.mark.parametrize("error", ["construction", "calibration"])
+def test_supported_construction_refusals_keep_their_diagnostic_identity_and_resume(isolated_runner: Path, no_simulation: None, monkeypatch: pytest.MonkeyPatch, error: str) -> None:
+    from shwfs_ao.calibration.interaction import InteractionMatrixError
+
+    exception = _scao.ScaoConstructionError if error == "construction" else InteractionMatrixError
+    calls: list[int] = []
+
+    def refused(config, *, root_seed, **keywords):
+        calls.append(int(root_seed))
+        raise exception("inert supported refusal")
+
+    monkeypatch.setattr(_detector_level, "paired_noise_run_traced", refused)
+    traced_series(plan=TRACED_PLAN[:1])
+    record_path = isolated_runner / "traced.json"
+    record = json.loads(record_path.read_text())
+    row = record["runs"][0]
+    assert row["status"] == "refused" and "inert supported refusal" in row["reason"]
+    assert row["diagnostic_protocol"]["map_retention"] == {"label": "m7", "root_seed": 21, "retained": False}
+    assert row["diagnostic_protocol_hash"] == runner.protocol_digest(row["diagnostic_protocol"])
+    assert "sidecar" not in row and record["refused"][0]["root_seed"] == 21
+    assert [path.name for path in isolated_runner.iterdir()] == ["traced.json"]
+    before = _snapshot(isolated_runner)
+    # Complete no-op resume: nothing runs, nothing changes.
+    start_fresh_invocation()
+    runner.OPTIONS.resume = True
+    traced_series(plan=TRACED_PLAN[:1])
+    assert calls == [21] and _snapshot(isolated_runner) == before
+    # Partial continuation: the refused row is kept as written, the new run is added with a sidecar.
+    monkeypatch.setattr(_detector_level, "paired_noise_run_traced", fake_traced_run)
+    start_fresh_invocation()
+    traced_series()
+    record = json.loads(record_path.read_text())
+    assert [run["root_seed"] for run in record["runs"]] == [21, 22] and record["runs"][0] == row
+    assert record["runs"][1]["sidecar"]["file"] == runner.sidecar_name("traced", "m7", 22)
+    assert runner._inconsistencies(record) == []
+
+
+def test_legacy_untraced_refusals_are_unchanged(isolated_runner: Path, no_simulation: None) -> None:
+    # The legacy handler still records a plain refused row for an untraced runner.
+    def refused(config, *, root_seed, n_steps, burn_in_frames, execution):
+        raise _scao.ScaoConstructionError("legacy refusal")
+
+    runner._gated_series("legacy.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=refused)
+    record = json.loads((isolated_runner / "legacy.json").read_text())
+    assert record["runs"][0]["status"] == "refused" and "diagnostic_protocol" not in record["runs"][0]
+
+
+# -- Independent review round 2 (2026-10-21, T1-02): semantic values, row and lenslet order --
+
+
+from _trace_fixtures import SIDECAR_MUTATIONS, mutate_sidecar  # noqa: E402
+
+
+def _series_for(mode: str, settings: dict, plan: list) -> None:
+    traced_series(settings=settings, plan=plan, mode=mode)
+
+
+@pytest.mark.parametrize("name", sorted(SIDECAR_MUTATIONS))
+def test_every_reviewed_sidecar_mutation_is_refused_by_the_runner_before_reuse(isolated_runner: Path, inert_traced: None, name: str) -> None:
+    """Both review rounds' mutations of a valid archive: one semantic element changed, digest and reference correct.
+
+    Units, axes and meaning are compared with the canonical schema; the twin's
+    lenslet order and the interleaved x/y row order are required; shapes and
+    dtypes are exact.  Every case is refused on a complete no-op resume and
+    before a pending inert run, with record and sidecar bytes and mtimes
+    untouched, and by the publication-time check.
+    """
+
+    mode, runner_match, _ = SIDECAR_MUTATIONS[name]
+    settings = {**TRACED_SETTINGS, "map_seeds": {}} if mode == "traced" else {**TRACED_SETTINGS, "record": "locked.json", "map_seeds": {}}
+    _series_for(mode, settings, TRACED_PLAN[:1])
+    record_path = isolated_runner / settings["record"]
+    record = json.loads(record_path.read_text())
+    row = record["runs"][0]
+    sidecar = isolated_runner / row["sidecar"]["file"]
+    metadata, arrays = runner.read_sidecar(sidecar)
+    new_arrays, new_metadata = mutate_sidecar(name, arrays, metadata)
+    sidecar.unlink()
+    row["sidecar"] = runner.publish_sidecar(sidecar, new_arrays, new_metadata)
+    record_path.write_text(json.dumps(record, indent=2) + "\n")
+    before = _snapshot(isolated_runner)
+    for plan in (TRACED_PLAN[:1], TRACED_PLAN):  # complete no-op, then partial continuation
+        start_fresh_invocation()
+        runner.OPTIONS.resume = True
+        with pytest.raises(runner.EvidenceRecordExists, match=runner_match):
+            _series_for(mode, settings, plan)
+        assert _snapshot(isolated_runner) == before
+    with pytest.raises(runner.TraceSidecarError, match=runner_match):
+        runner.validate_trace_payload(
+            new_metadata, new_arrays, label="m7", root_seed=21, n_steps=20, burn_in=5,
+            diagnostic=row["diagnostic_protocol"], diagnostic_hash=row["diagnostic_protocol_hash"], where="check",
+        )
+
+
+def test_a_valid_sidecar_passes_the_value_level_checks_in_both_modes(isolated_runner: Path, inert_traced: None) -> None:
+    for mode, name in (("traced", "traced.json"), ("mask_locked", "locked.json")):
+        settings = {**TRACED_SETTINGS, "record": name, "map_seeds": {"m7": 21}}
+        _series_for(mode, settings, TRACED_PLAN[:1])
+        record = json.loads((isolated_runner / name).read_text())
+        row = record["runs"][0]
+        metadata, arrays = runner.read_sidecar(isolated_runner / row["sidecar"]["file"], expected_sha256=row["sidecar"]["sha256"])
+        runner.validate_trace_payload(
+            metadata, arrays, label="m7", root_seed=21, n_steps=20, burn_in=5,
+            diagnostic=row["diagnostic_protocol"], diagnostic_hash=row["diagnostic_protocol_hash"], where="check",
+        )
+        # The canonical row layout is the package's own definition.
+        from shwfs_ao.wfs.shack_hartmann.calibration import row_ids_for_subapertures
+
+        assert tuple(arrays["row_ids"].tolist()) == row_ids_for_subapertures(tuple(arrays["noise_on__subaperture_ids" if mode == "traced" else "noise_on_mask_locked__subaperture_ids"].tolist()))

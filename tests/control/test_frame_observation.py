@@ -453,3 +453,211 @@ def test_canonical_scao_runner_forwards_observers_without_changing_control():
         residual = event.pre_update_residual_opd_m[pupil]
         rms = float(np.sqrt(np.mean((residual - residual.mean()) ** 2)))
         assert rms == pytest.approx(baseline.pre_update_residual_opd_rms_m[frame], rel=1e-12)
+
+
+# -- S4 traced experiment (T1, 2026-10-20): the row mask and telemetry fields --
+
+
+from shwfs_ao.control.observation import (  # noqa: E402
+    OBSERVABLE_MAP_FIELDS,
+    immutable_detector_telemetry,
+    immutable_mask_snapshot,
+)
+from shwfs_ao.core.types import DetectorTelemetry, is_immutable_buffer_array  # noqa: E402
+
+
+def _telemetry(count: int = 2) -> DetectorTelemetry:
+    return DetectorTelemetry(
+        subaperture_ids=tuple(f"subap-{index}" for index in range(count)),
+        centroids_xy_px=np.zeros((count, 2)),
+        reference_centroids_xy_px=np.zeros((count, 2)),
+        fluxes_e=np.full(count, 100.0),
+        valid_subapertures=np.ones(count, dtype=bool),
+        valid_by_flux=np.ones(count, dtype=bool),
+        valid_by_snr=np.ones(count, dtype=bool),
+        valid_by_uncertainty=np.ones(count, dtype=bool),
+        valid_by_clipping=np.ones(count, dtype=bool),
+        peak_snr=np.full(count, 12.0),
+        total_snr=np.full(count, 20.0),
+        centroid_sigma_px=np.full(count, 0.05),
+        clipping_fraction=np.zeros(count),
+        uncertainty_supported=np.ones(count, dtype=bool),
+        centroid_sigma_xy_px=np.full((count, 2), 0.05),
+        expected_centroids_xy_px=np.zeros((count, 2)),
+    )
+
+
+def test_the_new_observable_fields_are_the_three_maps_plus_mask_and_telemetry():
+    assert OBSERVABLE_FIELDS == (*OBSERVABLE_MAP_FIELDS, "measurement_row_mask", "detector_telemetry")
+    assert OBSERVABLE_MAP_FIELDS == (
+        "atmosphere_opd_m",
+        "pre_update_residual_opd_m",
+        "post_update_residual_opd_m",
+    )
+
+
+def test_the_row_mask_arrives_only_when_requested_as_a_boolean_read_only_snapshot(matrix):
+    # One observer per run: a field requested by any observer is materialized
+    # once for all of them, so the "not requested" side is checked alone.
+    mask_only = _Recorder(frozenset({"measurement_row_mask"}))
+    history, _ = _run(
+        matrix, latency=1, gain=0.5, leak=0.0, stroke=1.0,
+        none_frames=frozenset({2}), n_steps=5, observers=(mask_only,),
+    )
+    maps_only = _Recorder(frozenset({"pre_update_residual_opd_m"}))
+    _run(
+        matrix, latency=1, gain=0.5, leak=0.0, stroke=1.0,
+        none_frames=frozenset({2}), n_steps=5, observers=(maps_only,),
+    )
+    assert len(mask_only.events) == 5
+    for frame, event in enumerate(mask_only.events):
+        mask = event.measurement_row_mask
+        assert isinstance(mask, np.ndarray) and mask.dtype == np.dtype(bool) and mask.ndim == 1
+        assert not mask.flags.writeable
+        assert is_immutable_buffer_array(mask, dtype=bool)
+        # The mask is the frame's effective rows, the ones the history stores.
+        np.testing.assert_array_equal(mask, history.measurement_row_masks[frame])
+        with pytest.raises(ValueError):
+            mask[0] = False
+        with pytest.raises(ValueError):
+            mask.flags.writeable = True
+        # The stub sensor provides no telemetry: the field stays None even when
+        # requested, which is the explicit "not available" of a geometric sensor.
+        assert event.detector_telemetry is None
+        assert event.pre_update_residual_opd_m is None
+    assert len({id(event.measurement_row_mask) for event in mask_only.events}) == 5
+    for event in maps_only.events:
+        assert event.measurement_row_mask is None
+        assert event.detector_telemetry is None
+        assert event.pre_update_residual_opd_m is not None
+
+
+def test_requesting_the_mask_and_telemetry_is_passive(matrix):
+    baseline, atmosphere_a = _run(
+        matrix, latency=2, gain=0.5, leak=0.01, stroke=1.0,
+        none_frames=frozenset({3}), n_steps=9,
+    )
+    everything = _Recorder(frozenset(OBSERVABLE_FIELDS))
+    observed, atmosphere_b = _run(
+        matrix, latency=2, gain=0.5, leak=0.01, stroke=1.0,
+        none_frames=frozenset({3}), n_steps=9, observers=(everything,),
+    )
+    assert observed.config_hash == baseline.config_hash
+    assert atmosphere_a.times == atmosphere_b.times
+    for name in (
+        "pre_update_residual_opd_rms_m",
+        "post_update_residual_opd_rms_m",
+        "requested_command_history_opd_m",
+        "applied_command_history_opd_m",
+        "measurement_row_masks",
+        "reconstruction_usable",
+        "valid_measurement_fraction",
+    ):
+        np.testing.assert_array_equal(getattr(observed, name), getattr(baseline, name))
+    assert dict(observed.metadata["component_hashes"]) == dict(baseline.metadata["component_hashes"])
+    assert len(everything.events) == 9
+
+
+def test_mask_snapshots_are_never_cast_and_frame_observations_check_the_new_fields():
+    with pytest.raises(FrameObservationError, match="boolean"):
+        immutable_mask_snapshot(np.zeros(3))
+    snapshot = immutable_mask_snapshot(np.array([True, False, True]))
+    assert snapshot.dtype == np.dtype(bool) and not snapshot.flags.writeable
+    common = dict(
+        frame_index=0, time_s=0.0, frame_period_s=0.002, latency_frames=0,
+        reconstruction_usable=True, saturation_fraction=0.0,
+    )
+    with pytest.raises(FrameObservationError, match="read-only"):
+        FrameObservation(**common, measurement_row_mask=np.zeros(3, dtype=bool))
+    with pytest.raises(FrameObservationError, match="boolean"):
+        FrameObservation(**common, measurement_row_mask=np.frombuffer(np.zeros(3).tobytes(), dtype=float))
+    with pytest.raises(FrameObservationError, match="1-D"):
+        FrameObservation(**common, measurement_row_mask=np.frombuffer(np.zeros(4, dtype=bool).tobytes(), dtype=bool).reshape(2, 2))
+    with pytest.raises(FrameObservationError, match="DetectorTelemetry"):
+        FrameObservation(**common, detector_telemetry=object())
+    # The accepted forms.
+    observation = FrameObservation(
+        **common, measurement_row_mask=snapshot, detector_telemetry=immutable_detector_telemetry(_telemetry())
+    )
+    assert observation.measurement_row_mask is snapshot
+    assert isinstance(observation.detector_telemetry, DetectorTelemetry)
+
+
+def test_telemetry_snapshots_are_deeply_immutable_and_a_frozen_dataclass_alone_is_not_enough():
+    telemetry = _telemetry()
+    snapshot = immutable_detector_telemetry(telemetry)
+    assert snapshot is not telemetry
+    for name in ("centroids_xy_px", "fluxes_e", "valid_subapertures", "centroid_sigma_xy_px", "expected_centroids_xy_px"):
+        array = getattr(snapshot, name)
+        assert is_immutable_buffer_array(array, dtype=array.dtype)
+        assert array is not getattr(telemetry, name)  # detached: a fresh buffer
+        np.testing.assert_array_equal(array, getattr(telemetry, name))
+    # A frozen dataclass whose array was swapped for a writeable one is refused:
+    # the check reads the arrays, not the dataclass flag.
+    tampered = _telemetry()
+    object.__setattr__(tampered, "fluxes_e", np.full(2, 100.0))
+    assert tampered.fluxes_e.flags.writeable
+    with pytest.raises(FrameObservationError, match="read-only, bytes-backed"):
+        FrameObservation(
+            frame_index=0, time_s=0.0, frame_period_s=0.002, latency_frames=0,
+            reconstruction_usable=True, saturation_fraction=0.0, detector_telemetry=tampered,
+        )
+    # The copy made for observers repairs nothing silently: it rebuilds the
+    # record from the tampered values and then checks every leaf, so it also
+    # refuses a dataclass whose nested mapping could still be mutated.
+    assert immutable_detector_telemetry(tampered).fluxes_e.flags.writeable is False
+    with pytest.raises(FrameObservationError, match="DetectorTelemetry"):
+        immutable_detector_telemetry(object())  # type: ignore[arg-type]
+
+
+def test_physical_sensor_telemetry_reaches_observers_detached_and_aligned_with_the_frame():
+    from shwfs_ao.core.types import DetectorFrame
+    from shwfs_ao.io.configs import RandomSeedConfig
+
+    config = load_system_profile("det_emccd_2m_synthetic", 1)
+    config = replace(
+        config,
+        random=RandomSeedConfig(root_seed=11),
+        controller=replace(config.controller, n_steps=4),
+    )
+    execution = scao.ScaoExecutionOptions(telemetry_level="full")
+    baseline = scao.run_closed_loop(config, system=scao.build_scao_system(config, execution=execution))
+    recorder = _Recorder(frozenset({"measurement_row_mask", "detector_telemetry"}))
+    observed = scao.run_closed_loop(
+        config, system=scao.build_scao_system(config, execution=execution), observers=(recorder,)
+    )
+    assert observed.config_hash == baseline.config_hash
+    np.testing.assert_array_equal(observed.measurement_row_masks, baseline.measurement_row_masks)
+    np.testing.assert_array_equal(
+        observed.post_update_residual_opd_rms_m, baseline.post_update_residual_opd_rms_m
+    )
+    calibration_valid = np.asarray(observed.metadata["calibration_valid_rows"], dtype=bool)
+    assert len(recorder.events) == 4
+    for frame, event in enumerate(recorder.events):
+        telemetry = event.detector_telemetry
+        assert isinstance(telemetry, DetectorTelemetry)
+        assert telemetry.telemetry_level == "full"
+        assert telemetry.detector_frames is not None and telemetry.optical_spots is not None
+        # Deeply immutable: every array of the telemetry and of its frames and
+        # spots is bytes-backed and read-only, every mapping a read-only proxy.
+        for field_name in ("centroids_xy_px", "expected_centroids_xy_px", "centroid_sigma_xy_px", "valid_subapertures"):
+            array = getattr(telemetry, field_name)
+            assert array is not None and is_immutable_buffer_array(array, dtype=array.dtype)
+        frame_record: DetectorFrame = telemetry.detector_frames[0]
+        assert is_immutable_buffer_array(frame_record.image_e, dtype=float)
+        with pytest.raises(TypeError):
+            frame_record.random_stream_ids["x"] = "y"  # type: ignore[index]
+        assert is_immutable_buffer_array(telemetry.optical_spots.unit_sum_spots[0], dtype=float)
+        # Current-frame alignment: the mask is this frame's effective rows, and
+        # the telemetry's lenslet validity, repeated over x and y, intersected
+        # with the calibration-valid rows, is that same mask.
+        mask = event.measurement_row_mask
+        np.testing.assert_array_equal(mask, observed.measurement_row_masks[frame])
+        np.testing.assert_array_equal(
+            mask, np.repeat(telemetry.valid_subapertures, 2) & calibration_valid
+        )
+        assert mask.size == 2 * len(telemetry.subaperture_ids)
+        # Expected centroids live in the measured centroids' window coordinates.
+        valid = telemetry.valid_subapertures
+        assert np.all(np.isfinite(telemetry.expected_centroids_xy_px[valid]))
+        assert np.all(np.abs(telemetry.expected_centroids_xy_px[valid] - telemetry.centroids_xy_px[valid]) < 1.0)
