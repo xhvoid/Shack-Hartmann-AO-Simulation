@@ -1,16 +1,410 @@
 {
-  "schema_name": "shwfs_ao.deprecation_inventory",
-  "schema_version": 1,
-  "ticket": "AO-REF-021",
-  "phase": "A",
+  "behavior_compat_flags": [
+    {
+      "flag": "prnu_mode='per_frame_legacy'",
+      "owner": "shwfs_ao.detector.effects",
+      "status": "retained_contract_behavior"
+    },
+    {
+      "flag": "sort_kind='legacy_quicksort'",
+      "owner": "shwfs_ao.science.metrics",
+      "status": "retained_contract_behavior"
+    }
+  ],
+  "canonical_legacy_import_allowlist": {
+    "shwfs_ao.experiments.error_budget": [
+      "shwfs_ao.legacy.ao_closed_loop",
+      "shwfs_ao.legacy.ao_diagnostics",
+      "shwfs_ao.legacy.dm_model",
+      "shwfs_ao.legacy.interaction_matrix",
+      "shwfs_ao.legacy.synthetic_instrument_data"
+    ],
+    "shwfs_ao.experiments.integration": [
+      "shwfs_ao.legacy.ao_integration"
+    ],
+    "shwfs_ao.experiments.physical_integration": [
+      "shwfs_ao.legacy.ao_integration"
+    ],
+    "shwfs_ao.experiments.scenario_instrument": [
+      "shwfs_ao.legacy.dm_model",
+      "shwfs_ao.legacy.interaction_matrix",
+      "shwfs_ao.legacy.synthetic_instrument_data"
+    ],
+    "shwfs_ao.validation.checks": [
+      "shwfs_ao.legacy.ao_closed_loop",
+      "shwfs_ao.legacy.ao_validation"
+    ]
+  },
   "clock_resource": "deprecation_clock.json",
-  "warned_import_paths_policy": "Import-time DeprecationWarning fires for every root_shims entry and for the ao_simulation_data resource alias. shwfs_ao.legacy modules are the documented non-canonical compatibility layer and stay silent during the Phase A window.",
+  "legacy_modules": [
+    {
+      "canonical_destinations": [
+        "shwfs_ao.control",
+        "shwfs_ao.calibration",
+        "shwfs_ao.detector"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-021"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy._control_adapters",
+      "phase_b_disposition": "remove_after_error_budget_engine_relocation",
+      "private": true,
+      "source_path": "src/shwfs_ao/legacy/_control_adapters.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.control",
+        "shwfs_ao.calibration",
+        "shwfs_ao.detector"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-021"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy._interaction_adapters",
+      "phase_b_disposition": "remove_after_error_budget_engine_relocation",
+      "private": true,
+      "source_path": "src/shwfs_ao/legacy/_interaction_adapters.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.control",
+        "shwfs_ao.calibration",
+        "shwfs_ao.detector"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-021"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy._reconstruction_adapters",
+      "phase_b_disposition": "remove_after_error_budget_engine_relocation",
+      "private": true,
+      "source_path": "src/shwfs_ao/legacy/_reconstruction_adapters.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.control",
+        "shwfs_ao.experiments.scao",
+        "shwfs_ao.dm",
+        "shwfs_ao.calibration",
+        "shwfs_ao.validation.checks"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-006",
+        "AO-REF-007",
+        "AO-REF-008",
+        "AO-REF-009"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy.ao_closed_loop",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/ao_closed_loop.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.experiments.public_data_conditioned"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-003",
+        "AO-REF-011"
+      ],
+      "disposition": "pure_facade",
+      "module": "shwfs_ao.legacy.ao_conditions",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/ao_conditions.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.science.metrics",
+        "shwfs_ao.science.bandpass",
+        "shwfs_ao.core.wavefront"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-002",
+        "AO-REF-007",
+        "AO-REF-010",
+        "AO-REF-018"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy.ao_diagnostics",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/ao_diagnostics.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.experiments.error_budget"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-011",
+        "AO-REF-012"
+      ],
+      "disposition": "pure_facade",
+      "module": "shwfs_ao.legacy.ao_error_budget",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/ao_error_budget.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.experiments.scao",
+        "shwfs_ao.io.artifacts",
+        "shwfs_ao.validation.regression",
+        "shwfs_ao.experiments.integration"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-011",
+        "AO-REF-012",
+        "AO-REF-018"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy.ao_integration",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/ao_integration.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.validation.physical",
+        "shwfs_ao.validation.regression",
+        "shwfs_ao.validation.checks"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-010",
+        "AO-REF-018"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy.ao_validation",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/ao_validation.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.backends.native.atmosphere",
+        "shwfs_ao.io.configs",
+        "shwfs_ao.core.provenance"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-003",
+        "AO-REF-003A",
+        "AO-REF-011"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy.atmosphere_profiles",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/atmosphere_profiles.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.core.hashing"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-003A"
+      ],
+      "disposition": "pure_facade",
+      "module": "shwfs_ao.legacy.config_hashing",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/config_hashing.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.io.public_data",
+        "shwfs_ao.core.provenance"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-003",
+        "AO-REF-012"
+      ],
+      "disposition": "pure_facade",
+      "module": "shwfs_ao.legacy.data_sources",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/data_sources.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.dm",
+        "shwfs_ao.backends.native.dm",
+        "shwfs_ao.experiments.scenario_instrument"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-006"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy.dm_model",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/dm_model.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.calibration.interaction",
+        "shwfs_ao.calibration.diagnostics",
+        "shwfs_ao.calibration.reconstructors",
+        "shwfs_ao.experiments.scenario_instrument"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-007",
+        "AO-REF-008"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy.interaction_matrix",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/interaction_matrix.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.backends.native.atmosphere",
+        "shwfs_ao.core.wavefront"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-002",
+        "AO-REF-003A"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy.phase_screen",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/phase_screen.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.backends.native.propagation",
+        "shwfs_ao.science.metrics"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-010"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy.psf_tools",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/psf_tools.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.experimental.pwfs"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-005"
+      ],
+      "disposition": "pure_facade",
+      "module": "shwfs_ao.legacy.pwfs_forward",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/pwfs_forward.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.wfs.shack_hartmann.geometric",
+        "shwfs_ao.calibration"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-007",
+        "AO-REF-008"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy.reconstruction",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/reconstruction.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.io.resources"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-012"
+      ],
+      "disposition": "pure_facade",
+      "module": "shwfs_ao.legacy.runtime_resources",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/runtime_resources.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.detector",
+        "shwfs_ao.wfs.shack_hartmann.measurement",
+        "shwfs_ao.backends.native.shwfs"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-004",
+        "AO-REF-005",
+        "AO-REF-007"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy.shwfs_detector",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/shwfs_detector.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.detector",
+        "shwfs_ao.wfs.shack_hartmann.geometry",
+        "shwfs_ao.wfs.shack_hartmann.measurement",
+        "shwfs_ao.experiments.scenario_instrument"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-003",
+        "AO-REF-004",
+        "AO-REF-005",
+        "AO-REF-006",
+        "AO-REF-011"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy.synthetic_instrument_data",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/synthetic_instrument_data.py"
+    },
+    {
+      "canonical_destinations": [
+        "shwfs_ao.backends.native.modes",
+        "shwfs_ao.core.wavefront"
+      ],
+      "canonical_owner_tickets": [
+        "AO-REF-007"
+      ],
+      "disposition": "behavior_compat_adapter",
+      "module": "shwfs_ao.legacy.zernike",
+      "phase_b_disposition": "remove_with_root_shim",
+      "private": false,
+      "source_path": "src/shwfs_ao/legacy/zernike.py"
+    }
+  ],
+  "phase": "A",
+  "resource_aliases": [
+    {
+      "byte_identical_to": "shwfs_ao.resources",
+      "generator": "build_support/resource_alias.py",
+      "kind": "package",
+      "name": "ao_simulation_data",
+      "replacement": "shwfs_ao.resources via shwfs_ao.io.resources",
+      "warns_on_import": true
+    },
+    {
+      "byte_identical_to": "shwfs_ao.resources logical names",
+      "generator": "shwfs_ao.io.resources.normalized_resource_name",
+      "kind": "logical_name_aliases",
+      "name": "data/<name> and bare <name> lookups",
+      "replacement": "canonical logical resource names",
+      "warns_on_import": false
+    }
+  ],
+  "retained_educational_code": [],
   "root_shims": [
     {
-      "module": "ao_closed_loop",
-      "source_path": "src/ao_closed_loop.py",
       "import_path": "ao_closed_loop",
-      "replacement": "shwfs_ao.control with shwfs_ao.experiments.scao (canonical loop) or shwfs_ao.legacy.ao_closed_loop (frozen compatibility surface)",
+      "module": "ao_closed_loop",
       "public_symbols": [
         "ALLOWED_SOURCE_CLASSES",
         "Any",
@@ -58,6 +452,8 @@
         "tsvd_reconstruct_commands",
         "vectorize_detector_measurement"
       ],
+      "replacement": "shwfs_ao.control with shwfs_ao.experiments.scao (canonical loop) or shwfs_ao.legacy.ao_closed_loop (frozen compatibility surface)",
+      "source_path": "src/ao_closed_loop.py",
       "symbol_replacement_overrides": {
         "DetectorLoopConfig": "shwfs_ao.legacy.ao_closed_loop.DetectorLoopConfig",
         "LoopHistory": "shwfs_ao.legacy.ao_closed_loop.LoopHistory",
@@ -65,10 +461,8 @@
       }
     },
     {
-      "module": "ao_conditions",
-      "source_path": "src/ao_conditions.py",
       "import_path": "ao_conditions",
-      "replacement": "shwfs_ao.experiments.public_data_conditioned",
+      "module": "ao_conditions",
       "public_symbols": [
         "ALLOWED_SOURCE_CLASSES",
         "AOConditionError",
@@ -87,13 +481,13 @@
         "r0_from_seeing_arcsec",
         "theta0_rad_from_arcsec"
       ],
+      "replacement": "shwfs_ao.experiments.public_data_conditioned",
+      "source_path": "src/ao_conditions.py",
       "symbol_replacement_overrides": {}
     },
     {
-      "module": "ao_diagnostics",
-      "source_path": "src/ao_diagnostics.py",
       "import_path": "ao_diagnostics",
-      "replacement": "shwfs_ao.science.metrics and shwfs_ao.science.bandpass (canonical) or shwfs_ao.legacy.ao_diagnostics (frozen compatibility surface)",
+      "module": "ao_diagnostics",
       "public_symbols": [
         "ALLOWED_SOURCE_CLASSES",
         "AODiagnosticsError",
@@ -129,17 +523,17 @@
         "synthesize_dm_phase_rad",
         "top_hat_bandpass"
       ],
+      "replacement": "shwfs_ao.science.metrics and shwfs_ao.science.bandpass (canonical) or shwfs_ao.legacy.ao_diagnostics (frozen compatibility surface)",
+      "source_path": "src/ao_diagnostics.py",
       "symbol_replacement_overrides": {
         "ScienceBandpass": "shwfs_ao.science.bandpass.ScienceBandpass",
-        "top_hat_bandpass": "shwfs_ao.science.bandpass.top_hat_bandpass",
-        "bandpass_from_filter_curve": "shwfs_ao.science.bandpass.bandpass_from_filter_curve"
+        "bandpass_from_filter_curve": "shwfs_ao.science.bandpass.bandpass_from_filter_curve",
+        "top_hat_bandpass": "shwfs_ao.science.bandpass.top_hat_bandpass"
       }
     },
     {
-      "module": "ao_error_budget",
-      "source_path": "src/ao_error_budget.py",
       "import_path": "ao_error_budget",
-      "replacement": "shwfs_ao.experiments.error_budget",
+      "module": "ao_error_budget",
       "public_symbols": [
         "ALLOWED_SOURCE_CLASSES",
         "AOErrorBudgetError",
@@ -188,13 +582,13 @@
         "synthesize_dm_phase_rad",
         "top_hat_bandpass"
       ],
+      "replacement": "shwfs_ao.experiments.error_budget",
+      "source_path": "src/ao_error_budget.py",
       "symbol_replacement_overrides": {}
     },
     {
-      "module": "ao_integration",
-      "source_path": "src/ao_integration.py",
       "import_path": "ao_integration",
-      "replacement": "shwfs_ao.experiments.integration or shwfs_ao.experiments.scao with shwfs_ao.io.artifacts (canonical) or shwfs_ao.legacy.ao_integration (frozen fast-integration surface)",
+      "module": "ao_integration",
       "public_symbols": [
         "ALLOWED_SOURCE_CLASSES",
         "AOIntegrationError",
@@ -262,13 +656,13 @@
         "top_hat_bandpass",
         "validation_results_as_dicts"
       ],
+      "replacement": "shwfs_ao.experiments.integration or shwfs_ao.experiments.scao with shwfs_ao.io.artifacts (canonical) or shwfs_ao.legacy.ao_integration (frozen fast-integration surface)",
+      "source_path": "src/ao_integration.py",
       "symbol_replacement_overrides": {}
     },
     {
-      "module": "ao_validation",
-      "source_path": "src/ao_validation.py",
       "import_path": "ao_validation",
-      "replacement": "shwfs_ao.validation (canonical) or shwfs_ao.legacy.ao_validation (frozen notebook-11 check surface)",
+      "module": "ao_validation",
       "public_symbols": [
         "ALLOWED_SOURCE_CLASSES",
         "AOValidationError",
@@ -302,13 +696,13 @@
         "science_psf_metrics_from_opd",
         "validation_results_as_dicts"
       ],
+      "replacement": "shwfs_ao.validation (canonical) or shwfs_ao.legacy.ao_validation (frozen notebook-11 check surface)",
+      "source_path": "src/ao_validation.py",
       "symbol_replacement_overrides": {}
     },
     {
-      "module": "atmosphere_profiles",
-      "source_path": "src/atmosphere_profiles.py",
       "import_path": "atmosphere_profiles",
-      "replacement": "shwfs_ao.backends.native.atmosphere and shwfs_ao.io.configs (canonical) or shwfs_ao.legacy.atmosphere_profiles (frozen compatibility surface)",
+      "module": "atmosphere_profiles",
       "public_symbols": [
         "ALLOWED_SOURCE_CLASSES",
         "ARCSEC_PER_RAD",
@@ -345,13 +739,13 @@
         "shift_full_phase_pixels",
         "wind_components_ms"
       ],
+      "replacement": "shwfs_ao.backends.native.atmosphere and shwfs_ao.io.configs (canonical) or shwfs_ao.legacy.atmosphere_profiles (frozen compatibility surface)",
+      "source_path": "src/atmosphere_profiles.py",
       "symbol_replacement_overrides": {}
     },
     {
-      "module": "config_hashing",
-      "source_path": "src/config_hashing.py",
       "import_path": "config_hashing",
-      "replacement": "shwfs_ao.core.hashing",
+      "module": "config_hashing",
       "public_symbols": [
         "Any",
         "annotations",
@@ -360,15 +754,15 @@
         "np",
         "stable_array_descriptor"
       ],
+      "replacement": "shwfs_ao.core.hashing",
+      "source_path": "src/config_hashing.py",
       "symbol_replacement_overrides": {
         "stable_array_descriptor": "shwfs_ao.core.hashing.stable_array_descriptor"
       }
     },
     {
-      "module": "data_sources",
-      "source_path": "src/data_sources.py",
       "import_path": "data_sources",
-      "replacement": "shwfs_ao.io.public_data",
+      "module": "data_sources",
       "public_symbols": [
         "ALLOWED_SOURCE_CLASSES",
         "ARCSEC_PER_RADIAN",
@@ -399,17 +793,17 @@
         "math",
         "open_text_resource"
       ],
+      "replacement": "shwfs_ao.io.public_data",
+      "source_path": "src/data_sources.py",
       "symbol_replacement_overrides": {
         "Provenance": "shwfs_ao.core.provenance.Provenance",
-        "load_svo_filter_curve": "shwfs_ao.io.public_data.load_svo_filter_curve",
-        "load_eso_asm_snapshot": "shwfs_ao.io.public_data.load_eso_asm_snapshot"
+        "load_eso_asm_snapshot": "shwfs_ao.io.public_data.load_eso_asm_snapshot",
+        "load_svo_filter_curve": "shwfs_ao.io.public_data.load_svo_filter_curve"
       }
     },
     {
-      "module": "dm_model",
-      "source_path": "src/dm_model.py",
       "import_path": "dm_model",
-      "replacement": "shwfs_ao.dm (canonical) or shwfs_ao.legacy.dm_model (frozen compatibility surface)",
+      "module": "dm_model",
       "public_symbols": [
         "ALLOWED_SOURCE_CLASSES",
         "Any",
@@ -443,16 +837,16 @@
         "synthesize_dm_opd_nm",
         "synthesize_dm_phase_rad"
       ],
+      "replacement": "shwfs_ao.dm (canonical) or shwfs_ao.legacy.dm_model (frozen compatibility surface)",
+      "source_path": "src/dm_model.py",
       "symbol_replacement_overrides": {
         "DMConfig": "shwfs_ao.dm.DMConfig",
         "DMModelError": "shwfs_ao.dm.DMModelError"
       }
     },
     {
-      "module": "interaction_matrix",
-      "source_path": "src/interaction_matrix.py",
       "import_path": "interaction_matrix",
-      "replacement": "shwfs_ao.calibration (canonical) or shwfs_ao.legacy.interaction_matrix (frozen compatibility surface)",
+      "module": "interaction_matrix",
       "public_symbols": [
         "ALLOWED_SOURCE_CLASSES",
         "Any",
@@ -495,13 +889,13 @@
         "tsvd_reconstruct_commands",
         "vectorize_detector_measurement"
       ],
+      "replacement": "shwfs_ao.calibration (canonical) or shwfs_ao.legacy.interaction_matrix (frozen compatibility surface)",
+      "source_path": "src/interaction_matrix.py",
       "symbol_replacement_overrides": {}
     },
     {
-      "module": "phase_screen",
-      "source_path": "src/phase_screen.py",
       "import_path": "phase_screen",
-      "replacement": "shwfs_ao.backends.native.atmosphere (canonical) or shwfs_ao.legacy.phase_screen (frozen compatibility surface)",
+      "module": "phase_screen",
       "public_symbols": [
         "annotations",
         "circular_mask_from_grid",
@@ -516,17 +910,17 @@
         "rms",
         "scale_r0_with_wavelength"
       ],
+      "replacement": "shwfs_ao.backends.native.atmosphere (canonical) or shwfs_ao.legacy.phase_screen (frozen compatibility surface)",
+      "source_path": "src/phase_screen.py",
       "symbol_replacement_overrides": {
-        "phase_to_opd": "shwfs_ao.core.wavefront.phase_to_opd",
+        "fourier_phase_screen": "shwfs_ao.backends.native.atmosphere.FrozenFlowAtmosphere",
         "opd_to_phase": "shwfs_ao.core.wavefront.opd_to_phase",
-        "fourier_phase_screen": "shwfs_ao.backends.native.atmosphere.FrozenFlowAtmosphere"
+        "phase_to_opd": "shwfs_ao.core.wavefront.phase_to_opd"
       }
     },
     {
-      "module": "psf_tools",
-      "source_path": "src/psf_tools.py",
       "import_path": "psf_tools",
-      "replacement": "shwfs_ao.science.metrics and shwfs_ao.backends.native.propagation (canonical) or shwfs_ao.legacy.psf_tools (frozen compatibility surface)",
+      "module": "psf_tools",
       "public_symbols": [
         "annotations",
         "compute_psf_from_phase",
@@ -536,13 +930,13 @@
         "radial_profile",
         "strehl_ratio"
       ],
+      "replacement": "shwfs_ao.science.metrics and shwfs_ao.backends.native.propagation (canonical) or shwfs_ao.legacy.psf_tools (frozen compatibility surface)",
+      "source_path": "src/psf_tools.py",
       "symbol_replacement_overrides": {}
     },
     {
-      "module": "pwfs_forward",
-      "source_path": "src/pwfs_forward.py",
       "import_path": "pwfs_forward",
-      "replacement": "shwfs_ao.experimental.pwfs",
+      "module": "pwfs_forward",
       "public_symbols": [
         "add_detector_noise",
         "add_tilt_phase",
@@ -567,13 +961,13 @@
         "pwfs_signal_maps_from_intensity",
         "pyramid_phase_mask"
       ],
+      "replacement": "shwfs_ao.experimental.pwfs",
+      "source_path": "src/pwfs_forward.py",
       "symbol_replacement_overrides": {}
     },
     {
-      "module": "reconstruction",
-      "source_path": "src/reconstruction.py",
       "import_path": "reconstruction",
-      "replacement": "shwfs_ao.wfs.shack_hartmann.geometric (canonical) or shwfs_ao.legacy.reconstruction (frozen compatibility surface)",
+      "module": "reconstruction",
       "public_symbols": [
         "annotations",
         "build_response_matrix",
@@ -591,13 +985,13 @@
         "subaperture_masks",
         "synthesize_from_coefficients"
       ],
+      "replacement": "shwfs_ao.wfs.shack_hartmann.geometric (canonical) or shwfs_ao.legacy.reconstruction (frozen compatibility surface)",
+      "source_path": "src/reconstruction.py",
       "symbol_replacement_overrides": {}
     },
     {
-      "module": "runtime_resources",
-      "source_path": "src/runtime_resources.py",
       "import_path": "runtime_resources",
-      "replacement": "shwfs_ao.io.resources",
+      "module": "runtime_resources",
       "public_symbols": [
         "Iterator",
         "Path",
@@ -611,17 +1005,17 @@
         "resource_exists",
         "resources"
       ],
+      "replacement": "shwfs_ao.io.resources",
+      "source_path": "src/runtime_resources.py",
       "symbol_replacement_overrides": {
+        "normalized_resource_name": "shwfs_ao.io.resources.normalized_resource_name",
         "open_text_resource": "shwfs_ao.io.resources.open_text_resource",
-        "resource_exists": "shwfs_ao.io.resources.resource_exists",
-        "normalized_resource_name": "shwfs_ao.io.resources.normalized_resource_name"
+        "resource_exists": "shwfs_ao.io.resources.resource_exists"
       }
     },
     {
-      "module": "shwfs_detector",
-      "source_path": "src/shwfs_detector.py",
       "import_path": "shwfs_detector",
-      "replacement": "shwfs_ao.detector and shwfs_ao.wfs.shack_hartmann (canonical) or shwfs_ao.legacy.shwfs_detector (frozen compatibility surface)",
+      "module": "shwfs_detector",
       "public_symbols": [
         "add_detector_noise",
         "annotations",
@@ -637,13 +1031,13 @@
         "reference_centroids",
         "subaperture_masks"
       ],
+      "replacement": "shwfs_ao.detector and shwfs_ao.wfs.shack_hartmann (canonical) or shwfs_ao.legacy.shwfs_detector (frozen compatibility surface)",
+      "source_path": "src/shwfs_detector.py",
       "symbol_replacement_overrides": {}
     },
     {
-      "module": "synthetic_instrument_data",
-      "source_path": "src/synthetic_instrument_data.py",
       "import_path": "synthetic_instrument_data",
-      "replacement": "shwfs_ao.detector and shwfs_ao.wfs.shack_hartmann (canonical) or shwfs_ao.legacy.synthetic_instrument_data (frozen compatibility surface)",
+      "module": "synthetic_instrument_data",
       "public_symbols": [
         "ALLOWED_SOURCE_CLASSES",
         "CentroidValidityConfig",
@@ -681,13 +1075,13 @@
         "subaperture_masks",
         "zero_phase_centroid_rms_px"
       ],
+      "replacement": "shwfs_ao.detector and shwfs_ao.wfs.shack_hartmann (canonical) or shwfs_ao.legacy.synthetic_instrument_data (frozen compatibility surface)",
+      "source_path": "src/synthetic_instrument_data.py",
       "symbol_replacement_overrides": {}
     },
     {
-      "module": "zernike",
-      "source_path": "src/zernike.py",
       "import_path": "zernike",
-      "replacement": "shwfs_ao.backends.native.modes (canonical) or shwfs_ao.legacy.zernike (frozen compatibility surface)",
+      "module": "zernike",
       "public_symbols": [
         "annotations",
         "eval_jacobi",
@@ -704,407 +1098,16 @@
         "zernike_nm",
         "zernike_radial"
       ],
+      "replacement": "shwfs_ao.backends.native.modes (canonical) or shwfs_ao.legacy.zernike (frozen compatibility surface)",
+      "source_path": "src/zernike.py",
       "symbol_replacement_overrides": {
         "generate_zernike_modes": "shwfs_ao.backends.native.modes.generate_zernike_modes",
         "number_of_zernike_modes": "shwfs_ao.backends.native.modes.number_of_zernike_modes"
       }
     }
   ],
-  "resource_aliases": [
-    {
-      "kind": "package",
-      "name": "ao_simulation_data",
-      "generator": "build_support/resource_alias.py",
-      "byte_identical_to": "shwfs_ao.resources",
-      "replacement": "shwfs_ao.resources via shwfs_ao.io.resources",
-      "warns_on_import": true
-    },
-    {
-      "kind": "logical_name_aliases",
-      "name": "data/<name> and bare <name> lookups",
-      "generator": "shwfs_ao.io.resources.normalized_resource_name",
-      "byte_identical_to": "shwfs_ao.resources logical names",
-      "replacement": "canonical logical resource names",
-      "warns_on_import": false
-    }
-  ],
-  "legacy_modules": [
-    {
-      "module": "shwfs_ao.legacy._control_adapters",
-      "source_path": "src/shwfs_ao/legacy/_control_adapters.py",
-      "private": true,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-021"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.control",
-        "shwfs_ao.calibration",
-        "shwfs_ao.detector"
-      ],
-      "phase_b_disposition": "remove_after_error_budget_engine_relocation"
-    },
-    {
-      "module": "shwfs_ao.legacy._interaction_adapters",
-      "source_path": "src/shwfs_ao/legacy/_interaction_adapters.py",
-      "private": true,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-021"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.control",
-        "shwfs_ao.calibration",
-        "shwfs_ao.detector"
-      ],
-      "phase_b_disposition": "remove_after_error_budget_engine_relocation"
-    },
-    {
-      "module": "shwfs_ao.legacy._reconstruction_adapters",
-      "source_path": "src/shwfs_ao/legacy/_reconstruction_adapters.py",
-      "private": true,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-021"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.control",
-        "shwfs_ao.calibration",
-        "shwfs_ao.detector"
-      ],
-      "phase_b_disposition": "remove_after_error_budget_engine_relocation"
-    },
-    {
-      "module": "shwfs_ao.legacy.ao_closed_loop",
-      "source_path": "src/shwfs_ao/legacy/ao_closed_loop.py",
-      "private": false,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-006",
-        "AO-REF-007",
-        "AO-REF-008",
-        "AO-REF-009"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.control",
-        "shwfs_ao.experiments.scao",
-        "shwfs_ao.dm",
-        "shwfs_ao.calibration",
-        "shwfs_ao.validation.checks"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.ao_conditions",
-      "source_path": "src/shwfs_ao/legacy/ao_conditions.py",
-      "private": false,
-      "disposition": "pure_facade",
-      "canonical_owner_tickets": [
-        "AO-REF-003",
-        "AO-REF-011"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.experiments.public_data_conditioned"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.ao_diagnostics",
-      "source_path": "src/shwfs_ao/legacy/ao_diagnostics.py",
-      "private": false,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-002",
-        "AO-REF-007",
-        "AO-REF-010",
-        "AO-REF-018"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.science.metrics",
-        "shwfs_ao.science.bandpass",
-        "shwfs_ao.core.wavefront"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.ao_error_budget",
-      "source_path": "src/shwfs_ao/legacy/ao_error_budget.py",
-      "private": false,
-      "disposition": "pure_facade",
-      "canonical_owner_tickets": [
-        "AO-REF-011",
-        "AO-REF-012"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.experiments.error_budget"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.ao_integration",
-      "source_path": "src/shwfs_ao/legacy/ao_integration.py",
-      "private": false,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-011",
-        "AO-REF-012",
-        "AO-REF-018"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.experiments.scao",
-        "shwfs_ao.io.artifacts",
-        "shwfs_ao.validation.regression",
-        "shwfs_ao.experiments.integration"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.ao_validation",
-      "source_path": "src/shwfs_ao/legacy/ao_validation.py",
-      "private": false,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-010",
-        "AO-REF-018"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.validation.physical",
-        "shwfs_ao.validation.regression",
-        "shwfs_ao.validation.checks"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.atmosphere_profiles",
-      "source_path": "src/shwfs_ao/legacy/atmosphere_profiles.py",
-      "private": false,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-003",
-        "AO-REF-003A",
-        "AO-REF-011"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.backends.native.atmosphere",
-        "shwfs_ao.io.configs",
-        "shwfs_ao.core.provenance"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.config_hashing",
-      "source_path": "src/shwfs_ao/legacy/config_hashing.py",
-      "private": false,
-      "disposition": "pure_facade",
-      "canonical_owner_tickets": [
-        "AO-REF-003A"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.core.hashing"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.data_sources",
-      "source_path": "src/shwfs_ao/legacy/data_sources.py",
-      "private": false,
-      "disposition": "pure_facade",
-      "canonical_owner_tickets": [
-        "AO-REF-003",
-        "AO-REF-012"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.io.public_data",
-        "shwfs_ao.core.provenance"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.dm_model",
-      "source_path": "src/shwfs_ao/legacy/dm_model.py",
-      "private": false,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-006"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.dm",
-        "shwfs_ao.backends.native.dm",
-        "shwfs_ao.experiments.scenario_instrument"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.interaction_matrix",
-      "source_path": "src/shwfs_ao/legacy/interaction_matrix.py",
-      "private": false,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-007",
-        "AO-REF-008"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.calibration.interaction",
-        "shwfs_ao.calibration.diagnostics",
-        "shwfs_ao.calibration.reconstructors",
-        "shwfs_ao.experiments.scenario_instrument"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.phase_screen",
-      "source_path": "src/shwfs_ao/legacy/phase_screen.py",
-      "private": false,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-002",
-        "AO-REF-003A"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.backends.native.atmosphere",
-        "shwfs_ao.core.wavefront"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.psf_tools",
-      "source_path": "src/shwfs_ao/legacy/psf_tools.py",
-      "private": false,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-010"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.backends.native.propagation",
-        "shwfs_ao.science.metrics"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.pwfs_forward",
-      "source_path": "src/shwfs_ao/legacy/pwfs_forward.py",
-      "private": false,
-      "disposition": "pure_facade",
-      "canonical_owner_tickets": [
-        "AO-REF-005"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.experimental.pwfs"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.reconstruction",
-      "source_path": "src/shwfs_ao/legacy/reconstruction.py",
-      "private": false,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-007",
-        "AO-REF-008"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.wfs.shack_hartmann.geometric",
-        "shwfs_ao.calibration"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.runtime_resources",
-      "source_path": "src/shwfs_ao/legacy/runtime_resources.py",
-      "private": false,
-      "disposition": "pure_facade",
-      "canonical_owner_tickets": [
-        "AO-REF-012"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.io.resources"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.shwfs_detector",
-      "source_path": "src/shwfs_ao/legacy/shwfs_detector.py",
-      "private": false,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-004",
-        "AO-REF-005",
-        "AO-REF-007"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.detector",
-        "shwfs_ao.wfs.shack_hartmann.measurement",
-        "shwfs_ao.backends.native.shwfs"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.synthetic_instrument_data",
-      "source_path": "src/shwfs_ao/legacy/synthetic_instrument_data.py",
-      "private": false,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-003",
-        "AO-REF-004",
-        "AO-REF-005",
-        "AO-REF-006",
-        "AO-REF-011"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.detector",
-        "shwfs_ao.wfs.shack_hartmann.geometry",
-        "shwfs_ao.wfs.shack_hartmann.measurement",
-        "shwfs_ao.experiments.scenario_instrument"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    },
-    {
-      "module": "shwfs_ao.legacy.zernike",
-      "source_path": "src/shwfs_ao/legacy/zernike.py",
-      "private": false,
-      "disposition": "behavior_compat_adapter",
-      "canonical_owner_tickets": [
-        "AO-REF-007"
-      ],
-      "canonical_destinations": [
-        "shwfs_ao.backends.native.modes",
-        "shwfs_ao.core.wavefront"
-      ],
-      "phase_b_disposition": "remove_with_root_shim"
-    }
-  ],
-  "canonical_legacy_import_allowlist": {
-    "shwfs_ao.experiments.error_budget": [
-      "shwfs_ao.legacy.ao_closed_loop",
-      "shwfs_ao.legacy.ao_diagnostics",
-      "shwfs_ao.legacy.dm_model",
-      "shwfs_ao.legacy.interaction_matrix",
-      "shwfs_ao.legacy.synthetic_instrument_data"
-    ],
-    "shwfs_ao.experiments.integration": [
-      "shwfs_ao.legacy.ao_integration"
-    ],
-    "shwfs_ao.experiments.scenario_instrument": [
-      "shwfs_ao.legacy.dm_model",
-      "shwfs_ao.legacy.interaction_matrix",
-      "shwfs_ao.legacy.synthetic_instrument_data"
-    ],
-    "shwfs_ao.validation.checks": [
-      "shwfs_ao.legacy.ao_closed_loop",
-      "shwfs_ao.legacy.ao_validation"
-    ]
-  },
-  "behavior_compat_flags": [
-    {
-      "flag": "prnu_mode='per_frame_legacy'",
-      "owner": "shwfs_ao.detector.effects",
-      "status": "retained_contract_behavior"
-    },
-    {
-      "flag": "sort_kind='legacy_quicksort'",
-      "owner": "shwfs_ao.science.metrics",
-      "status": "retained_contract_behavior"
-    }
-  ],
-  "retained_educational_code": []
+  "schema_name": "shwfs_ao.deprecation_inventory",
+  "schema_version": 1,
+  "ticket": "AO-REF-021",
+  "warned_import_paths_policy": "Import-time DeprecationWarning fires for every root_shims entry and for the ao_simulation_data resource alias. shwfs_ao.legacy modules are the documented non-canonical compatibility layer and stay silent during the Phase A window."
 }

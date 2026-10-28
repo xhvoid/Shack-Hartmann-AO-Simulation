@@ -1,0 +1,27 @@
+{
+  "accepted_files": [
+    {
+      "name": "physical_error_budget_regression_baseline.csv",
+      "sha256": "876289197b253e517cd6f0942eddcdeaebbeb3c946846dc9294bcbcb2559b4b2"
+    },
+    {
+      "name": "physical_reference_metrics.json",
+      "sha256": "705ef8acddd285e23d1a40f4f7344e330bf1701508bbf63d753818a84ea5ed29"
+    },
+    {
+      "name": "physical_reference_metrics_regression_baseline.json",
+      "sha256": "705ef8acddd285e23d1a40f4f7344e330bf1701508bbf63d753818a84ea5ed29"
+    },
+    {
+      "name": "physical_validation_regression_baseline.csv",
+      "sha256": "d905a3fac451ae43c2008ca7905c9a33cc9424c6e86b768ac51d31b769ec87cb"
+    }
+  ],
+  "accepted_utc": "2026-08-21T09:16:21Z",
+  "preset": "physical_2m",
+  "reason": "Corrects the atmospheric screen's pixel spacing. The builder re-derived it as D/pupil_pixels, but the calibration grid is a linspace spanning the full diameter, so its spacing is D/(pupil_pixels-1). The screen was therefore sampled 1.96 percent too finely, biasing D/r0 by about 3 percent in variance. The spacing is now read off calibration.x_m. Open-loop OPD RMS moves 636.86 -> 645.44 nm and H-band Strehl 0.5401 -> 0.5333 for all_effects. Supersedes the 2026-08-20 acceptance, which is withdrawn as physically incorrect.",
+  "review_reference": "Code review of public-clean-main, finding P1 'physical phase screen uses the wrong pixel spacing' (error_budget.py:702); guarded by tests/experiments/test_physical_error_budget.py::test_the_atmospheric_screen_samples_the_calibration_grid.",
+  "schema_name": "shwfs_ao.physical_baseline_acceptance",
+  "schema_version": 1,
+  "workflow": "physical_integration"
+}

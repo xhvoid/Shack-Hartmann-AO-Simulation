@@ -212,6 +212,21 @@ def test_packaged_clock_validates_and_earliest_removal_recomputes():
     assert recomputed == _deprecation.parse_utc_date(clock["earliest_removal_utc_date"])
 
 
+def test_packaged_clock_cache_is_recursively_immutable():
+    clock = _deprecation.deprecation_clock()
+    subsequent = clock["subsequent_minor_release"]
+
+    with pytest.raises(TypeError):
+        clock["publication_status"] = "published"
+    with pytest.raises(TypeError):
+        subsequent["publication_status"] = "published"
+
+    cached = _deprecation.deprecation_clock()
+    assert cached is clock
+    assert cached["publication_status"] == "planned"
+    assert cached["subsequent_minor_release"]["publication_status"] == "planned"
+
+
 def _clock(
     *,
     publication="2026-01-01",
@@ -358,6 +373,27 @@ def _pyproject_py_modules() -> list[str]:
     return re.findall(r'"([^"]+)"', match.group(1))
 
 
+def test_packaged_inventory_cache_is_recursively_immutable():
+    inventory = _deprecation.deprecation_inventory()
+    root_shims = inventory["root_shims"]
+    first_shim = root_shims[0]
+    public_symbols = first_shim["public_symbols"]
+    original_module = first_shim["module"]
+    original_symbol = public_symbols[0]
+
+    with pytest.raises(TypeError):
+        first_shim["module"] = "poisoned"
+    with pytest.raises(TypeError):
+        root_shims[0] = {"module": "poisoned"}
+    with pytest.raises(TypeError):
+        public_symbols[0] = "poisoned"
+
+    cached = _deprecation.deprecation_inventory()
+    assert cached is inventory
+    assert cached["root_shims"][0]["module"] == original_module
+    assert cached["root_shims"][0]["public_symbols"][0] == original_symbol
+
+
 def test_inventory_root_shims_match_pyproject_modules():
     inventory = _deprecation.deprecation_inventory()
     modules = sorted(record["module"] for record in inventory["root_shims"])
@@ -492,7 +528,7 @@ def test_owned_examples_import_only_canonical_surfaces():
 
 def test_retained_educational_code_inventory_matches_legacy_readme():
     inventory = _deprecation.deprecation_inventory()
-    assert inventory["retained_educational_code"] == []
+    assert inventory["retained_educational_code"] == ()
     readme = (LEGACY_DIR / "README.md").read_text(encoding="utf-8")
     assert "Deliberately retained educational code" in readme
     # Both the machine inventory and the human README agree: nothing is retained

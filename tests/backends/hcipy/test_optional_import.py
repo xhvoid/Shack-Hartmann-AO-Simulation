@@ -26,6 +26,7 @@ from shwfs_ao.backends.hcipy import conversion as cv
 from shwfs_ao.backends.hcipy.atmosphere import (
     HcipyAtmosphereConfig,
     HcipyAtmosphereError,
+    HcipyAtmosphereLayerConfig,
     HcipyVonKarmanAtmosphere,
 )
 from shwfs_ao.backends.hcipy.dm import (
@@ -63,6 +64,18 @@ def test_hcipy_package_and_conversion_module_import_lazily():
         OPTIONAL_DEPENDENCY_HINT
     )
     assert issubclass(OptionalDependencyError, ImportError)
+
+
+@pytest.mark.parametrize("outer_scale_m", (None, float("inf")))
+def test_unbounded_outer_scale_fails_before_hcipy_is_required(outer_scale_m):
+    with pytest.raises(
+        HcipyAtmosphereError,
+        match="unbounded.*not constructible.*finite outer scale",
+    ):
+        HcipyAtmosphereLayerConfig(
+            r0_m=0.15,
+            outer_scale_m=outer_scale_m,
+        )
 
 
 def test_importing_shwfs_ao_never_imports_hcipy_eagerly():

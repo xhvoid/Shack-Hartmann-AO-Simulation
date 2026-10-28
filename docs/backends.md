@@ -47,12 +47,67 @@ than silently substituting native components, and resolving the registration
 never imports HCIPy: building without the optional dependency raises the
 canonical `OptionalDependencyError` with its install hint.
 
+### Native atmosphere: `native_frozen_flow` versus `native_frozen_flow_v2`
+
+Two native atmosphere models ship, and they are not interchangeable.
+
+`native_frozen_flow` is the historical screen. Its spectral synthesis omits
+the `N**2 * df` amplitude factor, so a realization has no calibrated
+amplitude of its own and is usable only through `normalize_rms`; it carries no
+spatial frequency below `1/(N*delta)` and applies no subharmonic
+compensation; and its default RMS target is the *infinite*-outer-scale Noll
+coefficient `1.03 * (D/r0)**(5/3)` even when a finite `outer_scale_m` is
+configured. The measurable consequences, against the independently
+implemented HCIPy backend at `D = 2 m`, `r0 = 0.15 m`, `L0 = 25 m`: a total
+RMS ratio of about 1.5, only 0.78 of the variance in the first 14 Zernike
+modes against HCIPy's 0.95, and per-mode mid-order variance 6-12 times
+HCIPy's. Its frozen flow rounds the wind to whole pixels, so a 10 m/s wind on
+a 1 kHz loop over 0.0385 m pixels leaves consecutive frames byte-identical
+about three quarters of the time.
+
+It is retained byte-identical because every accepted baseline in the
+repository was generated with it. Do not "fix" it; select the corrected model
+instead.
+
+`native_frozen_flow_v2` corrects all three defects. The synthesis carries its
+physical amplitude and integrates the PSD over each frequency cell rather than
+sampling its centre; three levels of Lane/Johansson subharmonics restore the
+sub-`1/(N*delta)` frequencies; the default RMS target is the von Kármán
+piston-removed aperture variance, which honours `outer_scale_m`; and frozen
+flow translates by an exact Fourier phase ramp, so every frame differs.
+Validated in `tests/backends/native/test_atmosphere_physics.py` against the
+Kolmogorov structure function (0.92-0.98 of `6.88 (r/r0)**(5/3)` with a fitted
+exponent of 1.674 on a resolved grid) and against HCIPy (total RMS ratio 0.99,
+low-order variance fraction 0.951 against 0.948).
+
+Because v2 is absolutely normalized, `normalize_rms` is optional rather than
+load-bearing. Keeping an explicit `target_rms_opd_m` with v2 is a valid
+migration step: it holds the total wavefront error fixed while correcting the
+modal distribution and removing the temporal staircase.
+
+Both models are selected by profile name through `atmosphere_model`. The three
+v2 construction fields on `FrozenFlowAtmosphereConfig` are omitted from the
+config hash whenever they hold their legacy values, so every profile written
+before v2 existed hashes exactly as it did and its baselines stay valid; any v2
+configuration hashes differently and records `spectrum_model`,
+`translation_model`, `screen_grid_size`, `absolutely_normalized`, and
+`subharmonic_depth` in its metadata.
+
 ### Known backend scope
 
 - Native frozen flow preserves the historical nearest-integer periodic shift.
-  HCIPy atmosphere supports finite/infinite layers and sub-pixel motion. The
+  `native_frozen_flow_v2` and the HCIPy atmosphere both move sub-pixel.
+  HCIPy atmosphere supports finite/infinite layers. The
   adapter sums pupil-plane phase/OPD; layer altitude is metadata and there is
   no scintillation, anisoplanatic tomography, or laser-guide-star propagation.
+- The legacy native spectrum is exactly periodic and may wrap indefinitely.
+  The v2 subharmonics are not periodic, so the named v2 factory builds a larger
+  generated screen using `screen_grid_size`. `opd_at()` refuses the first frame
+  whose requested translation exceeds that padding, before the wrap seam can
+  enter the pupil; an unpadded v2 screen consequently permits only zero travel.
+- The subharmonic hierarchy represents scales far larger than the screen. On
+  coarse grids this lifts `D(r)` slightly above the infinite-medium
+  Kolmogorov value at separations approaching the grid size.
 - The HCIPy SH-WFS block-window adapter requires each pupil dimension to be an
   integer multiple of `n_lenslets_across`. Other samplings use the native
   optics backend.

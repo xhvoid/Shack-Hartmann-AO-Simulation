@@ -107,6 +107,13 @@ NATIVE_ATMOSPHERE_EXPORTS = (
     "StaticOpdAtmosphere",
     "FrozenFlowAtmosphereConfig",
     "FrozenFlowAtmosphere",
+    "SPECTRUM_LEGACY_V1",
+    "SPECTRUM_SUBHARMONIC_V2",
+    "TRANSLATION_LEGACY_V1",
+    "TRANSLATION_FOURIER_SUBPIXEL_V2",
+    "fourier_von_karman_phase_realization",
+    "subharmonic_von_karman_phase_realization",
+    "von_karman_piston_removed_variance_rad2",
 )
 NATIVE_PROPAGATION_EXPORTS = ("NativeSciencePropagator",)
 NATIVE_SHWFS_EXPORTS = (
@@ -445,6 +452,7 @@ NATIVE_FACTORY_EXPORTS = (
     "NativeScaoFactoryError",
     "NativeScaoComponentFactory",
     "NATIVE_SCAO_COMPONENT_FACTORY",
+    "SCREEN_OVERSIZE_FACTOR",
 )
 ERROR_BUDGET_EXPORTS = (
     "DEFAULT_SCENARIO_SOURCE_CLASS",
@@ -515,14 +523,19 @@ AO_REF_011_PROFILE_RESOURCES = (
 AO_REF_011_SYSTEM_PROFILES = (
     ("fast_2m_detector", 1),
     ("fast_2m_detector", 2),
+    ("fast_2m_detector", 3),
     ("portfolio_2m_detector", 1),
     ("portfolio_2m_detector", 2),
+    ("portfolio_2m_detector", 3),
     ("research_2m_detector", 1),
     ("research_2m_detector", 2),
+    ("research_2m_detector", 3),
     ("high_order_10m_geometric", 1),
     ("high_order_10m_geometric", 2),
+    ("high_order_10m_geometric", 3),
     ("high_order_10m_hcipy", 1),
     ("high_order_10m_hcipy", 2),
+    ("high_order_10m_hcipy", 3),
 )
 CONTRACT_MANIFEST = (
     ROOT
@@ -699,8 +712,10 @@ def _assert_wheel_layout(
         "shwfs_ao/experimental/__init__.py",
         "shwfs_ao/experimental/pwfs.py",
         "shwfs_ao/experiments/__init__.py",
+        "shwfs_ao/experiments/atmospheric_disturbance.py",
         "shwfs_ao/experiments/error_budget.py",
         "shwfs_ao/experiments/integration.py",
+        "shwfs_ao/experiments/physical_integration.py",
         "shwfs_ao/experiments/public_data_conditioned.py",
         "shwfs_ao/experiments/scao.py",
         "shwfs_ao/experiments/scenario_instrument.py",
@@ -1521,8 +1536,10 @@ def test_direct_wheel_and_sdist_wheel_have_identical_installed_contract(tmp_path
         "src/shwfs_ao/experimental/__init__.py",
         "src/shwfs_ao/experimental/pwfs.py",
         "src/shwfs_ao/experiments/__init__.py",
+        "src/shwfs_ao/experiments/atmospheric_disturbance.py",
         "src/shwfs_ao/experiments/error_budget.py",
         "src/shwfs_ao/experiments/integration.py",
+        "src/shwfs_ao/experiments/physical_integration.py",
         "src/shwfs_ao/experiments/public_data_conditioned.py",
         "src/shwfs_ao/experiments/scao.py",
         "src/shwfs_ao/experiments/scenario_instrument.py",
@@ -1733,5 +1750,5 @@ def test_pep660_editable_install_generates_resource_alias_only_in_environment(
         capture_output=True,
         text=True,
     )
-    assert result.stdout.strip() == "editable-resource-alias-ok:43"
+    assert result.stdout.strip() == "editable-resource-alias-ok:53"
     assert not source_alias.exists()

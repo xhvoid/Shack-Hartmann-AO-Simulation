@@ -44,14 +44,19 @@ ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_PROFILES = (
     ("fast_2m_detector", 1),
     ("fast_2m_detector", 2),
+    ("fast_2m_detector", 3),
     ("portfolio_2m_detector", 1),
     ("portfolio_2m_detector", 2),
+    ("portfolio_2m_detector", 3),
     ("research_2m_detector", 1),
     ("research_2m_detector", 2),
+    ("research_2m_detector", 3),
     ("high_order_10m_geometric", 1),
     ("high_order_10m_geometric", 2),
+    ("high_order_10m_geometric", 3),
     ("high_order_10m_hcipy", 1),
     ("high_order_10m_hcipy", 2),
+    ("high_order_10m_hcipy", 3),
 )
 CURRENT_2M_PROFILES = (
     ("fast_2m_detector", 2),
@@ -85,7 +90,7 @@ def test_profile_loader_has_no_latest_alias() -> None:
     # A never-published version is unknown: there is no implicit "latest" and no
     # silent fall-through to an adjacent version in either direction.
     with pytest.raises(SystemConfigError, match="unknown system profile"):
-        load_system_profile("high_order_10m_hcipy", 3)
+        load_system_profile("high_order_10m_hcipy", 4)
     with pytest.raises(SystemConfigError, match="unknown system profile"):
         load_system_profile("fast_2m_geometric", 2)
 
@@ -305,6 +310,11 @@ def test_every_packaged_profile_identity_is_pinned() -> None:
         ("high_order_10m_geometric", 2): "f8b6f9da7b42ab42b4ead3d1e17da385dece3b568c196d5251d261e6ae2a4ad2",
         ("high_order_10m_hcipy", 1): "a280a9fa5ceb7d282155b4eb37c81c59f22d5dc9dc459865d583f2a3a8b96a54",
         ("high_order_10m_hcipy", 2): "50a1f9ea0a2abb4a07c7e9a151f76d366e64369f99df7f61c894217c2dd80d4a",
+        ("fast_2m_detector", 3): "e8a535fab4577b145115102da6aa8b57557a316d23d37e04e251ba67f7143c35",
+        ("portfolio_2m_detector", 3): "001b934eefe20e069702811194f1e78193362ead31a6c218340e2cd54fa3f0f6",
+        ("research_2m_detector", 3): "441b106f0eebc1574c4fcc62771087ca0d77e956cdacd25b86d9d44a5032b8dd",
+        ("high_order_10m_geometric", 3): "4a7d80b09c861a78f45f5a3c472f63d1bff619bcaa891050b95487c6a8f9f0ca",
+        ("high_order_10m_hcipy", 3): "bc73f30b8d37a1dcc5603f8d2007d9e69daf02e54ced8898eef53afb7153e65c",
     }
     observed = {
         key: load_system_profile(*key).config_hash for key in available_system_profiles()
@@ -339,6 +349,13 @@ def test_every_packaged_nested_wfs_identity_is_pinned() -> None:
         ("high_order_10m_geometric", 2): "0dca580f4af5fccdf3ba0126a697f1549fd11753c93c97d121faa148aa72584a",
         ("high_order_10m_hcipy", 1): "5f83323a842d7f73f04b02aab3e12ed95cd315bdbed4496c2e9f0d666982e48b",
         ("high_order_10m_hcipy", 2): "45b4f2e0544cdab27e89ef1e88caed8b86c9012270cdfd1e1a7e4a45e64b6078",
+        # v3 changes the atmosphere and the controller, never the WFS policy,
+        # so each v3 nested WFS identity is deliberately its v2 value.
+        ("fast_2m_detector", 3): "dbf9dd715cb775abed56a42551734817868c101395339cbac69e6ed4d01add03",
+        ("portfolio_2m_detector", 3): "f44dd42a39c0f67318484e3d01b3b43195f379719be65d0c491a4e31a875eb0e",
+        ("research_2m_detector", 3): "241f18d74988683fab9b4e8d748a86d11e5482bc6020d338a0d66b24c0b6c469",
+        ("high_order_10m_geometric", 3): "0dca580f4af5fccdf3ba0126a697f1549fd11753c93c97d121faa148aa72584a",
+        ("high_order_10m_hcipy", 3): "45b4f2e0544cdab27e89ef1e88caed8b86c9012270cdfd1e1a7e4a45e64b6078",
     }
     observed = {
         key: load_system_profile(*key).component_config_hashes["wfs"]
