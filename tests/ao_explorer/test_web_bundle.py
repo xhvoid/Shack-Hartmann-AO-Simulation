@@ -306,3 +306,24 @@ def test_changed_code_or_entry_build_is_detected(web_dir, tmp_path):
     entry_path.write_text(json.dumps(entry, indent=1) + "\n")
     report = _run(site)
     assert any("page code build" in failure for failure in report["failures"]), report["failures"][:5]
+
+
+@pytest.mark.parametrize("indent", [1, 2])
+def test_restamping_keeps_the_entry_layout(web_dir, tmp_path, indent):
+    # Only the page, its code and the entry take part in a restamp, so a copy of those three is enough.
+    import site_build
+
+    source = _bundle_or_skip(web_dir)
+    site = tmp_path / "site"
+    (site / "data").mkdir(parents=True)
+    shutil.copy2(source / "index.html", site / "index.html")
+    code = next(source.glob("code-*"))
+    shutil.copytree(code, site / code.name)
+    entry = json.loads((source / "data" / "current.json").read_text())
+    (site / "data" / "current.json").write_text(json.dumps(entry, indent=indent) + "\n")
+    app = site / code.name / "app.js"
+    app.write_text(app.read_text() + "\n// changed\n")
+    report = site_build.write(site)
+    assert report["problems"] == [] and report["code_dir"] != code.name
+    entry["code_build"] = report["build"]
+    assert (site / "data" / "current.json").read_text() == json.dumps(entry, indent=indent) + "\n"
