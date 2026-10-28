@@ -435,8 +435,9 @@ class InteractionMatrix:
     ``sensor_response_hash`` identifies the noiseless sensor response the
     matrix was calibrated against (for detector-level sensors: optics backend,
     WFS wavelength, padding and detector-window sampling, detector pedestal
-    and full well relative to the source, PRNU and bad-pixel maps, and
-    centroid estimator), excluding read noise and the absolute source scale.
+    and full well relative to the source, PRNU and bad-pixel maps or legacy
+    PRNU seeds, photon allocation where it matters, and centroid estimator),
+    excluding read noise and the absolute source scale.
     It is ``None`` for a
     matrix whose sensor declared no ``response_hash`` and for records written
     before the field existed; such a matrix keeps its historical content hash
