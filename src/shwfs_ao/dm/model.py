@@ -23,7 +23,11 @@ import numpy.typing as npt
 
 from ..core.hashing import component_config_hash, stable_hash
 from ..core.provenance import Provenance
-from ..core.types import DmCommandVector, DmSynthesisResult
+from ..core.types import (
+    DmCommandVector,
+    DmSynthesisResult,
+    is_immutable_buffer_array,
+)
 from .config import DMConfig, actuator_ids_from_grid_indices
 
 
@@ -817,6 +821,9 @@ def _build_actuator_metadata(
 
 
 def _readonly_array(values: npt.ArrayLike, *, dtype: npt.DTypeLike) -> np.ndarray:
+    if is_immutable_buffer_array(values, dtype=dtype):
+        # Already immutable: sharing it avoids a second dense influence cube.
+        return values
     contiguous = np.ascontiguousarray(np.array(values, dtype=dtype, copy=True))
     immutable = np.frombuffer(contiguous.tobytes(order="C"), dtype=contiguous.dtype)
     return immutable.reshape(contiguous.shape)

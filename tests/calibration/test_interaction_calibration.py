@@ -313,6 +313,177 @@ def _faulted_dm() -> DeformableMirror:
     )
 
 
+def test_dm_basis_shares_the_dense_stack_when_every_actuator_is_selected() -> None:
+    """Selecting all actuators in order must not copy the influence cube.
+
+    At the published HCIPy scale the cube is 2.8 GB; the identity selection
+    keeps the DM's immutable stack (same values, so the same hashes), and any
+    other selection still indexes a copy.
+    """
+
+    influences = np.random.default_rng(3).random((4, 2, 2)) + 0.1
+    dm = DeformableMirror(
+        DMConfig(n_actuators_across=2, stroke_limit_nm=100.0),
+        NativeDmBackend(influences),
+        actuator_ids=("a0", "a1", "a2", "a3"),
+    )
+    full = DmActuatorProbeBasis(dm)
+    assert np.shares_memory(full._influences, dm.influence_functions)
+    np.testing.assert_array_equal(full._influences, influences)
+
+    subset = DmActuatorProbeBasis(dm, coordinate_ids=("a1", "a3"))
+    assert not np.shares_memory(subset._influences, dm.influence_functions)
+    np.testing.assert_array_equal(subset._influences, influences[[1, 3]])
+
+
+def _historical_probe_basis_hash(basis, amplitude_m: float) -> str:
+    """The probe-basis content hash as built before streaming, on np.stack."""
+
+    from shwfs_ao.calibration.interaction import _validated_probe_basis
+    from shwfs_ao.core.hashing import component_config_hash
+
+    contract = _validated_probe_basis(basis)
+    return component_config_hash(
+        "calibration_probe_basis_content",
+        {
+            "declared_config_hash": getattr(basis, "config_hash", None),
+            "coordinate_ids": contract.coordinate_ids,
+            "coordinate_kind": contract.coordinate_kind,
+            "coordinate_unit": contract.coordinate_unit,
+            "max_abs_amplitude_m": contract.max_abs_amplitude_m,
+            "positive_probe_maps_at_amplitude": np.stack(
+                [basis.opd_m_for_coordinate(index, amplitude_m) for index in range(basis.size)],
+                axis=0,
+            ),
+            "amplitude_m": amplitude_m,
+        },
+    )
+
+
+def _recorded_probe_basis_hash(result: InteractionMatrix) -> str:
+    prefix = "probe_basis_hash="
+    return next(
+        reference[len(prefix):]
+        for reference in result.provenance.references
+        if reference.startswith(prefix)
+    )
+
+
+@pytest.mark.parametrize("method", ["central", "forward"])
+def test_streamed_probe_hash_equals_hashing_the_stacked_probe_maps(method: str) -> None:
+    """Calibration hashes the positive maps without stacking them.
+
+    The digest is built map by map; it must equal the historical hash of
+    ``np.stack(positive maps)`` for a modal and a DM actuator basis alike.
+    """
+
+    modal = _orthogonal_modal_basis()
+    modal_result = calibrate_interaction_matrix(
+        modal,
+        _projection_sensor(modal),
+        23.0e-9,
+        random_streams=NamedRandomStreams(121),
+        method=method,
+    )
+    assert _recorded_probe_basis_hash(modal_result) == _historical_probe_basis_hash(
+        modal, 23.0e-9
+    )
+
+    dm_basis = DmActuatorProbeBasis(_faulted_dm())
+    sensor = _LinearSensor(np.random.default_rng(5).normal(size=(3, 2, 2)))
+    dm_result = calibrate_interaction_matrix(
+        dm_basis,
+        sensor,
+        25.0e-9,
+        random_streams=NamedRandomStreams(122),
+        method=method,
+    )
+    assert _recorded_probe_basis_hash(dm_result) == _historical_probe_basis_hash(
+        dm_basis, 25.0e-9
+    )
+
+
+class _DriftingBasis:
+    """A probe basis whose maps change a little on every call."""
+
+    def __init__(self, basis) -> None:
+        self._basis = basis
+        self._calls = 0
+
+    def __getattr__(self, name):
+        return getattr(self._basis, name)
+
+    def opd_m_for_coordinate(self, index, amplitude_m):
+        self._calls += 1
+        return np.asarray(self._basis.opd_m_for_coordinate(index, amplitude_m)) * (
+            1.0 + 1.0e-6 * self._calls
+        )
+
+
+def test_calibration_refuses_a_probe_basis_whose_maps_change() -> None:
+    """Maps are fingerprinted up front and recomputed before each probe."""
+
+    basis = _orthogonal_modal_basis()
+    sensor = _projection_sensor(basis)
+    with pytest.raises(InteractionMatrixError, match="deterministic"):
+        calibrate_interaction_matrix(
+            _DriftingBasis(basis),
+            sensor,
+            23.0e-9,
+            random_streams=NamedRandomStreams(121),
+            method="central",
+        )
+    assert sensor.calls == []
+
+
+class _LeanLinearSensor(_LinearSensor):
+    """The linear sensor without its per-call OPD record."""
+
+    def measure(self, residual_opd_m, *, random_streams, include_noise):
+        measurement = super().measure(
+            residual_opd_m, random_streams=random_streams, include_noise=include_noise
+        )
+        self.calls.clear()
+        return measurement
+
+
+def test_dm_calibration_holds_about_one_probe_map_at_a_time() -> None:
+    """Before streaming, calibration held every +/- map and their stack.
+
+    That was three dense influence stacks on top of the DM; now only
+    fingerprints and the map being measured are kept.
+    """
+
+    import tracemalloc
+
+    count, rows, columns = 100, 48, 48
+    rng = np.random.default_rng(11)
+    influences = rng.random((count, rows, columns)) + 0.05
+    dm = DeformableMirror(
+        DMConfig(n_actuators_across=10, stroke_limit_nm=100.0),
+        NativeDmBackend(influences),
+        actuator_ids=tuple(f"a{index}" for index in range(count)),
+    )
+    basis = DmActuatorProbeBasis(dm)
+    sensor = _LeanLinearSensor(rng.normal(size=(6, rows, columns)))
+    tracemalloc.start()
+    try:
+        start_bytes = tracemalloc.get_traced_memory()[0]
+        calibrate_interaction_matrix(
+            basis,
+            sensor,
+            20.0e-9,
+            random_streams=NamedRandomStreams(7),
+            method="central",
+        )
+        peak_bytes = tracemalloc.get_traced_memory()[1] - start_bytes
+    finally:
+        tracemalloc.stop()
+    assert peak_bytes < 0.5 * influences.nbytes, (
+        f"calibration peak {peak_bytes / influences.nbytes:.2f} influence stacks"
+    )
+
+
 def test_dm_basis_uses_controllable_ids_stroke_and_positive_residual_sign() -> None:
     dm = _faulted_dm()
     basis = DmActuatorProbeBasis(dm)
