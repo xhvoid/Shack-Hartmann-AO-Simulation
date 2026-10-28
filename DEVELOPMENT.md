@@ -139,12 +139,19 @@ preserve unrelated work.
 
 ## Publication and rollback
 
-`.github/workflows/pages.yml` validates both supported Python versions and
-uploads only `web/ao-explorer`. When triggered, PRs validate without deploying.
-Routine commits use the `skip-checks: true` trailer to skip this workflow. Only a push to
-`main`, or a manual workflow run explicitly on `main`, can publish. GitHub
-Settings > Pages must use **GitHub Actions** as its source. Development
-branches cannot replace the public site through this workflow.
+`.github/workflows/pages.yml` uploads only committed `web/ao-explorer` files.
+For a routine website update, add the `skip-checks: true` trailer, then run **Explorer
+Pages** manually on `main` with **Run validation before deployment** left off.
+This mode publishes the existing static files without installing dependencies,
+rebuilding, running the validator or executing tests. Validation is off by default
+for manual publication; enable it only for particularly major changes or an
+explicit maintainer request.
+
+Push and pull-request validation remains available when deliberately triggered
+without a CI skip instruction. It covers both supported Python versions; PRs never deploy.
+Only `main` can publish. GitHub Settings > Pages must use **GitHub Actions** as
+its source. Development branches cannot replace the public site through this
+workflow.
 
 After each release, record the merged commit, workflow run, public URL,
 dataset ID, manifest SHA-256 and code build. Inspect the real public site:

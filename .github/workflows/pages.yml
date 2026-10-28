@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      run_validation:
+        description: Run validation before deployment (major changes only)
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -15,6 +21,7 @@ concurrency:
 
 jobs:
   validate:
+    if: github.event_name != 'workflow_dispatch' || inputs.run_validation
     name: Explorer bundle Python ${{ matrix.python }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -58,7 +65,12 @@ jobs:
         run: git diff --exit-code
 
   deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: >-
+      always() && !cancelled() &&
+      github.ref == 'refs/heads/main' && github.event_name != 'pull_request' &&
+      (needs.validate.result == 'success' ||
+       (github.event_name == 'workflow_dispatch' && !inputs.run_validation &&
+        needs.validate.result == 'skipped'))
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -75,7 +87,7 @@ jobs:
           persist-credentials: false
       - name: Configure Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
-      - name: Upload only the validated explorer
+      - name: Upload committed explorer
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
           path: web/ao-explorer
