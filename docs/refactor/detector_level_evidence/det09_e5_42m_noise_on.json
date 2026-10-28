@@ -1,0 +1,57 @@
+{
+  "command": "e5",
+  "argv": [
+    "scripts/run_detector_level_evidence.py",
+    "e5"
+  ],
+  "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+  "numpy": "2.5.0",
+  "scipy": "1.18.0",
+  "machine": "arm64",
+  "started_unix_s": 1792111857.417372,
+  "enabled_by_user": "2026-10-16: every gated run enabled, one at a time",
+  "n_steps": 2000,
+  "burn_in_frames": 200,
+  "runs": [
+    {
+      "config_hash": "1ebaf8f35f977e01e2d65a496cf9d4ea06a5a0bc79362852df97646090db8b4f",
+      "root_seed": 1,
+      "n_steps": 2000,
+      "burn_in_frames": 200,
+      "build_s": 27.4127407502383,
+      "loop_s": 3497.768274624832,
+      "per_frame_s": 1.748884137312416,
+      "process_peak_rss_bytes": 1729118208,
+      "post_update_rms_m": 1.7319477128890864e-07,
+      "open_loop_rms_m": 1.6831505469862892e-06,
+      "final_post_update_rms_m": 1.690835271479216e-07,
+      "valid_measurement_fraction": 0.9992167666492785,
+      "min_valid_measurement_fraction": 0.9943270735524257,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7533179658694708,
+          "on_axis_strehl": 0.7533179658694708,
+          "fwhm_lambda_over_d": 0.9292401081026002
+        }
+      ],
+      "label": "det_ccd_42m_r3band_derived@1"
+    }
+  ],
+  "summary": {
+    "det_ccd_42m_r3band_derived@1": {
+      "runs": 1,
+      "post_update_rms_mean_m": 1.7319477128890864e-07,
+      "post_update_rms_seed_std_m": 0.0,
+      "valid_fraction_mean": 0.9992167666492785,
+      "valid_fraction_seed_std": 0.0,
+      "peak_strehl_mean": 0.7533179658694708,
+      "peak_strehl_seed_std": 0.0,
+      "lost_lock_runs": 0
+    }
+  },
+  "refused": [],
+  "wall_s": 3541.332608938217
+}

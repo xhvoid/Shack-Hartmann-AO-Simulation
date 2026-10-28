@@ -130,8 +130,18 @@ def run_closed_loop(
     include_noise: bool,
     realization_index: int = 0,
     observers: Sequence[FrameObserver] = (),
+    exposure_subsamples: int = 1,
+    exposure_s: float | None = None,
 ) -> LoopHistory:
     """Run one deterministic, fixed-length canonical AO control sequence.
+
+    ``exposure_subsamples`` (DET-08, default 1) integrates the WFS exposure
+    over ``n`` atmosphere samples at ``t + j * exposure_s / n``,
+    ``j = 0 .. n - 1``, with the DM state held for the whole exposure; the WFS
+    must provide ``measure_exposure``, which averages the optical intensities
+    and applies detector noise once.  With ``n = 1`` the loop makes exactly one
+    atmosphere call per frame at ``t``, as always.  The frame's residual metrics
+    always use the ``j = 0`` sample.
 
     Frame ``k`` samples the atmosphere exactly once at
     ``k / config.frame_rate_hz``.  Both residual metrics for that frame use
@@ -158,6 +168,21 @@ def run_closed_loop(
         include_noise=include_noise,
         realization_index=realization_index,
     )
+    if (
+        isinstance(exposure_subsamples, bool)
+        or not isinstance(exposure_subsamples, int)
+        or exposure_subsamples < 1
+    ):
+        raise ControlLoopError("exposure_subsamples must be a positive integer.")
+    if exposure_subsamples > 1:
+        if exposure_s is None or not np.isfinite(exposure_s) or exposure_s <= 0.0:
+            raise ControlLoopError("exposure sub-samples need a positive exposure_s.")
+        if exposure_s > 1.0 / config.frame_rate_hz * (1.0 + 1.0e-12):
+            raise ControlLoopError("exposure_s must not exceed the frame period.")
+        if not callable(getattr(wfs, "measure_exposure", None)):
+            raise ControlLoopError(
+                "exposure sub-samples need a WFS that provides measure_exposure."
+            )
     try:
         frame_observers, observed_fields = validate_frame_observers(observers)
     except FrameObservationError as exc:
@@ -277,12 +302,31 @@ def run_closed_loop(
 
         assert pupil_mask is not None
         residual_before = atmospheric_opd - current_correction
-        measurement = _measurement(
-            wfs.measure(
+        if exposure_subsamples == 1:
+            raw_measurement = wfs.measure(
                 residual_before,
                 random_streams=random_streams,
                 include_noise=include_noise,
-            ),
+            )
+        else:
+            assert exposure_s is not None
+            samples = [residual_before]
+            for sample_index in range(1, exposure_subsamples):
+                sample_opd = _atmospheric_opd(
+                    atmosphere.opd_at(
+                        float(frame_time_s)
+                        + sample_index * float(exposure_s) / exposure_subsamples
+                    ),
+                    expected_shape=sampled_shape,
+                )
+                samples.append(sample_opd - current_correction)
+            raw_measurement = wfs.measure_exposure(  # type: ignore[attr-defined]
+                samples,
+                random_streams=random_streams,
+                include_noise=include_noise,
+            )
+        measurement = _measurement(
+            raw_measurement,
             row_ids=row_ids,
             measurement_unit=interaction_matrix.measurement_unit,
         )

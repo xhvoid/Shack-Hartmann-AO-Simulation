@@ -11,6 +11,18 @@
       "sha256": "8711c48d3ff1073c7441d9e25070865c1e8b4f52f3659401be44c5cb2ce3be70"
     },
     {
+      "logical_name": "benchmarks/detector_camera_presets.v1.json",
+      "sha256": "6e85ad08244a866a8ea12a92ca5fa4e1b583d7c640476a4f09fc55f460fa658f"
+    },
+    {
+      "logical_name": "benchmarks/detector_level.assumptions.v1.json",
+      "sha256": "7741b63b9a79aa259363c22fce7eb96bd0b7a109d4a7c625804dd994a1e22f8c"
+    },
+    {
+      "logical_name": "benchmarks/detector_source_ledger.v1.json",
+      "sha256": "2b8cc13ebca067f9c48af1861680a84de619834019567a33a7d671ec606882fc"
+    },
+    {
       "logical_name": "benchmarks/eso_drm_42m_scao_derived.assumptions.v1.json",
       "sha256": "adc5e93d97b2db8a29850eb05c63bcad0ec5c14e8881d7128438f21b5318b15d"
     },
@@ -165,6 +177,34 @@
     {
       "logical_name": "schemas/validation_table_sidecar.schema.json",
       "sha256": "32c60b35da3520a061e5f480da49abcd1aa8d45e7c9ac2897ac99064e8756a34"
+    },
+    {
+      "logical_name": "synthetic_presets/det_ccd_2m_synthetic.v1.json",
+      "sha256": "063d172dc88689137a3eb70257d0a3a6a4f0ba2d25944fac8172b153c88cf154"
+    },
+    {
+      "logical_name": "synthetic_presets/det_ccd_42m_r3band_derived.v1.json",
+      "sha256": "56d8a6bac412b56c995a359f56458eb4ad5383d6f5fe47b9fa60b58a3a6714ff"
+    },
+    {
+      "logical_name": "synthetic_presets/det_cmos_2m_synthetic.v1.json",
+      "sha256": "49f726187dba27d91e2941ffc9787a23308503ca3a67fc55e603cc0c62dd1615"
+    },
+    {
+      "logical_name": "synthetic_presets/det_emccd_12m_medium_derived.v1.json",
+      "sha256": "378b3643a69508b76ea290185547c02cf27dd1aafa8e16b37c42e0c75917a9a5"
+    },
+    {
+      "logical_name": "synthetic_presets/det_emccd_12m_medium_derived.v2.json",
+      "sha256": "de4faf333619456fdaf2ec1d9d1680565b318ceb123e3404f3bbc5095ecd3574"
+    },
+    {
+      "logical_name": "synthetic_presets/det_emccd_2m_plane_synthetic.v1.json",
+      "sha256": "1109069a34312cbe83399f4628efe99e9e8981e27726a50580ba0448eab64528"
+    },
+    {
+      "logical_name": "synthetic_presets/det_emccd_2m_synthetic.v1.json",
+      "sha256": "8ee39a63e9897539ef11b52b2409969a8dccb4a81e94b09598ab27269d9d801b"
     },
     {
       "logical_name": "synthetic_presets/dm_2m_fast_gaussian.json",

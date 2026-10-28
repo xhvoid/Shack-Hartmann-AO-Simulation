@@ -56,8 +56,17 @@ PROFILE_SCHEMA_NAME = "shwfs_ao.system_profile"
 # across their detector windows; "pixel_block_center" centres them
 # (docs/refactor/AO_REF_016A_HCIPY_LENSLET_AXIS.md).  v1-v5 records omit the
 # field and keep the vertices they were published with.
-PROFILE_SCHEMA_VERSION = 6
-SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2, 3, 4, 5, 6)
+# Schema v7 adds the optional ``detector_physics`` block, which selects the
+# physical camera path (shwfs_ao.detector.physical_camera.v1): a packaged
+# camera preset, the detector-pixel layout, the photometric source and sky
+# budget, the WFS bandpass, the detector-plane sampling, RTC pixel processing
+# and exposure sub-samples (docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_PROMPT.md).
+# The existing detector and wfs blocks keep their field lists, so no nested
+# hash moves; a v1-v6 record cannot carry the block.  A v7 record also
+# requires an exposure no longer than the frame period and a centroid window
+# symmetric about the optical-axis pixel.
+PROFILE_SCHEMA_VERSION = 7
+SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7)
 # The WFS photon allocation the schema-v1 profiles were reviewed and published
 # under.  A v1 record omits the field entirely, so this is the only allocation a
 # configuration claiming record schema 1 can legitimately hold.  It must stay
@@ -107,6 +116,17 @@ _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
     ("eso_scao_medium_12m_derived", 2): "synthetic_presets/eso_scao_medium_12m_derived.v2.json",
     ("eso_scao_medium_12m_weak_gate", 2): "synthetic_presets/eso_scao_medium_12m_weak_gate.v2.json",
     ("eso_drm_42m_scao_derived", 2): "synthetic_presets/eso_drm_42m_scao_derived.v2.json",
+    # Schema-v7 detector-level noise-on families (physical camera path;
+    # docs/detector_model.md, scripts/generate_detector_level_profiles.py).
+    ("det_ccd_2m_synthetic", 1): "synthetic_presets/det_ccd_2m_synthetic.v1.json",
+    ("det_emccd_2m_synthetic", 1): "synthetic_presets/det_emccd_2m_synthetic.v1.json",
+    ("det_cmos_2m_synthetic", 1): "synthetic_presets/det_cmos_2m_synthetic.v1.json",
+    ("det_emccd_2m_plane_synthetic", 1): "synthetic_presets/det_emccd_2m_plane_synthetic.v1.json",
+    ("det_emccd_12m_medium_derived", 1): "synthetic_presets/det_emccd_12m_medium_derived.v1.json",
+    ("det_ccd_42m_r3band_derived", 1): "synthetic_presets/det_ccd_42m_r3band_derived.v1.json",
+    # Version 2 after its E3 magnitude scan: bright internal calibration source
+    # and validity gating on the detector_covariance_v1 domain.
+    ("det_emccd_12m_medium_derived", 2): "synthetic_presets/det_emccd_12m_medium_derived.v2.json",
 }
 
 BackendName = Literal["native", "hcipy"]
@@ -327,10 +347,8 @@ class DetectorSystemConfig:
         photons = _optional_nonnegative(
             self.photons_per_subap_frame, "photons_per_subap_frame"
         )
-        if enabled and photons is None:
-            raise SystemConfigError(
-                "enabled detector profiles require photons_per_subap_frame."
-            )
+        # Whether an enabled detector needs this photon budget depends on the
+        # schema-v7 detector_physics block, so SystemConfig checks it.
         object.__setattr__(self, "enabled", enabled)
         object.__setattr__(self, "photons_per_subap_frame", photons)
         for name in (
@@ -997,6 +1015,119 @@ class RandomSeedConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class DetectorPhysicsConfig:
+    """Schema-v7 physical camera path (``detector_physics`` block).
+
+    ``camera`` names a packaged preset by name and version
+    (``benchmarks/detector_camera_presets.v1.json``).  The nested blocks are
+    the detector layer's own typed configurations; their identities are this
+    block's identity.  Its presence selects the physical response; its
+    absence keeps the AO-REF-004 compatibility chain.
+    """
+
+    camera_preset_name: str
+    camera_preset_version: int
+    layout_scheme: str
+    guard_px: int
+    source: Any
+    bandpass: Any
+    sampling: Any
+    processing: Any
+    exposure_subsamples: int
+    # Optional bright internal calibration source (detected photoelectrons per
+    # frame of a full subaperture).  Absent from a record when null, so every
+    # record without one keeps its identity.
+    calibration_source_detected_e_per_full_subap_frame: float | None = None
+
+    def __post_init__(self) -> None:
+        from ..detector.physical_config import (
+            BandpassConfig,
+            DetectorPlaneSamplingConfig,
+            SourceBudgetConfig,
+        )
+        from ..detector.processing import PixelProcessingConfig
+        from .camera_presets import CameraPresetError, load_camera_preset
+
+        object.__setattr__(self, "camera_preset_name", _text(self.camera_preset_name, "camera_preset_name"))
+        object.__setattr__(self, "camera_preset_version", _integer(self.camera_preset_version, "camera_preset_version", minimum=1))
+        if self.layout_scheme != "isolated_lenslet_blocks.v1":
+            raise SystemConfigError("layout_scheme must be 'isolated_lenslet_blocks.v1'.")
+        object.__setattr__(self, "guard_px", _integer(self.guard_px, "guard_px", minimum=0))
+        object.__setattr__(self, "exposure_subsamples", _integer(self.exposure_subsamples, "exposure_subsamples", minimum=1))
+        for name, kind in (
+            ("source", SourceBudgetConfig),
+            ("bandpass", BandpassConfig),
+            ("sampling", DetectorPlaneSamplingConfig),
+            ("processing", PixelProcessingConfig),
+        ):
+            if not isinstance(getattr(self, name), kind):
+                raise SystemConfigError(f"detector_physics.{name} has the wrong type.")
+        try:
+            camera = load_camera_preset(self.camera_preset_name, self.camera_preset_version)
+        except CameraPresetError as exc:
+            raise SystemConfigError(f"detector_physics.camera: {exc}") from exc
+        if camera.has_coupling and self.guard_px < 1:
+            raise SystemConfigError(
+                "a camera with electronic coupling needs detector_physics.guard_px >= 1."
+            )
+        if self.calibration_source_detected_e_per_full_subap_frame is not None:
+            object.__setattr__(
+                self,
+                "calibration_source_detected_e_per_full_subap_frame",
+                _positive(
+                    self.calibration_source_detected_e_per_full_subap_frame,
+                    "calibration_source_detected_e_per_full_subap_frame",
+                ),
+            )
+
+    @property
+    def camera(self) -> Any:
+        from .camera_presets import load_camera_preset
+
+        return load_camera_preset(self.camera_preset_name, self.camera_preset_version)
+
+    @property
+    def config_hash(self) -> str:
+        if self.calibration_source_detected_e_per_full_subap_frame is None:
+            return component_config_hash(
+                "scao.detector_physics_config",
+                _DetectorPhysicsConfigWithoutCalibrationSource(
+                    camera_preset_name=self.camera_preset_name,
+                    camera_preset_version=self.camera_preset_version,
+                    layout_scheme=self.layout_scheme,
+                    guard_px=self.guard_px,
+                    source=self.source,
+                    bandpass=self.bandpass,
+                    sampling=self.sampling,
+                    processing=self.processing,
+                    exposure_subsamples=self.exposure_subsamples,
+                ),
+            )
+        return component_config_hash("scao.detector_physics_config", self)
+
+
+@dataclass(frozen=True, slots=True)
+class _DetectorPhysicsConfigWithoutCalibrationSource:
+    """Hash shape of a ``detector_physics`` block without a calibration source.
+
+    The same declared fields, order and schema id as before the optional
+    source existed, so records without one keep their identity.
+    """
+
+    __hash_schema_id__ = "shwfs_ao.io.configs.DetectorPhysicsConfig"
+
+    camera_preset_name: str
+    camera_preset_version: int
+    layout_scheme: str
+    guard_px: int
+    source: Any
+    bandpass: Any
+    sampling: Any
+    processing: Any
+    exposure_subsamples: int
+
+
+@dataclass(frozen=True, slots=True)
 class SystemConfig:
     backend: BackendName
     wfs_model: WfsModel
@@ -1027,6 +1158,9 @@ class SystemConfig:
     # Schema v5: the opt-in scalable high-order path, or None for the dense
     # reference path every earlier profile uses.
     scalable: ScalablePathConfig | None = None
+    # Schema v7: the physical camera path, or None for the AO-REF-004
+    # compatibility detector every earlier profile uses.
+    detector_physics: DetectorPhysicsConfig | None = None
 
     def __post_init__(self) -> None:
         if self.backend not in {"native", "hcipy"}:
@@ -1073,11 +1207,27 @@ class SystemConfig:
                 "atmosphere_model='native_layered' or 'hcipy_layered' requires "
                 "atmosphere.layers, and no other atmosphere model accepts them."
             )
+        physics = self.detector_physics
+        if physics is not None and not isinstance(physics, DetectorPhysicsConfig):
+            raise SystemConfigError("detector_physics has the wrong configuration type.")
+        mft_sampling = physics is not None and physics.sampling.kind == "mft_pixel_integrated"
         if self.wfs_model == "detector_level":
-            if not self.detector.enabled or self.wfs.pad_factor is None or self.wfs.detector_window_px is None:
+            if not self.detector.enabled or self.wfs.detector_window_px is None:
+                raise SystemConfigError("detector_level requires enabled detector and explicit pad/window sampling.")
+            if mft_sampling:
+                if self.wfs.pad_factor is not None:
+                    raise SystemConfigError(
+                        "mft_pixel_integrated sampling declares its pixel scale; "
+                        "wfs.pad_factor must be null (declare one mapping, not both)."
+                    )
+            elif self.wfs.pad_factor is None:
                 raise SystemConfigError("detector_level requires enabled detector and explicit pad/window sampling.")
         elif self.detector.enabled or self.wfs.pad_factor is not None or self.wfs.detector_window_px is not None:
             raise SystemConfigError("geometric WFS requires disabled detector and null pad/window sampling.")
+        if self.detector.enabled and physics is None and self.detector.photons_per_subap_frame is None:
+            raise SystemConfigError(
+                "enabled detector profiles require photons_per_subap_frame."
+            )
         if self.calibration.probe_kind == "modal" and self.command_projector.kind != "modal":
             raise SystemConfigError("modal calibration requires a modal command projector.")
         if self.calibration.probe_kind == "dm_actuator" and self.command_projector.kind == "modal":
@@ -1184,6 +1334,13 @@ class SystemConfig:
         if self.scalable is not None and not isinstance(self.scalable, ScalablePathConfig):
             raise SystemConfigError("scalable has the wrong configuration type.")
         _validate_scalable_pairing(self)
+        if record_version < 7 and physics is not None:
+            raise SystemConfigError(
+                f"record_schema_version={record_version} cannot express the "
+                "detector_physics block; record this configuration under schema 7."
+            )
+        if record_version >= 7:
+            _validate_schema7_rules(self)
         object.__setattr__(self, "record_schema_version", record_version)
 
     @property
@@ -1192,19 +1349,26 @@ class SystemConfig:
 
     @property
     def observing_conditions_hash(self) -> str:
-        return component_config_hash(
-            "scao.observing_conditions",
-            {
-                "telescope_diameter_m": self.telescope_diameter_m,
-                "wfs_wavelength_m": self.wfs_wavelength_m,
-                "science_wavelengths_m": self.science_wavelengths_m,
-                "atmosphere_model": self.atmosphere_model,
-                # Single-layer blocks hash as their pre-v4 shape, so a
-                # published profile's observing conditions keep their identity.
-                "atmosphere": self.atmosphere._hash_view(),
-                "detector": self.detector,
-            },
-        )
+        conditions: dict[str, object] = {
+            "telescope_diameter_m": self.telescope_diameter_m,
+            "wfs_wavelength_m": self.wfs_wavelength_m,
+            "science_wavelengths_m": self.science_wavelengths_m,
+            "atmosphere_model": self.atmosphere_model,
+            # Single-layer blocks hash as their pre-v4 shape, so a
+            # published profile's observing conditions keep their identity.
+            "atmosphere": self.atmosphere._hash_view(),
+            "detector": self.detector,
+        }
+        # The physical source/sky budget, band and camera are observing
+        # conditions; the key exists only when the v7 block does.
+        if self.detector_physics is not None:
+            conditions["detector_physics_source"] = self.detector_physics.source
+            conditions["detector_physics_bandpass"] = self.detector_physics.bandpass
+            conditions["detector_physics_camera"] = (
+                self.detector_physics.camera_preset_name,
+                self.detector_physics.camera_preset_version,
+            )
+        return component_config_hash("scao.observing_conditions", conditions)
 
     @property
     def component_config_hashes(self) -> Mapping[str, str]:
@@ -1247,6 +1411,13 @@ class SystemConfig:
                 if self.scalable is None
                 else self.scalable.config_hash
             )
+        # Likewise only schema-v7 records carry the detector_physics key.
+        if self.record_schema_version >= 7:
+            hashes["detector_physics"] = (
+                component_config_hash("scao.detector_physics_config", None)
+                if self.detector_physics is None
+                else self.detector_physics.config_hash
+            )
         return MappingProxyType(hashes)
 
 
@@ -1278,6 +1449,65 @@ def _validate_scalable_pairing(config: SystemConfig) -> None:
         raise SystemConfigError(
             "the scalable path requires " + ", ".join(missing) + "."
         )
+
+
+def _validate_schema7_rules(config: SystemConfig) -> None:
+    """New-schema rules: exposure within the frame, symmetric window, physics pairing."""
+
+    detector = config.detector
+    frame_period_s = 1.0 / config.controller.frame_rate_hz
+    if config.wfs_model == "detector_level" and detector.exposure_s > frame_period_s * (1.0 + 1.0e-12):
+        raise SystemConfigError(
+            f"detector.exposure_s={detector.exposure_s!r} exceeds the frame period "
+            f"{frame_period_s!r} s; a schema-7 record integrates within one frame."
+        )
+    window = config.wfs.detector_window_px
+    if config.wfs_model == "detector_level" and window is not None:
+        if config.backend == "native" and window % 2 != 1:
+            raise SystemConfigError(
+                "a schema-7 native detector-level record needs an odd "
+                "wfs.detector_window_px, symmetric about the optical-axis pixel "
+                "(docs/refactor/eso_scao_evidence/published_profile_window_bias.md)."
+            )
+        if config.backend == "hcipy" and config.wfs.lenslet_axis != "pixel_block_center":
+            raise SystemConfigError(
+                "a schema-7 HCIPy detector-level record needs "
+                "wfs.lenslet_axis='pixel_block_center' so each spot axis is "
+                "symmetric in its block window."
+            )
+    physics = config.detector_physics
+    if physics is None:
+        return
+    requirements = (
+        (config.backend == "native", "backend='native' (HCIPy fails closed for the physical camera path)"),
+        (config.wfs_model == "detector_level", "wfs_model='detector_level'"),
+        (detector.enabled, "detector.enabled=true"),
+        (detector.photons_per_subap_frame is None, "detector.photons_per_subap_frame=null (the source block owns the budget)"),
+        (detector.qe == 1.0, "detector.qe=1 (the camera preset owns QE, applied once)"),
+        (detector.read_noise_e == 0.0, "detector.read_noise_e=0"),
+        (detector.dark_e_per_s == 0.0, "detector.dark_e_per_s=0"),
+        (detector.background_e_per_pixel_frame == 0.0, "detector.background_e_per_pixel_frame=0"),
+        (detector.full_well_e is None, "detector.full_well_e=null"),
+        (detector.prnu_rms == 0.0, "detector.prnu_rms=0"),
+        (detector.bad_pixel_fraction == 0.0, "detector.bad_pixel_fraction=0"),
+        (detector.prnu_mode == "persistent", "detector.prnu_mode='persistent'"),
+        (config.wfs.photon_allocation == "throughput_scaled", "wfs.photon_allocation='throughput_scaled'"),
+        (not config.wfs.clip_negative_pixels or physics.processing.clip_negative,
+         "wfs.clip_negative_pixels=false unless the processing block clips (the processing block owns clipping)"),
+    )
+    missing = [label for ok, label in requirements if not ok]
+    if missing:
+        raise SystemConfigError(
+            "the detector_physics block requires " + "; ".join(missing) + "."
+        )
+    if physics.sampling.kind == "legacy_fft" and physics.bandpass.kind != "monochromatic":
+        raise SystemConfigError("a polychromatic bandpass needs mft_pixel_integrated sampling.")
+    if physics.bandpass.kind == "monochromatic" and not (
+        physics.bandpass.band_min_m <= config.wfs_wavelength_m <= physics.bandpass.band_max_m
+    ):
+        raise SystemConfigError("wfs_wavelength_m must lie inside the declared monochromatic band.")
+    if physics.exposure_subsamples > 1 and config.atmosphere_model == "static":
+        raise SystemConfigError("exposure sub-samples need a time-dependent atmosphere.")
 
 
 def available_system_profiles() -> tuple[tuple[str, int], ...]:
@@ -1363,12 +1593,14 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
     # :meth:`SystemConfig.__post_init__` owns that rule, because it must hold
     # for a configuration however it was made, not only for a parsed record.
     values = _mapping(root["config"], "config")
-    _keys(
-        values,
-        _SYSTEM_FIELDS | {"scalable"} if schema_version >= 5 else _SYSTEM_FIELDS,
-        "config",
-    )
+    system_fields = set(_SYSTEM_FIELDS)
+    if schema_version >= 5:
+        system_fields.add("scalable")
+    if schema_version >= 7:
+        system_fields.add("detector_physics")
+    _keys(values, system_fields, "config")
     scalable_record = values.get("scalable") if schema_version >= 5 else None
+    physics_record = values.get("detector_physics") if schema_version >= 7 else None
     return SystemConfig(
         backend=cast(BackendName, values["backend"]),
         wfs_model=cast(WfsModel, values["wfs_model"]),
@@ -1408,6 +1640,9 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
             None
             if scalable_record is None
             else _construct(ScalablePathConfig, scalable_record, _SCALABLE_FIELDS, "scalable")
+        ),
+        detector_physics=(
+            None if physics_record is None else _detector_physics_config(physics_record)
         ),
     )
 
@@ -1484,6 +1719,14 @@ def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
         config_record["scalable"] = (
             None if config.scalable is None else _dataclass_mapping(config.scalable)
         )
+    if config.record_schema_version >= 7:
+        config_record = record["config"]
+        assert isinstance(config_record, dict)
+        config_record["detector_physics"] = (
+            None
+            if config.detector_physics is None
+            else _detector_physics_mapping(config.detector_physics)
+        )
     return record
 
 
@@ -1514,6 +1757,78 @@ _CONTROLLER_FIELDS = {"n_steps", "gain", "leak", "latency_frames", "frame_rate_h
 _SCIENCE_FIELDS = {"psf_pad_factor"}
 _SCALABLE_FIELDS = {"dm_operator", "wfs_geometry", "calibration_strategy", "solver", "solver_atol", "solver_btol", "solver_max_iterations", "nonconverged_policy"}
 _RANDOM_FIELDS = {"root_seed", "derivation_scheme_id"}
+_PHYSICS_FIELDS = {"camera", "layout", "source", "bandpass", "sampling", "processing", "exposure_subsamples"}
+_PHYSICS_CAMERA_FIELDS = {"preset_name", "preset_version"}
+_PHYSICS_LAYOUT_FIELDS = {"scheme", "guard_px"}
+_PHYSICS_SOURCE_FIELDS = {"kind", "ab_magnitude", "incident_photons_per_full_subap_frame", "detected_e_per_full_subap_frame", "throughput_excluding_qe", "sky_ab_mag_per_arcsec2"}
+_PHYSICS_BANDPASS_FIELDS = {"kind", "band_min_m", "band_max_m", "n_samples"}
+_PHYSICS_SAMPLING_FIELDS = {"kind", "pixel_scale_rad", "oversampling", "diffusion_sigma_px"}
+_PHYSICS_PROCESSING_FIELDS = {"mode", "n_bias_frames", "n_dark_frames", "n_sky_frames", "n_flat_frames", "flat_level_e", "hot_pixel_threshold_e", "flat_low_threshold", "flat_high_threshold", "bad_pixel_policy", "gain_treatment", "clip_negative"}
+
+
+def _detector_physics_config(value: object) -> DetectorPhysicsConfig:
+    from ..detector.physical_config import (
+        BandpassConfig,
+        DetectorPlaneSamplingConfig,
+        SourceBudgetConfig,
+    )
+    from ..detector.processing import PixelProcessingConfig
+
+    record = _mapping(value, "detector_physics")
+    _keys(
+        record,
+        _PHYSICS_FIELDS | {"calibration_source_detected_e_per_full_subap_frame"},
+        "detector_physics",
+        optional={"calibration_source_detected_e_per_full_subap_frame"},
+    )
+    camera = _mapping(record["camera"], "detector_physics.camera")
+    _keys(camera, _PHYSICS_CAMERA_FIELDS, "detector_physics.camera")
+    layout = _mapping(record["layout"], "detector_physics.layout")
+    _keys(layout, _PHYSICS_LAYOUT_FIELDS, "detector_physics.layout")
+    try:
+        return DetectorPhysicsConfig(
+            camera_preset_name=cast(str, camera["preset_name"]),
+            camera_preset_version=cast(int, camera["preset_version"]),
+            layout_scheme=cast(str, layout["scheme"]),
+            guard_px=cast(int, layout["guard_px"]),
+            source=_construct(SourceBudgetConfig, record["source"], _PHYSICS_SOURCE_FIELDS, "detector_physics.source"),
+            bandpass=_construct(BandpassConfig, record["bandpass"], _PHYSICS_BANDPASS_FIELDS, "detector_physics.bandpass"),
+            sampling=_construct(DetectorPlaneSamplingConfig, record["sampling"], _PHYSICS_SAMPLING_FIELDS, "detector_physics.sampling"),
+            processing=_construct(PixelProcessingConfig, record["processing"], _PHYSICS_PROCESSING_FIELDS, "detector_physics.processing"),
+            exposure_subsamples=cast(int, record["exposure_subsamples"]),
+            calibration_source_detected_e_per_full_subap_frame=cast(
+                float | None,
+                record.get("calibration_source_detected_e_per_full_subap_frame"),
+            ),
+        )
+    except (TypeError, ValueError) as exc:
+        if isinstance(exc, SystemConfigError):
+            raise
+        raise SystemConfigError(f"invalid detector_physics: {exc}") from exc
+
+
+def _detector_physics_mapping(config: DetectorPhysicsConfig) -> dict[str, object]:
+    mapping = _detector_physics_base_mapping(config)
+    if config.calibration_source_detected_e_per_full_subap_frame is not None:
+        mapping["calibration_source_detected_e_per_full_subap_frame"] = (
+            config.calibration_source_detected_e_per_full_subap_frame
+        )
+    return mapping
+
+
+def _detector_physics_base_mapping(config: DetectorPhysicsConfig) -> dict[str, object]:
+    return {
+        "camera": {
+            "preset_name": config.camera_preset_name,
+            "preset_version": config.camera_preset_version,
+        },
+        "layout": {"scheme": config.layout_scheme, "guard_px": config.guard_px},
+        "source": _dataclass_mapping(config.source),
+        "bandpass": _dataclass_mapping(config.bandpass),
+        "sampling": _dataclass_mapping(config.sampling),
+        "processing": _dataclass_mapping(config.processing),
+        "exposure_subsamples": config.exposure_subsamples,
+    }
 
 
 def _atmosphere_config(value: object, schema_version: int) -> AtmosphereConfig:
@@ -1725,6 +2040,7 @@ __all__ = (
     "PROFILE_SCHEMA_NAME",
     "PROFILE_SCHEMA_VERSION",
     "SUPPORTED_PROFILE_SCHEMA_VERSIONS",
+    "DetectorPhysicsConfig",
     "SystemConfigError",
     "ProfileProvenance",
     "AtmosphereLayerConfig",

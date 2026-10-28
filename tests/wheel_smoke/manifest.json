@@ -425,6 +425,41 @@
       "source": "scripts/run_readme_smoke.py",
       "kind": "support",
       "requires": []
+    },
+    {
+      "source": "tests/detector/test_physical_camera.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/detector/test_photometry.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/detector/test_noise_model.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/wfs/test_physical_sensor.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/backends/native/test_shwfs_mft.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/io/test_detector_level_profiles.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/control/test_exposure_subsamples.py",
+      "kind": "test",
+      "requires": []
     }
   ]
 }
