@@ -492,3 +492,57 @@ def test_noise_stream_identity_rejects_a_foreign_realization_or_backend(
             sensor.detector_realization,
             optics_backend=_DeclaredBackend(native_backend),
         )
+
+
+@pytest.mark.parametrize(
+    "detector",
+    [replace(PERSISTENT, background_e_per_pixel_frame=0.0), PER_FRAME_LEGACY],
+    ids=["persistent", "per_frame_legacy"],
+)
+def test_unlit_pixel_roundoff_keeps_every_frame_of_a_stream(
+    geometry: ShackHartmannGeometry,
+    detector: DetectorConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # With no background, block-lenslet spots have exactly unlit pixels on one
+    # host and roundoff residues on another.  A tiny additive FFT residue
+    # stands in for that host: it turns exact zeros into positive
+    # expectations without changing any lit pixel.  Several frames share one
+    # provider, so a shifted persistent stream would show in later frames.
+    backend = NativeShackHartmannOptics(geometry, WAVELENGTH_M, pad_factor=4)
+    residuals = (
+        1.5e-7 * geometry.x_m - 0.8e-7 * geometry.y_m,
+        4.0e-7 * (geometry.x_m**2 - geometry.y_m**2),
+        -1.0e-7 * geometry.y_m,
+    )
+
+    def run() -> list[WfsMeasurement]:
+        sensor = _calibrated(geometry, backend, detector)
+        streams = NamedRandomStreams(SEED)
+        return [
+            sensor.measure(residual, random_streams=streams, include_noise=True)
+            for residual in residuals
+        ]
+
+    exact = run()
+    numpy_fft2 = np.fft.fft2
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            np.fft, "fft2", lambda *args, **kwargs: numpy_fft2(*args, **kwargs) + 1.0e-30
+        )
+        residue = run()
+
+    exact_zeros = sum(
+        np.count_nonzero(frame.expected_pre_poisson_e == 0.0)
+        for measurement in exact
+        for frame in _frames(measurement)
+    )
+    residue_zeros = sum(
+        np.count_nonzero(frame.expected_pre_poisson_e == 0.0)
+        for measurement in residue
+        for frame in _frames(measurement)
+    )
+    assert exact_zeros > residue_zeros
+    for first, second in zip(exact, residue, strict=True):
+        for left, right in zip(_frames(first), _frames(second), strict=True):
+            np.testing.assert_array_equal(right.image_e, left.image_e)

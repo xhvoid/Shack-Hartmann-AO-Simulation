@@ -302,7 +302,11 @@ Noise is now keyed by a declared sensor identity (schema
 [reproducibility](reproducibility.md). Tests show that a one-ULP shift of every
 reference centroid, or a reference calibrated through `scipy.fft`, keeps the
 identity, the runtime stream IDs and the noisy detector images bit for bit,
-while each declared input still changes the identity. The fast and physical
+while each declared input still changes the identity. Shot noise also treats
+expectations below a roundoff floor of the declared budget as exactly zero:
+NumPy's Poisson sampler consumes a variate for any positive expectation, so
+an unlit pixel that is exactly zero on one host and a roundoff residue on
+another would otherwise shift every later draw of that lenslet's stream. The fast and physical
 error budgets pass explicit legacy per-frame seeds, which this change does not
 touch.
 
@@ -320,9 +324,9 @@ on measurement noise were regenerated:
 - `figures/detector_level_SCAO/shwfs_centroid_demo.{csv,png}`.
 
 Re-executing the tutorials with the unchanged code first reproduced their
-tracked outputs exactly, including PNG bytes. With the new keying, tutorials 00, 01 and 04 and the high-order,
-gain/latency and mode-order studies are unchanged, as are all other example
-outputs. Two tracked outputs were stale before this change and were refreshed:
+tracked outputs exactly, including PNG bytes. With the new keying, tutorials
+00, 01 and 04 and the high-order, gain/latency and mode-order studies are
+unchanged, as are all other example outputs. Two tracked outputs were stale before this change and were refreshed:
 `figures/detector_level_SCAO/science_psf_metrics.csv` now carries the FWHM
 values of the corrected canonical estimator (for example 1.109 rather than
 0.984 λ/D for the open-loop J band; every other column is unchanged), and the

@@ -54,7 +54,7 @@ specified synthetic experiments, not predicted ELT or instrument performance.
 | Experiment | Recorded result | Interpretation |
 | --- | --- | --- |
 | [Sensor calibration](notebooks/tutorials/01_geometric_shwfs.ipynb) | A 2 µrad tilt produces 2.701 px displacement versus 2.902 px geometrically; measured/geometric gain **0.9305** | Finite spot windows change the measured response; calibration matters |
-| [TSVD reconstruction](notebooks/tutorials/03_tsvd_regularization.ipynb) | Retaining 12, 24, 27 and 29 singular modes gives command RMS errors of **62.90, 43.37, 17.51 and 8.58 nm** | Cutoffs cross the measured spectrum; thresholds retaining the same rank tie in this realization |
+| [TSVD reconstruction](notebooks/tutorials/03_tsvd_regularization.ipynb) | Retaining 12, 24, 27 and 29 singular modes gives command RMS errors of **62.94, 43.22, 17.66 and 8.58 nm** | Cutoffs cross the measured spectrum; thresholds retaining the same rank tie in this realization |
 | [Closed-loop control](notebooks/tutorials/04_closed_loop_control.ipynb) | Matched final-half wavefront RMS: **148.6 → 84.4 nm** | A 1 m, 500 Hz, gain-0.5 example with zero frame delay and detector noise disabled |
 | [Correction-order comparison](notebooks/studies/high_order_scao.ipynb) | Common open-loop RMS **256.3 nm**; 5×5 / 7×7 / 9×9 DM grids give **246.7 / 229.6 / 227.5 nm** | Pupil sampling, 10×10 lenslet geometry and atmospheric trajectory are held fixed |
 | [Gain and latency](notebooks/studies/noise_latency_gain.ipynb) | At two frames of delay, closed/open RMS rises from **0.723** at gain 0.2 to **1.746** at gain 1.0 | The 16-frame noiseless scan exposes amplification; it is not a formal stability boundary |

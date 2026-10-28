@@ -428,6 +428,7 @@ class DetectorShackHartmannSensor:
                 if ordered_legacy_seeds is not None
                 else None
             )
+            stream_seeded = False
             if (
                 compatibility_mode is None
                 and self._calibration.detector_config.prnu_mode
@@ -441,6 +442,7 @@ class DetectorShackHartmannSensor:
                         legacy_seed = int(
                             seed_generator.integers(0, 2**63 - 1)
                         )
+                        stream_seeded = True
                         runtime_stream_ids.append(
                             frame_streams.stream_id("detector.shot_noise")
                         )
@@ -475,6 +477,7 @@ class DetectorShackHartmannSensor:
                         random_streams=frame_streams,
                         include_noise=noisy,
                         legacy_seed=legacy_seed,
+                        portable_poisson=stream_seeded,
                     )
                 estimate = estimate_centroid(
                     frame.image_e,
