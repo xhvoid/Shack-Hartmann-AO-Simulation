@@ -1,10 +1,14 @@
-# Tests run the fast end-to-end integration, verify finite final metrics, required figures, reference JSON fields, and notebook-11 smoke execution.
+# Tests run the fast end-to-end integration and verify finite final metrics, required figures, and reference JSON fields.
+# The historical notebook-11 top-to-bottom exec smoke was retired by AO-REF-019:
+# the original notebook is archived evidence under notebooks/legacy/ (never
+# executed), its canonical successor notebooks/studies/detector_level_2m.ipynb
+# runs under scripts/run_notebook_smoke.py, and the fast integration path is
+# exercised directly through run_fast_integration below.
 
 import ast
 import json
 import math
 from pathlib import Path
-import shutil
 from types import SimpleNamespace
 
 import numpy as np
@@ -16,7 +20,6 @@ from shwfs_ao.legacy import ao_integration as legacy_integration
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_ROOT = ROOT / "src" / "shwfs_ao" / "resources"
-NOTEBOOK_11 = ROOT / "notebooks" / "11_full_detector_level_2m_scao_demo.ipynb"
 REFERENCE_BASELINE = DATA_ROOT / "reference_metrics" / "fast_reference_metrics_regression_baseline.json"
 ERROR_BUDGET_BASELINE = DATA_ROOT / "reference_metrics" / "fast_error_budget_regression_baseline.csv"
 VALIDATION_BASELINE = DATA_ROOT / "reference_metrics" / "fast_validation_regression_baseline.csv"
@@ -314,30 +317,3 @@ def test_generated_tables_match_committed_semantic_baselines(fast_integration_re
         )
 
 
-def test_notebook_11_runs_top_to_bottom_in_fast_mode_without_external_data(tmp_path, monkeypatch):
-    monkeypatch.chdir(ROOT)
-    output_dir = tmp_path / "figures"
-    output_dir.mkdir()
-    shutil.copy2(
-        ROOT / "figures" / "detector_level_SCAO" / "public_data_informed_error_budget.csv",
-        output_dir / "public_data_informed_error_budget.csv",
-    )
-    monkeypatch.setenv("AO_DEMO_OUTPUT_DIR", str(output_dir))
-    monkeypatch.setenv("AO_DEMO_REFERENCE_METRICS", str(tmp_path / "reference_metrics" / "fast_reference_metrics.json"))
-    notebook = json.loads(NOTEBOOK_11.read_text(encoding="utf-8"))
-    namespace = {"__name__": "__main__"}
-
-    for cell in notebook["cells"]:
-        if cell.get("cell_type") != "code":
-            continue
-        source = "".join(cell.get("source", ""))
-        if source.strip():
-            exec(compile(source, str(NOTEBOOK_11), "exec"), namespace)
-
-    reference_path = tmp_path / "reference_metrics" / "fast_reference_metrics.json"
-    assert reference_path.exists()
-    payload = json.loads(reference_path.read_text(encoding="utf-8"))
-    assert payload["scenario_count"] == 8
-    assert payload["validation_pass_count"] == payload["validation_check_count"]
-    assert namespace["public_rows"]
-    assert namespace["public_csv"].parent == output_dir

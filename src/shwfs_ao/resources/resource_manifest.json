@@ -76,7 +76,7 @@
     },
     {
       "logical_name": "reference_metrics/refactor_contract_manifest.json",
-      "sha256": "3a8821094a2b2705a21962d39d76a2a969400fb42df100daf1437c3fec2fa798"
+      "sha256": "9f476e20e285515eb28a6ed9b13323e039caa170b18c2ab39657bffbad4a3812"
     },
     {
       "logical_name": "samples/eso_asm_snapshot_sample.json",
@@ -128,19 +128,19 @@
     },
     {
       "logical_name": "synthetic_presets/fast_2m_detector.v1.json",
-      "sha256": "1a315f249b2db275a729e76d2878db2faaf69c5e65326ccecc5efaa4721db194"
+      "sha256": "d2d93607afa6f0f21e5c3fde34c78324f8e443630825bdca7b39fe128288b961"
     },
     {
       "logical_name": "synthetic_presets/high_order_10m_geometric.v1.json",
-      "sha256": "7eb17e3503153c1717b687c1b539ab3a522c640fa41355d76bc1854b5b2c4fdc"
+      "sha256": "c736d06195f2c293ddb8f1b06c95716181a8e06898e8b2b9da2f51d5655a239c"
     },
     {
       "logical_name": "synthetic_presets/portfolio_2m_detector.v1.json",
-      "sha256": "67f402ec4b83430b11022b46bf2c6f0224e8513bb921ddac03174cf13ceb7bb0"
+      "sha256": "63deef9e2721ce02217ff0452b7803c4aab46324b69241cfb0617637cea25297"
     },
     {
       "logical_name": "synthetic_presets/research_2m_detector.v1.json",
-      "sha256": "ddd56a98001fed38fbbc4e948e6b254de0c88fc47403427a8cf758c9b642eac5"
+      "sha256": "ced584acd4507165d204d2d35363cd741664481d06dc1596c65c2dfd9d569508"
     }
   ]
 }
