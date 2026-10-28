@@ -67,7 +67,15 @@ timing and ``child_process_peak_rss_bytes``, the child interpreter's own
 peak resident set since its exec (Linux ``VmHWM``: its start-up, imports,
 set-up and the run; not the parent, not a process group, not the function
 alone, not a capacity budget; null where it cannot be measured).  Without the
-option nothing changes; other commands refuse it.
+option nothing changes; other commands refuse it.  DIR must not exist (missing
+parents are created); a relative DIR is resolved against the working directory
+of the invocation before any job starts, and every job is given absolute
+paths.  The options are checked before anything is created, and a gated
+command still needs its ``--enabled-by-user`` note, for example::
+
+    python scripts/run_detector_level_evidence.py --output-dir outputs/g4-det08 \\
+        --fresh-process-dir outputs/g4-det08/jobs --fresh-process-timeout-s 3600 \\
+        --fresh-process-budget-mib 4096 --enabled-by-user "DATE: WORDING" det08
 
 Existing records are never replaced silently (review R6).  A command whose
 record exists stops unless one of the global options says what to do:
@@ -2007,6 +2015,28 @@ def _json_default(value: Any) -> Any:
     raise TypeError(f"{type(value).__name__} is not JSON serializable")
 
 
+def _caller_path(path: Any) -> Path:
+    """``path`` as an absolute, normalized location against this process's working directory.
+
+    A relative location is the caller's: it is fixed here, before a child starts in its own working directory, so
+    every path the parent records and the child is given names the same place.  Symbolic links are kept as given.
+    """
+
+    return Path(os.path.abspath(os.fspath(path)))
+
+
+def _check_fresh_process_options(target: Any, timeout_s: Any, budget_bytes: Any) -> None:
+    """Refuse an unusable job description before any directory is created or process started."""
+
+    module, colon, function = target.partition(":") if isinstance(target, str) else ("", "", "")
+    if not (colon and module and function and ":" not in function):
+        raise FreshProcessError(f"target {target!r} is not 'package.module:function'; nothing ran.")
+    if isinstance(timeout_s, bool) or not isinstance(timeout_s, (int, float)) or not math.isfinite(timeout_s) or timeout_s <= 0:
+        raise FreshProcessError(f"timeout_s {timeout_s!r} is not a positive finite number of seconds; nothing ran.")
+    if isinstance(budget_bytes, bool) or not isinstance(budget_bytes, int) or budget_bytes <= 0:
+        raise FreshProcessError(f"budget_bytes {budget_bytes!r} is not a positive integer; nothing ran.")
+
+
 def _fresh_process_status(supervised: Any, child: dict[str, Any] | None, has_result: bool) -> tuple[str, str]:
     if supervised.status == "COMPLETED":
         if child is not None and child.get("outcome") == "returned" and has_result:
@@ -2039,7 +2069,10 @@ def run_in_fresh_process(
     command is an argument list (no shell).  The child imports the ``shwfs_ao`` this process imported (its
     PYTHONPATH is that import directory, as the G1 fix does for the slow self-check) and inherits this
     environment with run_supervised's native thread limits, AO_RESOURCE_GUARD included as set.  ``job_dir``
-    must not exist.  The envelope, also written to ``job_dir/envelope.json``, records the outcome, the
+    must not exist (missing parents are created); a relative ``job_dir`` or import path is the caller's, resolved
+    against this process's working directory before the child starts, and every path the child is given is
+    absolute.  Options are checked before anything is created.  The envelope, also written to
+    ``job_dir/envelope.json``, records the outcome (``launch_failed`` when no child could be started), the
     identities, the timing and the child's own peak RSS; it never substitutes a value for a missing one.
     """
 
@@ -2048,12 +2081,16 @@ def run_in_fresh_process(
     import shwfs_ao
     from shwfs_ao.runtime.resource_guard import resource_guard_enabled, run_supervised
 
-    job_dir = Path(job_dir)
+    _check_fresh_process_options(target, timeout_s, budget_bytes)
+    requested = os.fspath(job_dir)
+    job_dir = _caller_path(job_dir)
+    paths = [str(_caller_path(path)) for path in import_paths]
+    payload = pickle.dumps((tuple(args), dict(kwargs)), protocol=pickle.HIGHEST_PROTOCOL)  # before anything is created
+    job_dir.parent.mkdir(parents=True, exist_ok=True)
     try:
         job_dir.mkdir()
     except FileExistsError:
         raise FreshProcessError(f"{job_dir} exists: a fresh-process job never reuses an output directory; nothing ran.") from None
-    payload = pickle.dumps((tuple(args), dict(kwargs)), protocol=pickle.HIGHEST_PROTOCOL)
     (job_dir / "payload.pickle").write_bytes(payload)
     parent = _process_identity()
     import_root = str(Path(shwfs_ao.__file__).resolve().parents[1])
@@ -2061,7 +2098,10 @@ def run_in_fresh_process(
         "schema": FRESH_PROCESS_SCHEMA,
         "label": label,
         "target": target,
-        "import_paths": [str(path) for path in import_paths],
+        "job_dir": str(job_dir),
+        "job_dir_requested": requested,
+        "import_paths": paths,
+        "import_paths_requested": [os.fspath(path) for path in import_paths],
         "payload": {"file": "payload.pickle", "bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()},
         "parent": parent,
     }
@@ -2071,32 +2111,44 @@ def run_in_fresh_process(
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
     argv = [sys.executable, str(Path(__file__).resolve()), FRESH_PROCESS_CHILD_FLAG, str(job_dir / "job.json")]
     started = time.time()
-    supervised = run_supervised(argv, budget_bytes=budget_bytes, timeout_s=timeout_s, env=environment, cwd=job_dir, log_path=job_dir / "output.log")
+    try:
+        supervised = run_supervised(argv, budget_bytes=budget_bytes, timeout_s=timeout_s, env=environment, cwd=job_dir, log_path=job_dir / "output.log")
+    except OSError as exc:  # the child could not be started (missing interpreter, unusable working directory, ...)
+        supervised, launch_error = None, f"{type(exc).__name__}: {exc}"
+    else:
+        launch_error = None
     try:
         child = json.loads((job_dir / "child.json").read_text())
     except (OSError, ValueError):
         child = None
     result_path = job_dir / "result.json"
-    status, reason = _fresh_process_status(supervised, child, result_path.is_file())
+    if supervised is None:
+        status, reason = "launch_failed", f"the child could not be started ({launch_error})"
+    else:
+        status, reason = _fresh_process_status(supervised, child, result_path.is_file())
     peak = child.get("vm_hwm_bytes") if child is not None else None
     available = isinstance(peak, int) and not isinstance(peak, bool) and peak > 0
     if available:
         missing = None
+    elif status == "launch_failed":
+        missing = "no child was started; no measurement exists"
     elif child is None and status in ("timed_out", "resource_limited", "interrupted"):
         missing = "the child was stopped before it wrote its report; no measurement exists"
     elif child is None:
         missing = "the child ended without writing its report; no measurement exists"
     else:
         missing = f"no VmHWM on this platform ({child.get('platform')}); ru_maxrss alone cannot exclude the image the child was spawned from"
-    supervisor = supervised.to_record()
+    supervisor = supervised.to_record() if supervised is not None else None
     envelope = {
         "schema": FRESH_PROCESS_SCHEMA,
         "mode": "fresh_process",
         "label": label,
         "target": target,
+        "job_dir": str(job_dir),
+        "job_dir_requested": requested,
         "status": status,
         "status_reason": reason,
-        "returncode": supervised.returncode,
+        "returncode": supervised.returncode if supervised is not None else None,
         "child_process_peak_rss_bytes": peak if available else None,
         "child_process_peak_rss": {
             **FRESH_PROCESS_PEAK_RSS,
@@ -2106,7 +2158,7 @@ def run_in_fresh_process(
         },
         "timing": {
             "started_unix_s": started,
-            "supervised_wall_s": supervised.wall_s,
+            "supervised_wall_s": supervised.wall_s if supervised is not None else None,
             "child_started_unix_s": child.get("started_unix_s") if child is not None else None,
             "child_finished_unix_s": child.get("finished_unix_s") if child is not None else None,
         },
@@ -2117,7 +2169,7 @@ def run_in_fresh_process(
             "PYTHONPATH": import_root,
             "AO_RESOURCE_GUARD": environment.get("AO_RESOURCE_GUARD"),
             "memory_enforcement_enabled": resource_guard_enabled(),
-            **supervisor["environment_thread_limits"],
+            **(supervisor["environment_thread_limits"] if supervisor is not None else {}),
         },
         "supervisor": supervisor,
         "supervisor_note": (
@@ -2144,17 +2196,21 @@ def fresh_process_runner(
 ) -> Any:
     """A run function with ``science_run``'s signature that runs every call in a fresh interpreter (G4, opt-in).
 
-    ``directory`` must not exist; it is created for the first call and holds one job directory per call.
-    The returned result is the job's own (science_run's fields unchanged) plus ``execution_envelope``.  A job
-    that raised re-raises its exception here, so a configuration the system refuses is still recorded as
-    refused; any other unsuccessful job raises :class:`FreshProcessError` carrying its envelope.
+    ``directory`` must not exist; it is created for the first call and holds one job directory per call.  A
+    relative ``directory`` or import path is resolved here, against the caller's working directory at
+    construction.  The returned result is the job's own (science_run's fields unchanged) plus
+    ``execution_envelope``.  A job that raised re-raises its exception here, so a configuration the system
+    refuses is still recorded as refused; any other unsuccessful job raises :class:`FreshProcessError`
+    carrying its envelope.
     """
 
-    directory = Path(directory)
-    if directory.exists():
-        raise FreshProcessError(f"{directory} exists: --fresh-process-dir must name a new directory; nothing ran.")
     target = FRESH_PROCESS_TARGET if target is None else target
-    paths = FRESH_PROCESS_IMPORT_PATHS if import_paths is None else tuple(import_paths)
+    _check_fresh_process_options(target, timeout_s, budget_bytes)
+    requested = os.fspath(directory)
+    directory = _caller_path(directory)
+    if os.path.lexists(directory):
+        raise FreshProcessError(f"{directory} exists: --fresh-process-dir must name a new directory; nothing ran.")
+    paths = tuple(str(_caller_path(path)) for path in (FRESH_PROCESS_IMPORT_PATHS if import_paths is None else import_paths))
     calls: list[Any] = []
 
     def run(config: Any, *, root_seed: int | None = None, n_steps: int | None = None, burn_in_frames: int, execution: Any = None, realization_index: int = 0) -> dict[str, Any]:
@@ -2181,6 +2237,7 @@ def fresh_process_runner(
 
     run.target = target
     run.directory = directory
+    run.directory_requested = requested
     return run
 
 
@@ -2210,6 +2267,7 @@ def _fresh_process_child(job_path: Path) -> int:
 
     from shwfs_ao.runtime.resource_guard import THREAD_ENV_VARS
 
+    job_path = Path(os.path.abspath(job_path))  # the parent passes it absolute; a hand-run child resolves it here
     job_dir = job_path.parent
     report: dict[str, Any] = {"pid": os.getpid(), "ppid": os.getppid(), "started_unix_s": time.time(), "outcome": None}
     returncode = 1
@@ -2266,7 +2324,8 @@ def main(argv: list[str] | None = None) -> int:
         "--fresh-process-dir",
         type=Path,
         help="opt-in (G4): run each science_run of a gated series in a fresh interpreter, one job directory per run "
-        "under this new directory, and record each child's own peak RSS in the run's execution_envelope",
+        "under this new directory (a relative path is resolved against the working directory of this invocation), "
+        "and record each child's own peak RSS in the run's execution_envelope",
     )
     parser.add_argument("--fresh-process-timeout-s", type=float, help="wall-clock limit of each fresh-process job (with --fresh-process-dir)")
     parser.add_argument(
@@ -2313,10 +2372,14 @@ def main(argv: list[str] | None = None) -> int:
         if any(value is not None for value in fresh):
             parser.error("--fresh-process-timeout-s and --fresh-process-budget-mib apply only with --fresh-process-dir")
     else:
-        if any(value is None or not math.isfinite(value) or value <= 0 for value in fresh):
+        if any(value is None or not math.isfinite(value) or value <= 0 for value in fresh) or int(arguments.fresh_process_budget_mib * 2**20) < 1:
             parser.error("--fresh-process-dir needs a positive --fresh-process-timeout-s and --fresh-process-budget-mib")
         if arguments.command not in FRESH_PROCESS_COMMANDS:
             parser.error(f"{arguments.command} has no fresh-process mode; --fresh-process-dir applies to {', '.join(sorted(FRESH_PROCESS_COMMANDS))}")
+        # Fixed against this invocation's working directory; the jobs run in their own.
+        arguments.fresh_process_dir = _caller_path(arguments.fresh_process_dir)
+        if os.path.lexists(arguments.fresh_process_dir):
+            parser.error(f"--fresh-process-dir {arguments.fresh_process_dir} exists; it must name a new directory")
     OPTIONS.fresh_process_dir = arguments.fresh_process_dir
     OPTIONS.fresh_process_timeout_s = arguments.fresh_process_timeout_s
     OPTIONS.fresh_process_budget_bytes = None if arguments.fresh_process_budget_mib is None else int(arguments.fresh_process_budget_mib * 2**20)
