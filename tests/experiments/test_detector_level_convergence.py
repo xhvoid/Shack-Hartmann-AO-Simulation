@@ -601,7 +601,11 @@ def test_the_real_ci_self_check_runs_in_fresh_child_processes_on_the_exposure_ax
     """Four real runs (baseline, midpoint n = 1, 2, left n = 2) in fresh children, then an exact no-op."""
 
     monkeypatch.undo()
-    environment = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
+    # The children import the code this process imported, so that the study has one producer: src/ in a source
+    # tree, site-packages where the scheduled lane tests the installed wheel.
+    import shwfs_ao
+
+    environment = {**os.environ, "PYTHONPATH": str(Path(shwfs_ao.__file__).resolve().parents[1])}
     monkeypatch.setattr(os, "environ", environment)
     assert study.main(["--scale", "ci", "--output-dir", str(tmp_path), "--axes", "exposure"]) == 0
     record = json.loads((tmp_path / "convergence_ci.json").read_text())
