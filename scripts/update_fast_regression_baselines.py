@@ -13,6 +13,7 @@ import csv
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import shutil
@@ -45,6 +46,14 @@ CANDIDATE_FILES = (
 DIFF_JSON = "fast_baseline_diff.json"
 DIFF_MARKDOWN = "fast_baseline_diff.md"
 ACCEPTANCE_RECORD_NAME = "fast_baseline_acceptance.json"
+
+# Reference-JSON metrics and the reference-scenario CSV columns they round.
+_REFERENCE_SCENARIO_BINDINGS = {
+    "open_rms_nm": "open_rms_nm",
+    "closed_rms_nm": "closed_rms_nm",
+    "h_strehl": "strehl_H",
+    "valid_centroid_fraction": "valid_centroid_frac",
+}
 
 
 def main() -> None:
@@ -265,8 +274,10 @@ def _validate_candidate(candidate_dir: Path) -> None:
     non-negative finite values, and internal scenario/validation-count
     consistency; the strict table readers enforce the frozen CSV headers.
     On top of that, the JSON and CSV members of one candidate must agree on
-    the scenario inventory and the distinct validation checks, so a
-    mismatched mixture of files can never be accepted as one baseline.
+    the scenario inventory, the reference-scenario metrics the JSON rounds
+    from its CSV row, the distinct validation checks, and how many of them
+    passed, so a mismatched mixture of files can never be accepted as one
+    baseline.
     """
 
     for name in CANDIDATE_FILES:
@@ -302,6 +313,25 @@ def _validate_candidate(candidate_dir: Path) -> None:
         )
     if payload["reference_scenario"] not in set(scenario_names):
         raise SystemExit("Candidate reference_scenario is missing from the scenario table.")
+    reference_row = scenario_rows[scenario_names.index(payload["reference_scenario"])]
+    for json_field, csv_field in _REFERENCE_SCENARIO_BINDINGS.items():
+        cell = reference_row[csv_field]
+        try:
+            value = float(cell)
+        except ValueError as exc:
+            raise SystemExit(
+                f"Candidate reference scenario has a non-numeric {csv_field}={cell!r}."
+            ) from exc
+        if not math.isfinite(value):
+            raise SystemExit(
+                f"Candidate reference scenario has a non-finite {csv_field}={cell!r}."
+            )
+        if float(payload[json_field]) != round(value, 6):
+            raise SystemExit(
+                f"Candidate reference JSON {json_field}={payload[json_field]} disagrees "
+                f"with reference scenario {payload['reference_scenario']!r} "
+                f"{csv_field}={cell} (serialized as {round(value, 6)})."
+            )
 
     check_names = [row["check_name"] for row in validation_rows]
     if any(not name.strip() for name in check_names):
@@ -310,6 +340,27 @@ def _validate_candidate(candidate_dir: Path) -> None:
         raise SystemExit(
             "Candidate validation table and reference JSON disagree on the "
             "distinct validation-check inventory."
+        )
+    # A scan check writes one row per sample, all carrying the check's verdict.
+    passed_by_check: dict[str, bool] = {}
+    for row in validation_rows:
+        passed_text = row["passed"].strip().lower()
+        if passed_text not in {"true", "false", "1", "0"}:
+            raise SystemExit(
+                f"Candidate validation check {row['check_name']!r} has invalid "
+                f"passed={row['passed']!r}; expected a boolean."
+            )
+        passed = passed_text in {"true", "1"}
+        if passed_by_check.setdefault(row["check_name"], passed) != passed:
+            raise SystemExit(
+                f"Candidate validation check {row['check_name']!r} has rows with "
+                "contradictory passed values."
+            )
+    pass_count = sum(passed_by_check.values())
+    if pass_count != int(payload["validation_pass_count"]):
+        raise SystemExit(
+            f"Candidate validation table has {pass_count} passing checks but the "
+            f"reference JSON records {payload['validation_pass_count']}."
         )
 
 
