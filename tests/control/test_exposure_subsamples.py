@@ -26,12 +26,12 @@ def _count_calls(monkeypatch, atmosphere) -> list[float]:
     return times
 
 
-def _loop(system, config, *, atmosphere=None, **keywords):
+def _loop(system, config, *, atmosphere=None, wfs=None, **keywords):
     return component_loop(
         scao._loop_config(config),
         random_streams=system.random_streams,
         atmosphere=system.atmosphere if atmosphere is None else atmosphere,
-        wfs=system.wfs,
+        wfs=system.wfs if wfs is None else wfs,
         dm=system.dm,
         interaction_matrix=system.interaction_matrix,
         reconstructor=system.reconstructor,
@@ -111,3 +111,85 @@ def test_subsamples_need_an_exposure_and_a_capable_wfs() -> None:
         _loop(system, config, exposure_subsamples=2)
     with pytest.raises(ControlLoopError, match="frame period"):
         _loop(system, config, exposure_subsamples=2, exposure_s=2.0e-3)
+
+
+# -- GPT pre-refactor audit F-02 (2026-10-18): the effective quadrature is identity --
+
+# The single-sample identity of this 3-frame system before the change; it
+# must stay exactly the same.
+SINGLE_SAMPLE_HASH = "02cc0257e875ed44588f24bb93211490294856ecafaa128cb882d9a6b06de7e1"
+
+
+def _DeclaredExposureWfs(wfs, configured):
+    """A shallow copy of the system's WFS that reports another configured count."""
+
+    import copy
+
+    class Declared(type(wfs)):  # type: ignore[misc, valid-type]
+        @property
+        def exposure_subsamples(self):
+            return configured
+
+    clone = copy.copy(wfs)
+    clone.__class__ = Declared
+    return clone
+
+
+def test_the_effective_quadrature_is_part_of_the_run_identity() -> None:
+    import json
+
+    config = _config(n_steps=3)
+    system = scao.build_scao_system(config)
+    single = [_loop(system, config), _loop(system, config, exposure_subsamples=1, exposure_s=1.0e-3),
+              _loop(system, config, exposure_subsamples=1, exposure_s=5.0e-4)]
+    # exposure_s has no effect on one sample, so it changes nothing.
+    assert {history.config_hash for history in single} == {SINGLE_SAMPLE_HASH}
+    assert all("wfs_exposure" not in history.metadata for history in single)
+    multi = {
+        (2, 1.0e-3): _loop(system, config, exposure_subsamples=2, exposure_s=1.0e-3),
+        (2, 5.0e-4): _loop(system, config, exposure_subsamples=2, exposure_s=5.0e-4),
+        (4, 1.0e-3): _loop(system, config, exposure_subsamples=4, exposure_s=1.0e-3),
+    }
+    hashes = {key: history.config_hash for key, history in multi.items()}
+    assert len(set(hashes.values()) | {SINGLE_SAMPLE_HASH}) == 4
+    assert _loop(system, config, exposure_subsamples=2, exposure_s=1.0e-3).config_hash == hashes[(2, 1.0e-3)]
+    for (count, duration), history in multi.items():
+        record = dict(history.metadata["wfs_exposure"])
+        assert record == {
+            "scheme": "left_point_uniform_held_dm.v1", "subsamples": count, "duration_s": duration,
+            "source": "run_closed_loop arguments", "wfs_configured_subsamples": 1,
+        }
+        assert json.loads(json.dumps(record)) == record  # survives serialization
+
+
+def test_an_override_of_the_configured_exposure_is_recorded() -> None:
+    config = _config(n_steps=3)
+    system = scao.build_scao_system(config)
+    # A WFS configured for two samples, run on one: the effective single
+    # sample keeps the single-sample identity, and the metadata says so.
+    declared = _loop(system, config, atmosphere=None, wfs=_DeclaredExposureWfs(system.wfs, 2))
+    assert declared.config_hash == SINGLE_SAMPLE_HASH
+    assert dict(declared.metadata["wfs_exposure"]) == {
+        "scheme": "single_sample_at_frame_time.v1", "subsamples": 1, "duration_s": None,
+        "source": "run_closed_loop arguments", "wfs_configured_subsamples": 2,
+    }
+    # Any integer type is a count (recorded as an int); other types are not.
+    numpy_count = _loop(system, config, atmosphere=None, wfs=_DeclaredExposureWfs(system.wfs, np.int64(2)))
+    assert numpy_count.config_hash == SINGLE_SAMPLE_HASH
+    assert dict(numpy_count.metadata["wfs_exposure"]) == dict(declared.metadata["wfs_exposure"])
+    assert type(numpy_count.metadata["wfs_exposure"]["wfs_configured_subsamples"]) is int
+    for invalid in (0, np.int64(0), True, np.True_, 2.0):
+        with pytest.raises(ControlLoopError, match="positive integer"):
+            _loop(system, config, wfs=_DeclaredExposureWfs(system.wfs, invalid))
+
+
+def test_a_profile_quadrature_reaches_the_run_identity() -> None:
+    from shwfs_ao.experiments.detector_level import with_physics
+
+    config = with_physics(_config(n_steps=3), exposure_subsamples=2)
+    history = scao.run_closed_loop(config)
+    assert dict(history.metadata["wfs_exposure"]) == {
+        "scheme": "left_point_uniform_held_dm.v1", "subsamples": 2,
+        "duration_s": float(config.detector.exposure_s),
+        "source": "run_closed_loop arguments", "wfs_configured_subsamples": 2,
+    }

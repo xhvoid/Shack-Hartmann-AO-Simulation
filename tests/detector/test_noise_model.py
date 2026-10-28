@@ -489,3 +489,162 @@ def test_raw_readout_temporal_scatter_with_a_gain_map_fast() -> None:
     measured = temporal_trials(fix, 1000)["centroids_px"].std(axis=0, ddof=1)
     ratio = measured / quality.centroid_sigma_xy_px[0]
     assert np.all(np.abs(ratio - 1.0) < 0.15), ratio
+
+
+# -- GPT pre-refactor audit F-01 (2026-10-18): per-pixel quantization support --
+#
+# The white term step**2 / 12 is the model's quantization variance.  Its
+# declared domain is read noise of at least half an ADC step; the gate must
+# apply it to each pixel that enters the centroid, with that pixel's own read
+# noise (the CMOS read-noise map) and step (the gain map), and to no other.
+
+QUIET = 0.1  # read-noise multiplier: 0.6 e- x 0.1 = 0.06 ADU at 1 e-/ADU
+WINDOW_PIXEL = (2, 4)  # inside the 5 x 5 window of a 7 x 7 block
+GUARD_PIXEL = (0, 3)  # in the one-pixel guard ring, outside the window
+
+
+def _rounded_gaussian_variance(sigma: float, offset: float) -> float:
+    """Exact variance of round(offset + N(0, sigma**2)) from bin probabilities."""
+
+    codes = np.arange(-30, 31, dtype=float)
+    cdf = np.vectorize(lambda z: 0.5 * (1.0 + math.erf(z / math.sqrt(2.0))))
+    probability = cdf((codes + 0.5 - offset) / sigma) - cdf((codes - 0.5 - offset) / sigma)
+    mean = float(np.sum(codes * probability))
+    return float(np.sum(codes**2 * probability)) - mean**2
+
+
+def test_white_quantization_holds_from_half_a_step_of_read_noise() -> None:
+    # Independent of the covariance code: an exact quantizer of a Gaussian.
+    # The white model sigma**2 + 1/12 is off by at most 2.4 % at half a step
+    # (worst offset of the expected value), 0.3 % at 0.6 ADU, and fails
+    # quickly below the cut: 13 % at 0.4 ADU, 188 % at 0.06 ADU.
+    offsets = np.linspace(0.0, 0.5, 51)
+
+    def worst(sigma: float) -> float:
+        return max(abs(_rounded_gaussian_variance(sigma, o) / (sigma**2 + 1.0 / 12.0) - 1.0) for o in offsets)
+
+    assert worst(0.5) < 0.025
+    assert all(worst(sigma) < 0.003 for sigma in (0.6, 0.75, 1.0, 2.0))
+    assert worst(0.4) > 0.1
+    assert worst(0.06) > 1.0
+
+
+def _support_case(
+    read_multiplier: dict[tuple[int, int], float] | None = None,
+    gain_multiplier: dict[tuple[int, int], float] | None = None,
+    *,
+    read_noise_e: float = 0.6,
+    adc_bits: int | None = 16,
+    processing: PixelProcessingConfig | None = None,
+    bad: tuple[tuple[int, int], ...] = (),
+):
+    from shwfs_ao.detector.noise_model import detector_covariance_quality
+
+    cam = camera(
+        model="cmos", read_noise_e=read_noise_e, conversion_gain_e_per_adu=1.0, adc_bits=adc_bits,
+        prnu_rms=0.0, dark_e_per_s=0.0, offset_map_rms_adu=0.0,
+    )
+    processing = PixelProcessingConfig(mode="raw_readout") if processing is None else processing
+    fix = NoiseFixture(
+        camera=cam, processing=processing, source_e=gaussian_spot(7, 3000.0, 1.2),
+        window_px=5, guard_px=1, sky_e_per_pixel=0.0,
+    )
+    products = fixture_products(fix)
+    if bad:
+        mask = np.zeros((1, 7, 7), dtype=bool)
+        for pixel in bad:
+            mask[(0, *pixel)] = True
+        products = replace(products, bad=mask)
+
+    def as_map(values: dict[tuple[int, int], float] | None) -> np.ndarray | None:
+        if values is None:
+            return None
+        array = np.ones((1, 7, 7))
+        for pixel, value in values.items():
+            array[(0, *pixel)] = value
+        return array
+
+    maps = {
+        "prnu": None, "dead": None, "hot": None, "offset_adu": None,
+        "gain_multiplier": as_map(gain_multiplier), "read_noise_multiplier": as_map(read_multiplier),
+    }
+    zero = np.zeros((1, 7, 7))
+    return detector_covariance_quality(
+        expected_source_e=fix.source_e[None], expected_background_e=zero, camera=cam, maps=maps,
+        products=products, processing=processing, centroid_config=CentroidConfig(), window=fix.window(),
+        sky_e_per_pixel=0.0, dark_e_map=zero, optical_response=np.ones((1, 7, 7)),
+    )
+
+
+def test_uniform_maps_keep_the_scalar_half_step_rule() -> None:
+    assert _support_case(read_noise_e=0.51).supported[0]
+    assert not _support_case(read_noise_e=0.49).supported[0]
+    assert _support_case(read_noise_e=0.6).supported[0]
+
+
+def test_a_contributing_pixel_below_half_a_step_unsupports_the_block() -> None:
+    from shwfs_ao.detector.validity import UNDEFINED_CENTROID_SIGMA_PX
+
+    quality = _support_case({WINDOW_PIXEL: QUIET})
+    assert not quality.supported[0]
+    # The consequence: the physical WFS validity gate (max_centroid_sigma_px)
+    # rejects a block whose sigma is undefined.
+    assert quality.centroid_sigma_px[0] == UNDEFINED_CENTROID_SIGMA_PX
+
+
+def test_the_audit_production_map_is_no_longer_supported() -> None:
+    # GPT F-01's case: seed 718, one 7 x 7 block, 0.6 e-, 1 e-/ADU, a
+    # log-normal read-noise map of sigma 1 from the production generator; 20
+    # pixels fall below 0.5 ADU (minimum 0.0716) and the block was supported.
+    from shwfs_ao.core.random import NamedRandomStreams
+    from shwfs_ao.detector.camera_maps import CameraMaps
+    from shwfs_ao.detector.layout import DetectorLayout
+    from shwfs_ao.detector.noise_model import detector_covariance_quality
+
+    cam = camera(
+        model="cmos", quantum_efficiency=1.0, dark_e_per_s=0.0, prnu_rms=0.0, read_noise_e=0.6,
+        conversion_gain_e_per_adu=1.0, offset_map_rms_adu=0.0, cmos_read_noise_lognormal_sigma=1.0,
+    )
+    layout = DetectorLayout(scheme="isolated_lenslet_blocks.v1", lenslets_across=1, window_px=7)
+    maps = CameraMaps.create(cam, layout, ("lenslet-r0000-c0000",), random_streams=NamedRandomStreams(718))
+    arrays = maps.subset(np.arange(1))
+    read_adu = cam.read_noise_e * np.asarray(arrays["read_noise_multiplier"])
+    assert np.count_nonzero(read_adu < 0.5) == 20
+    zero = np.zeros((1, 7, 7))
+    for flux in (0.0, 1000.0):
+        source = zero.copy()
+        source[0, 3, 3] = flux
+        quality = detector_covariance_quality(
+            expected_source_e=source, expected_background_e=zero, camera=cam, maps=arrays, products=None,
+            processing=PixelProcessingConfig(mode="raw_readout"), centroid_config=CentroidConfig(),
+            window=layout.window_slice, sky_e_per_pixel=0.0, dark_e_map=zero, optical_response=np.ones_like(zero),
+        )
+        assert not quality.supported[0]
+
+
+def test_pixels_without_centroid_weight_are_not_tested() -> None:
+    # A quiet guard pixel is outside the centroid window.
+    assert _support_case({GUARD_PIXEL: QUIET}).supported[0]
+    # A quiet window pixel that is a zero-weight bad pixel carries no weight.
+    zero_weight = replace(ORACLE, bad_pixel_policy="zero_weight")
+    assert _support_case({WINDOW_PIXEL: QUIET}, processing=zero_weight, bad=(WINDOW_PIXEL,)).supported[0]
+    assert not _support_case({WINDOW_PIXEL: QUIET}, processing=zero_weight).supported[0]
+    # With 4-neighbour interpolation a bad pixel on the window edge borrows
+    # from its guard neighbour, which then enters the centroid.
+    interpolate = replace(ORACLE, bad_pixel_policy="interpolate_mean4")
+    edge_bad = (GUARD_PIXEL[0] + 1, GUARD_PIXEL[1])
+    assert not _support_case({GUARD_PIXEL: QUIET}, processing=interpolate, bad=(edge_bad,)).supported[0]
+    assert _support_case({GUARD_PIXEL: QUIET}, processing=zero_weight, bad=(edge_bad,)).supported[0]
+
+
+def test_the_gain_map_sets_each_pixel_s_step() -> None:
+    # 0.6 e- read noise on a 1.5 e-/ADU step is 0.4 ADU.  In the window that
+    # is coarse; in the guard it does not enter the centroid.  (The former
+    # gate used the largest gain multiplier anywhere and rejected both.)
+    assert not _support_case(gain_multiplier={WINDOW_PIXEL: 1.5}).supported[0]
+    assert _support_case(gain_multiplier={GUARD_PIXEL: 1.5}).supported[0]
+
+
+def test_without_an_adc_the_quantization_gate_does_not_apply() -> None:
+    assert _support_case({WINDOW_PIXEL: QUIET}, adc_bits=None).supported[0]
+    assert _support_case(read_noise_e=0.2, adc_bits=None).supported[0]

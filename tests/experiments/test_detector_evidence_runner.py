@@ -42,7 +42,12 @@ def isolated_runner(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(runner, "OPTIONS", runner.argparse.Namespace(output=None, overwrite=False, resume=False, enabled_by_user="test go-ahead", output_dir=None))
     monkeypatch.setattr(runner, "_STARTED", set())
     monkeypatch.setattr(runner, "code_identity", lambda: {"git_head": "test", "source_changes_sha256": "test"})
+    monkeypatch.setattr(runner, "producer_environment", lambda: dict(ENVIRONMENT_A))
     return tmp_path
+
+
+ENVIRONMENT_A = {"python": "3.x A", "numpy": "numpy A", "scipy": "scipy A", "machine": "arm64"}
+ENVIRONMENT_B = {**ENVIRONMENT_A, "numpy": "numpy B"}
 
 
 class Recorder:
@@ -337,3 +342,89 @@ def test_saved_evidence_records_keep_their_identities_and_summaries() -> None:
             assert record["summary"] == {label: summarize_runs(value) for label, value in groups.items()}, path.name
             checked_summaries += 1
     assert checked_hashes > 0 and checked_summaries > 0
+
+
+# -- GPT pre-refactor audit F-03 (2026-10-18): who produced each retained run --
+
+
+def _environment(monkeypatch: pytest.MonkeyPatch, environment: dict[str, str]) -> None:
+    monkeypatch.setattr(runner, "producer_environment", lambda: dict(environment))
+
+
+def test_a_resume_under_another_environment_is_refused(isolated_runner: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    runner._gated_series("series.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=Recorder())
+    before = (isolated_runner / "series.json").read_bytes()
+    start_fresh_invocation()
+    runner.OPTIONS.resume = True
+    _environment(monkeypatch, ENVIRONMENT_B)
+    idle = Recorder()
+    with pytest.raises(runner.EvidenceRecordExists, match="producing environment"):
+        runner._gated_series("series.json", "test", PLAN, n_steps=400, burn_in=100, execution=None, runner=idle)
+    assert idle.calls == []
+    assert (isolated_runner / "series.json").read_bytes() == before
+
+
+def test_each_run_names_the_environment_that_produced_it(isolated_runner: Path) -> None:
+    runner._gated_series("series.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=Recorder())
+    first = json.loads((isolated_runner / "series.json").read_text())["runs"][0]
+    start_fresh_invocation()
+    runner.OPTIONS.resume = True
+    runner._gated_series("series.json", "test", PLAN, n_steps=400, burn_in=100, execution=None, runner=Recorder())
+    record = json.loads((isolated_runner / "series.json").read_text())
+    assert record["series_protocol_version"] == 3
+    assert record["runs"][0] == first  # the retained row is kept as written
+    assert [run["protocol"]["environment"] for run in record["runs"]] == [ENVIRONMENT_A] * len(PLAN)
+
+
+def test_arms_must_share_the_producing_environment(isolated_runner: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    arm_x = [("x", CONFIG, 21)]
+    arm_y = [("y", CONFIG, 22)]
+    runner._gated_series("arms.json", "x", arm_x, n_steps=32, burn_in=0, execution=None, runner=Recorder())
+    before = (isolated_runner / "arms.json").read_bytes()
+    runner.OPTIONS.resume = True
+    _environment(monkeypatch, ENVIRONMENT_B)
+    for plan in (arm_y, arm_x):  # a disjoint arm, and the same arm with nothing left to run
+        start_fresh_invocation()
+        with pytest.raises(runner.EvidenceRecordExists, match="producing environment"):
+            runner._gated_series("arms.json", "arm", plan, n_steps=32, burn_in=0, execution=None, runner=Recorder())
+        assert (isolated_runner / "arms.json").read_bytes() == before
+    _environment(monkeypatch, ENVIRONMENT_A)
+    start_fresh_invocation()
+    appended = Recorder()
+    runner._gated_series("arms.json", "arm", arm_x + arm_y, n_steps=32, burn_in=0, execution=None, runner=appended)
+    assert appended.calls == [22]  # overlapping arms: only the new run executes
+
+
+def test_a_version_2_record_is_neither_continued_nor_reattributed(isolated_runner: Path) -> None:
+    runner._gated_series("legacy.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=Recorder())
+    path = isolated_runner / "legacy.json"
+    legacy = json.loads(path.read_text())
+    # The version-2 shape: runs carry no producing environment.
+    legacy["series_protocol_version"] = 2
+    for run in legacy["runs"]:
+        del run["protocol"]["environment"]
+        run["protocol"]["series_protocol_version"] = 2
+    path.write_text(json.dumps(legacy, indent=1) + "\n")
+    before = path.read_bytes()
+    runner.OPTIONS.resume = True
+    for plan in (PLAN, PLAN[:1]):  # with new runs, and with nothing left to run
+        start_fresh_invocation()
+        idle = Recorder()
+        with pytest.raises(runner.EvidenceRecordExists, match="do not name the environment"):
+            runner._gated_series("legacy.json", "test", plan, n_steps=400, burn_in=100, execution=None, runner=idle)
+        assert idle.calls == []
+        assert path.read_bytes() == before
+
+
+def test_appending_needs_a_known_code_identity(isolated_runner: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(runner, "code_identity", lambda: {"git_head": None, "source_changes_sha256": None})
+    runner._gated_series("series.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=Recorder())
+    before = (isolated_runner / "series.json").read_bytes()
+    runner.OPTIONS.resume = True
+    start_fresh_invocation()
+    with pytest.raises(runner.EvidenceRecordExists, match="code identity"):
+        runner._gated_series("series.json", "test", PLAN, n_steps=400, burn_in=100, execution=None, runner=Recorder())
+    assert (isolated_runner / "series.json").read_bytes() == before
+    start_fresh_invocation()
+    runner._gated_series("series.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=Recorder())
+    assert (isolated_runner / "series.json").read_bytes() == before  # nothing to add: verified, not written

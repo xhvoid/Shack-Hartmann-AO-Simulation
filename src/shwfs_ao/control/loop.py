@@ -61,6 +61,10 @@ __all__ = (
 
 
 _COMMAND_UNIT: Final = "m_opd_equivalent"
+# WFS exposure quadratures: n samples at t + j * T / n with the DM held, and
+# the default single sample at the frame time.
+_EXPOSURE_SCHEME: Final = "left_point_uniform_held_dm.v1"
+_SINGLE_SAMPLE_SCHEME: Final = "single_sample_at_frame_time.v1"
 
 
 class ControlLoopError(ValueError):
@@ -145,6 +149,17 @@ def run_closed_loop(
     atmosphere call per frame at ``t``, as always.  The frame's residual metrics
     always use the ``j = 0`` sample.
 
+    These arguments take precedence over any exposure the WFS was configured
+    with.  The effective quadrature is part of the run's identity: with
+    ``n > 1`` the history's ``config_hash`` and its metadata entry
+    ``wfs_exposure`` carry the count and the duration.  With ``n = 1``
+    ``exposure_s`` has no effect, so it changes neither; a single-sample run
+    keeps the identity and metadata it always had, except that ``wfs_exposure``
+    is recorded when the WFS declares a different configured count
+    (``exposure_subsamples``), so the override stays visible.  Before
+    2026-10-18 (GPT pre-refactor audit F-02) runs that differed only in these
+    arguments shared one ``config_hash``.
+
     ``recovery`` (opt-in, default ``None``) is a
     :class:`~shwfs_ao.control.recovery.ClosedLoopRecoveryPolicy`.  It may
     reconstruct a rejected frame from its usable rows, scale each used
@@ -194,6 +209,26 @@ def run_closed_loop(
             raise ControlLoopError(
                 "exposure sub-samples need a WFS that provides measure_exposure."
             )
+    configured_subsamples = getattr(wfs, "exposure_subsamples", None)
+    if configured_subsamples is not None:
+        # Any integer type (a NumPy integer too); recorded as an int.
+        if (
+            isinstance(configured_subsamples, bool)
+            or not isinstance(configured_subsamples, Integral)
+            or configured_subsamples < 1
+        ):
+            raise ControlLoopError("wfs.exposure_subsamples must be a positive integer.")
+        configured_subsamples = int(configured_subsamples)
+    # The quadrature the loop actually applies (GPT audit F-02).
+    effective_exposure: dict[str, Any] | None = (
+        None
+        if exposure_subsamples == 1
+        else {
+            "scheme": _EXPOSURE_SCHEME,
+            "subsamples": int(exposure_subsamples),
+            "duration_s": float(cast(float, exposure_s)),
+        }
+    )
     if recovery is not None:
         if not isinstance(recovery, ClosedLoopRecoveryPolicy):
             raise ControlLoopError("recovery must be a ClosedLoopRecoveryPolicy.")
@@ -499,6 +534,9 @@ def run_closed_loop(
             "residual_sign_convention": _RESIDUAL_SIGN_CONVENTION,
             "command_sign_convention": _COMMAND_SIGN_CONVENTION,
             "frame_sequence": "shwfs_ao.control.run_closed_loop.v1",
+            # Only a multi-sample quadrature enters: single-sample identities
+            # are unchanged.
+            **({} if effective_exposure is None else {"wfs_exposure": effective_exposure}),
         },
     )
     metadata: dict[str, Any] = {
@@ -539,6 +577,16 @@ def run_closed_loop(
         metadata["recovery"] = {
             "config_hash": recovery.config_hash,
             **recovery.statistics,
+        }
+    if effective_exposure is not None or (
+        configured_subsamples is not None and configured_subsamples != exposure_subsamples
+    ):
+        metadata["wfs_exposure"] = {
+            "scheme": _EXPOSURE_SCHEME if effective_exposure is not None else _SINGLE_SAMPLE_SCHEME,
+            "subsamples": int(exposure_subsamples),
+            "duration_s": None if effective_exposure is None else effective_exposure["duration_s"],
+            "source": "run_closed_loop arguments",
+            "wfs_configured_subsamples": configured_subsamples,
         }
     history = LoopHistory(
         time_s=time_s,

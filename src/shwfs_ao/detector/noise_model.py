@@ -49,14 +49,24 @@ The model is first order.  It flags (``supported = False``) and reports
 :data:`~shwfs_ao.detector.validity.UNDEFINED_CENTROID_SIGMA_PX` outside its
 declared domain: a thresholded or minimum-subtracted estimator, negative
 clipping, expected saturation (pixel, register or digital), a declared
-non-linearity, coarse quantization (read noise below half an ADC step), an
+non-linearity, coarse quantization (a pixel that enters the centroid with read
+noise, after the camera's read-noise map, below half of its own ADC step,
+after the gain map), an
 ADC code within :data:`ADC_HEADROOM_SIGMA` noise sigmas of either ADC limit
 (bias and offset map included), or a total-flux signal-to-noise ratio below
 :data:`MIN_DENOMINATOR_SNR`.
 
 Version 2 (2026-10-16 review, R2 and R4) replaces version 1, which formed the
 conditional mean from the ideal background and checked only the upper ADC
-limit without offsets.
+limit without offsets.  A 2026-10-18 correction (GPT pre-refactor audit F-01)
+applies the half-step quantization condition to every pixel that enters the
+centroid, with its own read noise and step, instead of to the scalar read
+noise and the largest gain multiplier of the whole batch (which then rejected
+every block).  It changes which blocks are supported, never the propagated
+covariance; a block that becomes unsupported reports the undefined sigma, so
+its lenslet fails the validity gate.  No packaged or recorded configuration
+changes (their CMOS maps keep at least 0.65 ADU of read noise on every
+pixel), so the identifier is unchanged.
 """
 
 from __future__ import annotations
@@ -94,7 +104,7 @@ UNCERTAINTY_MODEL_ID = "detector_covariance_v2"
 # optimistic sigma.
 MIN_DENOMINATOR_SNR = 7.0
 # White quantization noise q^2/12 needs a signal dithered by at least about
-# half an ADC step of read noise.
+# half an ADC step of read noise, on every pixel that enters the centroid.
 MIN_READ_NOISE_ADU_FOR_WHITE_QUANTIZATION = 0.5
 # Expected signal above this fraction of a capacity is treated as saturating.
 SATURATION_MARGIN = 0.9
@@ -419,12 +429,21 @@ def detector_covariance_quality(
         supported[:] = False
     if processing.clip_negative or camera.nonlinearity_coefficients:
         supported[:] = False
+    read_e = float(camera.read_noise_e) * (
+        np.ones(source.shape)
+        if maps.get("read_noise_multiplier") is None
+        else np.asarray(maps["read_noise_multiplier"], dtype=float)
+    )
     if camera.adc_bits is not None:
-        read_adu = float(camera.read_noise_e) / (
-            float(camera.conversion_gain_e_per_adu) * np.max(relative)
-        )
-        if read_adu < MIN_READ_NOISE_ADU_FOR_WHITE_QUANTIZATION:
-            supported[:] = False
+        # The white term step**2 / 12 needs each pixel that enters the
+        # centroid (a non-zero x, y or total sensitivity after the bad-pixel
+        # policy) dithered by its own read noise -- the read-noise map -- of at
+        # least half of its own ADC step -- the gain map.  Pixels without
+        # weight in the centroid do not enter the variance and are not tested.
+        read_adu = read_e / (float(camera.conversion_gain_e_per_adu) * relative)
+        contributing = (jx != 0.0) | (jy != 0.0) | (jt != 0.0)
+        coarse = contributing & (read_adu < MIN_READ_NOISE_ADU_FOR_WHITE_QUANTIZATION)
+        supported &= ~np.any(coarse, axis=(1, 2))
     saturating = np.max(mu, axis=(1, 2)) > SATURATION_MARGIN * float(camera.full_well_e)
     if camera.model == "emccd":
         assert camera.register_full_well_e is not None
@@ -440,11 +459,6 @@ def detector_covariance_quality(
         )
         saturating |= np.max(analog, axis=(1, 2)) > SATURATION_MARGIN * top
         # Temporal noise of each code: register shot noise plus read noise.
-        read_e = float(camera.read_noise_e) * (
-            1.0
-            if maps.get("read_noise_multiplier") is None
-            else np.asarray(maps["read_noise_multiplier"], dtype=float)
-        )
         code_sigma = np.sqrt(
             camera.em_gain**2 * camera.excess_noise_factor_squared * coupled(mu) + read_e**2
         ) * adu_per_output_e

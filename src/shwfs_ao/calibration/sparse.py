@@ -1090,7 +1090,8 @@ class SparseLsmrReconstructor:
         The fallback of an opt-in recovery policy (``controller.recovery``):
         the same Tikhonov LSMR solve as :meth:`reconstruct`, with
         ``min_valid_fraction`` in place of this reconstructor's own.  With
-        ``min_actuator_coverage`` (the rank guard) only actuators whose usable
+        ``min_actuator_coverage`` (a response-energy coverage threshold, not
+        a rank or observability test) only actuators whose usable
         rows keep at least that fraction of their calibrated response energy
         (squared column norm over the calibration-valid rows) are solved for;
         the rest receive an exactly zero increment.  Returns ``None`` when too

@@ -136,7 +136,9 @@ and LIM-07.
   `controller.recovery` (`control.ClosedLoopRecoveryPolicy`), now exists. It
   can decay or reset the requested command after a set number of consecutive
   rejected frames, reconstruct a rejected frame from its usable rows (sparse
-  LSMR only, optionally guarded by actuator coverage), and scale increments
+  LSMR only, optionally guarded by actuator coverage, which is response-energy
+  coverage, not a rank or observability test: GPT pre-refactor audit F-05),
+  and scale increments
   by the valid fraction. It acts after the controller update and never clears
   the latency queue; the controller still synchronizes to the applied command.
   Without the block every identity and result is unchanged. At 12 m the
@@ -217,7 +219,19 @@ and LIM-07.
   It declares unsupported regimes and reports an undefined sigma there (the
   lenslet is then invalid): threshold/minimum subtraction, negative clipping,
   non-linearity, expected pixel/register/ADC saturation above 90 % of capacity,
-  read noise below 0.5 ADU, or total-flux SNR below 7. The raw-readout case
+  read noise below half an ADC step on a pixel that enters the centroid, or
+  total-flux SNR below 7. Updated 2026-10-18 (GPT pre-refactor audit F-01):
+  the quantization gate had used the scalar read noise and the largest gain
+  multiplier of the whole batch (rejecting every block when it failed), so a
+  CMOS read-noise map could leave contributing pixels under half a step while
+  the block stayed supported; it now uses each contributing pixel's own read
+  noise and step, block by block. A block that becomes unsupported reports the
+  undefined sigma, so its lenslet fails the validity gate. No packaged or
+  recorded configuration changes: their CMOS maps keep at least 0.65 ADU on
+  every pixel (0.9055 ADU at the 2 m profile's own seed; at least 0.75 ADU
+  over root seeds 1–200; 0.65 ADU on the recorded 12 m E4 arm). The half-step cut is the project's
+  declared policy; Widrow et al. (1996) give σ > q as the rule of thumb, and at
+  the cut the exact per-pixel white-model error is at most 2.4 %. The raw-readout case
   with a non-uniform CMOS gain map was corrected in `62c0092`. Near the SNR
   floor the first-order sigma is low by about `4/SNR_T²` (Monte Carlo, E1).
   Persistent master-frame errors are reported separately as
@@ -236,6 +250,12 @@ and LIM-07.
   Supporting sensors can average optical intensities over several exposure
   samples, with one detector-noise application and the DM held fixed. The
   frame's residual metrics still use the first atmosphere sample.
+- Updated 2026-10-18 (GPT pre-refactor audit F-02): the effective
+  quadrature of `control.run_closed_loop` is part of the run identity. Runs
+  that differed only in `exposure_subsamples` or `exposure_s` used to share a
+  `config_hash`; a multi-sample run now records the count and duration in its
+  `config_hash` and `wfs_exposure` metadata, and an override of the WFS's
+  configured count is recorded. Single-sample identities are unchanged.
 - **Consequence / next evidence:** Default runs omit WFS temporal averaging;
   frame RMS is not exposure-averaged RMS. Claims about exposure smearing need
   convergence versus exposure subsamples and explicitly labelled metrics.
@@ -269,6 +289,14 @@ and LIM-07.
   pending. New R3-band detector configurations record 0.857 times Nyquist
   sampling at 600 nm; avoiding a repeated Fourier field does not remove
   that undersampling.
+- Updated 2026-10-18 (roadmap S3, produced by `2312502`): the paired study at
+  12 m (`medium` tier; fixed WFS field of view, paired atmospheric draws, three
+  realizations of 200 frames) finds peak Strehl converged in pupil, WFS and
+  science sampling (finest two within 0.25 %), and EE50 converged in pupil and
+  WFS sampling but not in science sampling (4.3 % between science pads 3 and
+  4). Quoted EE50 values at the default science sampling are therefore
+  unconverged. The 42 m scans were still running; this entry claims nothing
+  about them.
 - **Consequence / next evidence:** Successful execution and solver convergence
   do not establish spatial accuracy. Refine pupil, WFS and science sampling
   separately, hold physical field of view fixed, and compare matched inputs
@@ -279,8 +307,11 @@ and LIM-07.
 ### LIM-08 — Long runs and short demonstrations have statistical limits
 
 - **Status:** Assumption / validation gap; atmosphere and performance summaries.
-- The native layered atmosphere's periodic band repeats after each layer
+- The native layered atmosphere's periodic band can repeat once a layer
   travels one screen period; low-frequency modes do not share that period.
+  `periodic_band_repeated` flags that travel as an advisory: an exact repeat
+  needs both wind components times the elapsed time to be whole periods, as
+  for the packaged axis-aligned winds (GPT pre-refactor audit F-12).
   The recorded 4 s reference run repeats the fastest periodic bands.
   Introductory studies use short trajectories and limited realizations.
 - **Consequence / next evidence:** More frames do not automatically supply
@@ -337,6 +368,16 @@ and LIM-07.
   `a31099b` had caused; the native selection does not run them. The local
   development environment is not the constraint lock (numpy 2.5.0 against the
   pinned 2.5.1, plus optional extras).
+- Updated 2026-10-18 (GPT pre-refactor audit F-03): a resumed evidence series
+  used to retain old runs under the header of the newest environment. Series
+  protocol 3 makes the producing environment part of every run's protocol and
+  refuses a resume under another environment or of a version-2 record, and a
+  resume that would add runs while the code identity is unknown (a resume with
+  nothing left to run only verifies). The bound environment is four fields:
+  the Python version string, NumPy, SciPy and the machine; the BLAS/LAPACK
+  backend, thread settings, OS version and optional packages are not bound.
+  Version-2 records stay read-only history; their producers are not
+  reconstructed.
 - **Consequence / next evidence:** Record profile versions, overrides, seed,
   dependency versions and source revision/patch with results. Treat an
   implementation, a test pass and an accepted baseline as distinct evidence.
@@ -393,10 +434,32 @@ and LIM-07.
 - **Consequence / next evidence:** Do not describe the faint-end noise as
   photon-limited or as an exact match to the model. Explaining the
   departures is a separate study (roadmap S4); a new record must not
-  overwrite this one.
+  overwrite this one. A five-seed paired bootstrap of the saved 12 m records
+  (GPT pre-refactor audit F-06, an unweighted estimator) is exploratory
+  evidence, not a validated ensemble uncertainty.
 - **Evidence:** [12 m record](refactor/detector_level_evidence/det09_noise_isolation_12m_v3.json),
   [2 m record](refactor/detector_level_evidence/det09_noise_isolation_2m.json),
   [detector execution record](refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md#isolated-detector-noise-variance-2-m-results).
+
+### LIM-19 — HCIPy science images are conditional on their captured window
+
+- **Status:** Observable boundary; HCIPy science propagation. Added 2026-10-18
+  (GPT pre-refactor audit F-04).
+- The HCIPy science propagator normalizes each frame's image to unit sum over
+  its finite focal window, and the long exposure averages those images with
+  equal weights. For captured fractions `c_k` the grid Strehl is the source
+  Strehl times `c_0 / c_k`, so a frame that loses flux beyond the window is
+  weighted up: a 2.5 λ/D tilt in a 3 λ/D window gives a peak ratio of 1.188
+  where the equal-flux ratio is 1. This is the documented `PsfResult` unit-grid
+  convention, not an energy error.
+- **Consequence / next evidence:** Do not read HCIPy window images or their
+  peak ratios as full-source Strehl or as an equal-source-flux exposure. A
+  physical long exposure would weight frames by their captured fractions and
+  normalize once; validate the field of view at any claimed configuration.
+- **Evidence:** [science metrics](../src/shwfs_ao/science/metrics.py),
+  [HCIPy propagation](../src/shwfs_ao/backends/hcipy/propagation.py),
+  GPT audit oracle `reviewers/atmosphere_science/oracles/science_window_oracle.py`
+  (main checkout `outputs/pre_refactor_audit/20261017T143700Z/`).
 
 ## Keeping this record current
 
