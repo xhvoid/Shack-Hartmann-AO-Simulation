@@ -649,36 +649,6 @@ over tail frames, not a broadband exposure image. See the
 
 </details>
 
-## Connection to ESO engineering topics
-
-This independent project provides concrete examples of the optical modelling,
-Python analysis and numerical investigation relevant to two ESO research
-topics:
-
-| ESO topic | Relevant evidence in this repository |
-| --- | --- |
-| [ELT wavefront control](https://www.eso.org/sci/activities/fellowships-and-studentships/engstudentfellow/elt_wavefront_control.html): sensor testing, data analysis and simulations supporting the MELT bench | Calibrated sensor response, validity-aware detector measurements, regularized inverse problems, matched control experiments and independent optical-backend checks |
-| [Advanced data reduction / high-contrast imaging](https://www.eso.org/sci/activities/fellowships-and-studentships/engstudentfellow/Advanced_data_reduction_algorithms.html): PSF optimization and post-processing using GHOST images, including exploration of machine learning | Image formation and normalization, core/halo and aperture-energy diagnostics, noise-aware analysis, controlled parameter studies and explicit sampling-bias checks |
-
-The demonstrated work is simulation and numerical analysis. Its present
-sensor is Shack-Hartmann, with continuous synthetic DM influences; ZEUS
-phase-contrast sensing, segmented-mirror co-phasing and MELT/ZIRCAM/GHOST
-laboratory data are outside the implementation. Zernike modal expansions are
-distinct from a Zernike phase-contrast sensor. The image studies provide a
-foundation for PSF analysis; coronagraphic contrast, ADI/PCA post-processing,
-companion recovery and machine-learning algorithms would require additional
-implementation and validation.
-
-The native model is single-line-of-sight SCAO. Scintillation, full ELT geometry
-and measured hardware calibration are absent. The analytical MCAO study has
-its own restricted scope. Laboratory or on-sky validation would be needed to
-turn either into an instrument performance model.
-
-Connecting a laboratory optical system also requires camera-acquisition and
-DM-control adapters, a measured interaction matrix and hardware timing
-validation. The current runners advance a simulated clock; they do not drive
-a connected camera or mirror.
-
 ## Run the project
 
 Follow the [installation and notebook guide](docs/getting_started.md) to clone
@@ -839,7 +809,7 @@ Optional optical and analytical components build on
 Public ESO atmospheric-monitoring data and SVO/catalogue inputs are attributed
 in [provenance](docs/provenance.md). Their use supplies environmental or photon
 budget inputs alongside synthetic AO assumptions, rather than measured AO
-performance. This is an independent project with no ESO affiliation implied.
+performance.
 
 Repository-authored software and documentation are MIT licensed. Third-party
 software and cached data retain their own terms and acknowledgement
