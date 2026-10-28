@@ -617,8 +617,8 @@ def test_v1_producer_checks_are_read_from_the_producer_source():
     assert checks.window_fields == ("burn_in", "n_steps") and checks.window_in_checks is False
     assert checks.diagnostics == V1_PRODUCER_DIAGNOSTICS and checks.record_lists == V1_PRODUCER_RECORD_LISTS
     assert set(checks.recorded) == set(V1_PRODUCER_REQUIRED_TRUE) | set(V1_PRODUCER_DIAGNOSTICS) | set(V1_PRODUCER_RECORD_LISTS) and len(checks.recorded) == 11
-    # The validator's v1 provenance checks are unchanged (job id and raw-evidence bindings); the contract is applied
-    # by the v1 exporter before a case is written.
+    # The contract is applied by the v1 exporter before a case is written and by the validator on the v1 provenance's
+    # copy, with the window read from the case record's time domain (test_validate_v1_provenance.py).
     assert web_contract.V1.producer_checks is not web_contract.V2.producer_checks
 
 

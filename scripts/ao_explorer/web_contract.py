@@ -32,8 +32,11 @@ rule judges such a mapping wherever it is read (``producer_check_problems``):
 in the provenance by the validator and in the case record by ``long_export.py``.
 The v1 producer's checks are read the same way from the source of
 ``producer.run_job`` and ``ExplorerObserver.finish`` (``producer_checks_v1``)
-and judged by the same rule in ``render.py`` before a case is published; v1
-records its analysis window in the job record, not in the checks mapping.
+and judged by the same rule in ``render.py`` before a case is published and
+by the validator on the v1 provenance's copy; v1 records its analysis window
+in the job record, not in the checks mapping, and the validator hands the
+rule the case record's recorded time domain through an adapter
+(``validate.v1_window_record``), since the v1 provenance holds no job record.
 """
 
 from __future__ import annotations
@@ -463,7 +466,7 @@ class Contract:
     shared_images: bool                 # paired cases reference the baseline's atmosphere-side images (v2)
     raw_layout: str                     # "movie_npz" (v1) or "frame_stacks" (v2)
     metrics_display_indices: bool
-    producer_checks: Optional[ProducerChecks] = None   # v2: the producer's record checks copied into the provenance
+    producer_checks: Optional[ProducerChecks] = None   # the producer's record checks copied into the provenance (v1 and v2)
     extras: Dict[str, Any] = field(default_factory=dict)
 
     @property

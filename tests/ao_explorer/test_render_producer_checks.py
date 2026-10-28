@@ -397,8 +397,10 @@ def test_the_export_identity_lists_and_hashes_every_v1_rule_source():
     for name in rule_sources_v1():
         assert name in render.EXPORT_FILES and code["files"][name] == hashlib.sha256((SCRIPTS / name).read_bytes()).hexdigest(), name
     assert code["sha256"] == identity.file_set_identity(render.EXPORT_FILES)["sha256"]
-    # The three identities stay apart: the observation identity (derive stage, which does not read the rule) is
-    # unchanged, and the numerical producer identity and the historical derived set are not touched.
+    # The three identities stay apart: the observation identity's file set (derive stage, which does not read the rule)
+    # stays (binary_scene.py, render.py) while its digest follows render.py's bytes (review R24-01: a comment-only edit
+    # changes it too; historical datasets keep their recorded generation identities), and the numerical producer
+    # identity and the historical derived set are not touched.
     assert render.OBSERVATION_FILES == ("binary_scene.py", "render.py")
     assert render.observation_identity()["sha256"] == identity.file_set_identity(render.OBSERVATION_FILES)["sha256"]
     assert "web_contract.py" not in identity.PRODUCER_FILES and "web_contract.py" not in identity.DERIVED_FILES
