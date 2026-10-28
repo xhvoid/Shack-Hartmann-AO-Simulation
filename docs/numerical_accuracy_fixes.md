@@ -194,14 +194,13 @@ changed.
 
 ## Verification record
 
-- Source suite, excluding slow tests, wheel checks and the separately run
-  notebook-runner module: 1,576 passed, 15 skipped. One output-presence check
-  ran while notebook outputs were temporarily cleared for execution; after
-  the executions finished, the complete notebook-governance suite passed
-  all 58 checks. There is no unresolved failure from that run.
-- Notebook runner: 31 passed, two platform-dependent skips. The runner
-  tests that need local kernel ports/process control ran outside the sandbox.
-- Wheel and source-distribution installation contracts: two passed.
+- Final full fast source suite on Python 3.14: **1,617 passed, 17 skipped,
+  seven slow tests deselected** in 552 seconds. This run includes the
+  available HCIPy checks, notebook-runner tests, archive governance, and
+  wheel/source-distribution installation contracts. No failures remain.
+  Tests needing local kernel ports/process control ran outside the sandbox.
+- All native README commands executed successfully, including the complete
+  fast integration example and its generated figures, tables and metrics.
 - Fresh physical integration: both slow reference-metric and complete
   scenario-table reproduction tests passed (821 seconds), independently
   reproducing the candidate generation. The separate third redundant
