@@ -133,17 +133,19 @@ class HcipyDmBackend:
         _require_matching_grids(basis_grid, grid, hcipy=hcipy)
         rows, columns = (int(x.shape[0]), int(x.shape[1]))
 
-        stack = _dense_influence_stack(
-            influence_function_basis.transformation_matrix,
-            rows=rows,
-            columns=columns,
+        matrix = _dense_transformation_matrix(
+            influence_function_basis.transformation_matrix
         )
+        stack = _dense_influence_stack(matrix, rows=rows, columns=columns)
         self._influence_stack = _readonly_copy(stack, dtype=float)
         self._x_axis_m = _readonly_copy(x[0, :], dtype=float)
         self._y_axis_m = _readonly_copy(y[:, 0], dtype=float)
         self._output_shape = (rows, columns)
         self._hcipy_version = hcipy_version()
-        self._dm = hcipy.DeformableMirror(influence_function_basis)
+        # An HCIPy mirror keeps the basis it is given, and ModeBasis keeps a
+        # dense matrix uncopied.  Synthesize from this private copy so later
+        # edits to the caller's basis cannot drift from the hashed response.
+        self._dm = hcipy.DeformableMirror(hcipy.ModeBasis(matrix, grid))
         self._dm.flatten()
         self._config_hash = component_config_hash(
             "hcipy.dm_spatial_backend",
@@ -420,12 +422,11 @@ def _dense_transformation_matrix(raw: Any) -> np.ndarray:
 
 
 def _dense_influence_stack(
-    raw: Any,
+    matrix: np.ndarray,
     *,
     rows: int,
     columns: int,
 ) -> np.ndarray:
-    matrix = _dense_transformation_matrix(raw)
     if matrix.shape[0] != rows * columns:
         raise HcipyDmError(
             f"influence_function_basis has {matrix.shape[0]} samples per "
