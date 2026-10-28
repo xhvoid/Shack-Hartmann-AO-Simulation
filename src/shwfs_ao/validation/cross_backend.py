@@ -67,6 +67,9 @@ __all__ = (
     "CrossBackendConfig",
     "comparison_config_record",
     "comparison_config_hash",
+    "comparison_config_from_record",
+    "statistical_definition_binding",
+    "statistical_definition_for",
     "run_cross_backend_report",
 )
 
@@ -825,7 +828,11 @@ def _compare_atmosphere_statistics(context: _ComparisonContext) -> dict[str, Any
     # the structured fields are what a validator can compare and the narrative
     # is what a reviewer reads; neither replaces the other.
     statistical_definition = {
-        "sample_count": config.atmosphere_realizations,
+        # The two quantities the configuration already fixes come from it, not
+        # from restating them here: the validator holds the recorded pair to
+        # exactly this derivation, so a suite that drifted from its own
+        # configuration would be caught rather than recorded.
+        **statistical_definition_for(config),
         "estimator": (
             "per realization: masked pupil RMS at t=0, and the ratio of "
             "mean-square column differences at the recorded lag pair "
@@ -833,10 +840,6 @@ def _compare_atmosphere_statistics(context: _ComparisonContext) -> dict[str, Any
             "realizations, and the RMS additionally as the HCIPy-over-native "
             "ratio of those means"
         ),
-        "bins_or_lags": {
-            "kind": "structure_function_lags_px",
-            "values": [long_lag, short_lag],
-        },
         "uncertainty_method": (
             "first-order standard error of each ratio estimator across the "
             "independent realizations, recorded as informational metrics; "
@@ -1807,6 +1810,17 @@ def comparison_config_hash(record: Mapping[str, Any]) -> str:
     faithful ``CrossBackendConfig`` rather than a lookalike.
     """
 
+    return comparison_config_from_record(record).config_hash
+
+
+def comparison_config_from_record(record: Mapping[str, Any]) -> CrossBackendConfig:
+    """Rebuild the configuration a ``comparison_config`` record describes.
+
+    Shared by everything that must answer a question about the configuration a
+    document claims, so that identity and the evidence bound to it are read from
+    one reconstruction rather than from two readings that can disagree.
+    """
+
     if not isinstance(record, Mapping):
         raise CrossBackendError("comparison_config must be a mapping.")
     contents = {
@@ -1830,12 +1844,49 @@ def comparison_config_hash(record: Mapping[str, Any]) -> str:
         for key, value in contents.items()
     }
     try:
-        return CrossBackendConfig(**restored).config_hash
+        return CrossBackendConfig(**restored)
     except (TypeError, ValueError) as exc:
         raise CrossBackendError(
             "comparison_config does not describe a usable "
             f"CrossBackendConfig, so it has no identity hash: {exc}"
         ) from exc
+
+
+def statistical_definition_binding(record: Mapping[str, Any]) -> dict[str, Any]:
+    """The statistical_definition fields a ``comparison_config`` determines.
+
+    ``sample_count`` and ``bins_or_lags`` are not free-standing prose that
+    happens to be stored beside the configuration: they restate quantities the
+    configuration already fixes, and the suite reads them from it.  Recording
+    them separately means they can disagree with it, and a definition claiming
+    999 realizations over invented lags describes a run that did not happen
+    while every hash in the document still matches — the values are covered by
+    the document's own shape checks and by nothing else.
+
+    Deriving the expected pair here, from the same fields the suite consumes,
+    lets the validator hold the recorded pair to the configuration rather than
+    to a minimum.  The lag order is the reporting order — numerator first — and
+    is stated once, here, so producer and validator cannot drift apart.
+    """
+
+    return statistical_definition_for(comparison_config_from_record(record))
+
+
+def statistical_definition_for(config: CrossBackendConfig) -> dict[str, Any]:
+    """The same binding, for a caller that already holds the configuration.
+
+    The suite emits through this and the validator checks against it, so there
+    is one statement of what the configuration implies rather than two.
+    """
+
+    short_lag, long_lag = config.structure_function_lags_px
+    return {
+        "sample_count": config.atmosphere_realizations,
+        "bins_or_lags": {
+            "kind": "structure_function_lags_px",
+            "values": [long_lag, short_lag],
+        },
+    }
 
 
 def _fixture_hash(values: np.ndarray) -> str:

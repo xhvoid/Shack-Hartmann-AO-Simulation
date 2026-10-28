@@ -99,8 +99,16 @@ volts and not reflective surface displacement. The loop convention is:
 
 ```python
 residual_opd_m = atmosphere_opd_m - dm_correction_opd_m
-requested_commands_opd_m = leaked_commands_opd_m + gain * reconstructed_delta_opd_m
+requested_commands_opd_m = (
+    (1.0 - leak) * last_applied_commands_opd_m
+    + gain * released_delta_opd_m
+)
 ```
+
+`released_delta_opd_m` is the increment the sole controller delay queue
+releases on this frame, which may be older than the one just reconstructed.
+Applying the gain to the newly reconstructed delta instead would describe a
+loop with no latency; see `docs/backends.md` for the full convention.
 
 The HCIPy reflective-DM adapter converts OPD command to half-sized surface
 displacement and lets reflection produce `2 * surface` OPD exactly once.

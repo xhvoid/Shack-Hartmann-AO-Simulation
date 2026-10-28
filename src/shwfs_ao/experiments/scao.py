@@ -6,6 +6,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 import json
 from pathlib import PurePosixPath
+import threading
 from types import MappingProxyType
 from typing import Any, Literal, Protocol, cast, runtime_checkable
 import weakref
@@ -294,6 +295,16 @@ _FACTORIES: dict[str, ScaoBackendComponentFactory] = {}
 # See register_scao_backend_factory for the rules this implements.
 _FACTORY_EPOCHS: dict[str, int] = {}
 
+# Guards both maps together. They are one fact — which factory a key holds, and
+# how many times it has been replaced — and a reader that takes them in two
+# steps can observe a state that never existed: the factory from before a
+# replacement paired with the epoch from after it. Components built by the
+# superseded factory would then carry the current epoch, which is exactly the
+# combination attestation treats as still valid, so they would be accepted for
+# the rest of the session. Re-entrant because the lazy built-in path registers
+# from inside the lookup that is already holding it.
+_REGISTRY_LOCK = threading.RLock()
+
 
 def _factory_epoch(backend_name: str) -> int:
     """The epoch one registry key currently stands at.
@@ -388,9 +399,10 @@ def register_scao_backend_factory(
     # Moving the epoch there would put back exactly the rebuild-and-recalibrate
     # cost the attestations exist to avoid, for a backend the systems on hand do
     # not even use.
-    _FACTORIES[name] = factory
-    if replace:
-        _FACTORY_EPOCHS[name] = _factory_epoch(name) + 1
+    with _REGISTRY_LOCK:
+        _FACTORIES[name] = factory
+        if replace:
+            _FACTORY_EPOCHS[name] = _factory_epoch(name) + 1
 
 
 def build_scao_system(
@@ -408,12 +420,12 @@ def build_scao_system(
 
     if not isinstance(config, SystemConfig):
         raise ScaoConstructionError("config must be a SystemConfig.")
-    factory = _factory_for(config.backend)
-    # Sampled with the lookup rather than after the build: an attestation must
-    # name the epoch the factory it used stood at, so a replacement landing
-    # while this build runs retires what this build produced instead of being
-    # silently absorbed into it.
-    factory_epoch = _factory_epoch(config.backend)
+    # One observation, not two: an attestation must name the epoch the factory
+    # it used stood at, so a replacement landing while this build runs retires
+    # what this build produced instead of being silently absorbed into it, and a
+    # replacement landing *between* the two reads must not be able to pair the
+    # old factory with the new epoch.
+    factory, factory_epoch = _factory_and_epoch(config.backend)
     streams = NamedRandomStreams(config.random.root_seed)
     if streams.derivation_scheme_id != config.random.derivation_scheme_id:
         raise ScaoConstructionError(
@@ -726,19 +738,32 @@ def _attested_build_identity(
     return attested
 
 
+def _factory_and_epoch(name: str) -> tuple[ScaoBackendComponentFactory, int]:
+    """The factory a key holds and the epoch it stands at, as one observation.
+
+    Taken together under the registry lock because a build must attest the epoch
+    of the factory it actually used.  Read separately, a replacement landing
+    between the two would hand back the superseded factory with the successor's
+    epoch — components that the registry can no longer produce, labelled as
+    current — and every later verification would accept them.
+    """
+
+    with _REGISTRY_LOCK:
+        factory = _FACTORIES.get(name)
+        if factory is None:
+            loader = _BUILTIN_FACTORY_LOADERS.get(name)
+            if loader is None:
+                raise ScaoConstructionError(
+                    f"no SCAO backend factory is registered for {name!r}; "
+                    "optional backends never fall back to native."
+                )
+            factory = loader()
+            register_scao_backend_factory(name, factory)
+        return factory, _factory_epoch(name)
+
+
 def _factory_for(name: str) -> ScaoBackendComponentFactory:
-    factory = _FACTORIES.get(name)
-    if factory is not None:
-        return factory
-    loader = _BUILTIN_FACTORY_LOADERS.get(name)
-    if loader is None:
-        raise ScaoConstructionError(
-            f"no SCAO backend factory is registered for {name!r}; "
-            "optional backends never fall back to native."
-        )
-    factory = loader()
-    register_scao_backend_factory(name, factory)
-    return factory
+    return _factory_and_epoch(name)[0]
 
 
 def _target_rms_rad(config: SystemConfig) -> float | None:

@@ -485,6 +485,7 @@ def _validate_report_structure(
         )
     _validate_root_seed(document, config)
     _require_config_hash_binds_its_contents(config)
+    _require_statistics_bind_the_configuration(document, config)
     _require_fields(
         document["conventions"],
         _REQUIRED_CONVENTION_FIELDS,
@@ -1147,6 +1148,55 @@ def _require_config_hash_binds_its_contents(config: Mapping[str, Any]) -> None:
             "reminting the hash that identifies them; regenerate the document "
             "rather than adjusting either half."
         )
+
+
+def _require_statistics_bind_the_configuration(
+    document: Mapping[str, Any],
+    config: Mapping[str, Any],
+) -> None:
+    """Hold the recorded estimator to the configuration that was actually run.
+
+    :func:`_validate_statistical_definition` establishes that the four elements
+    are present, typed, and individually sane.  That is shape, not truth: a
+    document can state 999 realizations over invented lags while the hashed
+    configuration says four and ``(2, 4)``, and every other check in this
+    module passes, because ``config_hash`` covers the configuration and the
+    element checks cover the record, and nothing had covered the relationship
+    between them.  The reviewed tolerances were set against the configuration,
+    so evidence that contradicts it describes a run that did not happen.
+
+    Two of the four elements are determined by the configuration and are checked
+    against it here.  ``estimator``, ``uncertainty_method`` and ``narrative``
+    remain prose that only a reviewer can judge; this cannot rescue them, and
+    does not pretend to.  Nor can the JSON Schema express any of it — a
+    structural language cannot compare two fields of the document it is
+    validating — so the packaged schema is deliberately the weaker gate on this
+    one point, and this is the check that makes it moot.
+    """
+
+    from .cross_backend import CrossBackendError, statistical_definition_binding
+
+    recorded = _statistical_definition(document, "atmosphere_statistics")
+    if not isinstance(recorded, Mapping):
+        # Absent or malformed is _validate_statistical_definition's to report,
+        # with the message that names the four elements.
+        return
+    try:
+        expected = statistical_definition_binding(config)
+    except CrossBackendError as exc:  # pragma: no cover - config already checked
+        raise BaselineContractError(
+            "comparison_config does not describe a configuration the recorded "
+            f"statistics can be checked against: {exc}"
+        ) from exc
+    for field, value in expected.items():
+        if recorded.get(field) != value:
+            raise BaselineContractError(
+                f"comparison 'atmosphere_statistics' statistical_definition."
+                f"{field} is {recorded.get(field)!r}, but the configuration it "
+                f"was produced under determines {value!r}. The estimator must "
+                "describe the run the configuration identifies, not a different "
+                "one; regenerate the document rather than editing either half."
+            )
 
 
 def _validate_comparison(comparison: object) -> None:

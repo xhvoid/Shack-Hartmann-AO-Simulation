@@ -511,10 +511,25 @@ def test_an_available_namespace_is_used_by_every_mode_that_allows_it(monkeypatch
 _FAKE_UNSHARE = "/usr/bin/unshare"
 _FAKE_IP = "/usr/sbin/ip"
 _FAKE_SUDO = "/usr/bin/sudo"
+_FAKE_NSENTER = "/usr/bin/nsenter"
 
+# Never offered, and named here so the test below can say so. A network
+# namespace without a user namespace does not confine a process holding
+# CAP_SYS_ADMIN over it: setns(2) lets it reopen the outer namespace and step
+# back onto the host network. The sudo variant is worse, not better.
 _PRIVILEGED_NET = [_FAKE_UNSHARE, "--net", "--"]
+_PRIVILEGED_SUDO_NET = [_FAKE_SUDO, "-n", _FAKE_UNSHARE, "--net", "--"]
+
 _USER_NET = [_FAKE_UNSHARE, "--user", "--map-root-user", "--net", "--"]
-_SUDO_NET = [_FAKE_SUDO, "-n", _FAKE_UNSHARE, "--net", "--"]
+_SUDO_NET = [
+    _FAKE_SUDO,
+    "-n",
+    _FAKE_UNSHARE,
+    "--user",
+    "--map-root-user",
+    "--net",
+    "--",
+]
 
 # What `ip -o link show` prints inside a fresh namespace, and what it prints
 # where the unshare did not actually take: the runner parses these, so the
@@ -537,12 +552,17 @@ def _fake_linux_namespace_environment(
     links_seen_by,
     sudo=_FAKE_SUDO,
     sudo_needs_a_password=False,
+    escape_succeeds_for=(),
+    nsenter=_FAKE_NSENTER,
 ):
     """Run the probe's Linux decision path against recorded fakes.
 
     ``links_seen_by`` maps a prefix (as a tuple) to the ``ip -o link show``
     output that prefix produces; a prefix that is absent from it probes as a
     failure, which is exactly what a refused namespace looks like from here.
+    ``escape_succeeds_for`` names the prefixes whose namespace can still be
+    left through setns — the condition that makes a loopback-only namespace an
+    illusion, and the one a bare ``unshare --net`` actually satisfies.
 
     Nothing about a live namespace can be checked from macOS — there is no
     unshare(1) to run — so what these fakes hold is the decision: which forms
@@ -552,6 +572,7 @@ def _fake_linux_namespace_environment(
     """
 
     executed: list[list[str]] = []
+    escapes = {tuple(prefix) for prefix in escape_succeeds_for}
 
     def fake_run(command, **kwargs):
         command = list(command)
@@ -563,17 +584,24 @@ def _fake_linux_namespace_environment(
                 "",
                 "sudo: a password is required\n" if sudo_needs_a_password else "",
             )
-        assert command[-3:-1] == ["sh", "-c"], command
-        links = links_seen_by.get(tuple(command[:-3]))
+        # The probe carries the outer namespace path as an argument, so the
+        # trailing three fields are the script, ``sh`` and that path.
+        assert command[-5:-3] == ["sh", "-c"], command
+        assert command[-1].startswith("/proc/"), command
+        prefix = tuple(command[:-5])
+        links = links_seen_by.get(prefix)
         if links is None:
             return subprocess.CompletedProcess(
                 command, 1, "", "unshare: unshare failed: Operation not permitted\n"
             )
-        return subprocess.CompletedProcess(command, 0, links, "")
+        verdict = "ESCAPE_SUCCEEDED\n" if prefix in escapes else "ESCAPE_REFUSED\n"
+        return subprocess.CompletedProcess(command, 0, links + verdict, "")
 
     tools = {"unshare": _FAKE_UNSHARE, "ip": _FAKE_IP}
     if sudo is not None:
         tools["sudo"] = sudo
+    if nsenter is not None:
+        tools["nsenter"] = nsenter
     monkeypatch.setattr(runner, "shutil", types.SimpleNamespace(which=tools.get))
     monkeypatch.setattr(
         runner,
@@ -591,15 +619,15 @@ def _fake_linux_namespace_environment(
 
 
 def test_a_stock_ubuntu_24_04_runner_reaches_a_namespace_through_sudo(monkeypatch):
-    """The configured hosted runner refuses both unelevated forms.
+    """The configured hosted runner refuses the unelevated form.
 
     ubuntu-latest is Ubuntu 24.04, which ships
-    kernel.apparmor_restrict_unprivileged_userns=1: AppArmor denies
-    capabilities inside an unprivileged user namespace, and plain
-    ``unshare --net`` wants a CAP_SYS_ADMIN the runner user does not have.  With
-    only those two forms probed the required notebook lanes had no namespace at
-    all and aborted, so the passwordless sudo the hosted runners provide is
-    tried last rather than left unused.
+    kernel.apparmor_restrict_unprivileged_userns=1: AppArmor denies capabilities
+    inside an *unprivileged* user namespace, so the ordinary form fails and the
+    required notebook lanes had no namespace at all.  Sudo makes the same
+    unshare privileged, which the restriction does not cover — and because that
+    form still enters a child user namespace, it confines the kernel instead of
+    merely relocating it.
     """
 
     executed = _fake_linux_namespace_environment(
@@ -607,37 +635,94 @@ def test_a_stock_ubuntu_24_04_runner_reaches_a_namespace_through_sudo(monkeypatc
     )
 
     assert runner._network_namespace_prefix() == _SUDO_NET
-    # Both unelevated forms were actually tried before sudo was asked for
-    # anything, and the cheap question came before the expensive one.
-    attempted = [command[: command.index("sh")] for command in executed[:2]]
-    assert attempted == [_PRIVILEGED_NET, _USER_NET]
-    assert executed[2] == [_FAKE_SUDO, "-n", "true"]
-    assert executed[3][: len(_SUDO_NET)] == _SUDO_NET
+    # The unelevated form was actually tried before sudo was asked for anything.
+    attempted = [command[: command.index("sh")] for command in executed[:1]]
+    assert attempted == [_USER_NET]
+    assert executed[1] == [_FAKE_SUDO, "-n", "true"]
+    assert executed[2][: len(_SUDO_NET)] == _SUDO_NET
 
 
 def test_the_probed_forms_are_ordered_least_privileged_first(monkeypatch):
     _fake_linux_namespace_environment(monkeypatch, links_seen_by={})
 
-    assert list(runner._namespace_prefix_candidates()) == [
-        _PRIVILEGED_NET,
-        _USER_NET,
-        _SUDO_NET,
-    ]
+    assert list(runner._namespace_prefix_candidates()) == [_USER_NET, _SUDO_NET]
+
+
+def test_a_network_namespace_without_a_user_namespace_is_never_offered(monkeypatch):
+    """A bare ``unshare --net`` is not an offline sandbox and is not proposed.
+
+    setns(2) admits a process to any network namespace it holds CAP_SYS_ADMIN
+    over in that namespace's owning user namespace.  Under ``unshare --net``
+    alone — and under ``sudo unshare --net``, which holds more capability, not
+    less — notebook code keeps exactly that, so it can reopen
+    ``/proc/<pid>/ns/net`` and step back onto the host network.  The interface
+    listing cannot see this: it reports where the process started, not where it
+    may go.  Entering a child user namespace is what drops the capability, so
+    every offered form asks for one.
+    """
+
+    _fake_linux_namespace_environment(monkeypatch, links_seen_by={})
+    offered = list(runner._namespace_prefix_candidates())
+
+    for form in (_PRIVILEGED_NET, _PRIVILEGED_SUDO_NET):
+        assert form not in offered
+    for form in offered:
+        assert "--user" in form and "--map-root-user" in form, form
+
+
+def test_a_namespace_that_can_be_left_again_is_not_used(monkeypatch):
+    """Confinement is observed, not inferred from the flags that were passed.
+
+    A prefix whose namespace holds loopback and nothing else is still useless if
+    the process inside it can rejoin the outer one, so the probe attempts
+    exactly that and requires the attempt to fail.  This is the check that would
+    have caught the privileged form on its own terms rather than by argument.
+    """
+
+    _fake_linux_namespace_environment(
+        monkeypatch,
+        links_seen_by={
+            tuple(_USER_NET): _LOOPBACK_ONLY_LINKS,
+            tuple(_SUDO_NET): _LOOPBACK_ONLY_LINKS,
+        },
+        escape_succeeds_for=(_USER_NET, _SUDO_NET),
+    )
+
+    assert runner._network_namespace_prefix() is None
+    with pytest.raises(SystemExit, match="Network isolation is unavailable"):
+        runner._resolve_network_isolation("required")
+
+
+def test_without_nsenter_confinement_cannot_be_observed_so_nothing_is_offered(
+    monkeypatch,
+):
+    """The escape attempt is the evidence, so its absence is a refusal.
+
+    Accepting a prefix whose confinement could not be tested would put the
+    offline contract back on an argument, which is the thing that failed here.
+    """
+
+    _fake_linux_namespace_environment(
+        monkeypatch, links_seen_by={tuple(_USER_NET): _LOOPBACK_ONLY_LINKS}, nsenter=None
+    )
+
+    assert list(runner._namespace_prefix_candidates()) == []
+    assert runner._network_namespace_prefix() is None
 
 
 def test_a_form_that_needs_no_elevation_never_asks_sudo_for_anything(monkeypatch):
     """Ordering is the whole point of the list, so it is asserted, not assumed.
 
-    Where the process already holds the capability the namespace costs one
-    unshare and the kernel keeps the invoking user's credentials; reaching for
-    sudo there would elevate for nothing and run the kernel as root.
+    Where the unprivileged user namespace is available the kernel keeps the
+    invoking user's credentials; reaching for sudo there would elevate for
+    nothing and run the kernel as root.
     """
 
     executed = _fake_linux_namespace_environment(
-        monkeypatch, links_seen_by={tuple(_PRIVILEGED_NET): _LOOPBACK_ONLY_LINKS}
+        monkeypatch, links_seen_by={tuple(_USER_NET): _LOOPBACK_ONLY_LINKS}
     )
 
-    assert runner._network_namespace_prefix() == _PRIVILEGED_NET
+    assert runner._network_namespace_prefix() == _USER_NET
     assert len(executed) == 1
     assert _FAKE_SUDO not in executed[0]
 
@@ -652,20 +737,14 @@ def test_sudo_is_not_offered_when_it_cannot_elevate_without_asking(monkeypatch):
     executed = _fake_linux_namespace_environment(
         monkeypatch, links_seen_by={}, sudo_needs_a_password=True
     )
-    assert list(runner._namespace_prefix_candidates()) == [
-        _PRIVILEGED_NET,
-        _USER_NET,
-    ]
+    assert list(runner._namespace_prefix_candidates()) == [_USER_NET]
     assert [_FAKE_SUDO, "-n", "true"] in executed
     assert all(command[0] != _FAKE_SUDO for command in executed[1:])
 
     absent = _fake_linux_namespace_environment(
         monkeypatch, links_seen_by={}, sudo=None
     )
-    assert list(runner._namespace_prefix_candidates()) == [
-        _PRIVILEGED_NET,
-        _USER_NET,
-    ]
+    assert list(runner._namespace_prefix_candidates()) == [_USER_NET]
     assert absent == []
 
 
@@ -681,7 +760,6 @@ def test_a_probe_that_still_sees_the_host_network_is_not_used(monkeypatch):
     _fake_linux_namespace_environment(
         monkeypatch,
         links_seen_by={
-            tuple(_PRIVILEGED_NET): _HOST_NETWORK_LINKS,
             tuple(_USER_NET): _HOST_NETWORK_LINKS,
             tuple(_SUDO_NET): _HOST_NETWORK_LINKS,
         },
@@ -757,6 +835,50 @@ def test_the_budget_kill_is_reissued_through_sudo_for_a_root_owned_group(monkeyp
     escalated.clear()
     with pytest.raises(PermissionError):
         runner._kill_process_group(process, [])
+    assert escalated == []
+
+
+def test_a_successful_killpg_still_gets_the_privileged_pass(monkeypatch):
+    """Success from killpg does not mean the group is gone.
+
+    kill(2) reports success when the signal reached *at least one* member of the
+    group.  Behind sudo the group holds the signalable sudo process and the root
+    descendants it started, so killing sudo alone returns success while the
+    kernel keeps running and the notebook keeps executing in it.  Escalating
+    only on PermissionError therefore missed exactly the case the escalation
+    exists for, so the privileged pass runs whenever the group was started
+    privileged.
+    """
+
+    escalated: list[list[str]] = []
+    waited: list[str] = []
+
+    monkeypatch.setattr(
+        runner,
+        "os",
+        types.SimpleNamespace(name="posix", killpg=lambda pgid, sig: None),
+    )
+    monkeypatch.setattr(
+        runner,
+        "subprocess",
+        types.SimpleNamespace(
+            run=lambda command, **kwargs: escalated.append(list(command)),
+            SubprocessError=subprocess.SubprocessError,
+        ),
+    )
+    process = types.SimpleNamespace(
+        pid=4321, wait=lambda: waited.append("waited"), kill=lambda: None
+    )
+
+    runner._kill_process_group(process, [_FAKE_SUDO, "-n"])
+    assert escalated and escalated[0][:2] == [_FAKE_SUDO, "-n"]
+    assert "4321" in escalated[0]
+    assert waited == ["waited"]
+
+    # An unprivileged group is not signalled twice: there is nothing the second
+    # pass could reach that the first did not.
+    escalated.clear()
+    runner._kill_process_group(process, [])
     assert escalated == []
 
 
