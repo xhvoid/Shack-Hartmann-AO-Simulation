@@ -132,15 +132,10 @@ def _generate_candidate(candidate_dir: Path) -> None:
     }
     validate_cross_backend_report(candidate)
 
-    diff = _build_diff(candidate)
-    (candidate_dir / CANDIDATE_FILE).write_text(
-        json.dumps(candidate, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    (candidate_dir / DIFF_JSON).write_text(
-        json.dumps(diff, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    candidate_bytes = _canonical_bytes(candidate)
+    diff = _build_diff(candidate, candidate_bytes)
+    (candidate_dir / CANDIDATE_FILE).write_bytes(candidate_bytes)
+    (candidate_dir / DIFF_JSON).write_bytes(_canonical_bytes(diff))
     (candidate_dir / DIFF_MARKDOWN).write_text(
         _render_diff_markdown(diff),
         encoding="utf-8",
@@ -168,7 +163,8 @@ def _accept_reviewed_candidate(
     candidate_path = candidate_dir / CANDIDATE_FILE
     if not candidate_path.is_file():
         raise SystemExit(f"Missing reviewed candidate: {candidate_path}")
-    candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
+    candidate_bytes = candidate_path.read_bytes()
+    candidate = json.loads(candidate_bytes.decode("utf-8"))
     validate_cross_backend_report(candidate)
     generator = candidate.get("generator")
     if not isinstance(generator, dict) or not generator:
@@ -177,7 +173,11 @@ def _accept_reviewed_candidate(
             "this script."
         )
 
-    diff = _build_diff(candidate)
+    # The recomputed diff embeds content hashes of the candidate file bytes
+    # and the current packaged baseline, so any modification to either after
+    # the reviewed diff was generated — a tolerance, a rationale, a hash, or
+    # formatting alone — forces regeneration and a fresh review.
+    diff = _build_diff(candidate, candidate_bytes)
     checked_diff_path = candidate_dir / DIFF_JSON
     if not checked_diff_path.is_file():
         raise SystemExit(f"Missing generated machine-readable diff: {checked_diff_path}")
@@ -240,8 +240,12 @@ def _refresh_resource_manifest() -> None:
     print(f"Updated {manifest_path.relative_to(ROOT)}")
 
 
-def _build_diff(candidate: dict[str, Any]) -> dict[str, Any]:
+def _build_diff(
+    candidate: dict[str, Any],
+    candidate_bytes: bytes,
+) -> dict[str, Any]:
     current = _load_current_baseline()
+    current_bytes = _current_baseline_bytes()
     candidate_metrics = _metric_values(candidate)
     current_metrics = _metric_values(current) if current is not None else {}
     keys = sorted(set(candidate_metrics) | set(current_metrics))
@@ -256,6 +260,8 @@ def _build_diff(candidate: dict[str, Any]) -> dict[str, Any]:
             }
         )
     return {
+        "schema_name": "shwfs_ao.cross_backend_diff",
+        "schema_version": 1,
         "baseline_present": current is not None,
         "old_config_hash": (
             None
@@ -263,8 +269,116 @@ def _build_diff(candidate: dict[str, Any]) -> dict[str, Any]:
             else current["comparison_config"]["config_hash"]
         ),
         "new_config_hash": candidate["comparison_config"]["config_hash"],
+        "current_baseline_sha256": (
+            None
+            if current_bytes is None
+            else hashlib.sha256(current_bytes).hexdigest()
+        ),
+        "candidate_sha256": hashlib.sha256(candidate_bytes).hexdigest(),
         "metrics": entries,
+        "changes": _document_changes(current, candidate),
     }
+
+
+def _document_changes(
+    current: dict[str, Any] | None,
+    candidate: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Return every leaf-level difference between baseline and candidate.
+
+    Comparisons are keyed by ``comparison_kind`` and metrics by ``name`` so a
+    changed tolerance reads as one stable path instead of an array-index
+    shuffle.  The top-level ``acceptance`` block is excluded: candidates never
+    carry one, and acceptance provenance is minted at accept time.  An absent
+    side is rendered as null.
+    """
+
+    old_document = {} if current is None else dict(current)
+    new_document = dict(candidate)
+    old_document.pop("acceptance", None)
+    new_document.pop("acceptance", None)
+    changes: list[dict[str, Any]] = []
+    _collect_changes("", old_document, new_document, changes)
+    return changes
+
+
+_ABSENT = object()
+
+
+def _collect_changes(
+    path: str,
+    old: Any,
+    new: Any,
+    changes: list[dict[str, Any]],
+) -> None:
+    if old is _ABSENT or new is _ABSENT or type(old) is not type(new):
+        changes.append(
+            {
+                "path": path,
+                "old": None if old is _ABSENT else old,
+                "new": None if new is _ABSENT else new,
+            }
+        )
+        return
+    if isinstance(old, dict):
+        for key in sorted(set(old) | set(new)):
+            _collect_changes(
+                f"{path}.{key}" if path else str(key),
+                old.get(key, _ABSENT),
+                new.get(key, _ABSENT),
+                changes,
+            )
+        return
+    if isinstance(old, list):
+        keyed_old = _keyed_elements(path, old)
+        keyed_new = _keyed_elements(path, new)
+        if keyed_old is not None and keyed_new is not None:
+            for key in sorted(set(keyed_old) | set(keyed_new)):
+                _collect_changes(
+                    f"{path}[{key}]",
+                    keyed_old.get(key, _ABSENT),
+                    keyed_new.get(key, _ABSENT),
+                    changes,
+                )
+            return
+        for index in range(max(len(old), len(new))):
+            _collect_changes(
+                f"{path}[{index}]",
+                old[index] if index < len(old) else _ABSENT,
+                new[index] if index < len(new) else _ABSENT,
+                changes,
+            )
+        return
+    if old != new:
+        changes.append({"path": path, "old": old, "new": new})
+
+
+def _keyed_elements(
+    path: str,
+    elements: list[Any],
+) -> dict[str, Any] | None:
+    key_field = (
+        "comparison_kind"
+        if path.endswith("comparisons")
+        else "name" if path.endswith(".metrics") else None
+    )
+    if key_field is None:
+        return None
+    keyed: dict[str, Any] = {}
+    for element in elements:
+        if not isinstance(element, dict) or key_field not in element:
+            return None
+        label = str(element[key_field])
+        if label in keyed:
+            return None
+        keyed[label] = element
+    return keyed
+
+
+def _canonical_bytes(document: dict[str, Any]) -> bytes:
+    return (json.dumps(document, indent=2, sort_keys=True) + "\n").encode(
+        "utf-8"
+    )
 
 
 def _render_diff_markdown(diff: dict[str, Any]) -> str:
@@ -274,6 +388,10 @@ def _render_diff_markdown(diff: dict[str, Any]) -> str:
         f"- baseline present: {diff['baseline_present']}",
         f"- old config hash: {diff['old_config_hash']}",
         f"- new config hash: {diff['new_config_hash']}",
+        f"- current baseline SHA-256: {diff['current_baseline_sha256']}",
+        f"- candidate SHA-256: {diff['candidate_sha256']}",
+        "",
+        "## Metric values",
         "",
         "| comparison | metric | old | new |",
         "| --- | --- | --- | --- |",
@@ -283,6 +401,30 @@ def _render_diff_markdown(diff: dict[str, Any]) -> str:
             f"| {entry['comparison_kind']} | {entry['metric']} | "
             f"{entry['old_value']} | {entry['new_value']} |"
         )
+    lines.extend(
+        (
+            "",
+            "## All other changes (tolerances, criteria, rationale, hashes, "
+            "environment; null = absent)",
+            "",
+        )
+    )
+    changes = [
+        entry
+        for entry in diff["changes"]
+        if not (
+            entry["path"].endswith(".value")
+            and entry["path"].startswith("comparisons[")
+        )
+    ]
+    if not changes:
+        lines.append("None.")
+    else:
+        lines.extend(("| path | old | new |", "| --- | --- | --- |"))
+        for entry in changes:
+            lines.append(
+                f"| `{entry['path']}` | {entry['old']} | {entry['new']} |"
+            )
     return "\n".join(lines) + "\n"
 
 
@@ -299,6 +441,13 @@ def _load_current_baseline() -> dict[str, Any] | None:
     if not path.is_file():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _current_baseline_bytes() -> bytes | None:
+    path = DESTINATION_DIR / BASELINE_NAME
+    if not path.is_file():
+        return None
+    return path.read_bytes()
 
 
 def _source_commit() -> str:
