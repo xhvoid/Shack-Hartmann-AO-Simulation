@@ -146,7 +146,7 @@ def _finite(value: Any) -> bool:
 
 
 def _hex64(value: Any) -> bool:
-    return isinstance(value, str) and bool(_HEX64.match(value))
+    return isinstance(value, str) and bool(_HEX64.fullmatch(value))  # fullmatch: "$" alone would admit a trailing newline
 
 
 def _close(a: Any, b: float, rel: float = 1e-9, absolute: float = 0.0) -> bool:
@@ -838,7 +838,7 @@ class Checker:
         parents = {role: observation["roles"][role]["parent"] for role in ROLES}
         named = {role: (parent.get("file"), parent.get("file_sha256")) for role, parent in parents.items()}
         shown = ", ".join(f"{role} {name!r} {str(digest)[:12]}" for role, (name, digest) in named.items())
-        self.check(len(set(named.values())) == 1, f"{case_id}: the uncorrected and corrected parents name one mean archive with one file digest ({shown})", area="observation")
+        self.check(named["uncorrected"] == named["corrected"], f"{case_id}: the uncorrected and corrected parents name one mean archive with one file digest ({shown})", area="observation")
         bound = provenance.get("raw_evidence", {}).get("files", {}).get(MEAN_ARCHIVE)
         recorded = bound.get("sha256") if isinstance(bound, dict) else None
         self.check(_hex64(recorded), f"{case_id}: provenance binds the retained mean archive {MEAN_ARCHIVE} by SHA-256 (recorded {recorded!r})", area="provenance")

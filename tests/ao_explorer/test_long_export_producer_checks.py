@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import sys
 
 import pytest
 
@@ -25,16 +26,27 @@ COUNT = long_series.N_STEPS - long_series.STARTUP_EXCLUSION_FRAMES
 
 @pytest.fixture(autouse=True)
 def _no_science(monkeypatch):
+    import shwfs_ao.control.loop
     import shwfs_ao.experiments.detector_level
     import shwfs_ao.experiments.scao
+
+    originals = (
+        shwfs_ao.experiments.detector_level.science_run,
+        shwfs_ao.experiments.scao.build_scao_system,
+        shwfs_ao.experiments.scao.run_closed_loop,
+        shwfs_ao.control.loop.run_closed_loop,
+    )
 
     def forbidden(*_, **__):
         raise AssertionError("an exporter test reached a production or science entry point")
 
     monkeypatch.setattr(long_series, "run_case", forbidden)
-    monkeypatch.setattr(shwfs_ao.experiments.scao, "build_scao_system", forbidden)
-    monkeypatch.setattr(shwfs_ao.experiments.scao, "run_closed_loop", forbidden)
-    monkeypatch.setattr(shwfs_ao.experiments.detector_level, "science_run", forbidden)
+
+    # Every loaded reference, import-time aliases included (``from .scao import build_scao_system`` and the like).
+    for module in [module for name, module in list(sys.modules.items()) if name == "shwfs_ao" or name.startswith("shwfs_ao.")]:
+        for name, value in list(vars(module).items()):
+            if any(value is original for original in originals):
+                monkeypatch.setattr(module, name, forbidden)
 
 
 def conforming_checks() -> dict:

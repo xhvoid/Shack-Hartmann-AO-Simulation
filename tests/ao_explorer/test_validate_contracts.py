@@ -503,6 +503,13 @@ def _drop_bound_archive(payload):
     payload["raw_evidence"]["files"].pop("mean_psfs.npz")
 
 
+def _with_trailing_newlines(site):
+    # Parents and provenance agree on the same digest plus a newline: equal, but not a SHA-256.
+    digest = _member(site, "baseline", "provenance.json")["raw_evidence"]["files"]["mean_psfs.npz"]["sha256"] + "\n"
+    _both_parents("file_sha256", digest)(site)
+    _case_member("baseline", "provenance.json", _set(("raw_evidence", "files", "mean_psfs.npz", "sha256"), digest))(site)
+
+
 MEAN_ARCHIVE_DEFECTS = [
     ("wrong-observation-file-digest", _both_parents("file_sha256", "a" * 64), [_archive_binding("uncorrected"), _archive_binding("corrected")]),
     ("wrong-provenance-file-digest", _case_member("baseline", "provenance.json", _set(("raw_evidence", "files", "mean_psfs.npz", "sha256"), "b" * 64)),
@@ -514,6 +521,12 @@ MEAN_ARCHIVE_DEFECTS = [
      [ARCHIVE_ROLES_AGREE, _archive_binding("corrected"), "baseline: corrected parent records its array, file and configuration digests"]),
     ("missing-provenance-binding", _case_member("baseline", "provenance.json", _drop_bound_archive),
      [ARCHIVE_BOUND, _archive_binding("uncorrected"), _archive_binding("corrected"), "baseline: raw-evidence file digests recorded"]),
+    # A recorded failure, not a crash: an unhashable digest used to raise TypeError in the role comparison.
+    ("parent-digest-not-a-string", _parent("corrected", "file_sha256", ["a" * 64]),
+     [ARCHIVE_ROLES_AGREE, _archive_binding("corrected"), "baseline: corrected parent records its array, file and configuration digests"]),
+    ("digests-with-trailing-newline", _with_trailing_newlines,
+     [ARCHIVE_BOUND, _archive_binding("uncorrected"), _archive_binding("corrected"), "baseline: raw-evidence file digests recorded",
+      "baseline: uncorrected parent records its array, file and configuration digests", "baseline: corrected parent records its array, file and configuration digests"]),
 ]
 
 
