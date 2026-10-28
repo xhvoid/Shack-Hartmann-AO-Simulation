@@ -100,6 +100,14 @@ version-1 comparison baseline cover thirteen comparison groups:
 12. short closed-loop correction/residual trend; and
 13. runtime and peak traced memory.
 
+This inventory is enforced, not aspirational: the document validator in
+`shwfs_ao.validation.regression` rejects any report or baseline whose
+comparison list does not cover exactly these thirteen kinds in this order,
+and rejects degenerate gating criteria (non-finite expectations, negative
+absolute tolerances, inverted ranges, non-finite recorded baseline values).
+A regenerated baseline therefore cannot silently drop a comparison or widen
+a tolerance into an always-passing gate.
+
 The suite uses the same stored/configured OPD and command fixtures for
 pointwise optical comparisons. Independently seeded atmospheric screens are
 compared across a declared realization count using statistical RMS and

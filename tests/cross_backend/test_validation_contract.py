@@ -40,6 +40,7 @@ from shwfs_ao.validation.regression import (
     CROSS_BACKEND_BASELINE_SCHEMA_NAME,
     CROSS_BACKEND_BASELINE_SCHEMA_VERSION,
     CROSS_BACKEND_REPORT_SCHEMA_NAME,
+    REQUIRED_COMPARISON_KINDS,
     BaselineContractError,
     baseline_from_report,
     evaluate_report_against_baseline,
@@ -93,6 +94,27 @@ def _hash64(seed: str) -> str:
     return hashlib.sha256(seed.encode("utf-8")).hexdigest()
 
 
+def _probe_comparison(kind: str) -> dict:
+    return {
+        "comparison_kind": kind,
+        "attribution": "Synthetic comparison for contract tests.",
+        "metrics": [
+            {
+                "name": f"{kind}_probe_value",
+                "level": "physical_tolerance",
+                "units": "ratio",
+                "value": 1.0,
+                "pass_criterion": {
+                    "type": "range",
+                    "low": 0.5,
+                    "high": 1.5,
+                },
+                "rationale": "Contract-test probe metric.",
+            },
+        ],
+    }
+
+
 def _minimal_report() -> dict:
     return {
         "artifact_schema_name": CROSS_BACKEND_REPORT_SCHEMA_NAME,
@@ -118,24 +140,7 @@ def _minimal_report() -> dict:
             "dependency_constraint_sha256": "unrecorded",
         },
         "comparisons": [
-            {
-                "comparison_kind": "unit_probe",
-                "attribution": "Synthetic comparison for contract tests.",
-                "metrics": [
-                    {
-                        "name": "probe_value",
-                        "level": "physical_tolerance",
-                        "units": "ratio",
-                        "value": 1.0,
-                        "pass_criterion": {
-                            "type": "range",
-                            "low": 0.5,
-                            "high": 1.5,
-                        },
-                        "rationale": "Contract-test probe metric.",
-                    },
-                ],
-            },
+            _probe_comparison(kind) for kind in REQUIRED_COMPARISON_KINDS
         ],
     }
 
@@ -346,6 +351,123 @@ class TestDocumentContract:
             json.loads(json.dumps(report["comparisons"][0]["metrics"][0]))
         )
         with pytest.raises(BaselineContractError, match="duplicate metric"):
+            validate_cross_backend_report(report)
+
+    def test_the_required_kind_inventory_matches_the_ticket(self):
+        assert REQUIRED_COMPARISON_KINDS == TICKET_COMPARISON_KINDS
+
+    def test_report_rejects_a_missing_required_comparison_kind(self):
+        report = _minimal_report()
+        del report["comparisons"][2]
+        with pytest.raises(
+            BaselineContractError,
+            match="required comparison kinds",
+        ) as excinfo:
+            validate_cross_backend_report(report)
+        assert "atmosphere_statistics" in str(excinfo.value)
+
+    def test_report_rejects_an_unknown_extra_comparison_kind(self):
+        report = _minimal_report()
+        report["comparisons"][0]["comparison_kind"] = "unit_probe"
+        with pytest.raises(
+            BaselineContractError,
+            match="required comparison kinds",
+        ) as excinfo:
+            validate_cross_backend_report(report)
+        assert "unit_probe" in str(excinfo.value)
+
+    def test_report_rejects_a_reordered_comparison_inventory(self):
+        report = _minimal_report()
+        comparisons = report["comparisons"]
+        comparisons[0], comparisons[1] = comparisons[1], comparisons[0]
+        with pytest.raises(
+            BaselineContractError,
+            match="canonical order",
+        ):
+            validate_cross_backend_report(report)
+
+    @pytest.mark.parametrize(
+        "criterion, message",
+        (
+            (
+                {"type": "abs_tolerance", "expected": 0.0, "tolerance": -1e-9},
+                "non-negative",
+            ),
+            (
+                {
+                    "type": "abs_tolerance",
+                    "expected": 0.0,
+                    "tolerance": float("nan"),
+                },
+                "non-negative",
+            ),
+            (
+                {
+                    "type": "abs_tolerance",
+                    "expected": float("inf"),
+                    "tolerance": 1e-9,
+                },
+                "finite number",
+            ),
+            (
+                {"type": "abs_tolerance", "expected": 0.0, "tolerance": True},
+                "non-negative",
+            ),
+            (
+                {"type": "range", "low": 2.0, "high": 1.0},
+                "must not exceed",
+            ),
+            (
+                {"type": "range", "low": float("-inf"), "high": 1.0},
+                "finite",
+            ),
+            (
+                {"type": "range", "low": 0.0, "high": float("nan")},
+                "finite",
+            ),
+            (
+                {"type": "equals", "expected": float("nan")},
+                "finite",
+            ),
+        ),
+    )
+    def test_report_rejects_degenerate_criterion_numerics(
+        self,
+        criterion,
+        message,
+    ):
+        report = _minimal_report()
+        report["comparisons"][0]["metrics"][0]["pass_criterion"] = criterion
+        with pytest.raises(BaselineContractError, match=message):
+            validate_cross_backend_report(report)
+
+    def test_report_accepts_boolean_and_string_equality_expectations(self):
+        report = _minimal_report()
+        metric = report["comparisons"][0]["metrics"][0]
+        metric["level"] = "exact"
+        metric["value"] = True
+        metric["pass_criterion"] = {"type": "equals", "expected": True}
+        validate_cross_backend_report(report)
+        metric["value"] = "native"
+        metric["pass_criterion"] = {"type": "equals", "expected": "native"}
+        validate_cross_backend_report(report)
+
+    def test_a_baseline_rejects_a_non_finite_recorded_gating_value(self):
+        # A fresh report may observe NaN — evaluation reports that as a
+        # metric failure with full context — but an accepted baseline's
+        # recorded value is an expectation and must be finite.
+        report = _minimal_report()
+        report["comparisons"][0]["metrics"][0]["value"] = float("nan")
+        validate_cross_backend_report(report)
+        baseline = _minimal_baseline()
+        baseline["comparisons"][0]["metrics"][0]["value"] = float("nan")
+        with pytest.raises(BaselineContractError, match="finite"):
+            validate_cross_backend_baseline(baseline)
+
+    def test_report_rejects_a_non_hex_content_hash(self):
+        report = _minimal_report()
+        report["component_hashes"]["pupil_geometry"] = "Z" * 64
+        with pytest.raises(BaselineContractError, match="hexadecimal"):
             validate_cross_backend_report(report)
 
     def test_report_rejects_unknown_levels_and_incomplete_criteria(self):
