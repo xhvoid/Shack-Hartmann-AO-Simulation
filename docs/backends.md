@@ -347,6 +347,8 @@ below are authoritative.
 | `uncertainty_supported` | bool vector or `None` | physical path: whether `detector_covariance_v2` supports the regime; unsupported lenslets report an undefined sigma |
 | `masked_pixel_fraction` | vector in `[0, 1]` or `None` | physical path: masked (bad) fraction of each centroid window; on this path `fluxes_e` is the model-expected processed window flux that the flux gate uses |
 | `saturated_pixel_count` | vector or `None` | physical path: saturated pixels per block (pixel, register or digital) |
+| `centroid_sigma_xy_px` | `(n_subapertures, 2)` px or `None` | physical path (S4 traced telemetry, T1): the `detector_covariance_v2` temporal sigma of each axis at the frame's own expected spot, NaN where the model does not support the lenslet; a diagnostic validated on its own (no infinities, non-negative where finite), never a gate |
+| `expected_centroids_xy_px` | `(n_subapertures, 2)` px or `None` | physical path, plain centre of gravity only: the centroid of the expected processed window of the same frame (the frame the gates use), in the window coordinates of `centroids_xy_px`; NaN where the expected window total is not positive (a valid noisy centroid may still exist there); `None` for a thresholded or minimum-subtracted estimator; a diagnostic that never changes `valid_subapertures` |
 
 ### `WfsMeasurement`
 

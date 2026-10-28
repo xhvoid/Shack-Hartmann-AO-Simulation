@@ -648,3 +648,43 @@ def test_the_gain_map_sets_each_pixel_s_step() -> None:
 def test_without_an_adc_the_quantization_gate_does_not_apply() -> None:
     assert _support_case({WINDOW_PIXEL: QUIET}, adc_bits=None).supported[0]
     assert _support_case(read_noise_e=0.2, adc_bits=None).supported[0]
+
+
+# -- S4 E0 ingredient (T1, 2026-10-20): the realized centroid residual against the model --
+
+
+@pytest.mark.slow
+def test_realized_centroid_residual_variance_matches_the_model_on_the_gaussian_fixture() -> None:
+    """``Var_t(c - c_hat)`` over 10^4 trials against ``detector_covariance_v2``.
+
+    Declared design: the photon-limited CCD fixture (Gaussian spot of 2e4
+    electrons, read noise 1 e-, estimated products), seed 1, 10^4 temporal
+    trials.  ``c_hat`` is the plain centre of gravity of the fixture's expected
+    processed frame (the E0 reference), the same for every trial here because
+    the spot does not move.  The sample variance of N trials has relative
+    standard error ``sqrt(2 / (N - 1))`` = 1.4 %, and the first-order model
+    is low by about ``4 / SNR_T**2`` (below 0.1 % at this flux), so the
+    variance ratio is accepted within 6 % (about four standard errors) and the
+    mean residual within five standard errors of the mean (``sigma / sqrt(N)``).
+    """
+
+    cam, flux = CASES["ccd"][0]
+    fix = fixture(cam, flux, seed=1)
+    quality = model_prediction(fix)
+    assert quality.supported[0] and quality.total_snr[0] > 60.0
+    rows, cols = fix.window()
+    expected_window = np.asarray(quality.expected_processed_e)[0][rows, cols]
+    c_hat = centre_of_gravity(expected_window[None])[0]
+    trials = 10_000
+    centroids = temporal_trials(fix, trials)["centroids_px"]
+    assert np.all(np.isfinite(centroids))
+    residual = centroids - c_hat
+    model_variance = quality.centroid_sigma_xy_px[0] ** 2
+    ratio = residual.var(axis=0, ddof=1) / model_variance
+    assert np.all(np.abs(ratio - 1.0) < 0.06), ratio
+    sigma = np.sqrt(model_variance)
+    assert np.all(np.abs(residual.mean(axis=0)) < 5.0 * sigma / math.sqrt(trials)), residual.mean(axis=0)
+    # The second moment equals the centred variance here only because the
+    # mean residual is zero within its error; the two are reported apart.
+    second_moment = np.mean(residual**2, axis=0)
+    assert np.all(np.abs(second_moment / model_variance - 1.0) < 0.06)

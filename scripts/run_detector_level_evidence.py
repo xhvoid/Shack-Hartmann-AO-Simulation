@@ -37,6 +37,14 @@ arm appends to one record; the protocol is predeclared in the status file
 ``noise-isolation-2m`` (ungated) and ``noise-isolation-12m`` (gated) run
 paired noise-on / noiseless-operating loops over magnitudes and seeds to
 isolate the temporal detector-noise variance (review 2026-10-16).
+``noise-isolation-2m-traced`` (ungated), ``noise-isolation-12m-traced`` and
+``noise-isolation-12m-masklocked`` (both gated) are the S4 traced family
+(ticket T1, 2026-10-20): the same paired runs observed per frame, each with
+one allow-pickle-free NumPy sidecar beside the record, a diagnostic protocol
+binding the tracing semantics beside the unchanged physical protocol, and
+atomic, never-clobbering publication (see the traced section below).  The
+mask-locked command is arm B of the contract: the twin runs first and the
+noisy arm replays its effective rows through a separately identified wrapper.
 ``e6-v3`` reruns E6 on ``det_emccd_12m_medium_derived@3`` with a
 photometry-matched monochromatic arm (gated).
 
@@ -95,12 +103,14 @@ import hashlib
 import importlib.util
 import json
 import math
+import os
 from pathlib import Path
 import platform
 import subprocess
 import sys
 import time
 from typing import Any
+import zipfile
 
 import numpy as np
 
@@ -646,6 +656,9 @@ def _gated_series(
     execution: Any,
     enabled_by_user: str | None = None,
     runner: Any = None,
+    run_context: bool = False,
+    validate_retained: Any = None,
+    header_extra: dict[str, Any] | None = None,
 ) -> None:
     """Run ``(label, config, root_seed)`` entries one at a time, saving after each.
 
@@ -653,6 +666,15 @@ def _gated_series(
     is called as ``runner(config, root_seed=, n_steps=, burn_in_frames=,
     execution=)``.  An existing record is continued only with ``--resume``, and
     only runs whose protocol identity matches are reused (review R6).
+
+    The three optional hooks serve the traced family (T1) and default to the
+    legacy behaviour: with ``run_context`` the runner also receives
+    ``context=`` (the run's label, its protocol identity, the record path, the
+    code identity and the environment); ``validate_retained(path, runs)`` is
+    called with the retained runs (an empty list for a fresh record) after the
+    legacy checks and before anything runs, and must raise
+    :class:`EvidenceRecordExists` to refuse; ``header_extra`` adds fields to
+    the record header.
     """
 
     from shwfs_ao.calibration.interaction import InteractionMatrixError
@@ -671,6 +693,8 @@ def _gated_series(
     record["burn_in_frames"] = burn_in
     record["series_protocol_version"] = SERIES_PROTOCOL_VERSION
     record["code_identity"] = code
+    if header_extra:
+        record.update(header_extra)
     record["runs"] = []
     expected = {
         (label, int(seed)): run_protocol(
@@ -771,6 +795,10 @@ def _gated_series(
         record["enabled_by_user"] = previous.get("enabled_by_user")
         resumed_notes = list(previous.get("resumed_enabled_by_user", []))
         resumed = True
+    if validate_retained is not None:
+        # The family's own checks (sidecars, diagnostic protocol, leftovers):
+        # read-only, before any decision to run or to leave the record alone.
+        validate_retained(path, list(record["runs"]))
     done = {(entry["label"], entry["root_seed"]) for entry in record["runs"]}
     pending = [(label, seed) for label, _, seed in plan if (label, seed) not in done]
     if pending and note is None:
@@ -802,7 +830,16 @@ def _gated_series(
             continue
         ran += 1
         try:
-            result = run(config, root_seed=seed, n_steps=n_steps, burn_in_frames=burn_in, execution=execution)
+            if run_context:
+                result = run(
+                    config, root_seed=seed, n_steps=n_steps, burn_in_frames=burn_in, execution=execution,
+                    context={
+                        "label": label, "protocol": expected[(label, int(seed))], "record_path": path,
+                        "code": code, "environment": environment,
+                    },
+                )
+            else:
+                result = run(config, root_seed=seed, n_steps=n_steps, burn_in_frames=burn_in, execution=execution)
         except (ScaoConstructionError, InteractionMatrixError) as exc:
             # A configuration the system refuses to build (for example a
             # calibration whose rows the validity gates reject) is a result.
@@ -1116,6 +1153,742 @@ def e5(arguments: argparse.Namespace) -> None:
     )
 
 
+# -- S4 traced noise isolation (ticket T1, 2026-10-20) --------------------------
+#
+# A separate record family beside the recorded ``noise-isolation-*`` studies:
+# the same paired runs, observed per frame (``paired_noise_run_traced``), with
+# one allow-pickle-free NumPy sidecar per run next to the JSON record.  The
+# physical run identity is the series protocol 4 payload, unchanged; the
+# tracing semantics (trace fields, frame domain, arm order, mask source, map
+# retention, dtypes) are bound by a separate diagnostic protocol with its own
+# hash, so a traced record is never accepted under other tracing semantics
+# merely because its physical hash matches.  A sidecar's digest is output
+# integrity, recorded in the run row and never part of any protocol payload
+# (no circular hash).  Publication is atomic and never clobbers: the complete
+# bytes go to a temporary file, are hard-linked into place (refused if the
+# destination exists), re-read and digested; only then is the run row with the
+# reference appended to the record.  An interrupted invocation therefore leaves
+# at most a sidecar without a row (an orphan) or a temporary file; both are
+# refused as ambiguous leftovers on the next invocation and are never deleted,
+# repaired or overwritten by this script.
+TRACE_FAMILY = "noise_isolation_traced"
+TRACE_SIDECAR_SCHEMA = "shwfs_ao.noise_isolation_trace_sidecar.v1"
+DIAGNOSTIC_PROTOCOL_VERSION = 1
+_SIDECAR_TEMP_MARK = ".tmp-"
+# Residual maps are retained for one predeclared seed per magnitude (the S4
+# contract's default); the 2 m m8 and the 12 m m11 selections take the seed
+# that showed the recorded excursion (seed 68 and seed 72), the others the
+# first seed of the study.  Declared here, before any traced run.
+NOISE_ISOLATION_2M_TRACED = {
+    **NOISE_ISOLATION_2M,
+    "record": "det09_noise_isolation_2m_traced.json",
+    "map_seeds": {"m5": 61, "m6": 61, "m7": 61, "m8": 68},
+}
+NOISE_ISOLATION_12M_TRACED = {
+    **NOISE_ISOLATION_12M,
+    "record": "det09_noise_isolation_12m_traced.json",
+    "map_seeds": {"m8": 71, "m9": 71, "m10": 71, "m11": 72},
+}
+# Arm B of the S4 contract: m_AB 11, root seeds 71-80, the noisy arm replaying
+# the twin's effective rows.  Conditional on A1's analysis; gated.
+NOISE_ISOLATION_12M_MASKLOCKED = {
+    "profile": ("det_emccd_12m_medium_derived", 3), "magnitudes": (11.0,),
+    "seeds": (71, 72, 73, 74, 75, 76, 77, 78, 79, 80), "n_steps": 400, "burn_in": 100,
+    "record": "det09_noise_isolation_12m_masklocked.json",
+    "map_seeds": {"m11": 72},
+}
+# Units and axes of every sidecar array (the sidecar's metadata repeats them).
+_SIDECAR_SHARED_ARRAYS = {
+    "frame_index": ("frame", "frame index 0..n_steps-1", ("frame",)),
+    "analysed_frame_index": ("frame", "frames after burn-in, the domain of the three series below", ("analysed_frame",)),
+    "delta_v_m2": ("m2", "DeltaV_t: piston-removed pupil mean square of the residual-map difference (noisy minus twin, float32-recorded maps)", ("analysed_frame",)),
+    "mean_square_difference_m2": ("m2", "msd_t: noisy minus twin post-update mean-square residual (float64 history)", ("analysed_frame",)),
+    "cross_term_m2": ("m2", "X_t = msd_t - DeltaV_t", ("analysed_frame",)),
+    "mask_disagreement_rows": ("rows", "rows on which the two arms' effective masks differ", ("frame",)),
+    "calibration_valid_rows": ("bool", "calibration-valid rows (the denominator of valid_measurement_fraction)", ("row",)),
+    "row_ids": ("id", "measurement row IDs in row order (x then y per lenslet)", ("row",)),
+}
+_SIDECAR_HISTORY_ARRAYS = {
+    "measurement_row_masks": ("bool", "effective rows used by the reconstructor", ("frame", "row")),
+    "valid_measurement_fraction": ("fraction", "effective rows over calibration-valid rows", ("frame",)),
+    "valid_subaperture_fraction": ("fraction", "sensor-valid lenslets over retained lenslets", ("frame",)),
+    "saturation_fraction": ("fraction", "clipped actuators of the applied command", ("frame",)),
+    "reconstruction_usable": ("bool", "a usable reconstruction reached the controller", ("frame",)),
+    "open_loop_opd_rms_m": ("m", "piston-removed pupil RMS of the atmosphere", ("frame",)),
+    "pre_update_residual_opd_rms_m": ("m", "residual the sensor saw", ("frame",)),
+    "post_update_residual_opd_rms_m": ("m", "residual after the frame's update", ("frame",)),
+    "subaperture_ids": ("id", "retained lenslet IDs in lenslet order", ("lenslet",)),
+}
+_SIDECAR_TELEMETRY_ARRAYS = {
+    "centroids_xy_px": ("px", "noisy processed centroid in window pixel coordinates (x = column, y = row); NaN where not finite", ("frame", "lenslet", "xy")),
+    "expected_centroids_xy_px": ("px", "plain centre of gravity of the expected processed window of the same frame, same coordinates; NaN where the window total is not positive", ("frame", "lenslet", "xy")),
+    "centroid_sigma_xy_px": ("px", "detector_covariance_v2 temporal sigma per axis at the frame's own expected spot; NaN where unsupported", ("frame", "lenslet", "xy")),
+    "fluxes_e": ("e", "model-expected processed window flux (the flux gate's input)", ("frame", "lenslet")),
+    "peak_snr": ("1", "peak-pixel SNR", ("frame", "lenslet")),
+    "total_snr": ("1", "window-total SNR (SNR_T)", ("frame", "lenslet")),
+    "centroid_sigma_px": ("px", "larger-axis model sigma; 1e6 where undefined", ("frame", "lenslet")),
+    "clipping_fraction": ("fraction", "expected flux outside the window (1 - capture)", ("frame", "lenslet")),
+    "centroid_calibration_sigma_px": ("px", "calibration-ensemble sigma (persistent per-run bias)", ("frame", "lenslet")),
+    "masked_pixel_fraction": ("fraction", "masked (bad) fraction of the centroid window", ("frame", "lenslet")),
+    "saturated_pixel_count": ("pixels", "saturated pixels per block", ("frame", "lenslet")),
+    "valid_subapertures": ("bool", "sensor validity (aggregate of the four gates); for the mask-locked arm the locked validity", ("frame", "lenslet")),
+    "valid_by_flux": ("bool", "flux gate", ("frame", "lenslet")),
+    "valid_by_snr": ("bool", "peak-SNR gate", ("frame", "lenslet")),
+    "valid_by_uncertainty": ("bool", "centroid-sigma gate", ("frame", "lenslet")),
+    "valid_by_clipping": ("bool", "window-clipping gate", ("frame", "lenslet")),
+    "uncertainty_supported": ("bool", "detector_covariance_v2 supports the lenslet", ("frame", "lenslet")),
+}
+_SIDECAR_WEIGHT_ARRAYS = {
+    "propagation_weights__weights_m2_per_px2": ("m2_opd_per_px2", "pupil variance of the DM response to a unit slope in the row (fixed reconstructor)", ("row",)),
+}
+_SIDECAR_MAP_ARRAYS = {
+    "residual_maps__pupil_mask": ("bool", "pupil samples kept by the map recorder", ("y", "x")),
+}
+# The retained residual maps of one arm (``residual_maps__<arm>``).
+_SIDECAR_RESIDUAL_MAP_ARM = ("m", "post-update residual OPD at the pupil samples (float32)", ("analysed_frame", "pupil_sample"))
+_SIDECAR_LOCK_ARRAYS = {
+    "mask_lock__rows_removed": ("rows", "rows the lock removed from the noisy arm's own validity", ("frame",)),
+    "mask_lock__rows_added": ("rows", "rows the lock forced valid", ("frame",)),
+    "mask_lock__rows_unaddable": ("rows", "scheduled rows that could not be forced (partial lock only)", ("frame",)),
+    "mask_lock__own_valid_subapertures": ("bool", "the noisy sensor's own gate decisions before the lock", ("frame", "lenslet")),
+}
+
+
+class TraceSidecarError(SystemExit):
+    """A trace sidecar could not be published or verified; nothing is repaired."""
+
+
+def _text_array(values: Any) -> np.ndarray:
+    """A fixed-width unicode array: loadable without pickle."""
+
+    return np.array([str(value) for value in values], dtype=str)
+
+
+def _jsonable(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _jsonable(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(item) for item in value]
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    return value
+
+
+def diagnostic_protocol(
+    *,
+    mode: str,
+    label: str,
+    root_seed: int,
+    retain_residual_maps: bool,
+    propagation_weights: bool,
+    allow_partial_lock: bool | None,
+) -> dict[str, Any]:
+    """The tracing semantics a traced run is bound to, beside its physical protocol.
+
+    ``map_retention`` is the only per-run field; everything else is shared by
+    every run of one traced record.  The physical protocol (series protocol 4)
+    is unchanged; this payload never includes a sidecar digest.
+    """
+
+    from shwfs_ao.experiments.detector_level import (
+        MASK_LOCK_SCHEMA,
+        MASK_LOCKED_NOISE_ARMS,
+        PAIRED_NOISE_ARMS,
+        TRACE_SCHEMA,
+    )
+
+    if mode not in ("traced", "mask_locked"):
+        raise ValueError("mode must be 'traced' or 'mask_locked'.")
+    locked = mode == "mask_locked"
+    return {
+        "diagnostic_protocol_version": DIAGNOSTIC_PROTOCOL_VERSION,
+        "family": TRACE_FAMILY,
+        "mode": mode,
+        "trace_schema": TRACE_SCHEMA,
+        "sidecar_schema": TRACE_SIDECAR_SCHEMA,
+        "arm_order": list(MASK_LOCKED_NOISE_ARMS if locked else PAIRED_NOISE_ARMS),
+        "mask_source": "operating_expectation twin of the same run and seed, frame by frame" if locked else None,
+        "mask_lock_schema": MASK_LOCK_SCHEMA if locked else None,
+        "forced_row_policy": (
+            None if not locked else ("keep_unaddable_rows_invalid" if allow_partial_lock else "refuse_nonfinite_forced_rows")
+        ),
+        "frame_domain": (
+            "masks and telemetry for every frame 0..n_steps-1; delta_v_m2, mean_square_difference_m2 and "
+            "cross_term_m2 for frames >= burn_in_frames; residual maps for frames >= burn_in_frames"
+        ),
+        "trace_fields": {
+            "history": sorted(name for name in _SIDECAR_HISTORY_ARRAYS if name != "subaperture_ids"),
+            "telemetry": sorted(_SIDECAR_TELEMETRY_ARRAYS),
+            "series": sorted(name for name in _SIDECAR_SHARED_ARRAYS if name not in ("row_ids", "calibration_valid_rows")),
+        },
+        "dtypes": {"telemetry_floats": "float64", "masks": "bool", "residual_maps": "float32", "series": "float64"},
+        "propagation_weights": bool(propagation_weights),
+        "map_retention": {"label": label, "root_seed": int(root_seed), "retained": bool(retain_residual_maps)},
+    }
+
+
+def _shared_diagnostic(protocol: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in protocol.items() if key != "map_retention"}
+
+
+def sidecar_name(stem: str, label: str, root_seed: int) -> str:
+    return f"{stem}__{label}__seed{int(root_seed)}.npz"
+
+
+def _sidecar_arrays(trace: dict[str, Any]) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
+    """Flatten a trace payload into sidecar arrays and their declared units and axes."""
+
+    arrays: dict[str, np.ndarray] = {}
+    declared: dict[str, Any] = {}
+
+    def put(name: str, value: np.ndarray, unit: str, meaning: str, axes: tuple[str, ...]) -> None:
+        array = np.ascontiguousarray(value)
+        arrays[name] = array
+        declared[name] = {"dtype": str(array.dtype), "shape": [int(size) for size in array.shape], "units": unit, "meaning": meaning, "axes": list(axes)}
+
+    for name, (unit, meaning, axes) in _SIDECAR_SHARED_ARRAYS.items():
+        value = trace[name]
+        put(name, _text_array(value) if name == "row_ids" else np.asarray(value), unit, meaning, axes)
+    for arm in trace["arm_order"]:
+        entry = trace["arms"][arm]
+        for name, (unit, meaning, axes) in _SIDECAR_HISTORY_ARRAYS.items():
+            value = entry[name]
+            put(f"{arm}__{name}", _text_array(value) if name == "subaperture_ids" else np.asarray(value), unit, meaning, axes)
+        for name, array in entry["telemetry"].items():
+            unit, meaning, axes = _SIDECAR_TELEMETRY_ARRAYS[name]
+            put(f"{arm}__telemetry__{name}", array, unit, meaning, axes)
+    weights = trace.get("propagation_weights")
+    if weights is not None and weights.get("available"):
+        unit, meaning, axes = _SIDECAR_WEIGHT_ARRAYS["propagation_weights__weights_m2_per_px2"]
+        put("propagation_weights__weights_m2_per_px2", np.asarray(weights["weights_m2_per_px2"], dtype=float), unit, meaning, axes)
+    maps = trace.get("residual_maps")
+    if maps is not None:
+        unit, meaning, axes = _SIDECAR_MAP_ARRAYS["residual_maps__pupil_mask"]
+        put("residual_maps__pupil_mask", np.asarray(maps["pupil_mask"], dtype=bool), unit, meaning, axes)
+        for arm in trace["arm_order"]:
+            put(f"residual_maps__{arm}", np.asarray(maps[arm], dtype=np.float32), *_SIDECAR_RESIDUAL_MAP_ARM)
+    lock = trace.get("mask_lock")
+    if lock is not None:
+        for name, (unit, meaning, axes) in _SIDECAR_LOCK_ARRAYS.items():
+            put(name, np.asarray(lock[name.split("__", 1)[1]]), unit, meaning, axes)
+    return arrays, declared
+
+
+def publish_sidecar(destination: Path, arrays: dict[str, np.ndarray], metadata: dict[str, Any]) -> dict[str, Any]:
+    """Write the complete sidecar atomically, never over an existing file, and return its reference.
+
+    The archive is built in memory, digested, written to a temporary file in
+    the same directory, synced, hard-linked into place (which fails if the
+    destination exists), read back and compared with the digest.  The
+    reference names the file, its SHA-256, its size and its schema.
+    """
+
+    import io
+    import secrets
+
+    destination = Path(destination)
+    if destination.exists():
+        raise TraceSidecarError(
+            f"{destination} exists and is not referenced by the record being written: an ambiguous leftover "
+            "(an interrupted invocation, or another study's file).  Move it aside or pass --output NAME; "
+            "nothing is overwritten."
+        )
+    buffer = io.BytesIO()
+    np.savez_compressed(buffer, metadata_json=np.array(json.dumps(metadata, sort_keys=True, default=str)), **arrays)
+    payload = buffer.getvalue()
+    digest = hashlib.sha256(payload).hexdigest()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name(f"{destination.name}{_SIDECAR_TEMP_MARK}{os.getpid()}-{secrets.token_hex(4)}")
+    with open(temporary, "xb") as handle:
+        handle.write(payload)
+        handle.flush()
+        os.fsync(handle.fileno())
+    try:
+        os.link(temporary, destination)
+    except FileExistsError:
+        temporary.unlink()
+        raise TraceSidecarError(f"{destination} appeared while the sidecar was being written; nothing was overwritten.") from None
+    temporary.unlink()
+    directory = os.open(destination.parent, os.O_RDONLY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
+    published = destination.read_bytes()
+    if hashlib.sha256(published).hexdigest() != digest or len(published) != len(payload):
+        raise TraceSidecarError(f"{destination} does not read back as the bytes written; the file is left as it is.")
+    read_sidecar(destination, expected_sha256=digest)
+    return {"file": destination.name, "sha256": digest, "bytes": len(payload), "schema": TRACE_SIDECAR_SCHEMA}
+
+
+def read_sidecar(path: Path, *, expected_sha256: str | None = None) -> tuple[dict[str, Any], dict[str, np.ndarray]]:
+    """Load and validate a sidecar without pickle; refuse corruption or undeclared content."""
+
+    path = Path(path)
+    if not path.is_file():
+        raise TraceSidecarError(f"{path} is missing.")
+    payload = path.read_bytes()
+    digest = hashlib.sha256(payload).hexdigest()
+    if expected_sha256 is not None and digest != expected_sha256:
+        raise TraceSidecarError(f"{path}: SHA-256 {digest} is not the recorded {expected_sha256}.")
+    try:
+        with np.load(path, allow_pickle=False) as archive:
+            names = set(archive.files)
+            if "metadata_json" not in names:
+                raise TraceSidecarError(f"{path}: no metadata_json entry.")
+            metadata = json.loads(archive["metadata_json"].item())
+            arrays = {name: archive[name] for name in names if name != "metadata_json"}
+    except (OSError, ValueError, KeyError, zipfile.BadZipFile) as exc:
+        raise TraceSidecarError(f"{path}: not a readable sidecar ({exc}).") from None
+    if not isinstance(metadata, dict) or metadata.get("schema") != TRACE_SIDECAR_SCHEMA:
+        raise TraceSidecarError(f"{path}: schema {metadata.get('schema') if isinstance(metadata, dict) else None!r} is not {TRACE_SIDECAR_SCHEMA}.")
+    declared = metadata.get("arrays")
+    if not isinstance(declared, dict) or set(declared) != set(arrays):
+        raise TraceSidecarError(f"{path}: the arrays present do not match the declared arrays.")
+    for name, spec in declared.items():
+        array = arrays[name]
+        if str(array.dtype) != spec.get("dtype") or [int(size) for size in array.shape] != list(spec.get("shape", [])):
+            raise TraceSidecarError(f"{path}: array {name} has dtype {array.dtype} and shape {array.shape}, declared {spec}.")
+    return metadata, arrays
+
+
+def _expected_sidecar_layout(
+    *,
+    diagnostic: dict[str, Any],
+    n_steps: int,
+    burn_in: int,
+    n_rows: int,
+    n_lenslets: int,
+    telemetry_unavailable: dict[str, list[str]],
+    weights_available: bool,
+) -> dict[str, tuple[str, tuple[int, ...] | None, str, str, tuple[str, ...]]]:
+    """Every array a sidecar of this diagnostic protocol must hold: dtype, shape, units, meaning, axes.
+
+    A ``None`` shape leaves one axis free (the pupil-sample count of retained
+    maps, the two axes of the pupil mask); everything else is fixed by the
+    frame count, the burn-in, the row count and the lenslet count.  Units,
+    meaning and axes are the canonical declarations the writer uses, so a
+    reader can compare values, not only the presence of the keys.
+    """
+
+    analysed = n_steps - burn_in
+    layout: dict[str, tuple[str, tuple[int, ...] | None, str, str, tuple[str, ...]]] = {}
+    series_dtypes = {
+        "frame_index": ("int64", (n_steps,)),
+        "analysed_frame_index": ("int64", (analysed,)),
+        "delta_v_m2": ("float64", (analysed,)),
+        "mean_square_difference_m2": ("float64", (analysed,)),
+        "cross_term_m2": ("float64", (analysed,)),
+        "mask_disagreement_rows": ("int64", (n_steps,)),
+        "calibration_valid_rows": ("bool", (n_rows,)),
+        "row_ids": ("str", (n_rows,)),
+    }
+    for name, (dtype, shape) in series_dtypes.items():
+        unit, meaning, axes = _SIDECAR_SHARED_ARRAYS[name]
+        layout[name] = (dtype, shape, unit, meaning, axes)
+    for arm in diagnostic["arm_order"]:
+        for name, (unit, meaning, axes) in _SIDECAR_HISTORY_ARRAYS.items():
+            if name == "subaperture_ids":
+                dtype, shape = "str", (n_lenslets,)
+            elif unit == "bool":
+                dtype, shape = "bool", ((n_steps, n_rows) if "row" in axes else (n_steps,))
+            else:
+                dtype, shape = "float64", (n_steps,)
+            layout[f"{arm}__{name}"] = (dtype, shape, unit, meaning, axes)
+        for name in diagnostic["trace_fields"]["telemetry"]:
+            if name in telemetry_unavailable.get(arm, []):
+                continue
+            unit, meaning, axes = _SIDECAR_TELEMETRY_ARRAYS[name]
+            shape = (n_steps, n_lenslets, 2) if "xy" in axes else (n_steps, n_lenslets)
+            layout[f"{arm}__telemetry__{name}"] = ("bool" if unit == "bool" else "float64", shape, unit, meaning, axes)
+    if weights_available:
+        unit, meaning, axes = _SIDECAR_WEIGHT_ARRAYS["propagation_weights__weights_m2_per_px2"]
+        layout["propagation_weights__weights_m2_per_px2"] = ("float64", (n_rows,), unit, meaning, axes)
+    if diagnostic["map_retention"]["retained"]:
+        unit, meaning, axes = _SIDECAR_MAP_ARRAYS["residual_maps__pupil_mask"]
+        layout["residual_maps__pupil_mask"] = ("bool", None, unit, meaning, axes)
+        for arm in diagnostic["arm_order"]:
+            layout[f"residual_maps__{arm}"] = ("float32", None, *_SIDECAR_RESIDUAL_MAP_ARM)
+    if diagnostic["mode"] == "mask_locked":
+        for name, (unit, meaning, axes) in _SIDECAR_LOCK_ARRAYS.items():
+            dtype, shape = ("bool", (n_steps, n_lenslets)) if unit == "bool" else ("int64", (n_steps,))
+            layout[name] = (dtype, shape, unit, meaning, axes)
+    return layout
+
+
+def validate_trace_payload(
+    metadata: dict[str, Any],
+    arrays: dict[str, np.ndarray],
+    *,
+    label: str,
+    root_seed: int,
+    n_steps: int,
+    burn_in: int,
+    diagnostic: dict[str, Any],
+    diagnostic_hash: str,
+    where: str,
+) -> None:
+    """Refuse a sidecar whose content does not carry the intended trace semantics.
+
+    Beyond the digest and the self-declared array table, the archive must
+    embed the run's frame counts, the row's diagnostic protocol (equal to the
+    embedded hash and to the row's), the protocol's trace schema and arm
+    order, and exactly the arrays that protocol requires, each with its
+    dtype and shape fixed by the frame, row and lenslet counts and with the
+    protocol's own units, axes and meaning declared (values compared, not
+    key presence); frame indices that are the declared domains; one lenslet
+    order shared by every arm and the canonical interleaved x/y rows of that
+    order (independent review T1-02, 2026-10-20 and its round 2 of
+    2026-10-21).  Nothing is repaired.
+    """
+
+    def refuse(reason: str) -> None:
+        raise TraceSidecarError(f"{where}: {reason}")
+
+    if int(metadata.get("n_steps", -1)) != int(n_steps) or int(metadata.get("burn_in_frames", -1)) != int(burn_in):
+        refuse(f"embeds n_steps {metadata.get('n_steps')!r} and burn_in_frames {metadata.get('burn_in_frames')!r}, the run has {n_steps} and {burn_in}")
+    if metadata.get("label") != label or metadata.get("root_seed") != int(root_seed):
+        refuse("embeds another label or seed than its run")
+    embedded = metadata.get("diagnostic_protocol")
+    if not isinstance(embedded, dict) or protocol_digest(embedded) != metadata.get("diagnostic_protocol_hash"):
+        refuse("its embedded diagnostic protocol is not the payload of its embedded diagnostic hash")
+    if _canonical(embedded) != _canonical(diagnostic) or metadata.get("diagnostic_protocol_hash") != diagnostic_hash:
+        refuse("its embedded diagnostic protocol is not the run row's")
+    if metadata.get("trace_schema") != diagnostic["trace_schema"] or list(metadata.get("arm_order", [])) != list(diagnostic["arm_order"]):
+        refuse(f"embeds trace schema {metadata.get('trace_schema')!r} and arm order {metadata.get('arm_order')!r}, the protocol expects {diagnostic['trace_schema']!r} and {diagnostic['arm_order']!r}")
+    arms = metadata.get("arms")
+    if not isinstance(arms, dict) or set(arms) != set(diagnostic["arm_order"]):
+        refuse("its per-arm metadata does not name exactly the protocol's arms")
+    noisy = next(arm for arm in diagnostic["arm_order"] if arm.startswith("noise_on"))
+    twin = next(arm for arm in diagnostic["arm_order"] if arm != noisy)
+    if metadata.get("noisy_arm") != noisy or metadata.get("twin_arm") != twin:
+        refuse("its noisy and twin arm names do not follow the protocol's arm order")
+    unavailable = {arm: list(arms[arm].get("telemetry_unavailable", [])) for arm in arms}
+    for arm, names in unavailable.items():
+        unknown = [name for name in names if name not in _SIDECAR_TELEMETRY_ARRAYS]
+        if unknown:
+            refuse(f"arm {arm} declares unknown unavailable telemetry fields {unknown}")
+    if "row_ids" not in arrays or "calibration_valid_rows" not in arrays:
+        refuse("has no row layout (row_ids and calibration_valid_rows)")
+    n_rows = int(arrays["row_ids"].shape[0]) if arrays["row_ids"].ndim == 1 else -1
+    first_ids = arrays.get(f"{noisy}__subaperture_ids")
+    if first_ids is None or first_ids.ndim != 1:
+        refuse("has no lenslet layout for the noisy arm")
+    n_lenslets = int(first_ids.shape[0])
+    if n_rows != 2 * n_lenslets or n_rows < 2:
+        refuse(f"has {n_rows} rows for {n_lenslets} lenslets; the Shack-Hartmann layout needs two rows per lenslet")
+    weights_available = bool((metadata.get("propagation_weights") or {}).get("available")) if diagnostic.get("propagation_weights") else False
+    if "propagation_weights__weights_m2_per_px2" in arrays and not weights_available:
+        refuse("holds propagation weights its metadata does not declare available")
+    layout = _expected_sidecar_layout(
+        diagnostic=diagnostic, n_steps=n_steps, burn_in=burn_in, n_rows=n_rows, n_lenslets=n_lenslets,
+        telemetry_unavailable=unavailable, weights_available=weights_available,
+    )
+    missing = sorted(set(layout) - set(arrays))
+    extra = sorted(set(arrays) - set(layout))
+    if missing or extra:
+        refuse(f"does not hold exactly the protocol's arrays (missing {missing[:8]}{'...' if len(missing) > 8 else ''}, undeclared {extra[:8]}{'...' if len(extra) > 8 else ''})")
+    declared = metadata.get("arrays", {})
+    for name, (dtype, shape, unit, meaning, axes) in layout.items():
+        array = arrays[name]
+        spec = declared.get(name, {})
+        # Values, not only keys: the declaration must be the canonical one of
+        # the protocol (independent review round 2, T1-02).
+        if spec.get("units") != unit or list(spec.get("axes", [])) != list(axes) or spec.get("meaning") != meaning:
+            refuse(f"array {name} is declared with units {spec.get('units')!r}, axes {spec.get('axes')!r} and meaning {spec.get('meaning')!r}; the protocol defines {unit!r}, {list(axes)!r}, {meaning!r}")
+        if dtype == "str":
+            if array.dtype.kind != "U":
+                refuse(f"array {name} must hold unicode identifiers")
+        elif str(array.dtype) != dtype:
+            refuse(f"array {name} has dtype {array.dtype}, the protocol requires {dtype}")
+        if shape is not None and tuple(int(size) for size in array.shape) != tuple(shape):
+            refuse(f"array {name} has shape {array.shape}, the protocol requires {shape}")
+    if not np.array_equal(arrays["frame_index"], np.arange(n_steps)):
+        refuse("frame_index is not 0..n_steps-1")
+    if not np.array_equal(arrays["analysed_frame_index"], np.arange(burn_in, n_steps)):
+        refuse("analysed_frame_index is not burn_in..n_steps-1")
+    # One lenslet order for every arm, and the canonical interleaved x/y rows
+    # of that order: masks, centroid axes and weights refer to the same rows.
+    from shwfs_ao.wfs.shack_hartmann.calibration import row_ids_for_subapertures
+
+    lenslet_ids = tuple(str(item) for item in first_ids.tolist())
+    if len(set(lenslet_ids)) != n_lenslets:
+        refuse("the lenslet identifiers are duplicated")
+    for arm in diagnostic["arm_order"]:
+        if tuple(str(item) for item in arrays[f"{arm}__subaperture_ids"].tolist()) != lenslet_ids:
+            refuse(f"arm {arm} lists the lenslets in another order than arm {noisy}")
+    canonical_rows = row_ids_for_subapertures(lenslet_ids)
+    if tuple(str(item) for item in arrays["row_ids"].tolist()) != canonical_rows:
+        refuse("row_ids are not the canonical interleaved x/y rows of the lenslet order")
+    if diagnostic["map_retention"]["retained"]:
+        mask = arrays["residual_maps__pupil_mask"]
+        if mask.ndim != 2:
+            refuse("the retained pupil mask is not a 2-D map")
+        samples = int(np.count_nonzero(mask))
+        for arm in diagnostic["arm_order"]:
+            maps = arrays[f"residual_maps__{arm}"]
+            if maps.shape != (n_steps - burn_in, samples):
+                refuse(f"retained maps of arm {arm} have shape {maps.shape}, the mask and burn-in require {(n_steps - burn_in, samples)}")
+
+
+def traced_run_factory(
+    settings: dict[str, Any], *, mode: str, allow_partial_lock: bool = False, propagation_weights: bool = True
+) -> Any:
+    """A gated-series runner that traces each paired run and publishes its sidecar.
+
+    Called by :func:`_gated_series` with ``run_context=True``; the context
+    carries the run's label and physical protocol, which the sidecar embeds.
+    A :class:`MaskLockError` is a refused run (recorded as such, no sidecar).
+    """
+
+    from shwfs_ao.calibration.interaction import InteractionMatrixError
+    from shwfs_ao.experiments.detector_level import (
+        MaskLockError,
+        paired_noise_run_mask_locked,
+        paired_noise_run_traced,
+    )
+    from shwfs_ao.experiments.scao import ScaoConstructionError
+
+    map_seeds = settings["map_seeds"]
+
+    def run(config: Any, *, root_seed: int, n_steps: int, burn_in_frames: int, execution: Any, context: dict[str, Any]) -> dict[str, Any]:
+        label = context["label"]
+        retain = map_seeds.get(label) == int(root_seed)
+        diagnostic = diagnostic_protocol(
+            mode=mode, label=label, root_seed=root_seed, retain_residual_maps=retain,
+            propagation_weights=propagation_weights, allow_partial_lock=allow_partial_lock if mode == "mask_locked" else None,
+        )
+        diagnostic_hash = protocol_digest(diagnostic)
+        destination = output_directory() / sidecar_name(_record_stem(context["record_path"]), label, root_seed)
+        if destination.exists():
+            raise TraceSidecarError(
+                f"{destination} exists before its run: an ambiguous leftover of an interrupted invocation.  "
+                "Move it aside or pass --output NAME; nothing is overwritten."
+            )
+        try:
+            if mode == "mask_locked":
+                result = paired_noise_run_mask_locked(
+                    config, root_seed=root_seed, n_steps=n_steps, burn_in_frames=burn_in_frames, execution=execution,
+                    allow_partial_lock=allow_partial_lock, retain_residual_maps=retain, propagation_weights=propagation_weights,
+                )
+            else:
+                result = paired_noise_run_traced(
+                    config, root_seed=root_seed, n_steps=n_steps, burn_in_frames=burn_in_frames, execution=execution,
+                    retain_residual_maps=retain, propagation_weights=propagation_weights,
+                )
+        except (MaskLockError, ScaoConstructionError, InteractionMatrixError) as exc:
+            # Every supported refusal keeps the diagnostic identity it was
+            # planned under, so the record stays resumable (independent
+            # review T1-03, 2026-10-20); the legacy handler in _gated_series
+            # is not reached for traced runs.
+            return {"status": "refused", "reason": str(exc)[:500], "root_seed": int(root_seed), "diagnostic_protocol": diagnostic, "diagnostic_protocol_hash": diagnostic_hash}
+        trace = result.pop("trace")
+        arrays, declared = _sidecar_arrays(trace)
+        weights = trace.get("propagation_weights")
+        metadata = {
+            "schema": TRACE_SIDECAR_SCHEMA,
+            "family": TRACE_FAMILY,
+            "record_stem": _record_stem(context["record_path"]),
+            "label": label,
+            "root_seed": int(root_seed),
+            "config_hash": result["config_hash"],
+            "n_steps": int(n_steps),
+            "burn_in_frames": int(burn_in_frames),
+            "protocol_hash": context["protocol"]["protocol_hash"],
+            "series_protocol_version": SERIES_PROTOCOL_VERSION,
+            "code": context["protocol"]["protocol"]["code"],
+            "environment": context["protocol"]["protocol"]["environment"],
+            "diagnostic_protocol": diagnostic,
+            "diagnostic_protocol_hash": diagnostic_hash,
+            "trace_schema": trace["schema"],
+            "arm_order": trace["arm_order"],
+            "noisy_arm": trace["noisy_arm"],
+            "twin_arm": trace["twin_arm"],
+            "arms": {
+                arm: {
+                    "history_config_hash": entry["history_config_hash"],
+                    "component_hashes": entry["component_hashes"],
+                    "random_stream_ids": entry["random_stream_ids"],
+                    "recovery": entry["recovery"],
+                    "wfs_exposure": entry["wfs_exposure"],
+                    "telemetry_unavailable": entry["telemetry_unavailable"],
+                    "telemetry_frames": entry["telemetry_frames"],
+                }
+                for arm, entry in trace["arms"].items()
+            },
+            "propagation_weights": None if weights is None else {key: value for key, value in weights.items() if key != "weights_m2_per_px2"},
+            "residual_maps": None if trace.get("residual_maps") is None else {"precision": trace["residual_maps"]["precision"]},
+            "arrays": declared,
+            "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+        if "lock" in result:
+            metadata["lock"] = result["lock"]
+        result["sidecar"] = publish_sidecar(destination, arrays, _jsonable(metadata))
+        written_metadata, written_arrays = read_sidecar(destination, expected_sha256=result["sidecar"]["sha256"])
+        validate_trace_payload(
+            written_metadata, written_arrays, label=label, root_seed=int(root_seed), n_steps=int(n_steps), burn_in=int(burn_in_frames),
+            diagnostic=diagnostic, diagnostic_hash=diagnostic_hash, where=f"published sidecar {destination.name}",
+        )
+        result["diagnostic_protocol"] = diagnostic
+        result["diagnostic_protocol_hash"] = diagnostic_hash
+        return _jsonable(result)
+
+    return run
+
+
+def _record_stem(record_path: Path) -> str:
+    return Path(record_path).stem
+
+
+def traced_record_validator(settings: dict[str, Any], *, mode: str, allow_partial_lock: bool = False, propagation_weights: bool = True) -> Any:
+    """The retained-run validator of a traced record: payload, digest and protocol before anything runs.
+
+    Every retained row must carry a diagnostic protocol whose digest is its
+    stored hash and whose shared part is this invocation's; its sidecar must
+    exist in the record's directory with the recorded size and SHA-256, load
+    without pickle with exactly its declared arrays, embed the row's label,
+    seed, configuration hash, physical protocol hash, diagnostic hash and
+    producer (code identity and environment), and pass
+    :func:`validate_trace_payload` against the row's protocol (frame counts,
+    trace schema, arm order, required arrays with their dtypes, shapes and
+    declared units, frame domains, row and lenslet layout, map retention).  Every sidecar of the
+    record's stem in the directory must be referenced by a retained row, and
+    no temporary file of an interrupted publication may remain.  A refused
+    retained row (``status == "refused"``) has no sidecar.  Nothing is
+    written, so a complete no-op invocation leaves bytes and mtimes alone.
+    """
+
+    def validate(path: Path, retained: list[dict[str, Any]]) -> None:
+        directory = Path(path).parent
+        record_stem = Path(path).stem
+        reference = diagnostic_protocol(
+            mode=mode, label="", root_seed=0, retain_residual_maps=False,
+            propagation_weights=propagation_weights, allow_partial_lock=allow_partial_lock if mode == "mask_locked" else None,
+        )
+        shared = _shared_diagnostic(reference)
+        referenced: set[str] = set()
+        for index, row in enumerate(retained):
+            label, seed = row.get("label"), row.get("root_seed")
+            diagnostic = row.get("diagnostic_protocol")
+            if not isinstance(diagnostic, dict) or protocol_digest(diagnostic) != row.get("diagnostic_protocol_hash"):
+                raise EvidenceRecordExists(
+                    f"{path}: run {index} ({label}, {seed}) has no diagnostic protocol or its hash is not the digest of its "
+                    "payload; nothing ran and the record is unchanged.  Pass --output NAME for a fresh record."
+                )
+            if _canonical(_shared_diagnostic(diagnostic)) != _canonical(shared):
+                raise EvidenceRecordExists(
+                    f"{path}: run {index} ({label}, {seed}) was traced under other diagnostic semantics (trace fields, "
+                    "frame domain, arm order, mask source or dtypes) than this invocation's, although its physical "
+                    "protocol may match; nothing ran and the record is unchanged.  Pass --output NAME for a fresh record."
+                )
+            retention = diagnostic.get("map_retention", {})
+            if retention.get("label") != label or retention.get("root_seed") != seed:
+                raise EvidenceRecordExists(f"{path}: run {index} ({label}, {seed}) carries another run's map retention; nothing ran.")
+            intended = settings["map_seeds"].get(label) == seed if label in settings["map_seeds"] else bool(retention.get("retained"))
+            if bool(retention.get("retained")) != intended:
+                raise EvidenceRecordExists(
+                    f"{path}: run {index} ({label}, {seed}) retained residual maps = {retention.get('retained')}, "
+                    f"but this study retains them for {label} at seed {settings['map_seeds'].get(label)}; nothing ran."
+                )
+            if row.get("status") == "refused":
+                continue
+            sidecar = row.get("sidecar")
+            if not isinstance(sidecar, dict) or not all(isinstance(sidecar.get(key), str) for key in ("file", "sha256", "schema")) or not isinstance(sidecar.get("bytes"), int):
+                raise EvidenceRecordExists(f"{path}: run {index} ({label}, {seed}) has no complete sidecar reference; nothing ran.")
+            if sidecar["file"] != sidecar_name(record_stem, label, seed) or sidecar["schema"] != TRACE_SIDECAR_SCHEMA:
+                raise EvidenceRecordExists(f"{path}: run {index} ({label}, {seed}) references sidecar {sidecar['file']!r} of another name or schema; nothing ran.")
+            file = directory / sidecar["file"]
+            if not file.is_file():
+                raise EvidenceRecordExists(f"{path}: the referenced sidecar {file} is missing; nothing ran and the record is unchanged.")
+            if file.stat().st_size != sidecar["bytes"]:
+                raise EvidenceRecordExists(f"{path}: sidecar {file} has {file.stat().st_size} bytes, recorded {sidecar['bytes']}; nothing ran.")
+            try:
+                metadata, arrays = read_sidecar(file, expected_sha256=sidecar["sha256"])
+            except TraceSidecarError as exc:
+                raise EvidenceRecordExists(f"{path}: {exc}; nothing ran and the record is unchanged.") from None
+            protocol = row.get("protocol", {})
+            try:
+                validate_trace_payload(
+                    metadata, arrays, label=label, root_seed=int(seed), n_steps=int(protocol.get("n_steps", -1)),
+                    burn_in=int(protocol.get("burn_in_frames", -1)), diagnostic=diagnostic,
+                    diagnostic_hash=row["diagnostic_protocol_hash"], where=f"sidecar {file.name}",
+                )
+            except TraceSidecarError as exc:
+                raise EvidenceRecordExists(f"{path}: {exc}; malformed or inconsistent evidence is not reused; nothing ran and the record is unchanged.") from None
+            expected_fields = {
+                "label": label, "root_seed": seed, "config_hash": row.get("config_hash"),
+                "protocol_hash": row.get("protocol_hash"), "diagnostic_protocol_hash": row.get("diagnostic_protocol_hash"),
+                "record_stem": record_stem, "family": TRACE_FAMILY,
+            }
+            for key, expected in expected_fields.items():
+                if _canonical(metadata.get(key)) != _canonical(expected):
+                    raise EvidenceRecordExists(f"{path}: sidecar {file.name} records {key} = {metadata.get(key)!r}, the run row {expected!r}: inconsistent metadata; nothing ran.")
+            if _canonical(metadata.get("code")) != _canonical(protocol.get("code")) or _canonical(metadata.get("environment")) != _canonical(protocol.get("environment")):
+                raise EvidenceRecordExists(f"{path}: sidecar {file.name} was produced by another code or environment than its run row: mixed producers; nothing ran.")
+            referenced.add(file.name)
+        leftovers = sorted(
+            candidate.name for candidate in directory.glob(f"{record_stem}__*.npz*")
+            if candidate.name not in referenced
+        )
+        if leftovers:
+            raise EvidenceRecordExists(
+                f"{path}: sidecar files {leftovers} are not referenced by any retained run (an interrupted invocation "
+                "leaves such orphans or temporary files); they are ambiguous leftovers.  Move them aside or pass "
+                "--output NAME; nothing ran and nothing was deleted."
+            )
+
+    return validate
+
+
+def _traced_series(settings: dict[str, Any], command: str, *, mode: str, **keywords: Any) -> None:
+    from shwfs_ao.experiments.detector_level import with_magnitude
+    from shwfs_ao.io.configs import load_system_profile
+
+    base = load_system_profile(*settings["profile"])
+    plan = [
+        (f"m{magnitude:g}", with_magnitude(base, magnitude), seed)
+        for magnitude in settings["magnitudes"]
+        for seed in settings["seeds"]
+    ]
+    _gated_series(
+        settings["record"], command, plan, n_steps=settings["n_steps"], burn_in=settings["burn_in"],
+        execution=_summary_execution(), runner=traced_run_factory(settings, mode=mode), run_context=True,
+        validate_retained=traced_record_validator(settings, mode=mode),
+        header_extra={
+            "record_family": TRACE_FAMILY,
+            "diagnostic_protocol_shared": _shared_diagnostic(
+                diagnostic_protocol(mode=mode, label="", root_seed=0, retain_residual_maps=False, propagation_weights=True,
+                                    allow_partial_lock=False if mode == "mask_locked" else None)
+            ),
+            "residual_map_seeds": dict(settings["map_seeds"]),
+        },
+        **keywords,
+    )
+
+
+def noise_isolation_2m_traced(arguments: argparse.Namespace) -> None:
+    _traced_series(
+        NOISE_ISOLATION_2M_TRACED, "noise-isolation-2m-traced", mode="traced",
+        enabled_by_user="not gated: 2 m tier (prompt section 2.5)",
+    )
+
+
+def noise_isolation_12m_traced(arguments: argparse.Namespace) -> None:
+    _traced_series(
+        NOISE_ISOLATION_12M_TRACED, "noise-isolation-12m-traced (profile @3)", mode="traced",
+        enabled_by_user=arguments.enabled_by_user,
+    )
+
+
+def noise_isolation_12m_masklocked(arguments: argparse.Namespace) -> None:
+    _traced_series(
+        NOISE_ISOLATION_12M_MASKLOCKED, "noise-isolation-12m-masklocked (profile @3, arm B)", mode="mask_locked",
+        enabled_by_user=arguments.enabled_by_user,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
@@ -1151,6 +1924,15 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("noise-isolation-12m").add_argument("--enabled-by-user", required=True)
     commands["e6-v3"] = lambda arguments: e6(arguments, version=3)
     sub.add_parser("e6-v3").add_argument("--enabled-by-user", required=True)
+    # The S4 traced family (T1): the 2 m command is ungated like the recorded
+    # 2 m study; both 12 m commands refuse at argument parsing without the
+    # user's enablement note, before any profile is loaded or system built.
+    commands["noise-isolation-2m-traced"] = noise_isolation_2m_traced
+    sub.add_parser("noise-isolation-2m-traced")
+    commands["noise-isolation-12m-traced"] = noise_isolation_12m_traced
+    sub.add_parser("noise-isolation-12m-traced").add_argument("--enabled-by-user", required=True)
+    commands["noise-isolation-12m-masklocked"] = noise_isolation_12m_masklocked
+    sub.add_parser("noise-isolation-12m-masklocked").add_argument("--enabled-by-user", required=True)
     arguments = parser.parse_args(argv)
     OPTIONS.output_dir = arguments.output_dir
     OPTIONS.output = arguments.output

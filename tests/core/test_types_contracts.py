@@ -79,6 +79,9 @@ def _telemetry(*, include_optional: bool = False) -> DetectorTelemetry:
         kwargs = {
             "detector_frames": (_frame(), _frame(1.0)),
             "optical_spots": _spots(ids),
+            "uncertainty_supported": np.array([True, False]),
+            "centroid_sigma_xy_px": np.array([[0.04, 0.05], [np.nan, np.nan]]),
+            "expected_centroids_xy_px": np.array([[0.1, -0.2], [np.nan, 0.3]]),
         }
     return DetectorTelemetry(
         subaperture_ids=ids,
@@ -255,6 +258,10 @@ def test_all_ten_result_classes_are_frozen_dataclasses_with_exact_field_order() 
             "uncertainty_supported",
             "masked_pixel_fraction",
             "saturated_pixel_count",
+            # S4 traced telemetry (T1, 2026-10-20): per-axis model sigma and
+            # the expected centroid of the same expected processed window.
+            "centroid_sigma_xy_px",
+            "expected_centroids_xy_px",
         ),
         WfsMeasurement: (
             "vector",
@@ -722,3 +729,29 @@ def test_reconstruction_validates_shapes_ids_units_modes_and_diagnostics() -> No
 def test_array_contracts_do_not_silently_accept_python_lists(constructor, kwargs) -> None:
     with pytest.raises(ValueError, match="numpy.ndarray"):
         constructor(**kwargs)
+
+
+def test_the_diagnostic_telemetry_fields_are_validated_on_their_own_domain() -> None:
+    """Independent review T1-01: NaN diagnostics never depend on measurement validity."""
+
+    telemetry = _telemetry(include_optional=True)
+    # A valid lenslet with an undefined expected centroid and an unsupported
+    # (NaN) sigma is accepted: both are diagnostics, not gates.
+    undefined = DetectorTelemetry(
+        **{field.name: getattr(telemetry, field.name) for field in fields(telemetry) if field.name not in ("centroid_sigma_xy_px", "expected_centroids_xy_px", "uncertainty_supported")},
+        uncertainty_supported=np.array([False, False]),
+        centroid_sigma_xy_px=np.array([[np.nan, np.nan], [np.nan, np.nan]]),
+        expected_centroids_xy_px=np.array([[np.nan, np.nan], [np.nan, np.nan]]),
+    )
+    assert undefined.valid_subapertures[0] and np.all(np.isnan(undefined.expected_centroids_xy_px))
+    # Infinities and negative sigmas are still refused, and the shape is fixed.
+    for name, bad in (
+        ("expected_centroids_xy_px", np.array([[np.inf, 0.0], [0.0, 0.0]])),
+        ("centroid_sigma_xy_px", np.array([[-0.1, 0.0], [0.0, 0.0]])),
+        ("centroid_sigma_xy_px", np.array([[0.1, 0.0, 0.0], [0.0, 0.0, 0.0]])),
+    ):
+        with pytest.raises(ValueError):
+            DetectorTelemetry(
+                **{field.name: getattr(telemetry, field.name) for field in fields(telemetry) if field.name != name},
+                **{name: bad},
+            )
