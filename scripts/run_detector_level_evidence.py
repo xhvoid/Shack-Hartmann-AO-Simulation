@@ -55,6 +55,20 @@ default for maintaining that evidence.  Ordinary and verification runs should
 name their own directory.  Every record header states the directory it was
 written to; no identity depends on it.
 
+``--fresh-process-dir DIR`` (opt-in, with ``--fresh-process-timeout-s`` and
+``--fresh-process-budget-mib``; G4) runs each ``science_run`` of the gated
+series that use it (``e3``, ``e4``, ``e6`` and their versions, ``e3-recovery``,
+``e3-excursion``, ``det08``, ``e5``) in a fresh interpreter supervised by
+``shwfs_ao.runtime.resource_guard.run_supervised``, one job directory per run
+under the new directory DIR.  Each run's result is science_run's own, with
+``process_peak_rss_bytes`` unchanged in name and meaning, plus an
+``execution_envelope``: the outcome, the identities of parent and child, the
+timing and ``child_process_peak_rss_bytes``, the child interpreter's own
+peak resident set since its exec (Linux ``VmHWM``: its start-up, imports,
+set-up and the run; not the parent, not a process group, not the function
+alone, not a capacity budget; null where it cannot be measured).  Without the
+option nothing changes; other commands refuse it.
+
 Existing records are never replaced silently (review R6).  A command whose
 record exists stops unless one of the global options says what to do:
 ``--output NAME`` writes a fresh record under another file name (a name, not
@@ -123,8 +137,12 @@ EVIDENCE_DIR = REPOSITORY / "docs/refactor/detector_level_evidence"
 # instead of this script's repository.
 SERIES_PROTOCOL_VERSION = 4
 # Global options, set by main(): fresh output name, overwrite, resume,
-# enablement note and output directory (None selects EVIDENCE_DIR).
-OPTIONS = argparse.Namespace(output=None, overwrite=False, resume=False, enabled_by_user=None, output_dir=None)
+# enablement note, output directory (None selects EVIDENCE_DIR) and the
+# opt-in fresh-process mode (G4; off when fresh_process_dir is None).
+OPTIONS = argparse.Namespace(
+    output=None, overwrite=False, resume=False, enabled_by_user=None, output_dir=None,
+    fresh_process_dir=None, fresh_process_timeout_s=None, fresh_process_budget_bytes=None,
+)
 _STARTED: set[Path] = set()
 GAINS = (0.2, 0.3, 0.4, 0.5)
 TWO_METRE_PROFILES = (
@@ -662,8 +680,9 @@ def _gated_series(
 ) -> None:
     """Run ``(label, config, root_seed)`` entries one at a time, saving after each.
 
-    ``runner`` (default :func:`~shwfs_ao.experiments.detector_level.science_run`)
-    is called as ``runner(config, root_seed=, n_steps=, burn_in_frames=,
+    ``runner`` (default :func:`~shwfs_ao.experiments.detector_level.science_run`,
+    or with ``--fresh-process-dir`` the same function in a fresh interpreter per
+    run) is called as ``runner(config, root_seed=, n_steps=, burn_in_frames=,
     execution=)``.  An existing record is continued only with ``--resume``, and
     only runs whose protocol identity matches are reused (review R6).
 
@@ -678,11 +697,11 @@ def _gated_series(
     """
 
     from shwfs_ao.calibration.interaction import InteractionMatrixError
-    from shwfs_ao.experiments.detector_level import science_run, summarize_runs
+    from shwfs_ao.experiments.detector_level import summarize_runs
 
     from shwfs_ao.experiments.scao import ScaoConstructionError
 
-    run = science_run if runner is None else runner
+    run = _series_runner(runner, run_context)
     path = _record_path(name)
     code = code_identity()
     environment = producer_environment()
@@ -1889,6 +1908,349 @@ def noise_isolation_12m_masklocked(arguments: argparse.Namespace) -> None:
     )
 
 
+# -- Opt-in fresh-process execution (G4, 2026-10-27) ----------------------------
+#
+# ``science_run`` records ``resource.getrusage(RUSAGE_SELF).ru_maxrss`` as
+# ``process_peak_rss_bytes``: the high-water mark of the whole process it runs
+# in, so in a series run in one process a later run reports the series peak
+# so far, not its own.  That field and its meaning stay as they are.  With
+# ``--fresh-process-dir`` each science_run of a gated series runs instead in a
+# fresh interpreter (this script in its child mode), launched, timed out and
+# reaped by ``shwfs_ao.runtime.resource_guard.run_supervised``, and the child's
+# own peak is recorded beside the unchanged result in a separate envelope,
+# ``execution_envelope.child_process_peak_rss_bytes``.  Off by default.
+
+FRESH_PROCESS_SCHEMA = "detector-evidence.fresh-process-execution.v1"
+FRESH_PROCESS_CHILD_FLAG = "--fresh-process-child"
+# What a child calls, and directories it may import that from (the tests point these at inert stand-ins).
+FRESH_PROCESS_TARGET = "shwfs_ao.experiments.detector_level:science_run"
+FRESH_PROCESS_IMPORT_PATHS: tuple[str, ...] = ()
+# The gated commands whose series call science_run; no other command has a fresh-process mode.
+FRESH_PROCESS_COMMANDS = frozenset({
+    "e3", "e4", "e6", "e3-v2", "e4-v2", "e6-v2", "e3-v3", "e4-v3", "e6-v3", "e3-recovery", "e3-excursion", "det08", "e5",
+})
+FRESH_PROCESS_PEAK_RSS = {
+    "unit": "bytes",
+    "method": (
+        "Linux only: VmHWM of /proc/self/status, the peak resident set of the child's process image since its exec, "
+        "read by the child itself after its job returned or raised, just before it wrote its report"
+    ),
+    "conversion": "VmHWM is reported in kB (KiB); times 1024",
+    "boundary": (
+        "the peak resident set of one fresh child interpreter since its exec: its start-up, imports, job set-up and "
+        "the job itself; it excludes the supervising parent, any process the child starts and every unrelated process"
+    ),
+    "is_not": "a process-group peak, the exact allocation of the called function alone, or a measured AO capacity budget",
+    "ru_maxrss_note": (
+        "getrusage(RUSAGE_SELF).ru_maxrss is recorded beside it (child.ru_maxrss_bytes) but not used: on Linux an "
+        "exec'd process's ru_maxrss also keeps the high-water mark of the image it was spawned from, so it can "
+        "include the supervisor's footprint at spawn; the same holds for science_run's process_peak_rss_bytes in a child"
+    ),
+}
+_FRESH_PROCESS_FILES = ("job.json", "payload.pickle", "child.json", "result.json", "exception.pickle", "output.log")
+
+
+class FreshProcessError(RuntimeError):
+    """A fresh-process job could not start, or ended without a result."""
+
+    def __init__(self, message: str, envelope: dict[str, Any] | None = None) -> None:
+        super().__init__(message)
+        self.envelope = envelope
+
+
+class FreshProcessUnsupported(SystemExit):
+    """--fresh-process-dir was given for a command or run function it does not cover."""
+
+
+def _file_entry(path: Path) -> dict[str, Any] | None:
+    if not path.is_file():
+        return None
+    data = path.read_bytes()
+    return {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+
+
+def _process_identity() -> dict[str, Any]:
+    """This interpreter, this script and the ``shwfs_ao`` it imports."""
+
+    import shwfs_ao
+
+    script = Path(__file__).resolve()
+    return {
+        "pid": os.getpid(),
+        "executable": sys.executable,
+        "python": sys.version,
+        "platform": sys.platform,
+        "shwfs_ao_file": str(Path(shwfs_ao.__file__).resolve()),
+        "script": str(script),
+        "script_sha256": hashlib.sha256(script.read_bytes()).hexdigest(),
+    }
+
+
+def _vm_hwm_bytes() -> int | None:
+    """Linux: the VmHWM line of /proc/self/status (peak resident set since exec), in bytes; None elsewhere."""
+
+    try:
+        for line in Path("/proc/self/status").read_text().splitlines():
+            if line.startswith("VmHWM:"):
+                _, value, unit = line.split()
+                return int(value) * 1024 if unit == "kB" else None
+    except (OSError, ValueError):
+        return None
+    return None
+
+
+def _json_default(value: Any) -> Any:
+    if hasattr(value, "tolist"):  # NumPy scalars and arrays
+        return value.tolist()
+    if isinstance(value, Path):
+        return str(value)
+    raise TypeError(f"{type(value).__name__} is not JSON serializable")
+
+
+def _fresh_process_status(supervised: Any, child: dict[str, Any] | None, has_result: bool) -> tuple[str, str]:
+    if supervised.status == "COMPLETED":
+        if child is not None and child.get("outcome") == "returned" and has_result:
+            return "succeeded", supervised.reason
+        return "failed", f"{supervised.reason}, but the child left no complete report and result"
+    if supervised.status == "FAILED":
+        return "failed", supervised.reason
+    if supervised.status == "RESOURCE_LIMITED":
+        return "resource_limited", supervised.reason
+    if supervised.reason.startswith("wall-clock limit"):
+        return "timed_out", supervised.reason
+    return "interrupted", supervised.reason
+
+
+def run_in_fresh_process(
+    target: str,
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    *,
+    job_dir: Path,
+    label: str,
+    timeout_s: float,
+    budget_bytes: int,
+    import_paths: tuple[str, ...] = (),
+) -> tuple[Any, dict[str, Any]]:
+    """Run ``target(*args, **kwargs)`` in a fresh interpreter; return ``(result, envelope)``.
+
+    ``target`` is ``"package.module:function"``.  The arguments travel as a pickle the child checks against its
+    recorded SHA-256 before loading it; the result comes back as JSON (``None`` unless the job succeeded).  The
+    command is an argument list (no shell).  The child imports the ``shwfs_ao`` this process imported (its
+    PYTHONPATH is that import directory, as the G1 fix does for the slow self-check) and inherits this
+    environment with run_supervised's native thread limits, AO_RESOURCE_GUARD included as set.  ``job_dir``
+    must not exist.  The envelope, also written to ``job_dir/envelope.json``, records the outcome, the
+    identities, the timing and the child's own peak RSS; it never substitutes a value for a missing one.
+    """
+
+    import pickle
+
+    import shwfs_ao
+    from shwfs_ao.runtime.resource_guard import resource_guard_enabled, run_supervised
+
+    job_dir = Path(job_dir)
+    try:
+        job_dir.mkdir()
+    except FileExistsError:
+        raise FreshProcessError(f"{job_dir} exists: a fresh-process job never reuses an output directory; nothing ran.") from None
+    payload = pickle.dumps((tuple(args), dict(kwargs)), protocol=pickle.HIGHEST_PROTOCOL)
+    (job_dir / "payload.pickle").write_bytes(payload)
+    parent = _process_identity()
+    import_root = str(Path(shwfs_ao.__file__).resolve().parents[1])
+    job = {
+        "schema": FRESH_PROCESS_SCHEMA,
+        "label": label,
+        "target": target,
+        "import_paths": [str(path) for path in import_paths],
+        "payload": {"file": "payload.pickle", "bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()},
+        "parent": parent,
+    }
+    (job_dir / "job.json").write_text(json.dumps(job, indent=1) + "\n")
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = import_root
+    environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    argv = [sys.executable, str(Path(__file__).resolve()), FRESH_PROCESS_CHILD_FLAG, str(job_dir / "job.json")]
+    started = time.time()
+    supervised = run_supervised(argv, budget_bytes=budget_bytes, timeout_s=timeout_s, env=environment, cwd=job_dir, log_path=job_dir / "output.log")
+    try:
+        child = json.loads((job_dir / "child.json").read_text())
+    except (OSError, ValueError):
+        child = None
+    result_path = job_dir / "result.json"
+    status, reason = _fresh_process_status(supervised, child, result_path.is_file())
+    peak = child.get("vm_hwm_bytes") if child is not None else None
+    available = isinstance(peak, int) and not isinstance(peak, bool) and peak > 0
+    if available:
+        missing = None
+    elif child is None and status in ("timed_out", "resource_limited", "interrupted"):
+        missing = "the child was stopped before it wrote its report; no measurement exists"
+    elif child is None:
+        missing = "the child ended without writing its report; no measurement exists"
+    else:
+        missing = f"no VmHWM on this platform ({child.get('platform')}); ru_maxrss alone cannot exclude the image the child was spawned from"
+    supervisor = supervised.to_record()
+    envelope = {
+        "schema": FRESH_PROCESS_SCHEMA,
+        "mode": "fresh_process",
+        "label": label,
+        "target": target,
+        "status": status,
+        "status_reason": reason,
+        "returncode": supervised.returncode,
+        "child_process_peak_rss_bytes": peak if available else None,
+        "child_process_peak_rss": {
+            **FRESH_PROCESS_PEAK_RSS,
+            "available": available,
+            "unavailable_reason": missing,
+            "platform": child.get("platform") if child is not None else None,
+        },
+        "timing": {
+            "started_unix_s": started,
+            "supervised_wall_s": supervised.wall_s,
+            "child_started_unix_s": child.get("started_unix_s") if child is not None else None,
+            "child_finished_unix_s": child.get("finished_unix_s") if child is not None else None,
+        },
+        "parent": parent,
+        "child": child,
+        "child_imports_parent_code": child is not None and all(child.get(key) == parent[key] for key in ("executable", "shwfs_ao_file", "script_sha256")),
+        "environment_given": {
+            "PYTHONPATH": import_root,
+            "AO_RESOURCE_GUARD": environment.get("AO_RESOURCE_GUARD"),
+            "memory_enforcement_enabled": resource_guard_enabled(),
+            **supervisor["environment_thread_limits"],
+        },
+        "supervisor": supervisor,
+        "supervisor_note": (
+            "supervisor.peak_rss_bytes is run_supervised's sampled aggregate RSS of the process group, taken only "
+            "when AO_RESOURCE_GUARD=1; it is not child_process_peak_rss_bytes"
+        ),
+        "files": {name: _file_entry(job_dir / name) for name in _FRESH_PROCESS_FILES},
+        "output_log": "output.log holds the child's stdout and stderr interleaved, as run_supervised writes them",
+        "result_note": "the job's result is returned as the child produced it; science_run's process_peak_rss_bytes keeps its meaning",
+    }
+    with open(job_dir / "envelope.json", "x") as handle:
+        handle.write(json.dumps(envelope, indent=1) + "\n")
+    result = json.loads(result_path.read_text()) if status == "succeeded" else None
+    return result, envelope
+
+
+def fresh_process_runner(
+    directory: Path,
+    *,
+    timeout_s: float,
+    budget_bytes: int,
+    target: str | None = None,
+    import_paths: tuple[str, ...] | None = None,
+) -> Any:
+    """A run function with ``science_run``'s signature that runs every call in a fresh interpreter (G4, opt-in).
+
+    ``directory`` must not exist; it is created for the first call and holds one job directory per call.
+    The returned result is the job's own (science_run's fields unchanged) plus ``execution_envelope``.  A job
+    that raised re-raises its exception here, so a configuration the system refuses is still recorded as
+    refused; any other unsuccessful job raises :class:`FreshProcessError` carrying its envelope.
+    """
+
+    directory = Path(directory)
+    if directory.exists():
+        raise FreshProcessError(f"{directory} exists: --fresh-process-dir must name a new directory; nothing ran.")
+    target = FRESH_PROCESS_TARGET if target is None else target
+    paths = FRESH_PROCESS_IMPORT_PATHS if import_paths is None else tuple(import_paths)
+    calls: list[Any] = []
+
+    def run(config: Any, *, root_seed: int | None = None, n_steps: int | None = None, burn_in_frames: int, execution: Any = None, realization_index: int = 0) -> dict[str, Any]:
+        import pickle
+
+        if not calls:
+            directory.mkdir(parents=True)
+        calls.append(root_seed)
+        label = f"{len(calls):04d}-seed{root_seed}-{str(getattr(config, 'config_hash', 'config'))[:12]}"
+        job_dir = directory / "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in label)
+        kwargs = {"root_seed": root_seed, "n_steps": n_steps, "burn_in_frames": burn_in_frames, "execution": execution, "realization_index": realization_index}
+        result, envelope = run_in_fresh_process(target, (config,), kwargs, job_dir=job_dir, label=label, timeout_s=timeout_s, budget_bytes=budget_bytes, import_paths=paths)
+        if envelope["status"] == "succeeded":
+            return {**result, "execution_envelope": envelope}
+        failure = FreshProcessError(f"{label}: {envelope['status']} ({envelope['status_reason']}); see {job_dir / 'envelope.json'}", envelope)
+        if (job_dir / "exception.pickle").is_file():
+            try:
+                raised = pickle.loads((job_dir / "exception.pickle").read_bytes())
+            except Exception:  # an exception that does not unpickle is reported by the envelope instead
+                raised = None
+            if isinstance(raised, Exception):
+                raise raised from failure
+        raise failure
+
+    run.target = target
+    run.directory = directory
+    return run
+
+
+def _series_runner(runner: Any, run_context: bool) -> Any:
+    """The run function of a gated series: science_run, the command's own, or the opt-in fresh-process runner."""
+
+    from shwfs_ao.experiments.detector_level import science_run
+
+    directory = getattr(OPTIONS, "fresh_process_dir", None)
+    if directory is None:
+        return science_run if runner is None else runner
+    if runner is not None or run_context:
+        raise FreshProcessUnsupported(
+            "--fresh-process-dir runs science_run in fresh processes; this command uses its own run function, "
+            "which has no fresh-process mode; nothing ran."
+        )
+    return fresh_process_runner(directory, timeout_s=OPTIONS.fresh_process_timeout_s, budget_bytes=OPTIONS.fresh_process_budget_bytes)
+
+
+def _fresh_process_child(job_path: Path) -> int:
+    """Child mode: run one job, write its result and this interpreter's own peak RSS (VmHWM); exit 0 when it returned."""
+
+    import importlib
+    import pickle
+    import resource
+    import traceback
+
+    from shwfs_ao.runtime.resource_guard import THREAD_ENV_VARS
+
+    job_dir = job_path.parent
+    report: dict[str, Any] = {"pid": os.getpid(), "ppid": os.getppid(), "started_unix_s": time.time(), "outcome": None}
+    returncode = 1
+    try:
+        job = json.loads(job_path.read_text())
+        payload = (job_dir / job["payload"]["file"]).read_bytes()
+        if hashlib.sha256(payload).hexdigest() != job["payload"]["sha256"]:
+            raise FreshProcessError("the job payload differs from its recorded SHA-256")
+        report.update(_process_identity())
+        report["environment"] = {name: os.environ.get(name) for name in ("PYTHONPATH", "AO_RESOURCE_GUARD", *THREAD_ENV_VARS)}
+        for path in reversed(job["import_paths"]):
+            sys.path.insert(0, path)
+        module_name, _, function_name = job["target"].partition(":")
+        module = importlib.import_module(module_name)
+        report["target_file"] = str(Path(module.__file__).resolve())
+        report["target_file_sha256"] = hashlib.sha256(Path(module.__file__).read_bytes()).hexdigest()
+        args, kwargs = pickle.loads(payload)
+        result = getattr(module, function_name)(*args, **kwargs)
+        with open(job_dir / "result.json", "x") as handle:
+            handle.write(json.dumps(result, indent=1, default=_json_default) + "\n")
+        report["outcome"] = "returned"
+        returncode = 0
+    except BaseException as exc:  # every outcome is reported, SystemExit included
+        report["outcome"] = "raised"
+        report["exception"] = {"type": f"{type(exc).__module__}.{type(exc).__qualname__}", "message": str(exc)[:2000], "traceback": traceback.format_exc()[-8000:]}
+        try:
+            (job_dir / "exception.pickle").write_bytes(pickle.dumps(exc))
+        except Exception:  # an exception that cannot be pickled is reported by type and message only
+            report["exception"]["pickled"] = False
+    finally:
+        report["vm_hwm_bytes"] = _vm_hwm_bytes()
+        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        report["ru_maxrss_raw"] = int(peak)
+        report["ru_maxrss_bytes"] = int(peak if sys.platform == "darwin" else peak * 1024)
+        report["finished_unix_s"] = time.time()
+        partial = job_dir / "child.json.partial"
+        partial.write_text(json.dumps(report, indent=1, default=str) + "\n")
+        os.replace(partial, job_dir / "child.json")
+    return returncode
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
@@ -1900,6 +2262,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--overwrite", action="store_true", help="replace an existing one-shot record")
     parser.add_argument("--resume", action="store_true", help="continue a gated series after validating each saved run")
     parser.add_argument("--enabled-by-user", dest="global_enabled_by_user", help="record this enablement note in a gated record (date and wording of the user's go-ahead)")
+    parser.add_argument(
+        "--fresh-process-dir",
+        type=Path,
+        help="opt-in (G4): run each science_run of a gated series in a fresh interpreter, one job directory per run "
+        "under this new directory, and record each child's own peak RSS in the run's execution_envelope",
+    )
+    parser.add_argument("--fresh-process-timeout-s", type=float, help="wall-clock limit of each fresh-process job (with --fresh-process-dir)")
+    parser.add_argument(
+        "--fresh-process-budget-mib",
+        type=float,
+        help="aggregate RSS budget of each job's process group, enforced only when AO_RESOURCE_GUARD=1 (with --fresh-process-dir)",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("gain-scan")
     commands = {
@@ -1934,6 +2308,18 @@ def main(argv: list[str] | None = None) -> int:
     commands["noise-isolation-12m-masklocked"] = noise_isolation_12m_masklocked
     sub.add_parser("noise-isolation-12m-masklocked").add_argument("--enabled-by-user", required=True)
     arguments = parser.parse_args(argv)
+    fresh = (arguments.fresh_process_timeout_s, arguments.fresh_process_budget_mib)
+    if arguments.fresh_process_dir is None:
+        if any(value is not None for value in fresh):
+            parser.error("--fresh-process-timeout-s and --fresh-process-budget-mib apply only with --fresh-process-dir")
+    else:
+        if any(value is None or not math.isfinite(value) or value <= 0 for value in fresh):
+            parser.error("--fresh-process-dir needs a positive --fresh-process-timeout-s and --fresh-process-budget-mib")
+        if arguments.command not in FRESH_PROCESS_COMMANDS:
+            parser.error(f"{arguments.command} has no fresh-process mode; --fresh-process-dir applies to {', '.join(sorted(FRESH_PROCESS_COMMANDS))}")
+    OPTIONS.fresh_process_dir = arguments.fresh_process_dir
+    OPTIONS.fresh_process_timeout_s = arguments.fresh_process_timeout_s
+    OPTIONS.fresh_process_budget_bytes = None if arguments.fresh_process_budget_mib is None else int(arguments.fresh_process_budget_mib * 2**20)
     OPTIONS.output_dir = arguments.output_dir
     OPTIONS.output = arguments.output
     OPTIONS.overwrite = arguments.overwrite
@@ -1944,4 +2330,6 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == FRESH_PROCESS_CHILD_FLAG:
+        sys.exit(_fresh_process_child(Path(sys.argv[2])))
     sys.exit(main())
