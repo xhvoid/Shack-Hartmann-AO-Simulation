@@ -430,7 +430,16 @@ class DmActuatorProbeBasis:
 
 @dataclass(frozen=True)
 class InteractionMatrix:
-    """Full-layout, unit-explicit calibrated wavefront-sensor response."""
+    """Full-layout, unit-explicit calibrated wavefront-sensor response.
+
+    ``sensor_response_hash`` identifies the sensor optical response the matrix
+    was calibrated against (for detector-level sensors: optics backend, WFS
+    wavelength, padding and detector-window sampling, and centroid estimator),
+    excluding photometric and noise operating points.  It is ``None`` for a
+    matrix whose sensor declared no ``response_hash`` and for records written
+    before the field existed; such a matrix keeps its historical content hash
+    but cannot be verified against a different sensor's response.
+    """
 
     __hash_schema_id__ = INTERACTION_MATRIX_SCHEMA_ID
 
@@ -456,6 +465,7 @@ class InteractionMatrix:
     dm_hash: str | None
     calibration_hash: str
     provenance: Provenance
+    sensor_response_hash: str | None = None
 
     def __post_init__(self) -> None:
         row_ids = _validated_ids(self.row_ids, label="row_ids")
@@ -628,6 +638,10 @@ class InteractionMatrix:
         geometry_hash = _nonempty_string(self.geometry_hash, label="geometry_hash")
         detector_hash = _optional_hash(self.detector_hash, label="detector_hash")
         dm_hash = _optional_hash(self.dm_hash, label="dm_hash")
+        response_hash = _optional_hash(
+            self.sensor_response_hash,
+            label="sensor_response_hash",
+        )
         if coordinate_kind == "dm_command_opd" and dm_hash is None:
             raise InteractionMatrixError(
                 "dm_command_opd interaction matrices require dm_hash."
@@ -659,6 +673,7 @@ class InteractionMatrix:
             geometry_hash=geometry_hash,
             detector_hash=detector_hash,
             dm_hash=dm_hash,
+            sensor_response_hash=response_hash,
             provenance=self.provenance,
         )
         if calibration_hash != expected_hash:
@@ -686,6 +701,7 @@ class InteractionMatrix:
         object.__setattr__(self, "geometry_hash", geometry_hash)
         object.__setattr__(self, "detector_hash", detector_hash)
         object.__setattr__(self, "dm_hash", dm_hash)
+        object.__setattr__(self, "sensor_response_hash", response_hash)
         object.__setattr__(self, "calibration_hash", calibration_hash)
 
     @property
@@ -725,13 +741,18 @@ class InteractionMatrix:
             "geometry_hash": self.geometry_hash,
             "detector_hash": self.detector_hash,
             "dm_hash": self.dm_hash,
+            "sensor_response_hash": self.sensor_response_hash,
             "calibration_hash": self.calibration_hash,
             "provenance": self.provenance.to_record(),
         }
 
     @classmethod
     def from_record(cls, record: Mapping[str, object]) -> InteractionMatrix:
-        """Deserialize a record and revalidate all identities and diagnostics."""
+        """Deserialize a record and revalidate all identities and diagnostics.
+
+        A record without ``sensor_response_hash`` predates that field and is
+        read as ``None``; its stored content hash still verifies.
+        """
 
         if not isinstance(record, Mapping):
             raise InteractionMatrixError("record must be a mapping.")
@@ -760,9 +781,10 @@ class InteractionMatrix:
             "calibration_hash",
             "provenance",
         }
-        if set(record) != expected_fields:
+        optional_fields = {"sensor_response_hash"}
+        if not expected_fields <= set(record) <= expected_fields | optional_fields:
             missing = sorted(expected_fields - set(record))
-            extra = sorted(set(record) - expected_fields)
+            extra = sorted(set(record) - expected_fields - optional_fields)
             raise InteractionMatrixError(
                 f"interaction-matrix record fields differ: missing={missing}, "
                 f"extra={extra}."
@@ -808,6 +830,10 @@ class InteractionMatrix:
                 dm_hash=cast(str | None, record["dm_hash"]),
                 calibration_hash=cast(str, record["calibration_hash"]),
                 provenance=provenance,
+                sensor_response_hash=cast(
+                    str | None,
+                    record.get("sensor_response_hash"),
+                ),
             )
         except (TypeError, ValueError) as exc:
             if isinstance(exc, InteractionMatrixError):
@@ -911,6 +937,7 @@ def calibrate_interaction_matrix(
         probe_shape=probe_shape,
     )
     detector_hash = _sensor_detector_hash(sensor)
+    response_hash = _sensor_response_hash(sensor)
     dm_hash = _basis_dm_hash(
         probe_basis,
         basis_contract.coordinate_kind,
@@ -1132,6 +1159,7 @@ def calibrate_interaction_matrix(
         geometry_hash=geometry_hash,
         detector_hash=detector_hash,
         dm_hash=dm_hash,
+        sensor_response_hash=response_hash,
         provenance=provenance,
     )
     return InteractionMatrix(
@@ -1157,6 +1185,7 @@ def calibrate_interaction_matrix(
         dm_hash=dm_hash,
         calibration_hash=calibration_hash,
         provenance=provenance,
+        sensor_response_hash=response_hash,
     )
 
 
@@ -1188,6 +1217,7 @@ def interaction_matrix_hash(interaction_matrix: InteractionMatrix) -> str:
         geometry_hash=interaction_matrix.geometry_hash,
         detector_hash=interaction_matrix.detector_hash,
         dm_hash=interaction_matrix.dm_hash,
+        sensor_response_hash=interaction_matrix.sensor_response_hash,
         provenance=interaction_matrix.provenance,
     )
 
@@ -1509,6 +1539,16 @@ def _sensor_detector_hash(sensor: object) -> str | None:
     return component_config_hash("wavefront_sensor_detector_context", payload)
 
 
+def _sensor_response_hash(sensor: object) -> str | None:
+    # ``response_hash`` is deliberately not a member of the public
+    # WavefrontSensor protocol: a structural sensor that declares none yields
+    # an unbound matrix rather than a guessed identity.
+    value = getattr(sensor, "response_hash", None)
+    if value is None:
+        return None
+    return _nonempty_string(value, label="sensor.response_hash")
+
+
 def _looks_detector_calibration(calibration: object) -> bool:
     if calibration is None:
         return False
@@ -1570,44 +1610,47 @@ def _interaction_matrix_hash_from_values(
     detector_hash: str | None,
     dm_hash: str | None,
     provenance: Provenance,
+    sensor_response_hash: str | None = None,
 ) -> str:
-    return component_config_hash(
-        "interaction_matrix_calibration",
-        {
-            "schema_id": INTERACTION_MATRIX_SCHEMA_ID,
-            "sign_convention": INTERACTION_SIGN_CONVENTION,
-            "matrix": matrix,
-            "row_valid": row_valid,
-            "row_ids": row_ids,
-            "row_layout_hash": calibration_rows_hash(
-                row_ids,
-                valid_rows=row_valid,
-            ),
-            "coordinate_ids": coordinate_ids,
-            "coordinate_kind": coordinate_kind,
-            "coordinate_unit": coordinate_unit,
-            "coordinate_layout_hash": command_coordinates_hash(
-                coordinate_ids,
-                coordinate_kind=coordinate_kind,
-                coordinate_unit=coordinate_unit,
-            ),
-            "calibration_amplitude_m": calibration_amplitude_m,
-            "measurement_unit": measurement_unit,
-            "matrix_unit": matrix_unit,
-            "singular_values": singular_values,
-            "rank": rank,
-            "condition_proxy": condition_proxy,
-            "method": method,
-            "include_noise": include_noise,
-            "repeat_count": repeat_count,
-            "matrix_standard_error": matrix_standard_error,
-            "sensor_config_hash": sensor_config_hash,
-            "geometry_hash": geometry_hash,
-            "detector_hash": detector_hash,
-            "dm_hash": dm_hash,
-            "provenance": provenance,
-        },
-    )
+    payload: dict[str, object] = {
+        "schema_id": INTERACTION_MATRIX_SCHEMA_ID,
+        "sign_convention": INTERACTION_SIGN_CONVENTION,
+        "matrix": matrix,
+        "row_valid": row_valid,
+        "row_ids": row_ids,
+        "row_layout_hash": calibration_rows_hash(
+            row_ids,
+            valid_rows=row_valid,
+        ),
+        "coordinate_ids": coordinate_ids,
+        "coordinate_kind": coordinate_kind,
+        "coordinate_unit": coordinate_unit,
+        "coordinate_layout_hash": command_coordinates_hash(
+            coordinate_ids,
+            coordinate_kind=coordinate_kind,
+            coordinate_unit=coordinate_unit,
+        ),
+        "calibration_amplitude_m": calibration_amplitude_m,
+        "measurement_unit": measurement_unit,
+        "matrix_unit": matrix_unit,
+        "singular_values": singular_values,
+        "rank": rank,
+        "condition_proxy": condition_proxy,
+        "method": method,
+        "include_noise": include_noise,
+        "repeat_count": repeat_count,
+        "matrix_standard_error": matrix_standard_error,
+        "sensor_config_hash": sensor_config_hash,
+        "geometry_hash": geometry_hash,
+        "detector_hash": detector_hash,
+        "dm_hash": dm_hash,
+        "provenance": provenance,
+    }
+    # Bound only when declared, so matrices and records without a response
+    # identity keep the content hash they were written with.
+    if sensor_response_hash is not None:
+        payload["sensor_response_hash"] = sensor_response_hash
+    return component_config_hash("interaction_matrix_calibration", payload)
 
 
 def _matrix_unit(measurement_unit: str, coordinate_unit: str) -> str:
