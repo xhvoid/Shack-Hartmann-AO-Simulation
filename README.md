@@ -358,6 +358,11 @@ and measured hardware calibration are absent. The analytical MCAO study has
 its own restricted scope. Laboratory or on-sky validation would be needed to
 turn either into an instrument performance model.
 
+Connecting a laboratory optical system also requires camera-acquisition and
+DM-control adapters, a measured interaction matrix and hardware timing
+validation. The current runners advance a simulated clock; they do not drive
+a connected camera or mirror.
+
 ## Run the project
 
 Follow the [installation and notebook guide](docs/getting_started.md) to clone
@@ -379,6 +384,56 @@ The demonstration writes figures, tables and metrics to `readme-smoke-output/`.
 It uses the fast control-space proxy described above. Start with the tutorials
 for physical wavefront experiments; restart the kernel and run all cells to
 regenerate their results.
+
+### Run a detector-level SCAO profile
+
+For new native 2 m simulations, start with these explicit profile versions:
+
+| Profile | Version | Detector window | Frames |
+| --- | --- | --- | --- |
+| `fast_2m_detector` | 4 | 24 px | 60 |
+| `portfolio_2m_detector` | 4 | 28 px | 150 |
+| `research_2m_detector` | 3 | 22 px | 180 |
+
+The fast and portfolio versions use wider windows so their open-loop spots
+fit within the configured clipping limit. Earlier versions stay available to
+replay published results; loading a profile always requires a version.
+See the [profile definitions and validation](docs/refactor/AO_REF_011_SCAO.md).
+
+```python
+from shwfs_ao.experiments import run_closed_loop
+from shwfs_ao.io.configs import load_system_profile
+
+config = load_system_profile("fast_2m_detector", 4)
+history = run_closed_loop(config)
+print(history.metadata["reconstruction_usable_fraction"])
+```
+
+Detector noise is selected separately by `controller.include_noise`. Every
+published profile clips negative detector pixels before centroiding. To
+study read-noise clipping bias with negative pixels retained, explicitly
+promote the configuration to record schema 3 and enable detector noise:
+
+```python
+from dataclasses import replace
+
+kept_pixels = replace(
+    config,
+    record_schema_version=3,
+    wfs=replace(config.wfs, clip_negative_pixels=False),
+    controller=replace(config.controller, include_noise=True),
+)
+```
+
+Keeping negative pixels removes their rectification bias; the plain centre
+of gravity remains approximately unbiased, and its uncertainty estimate is
+first-order. Thresholding, saturation and pixel defects have additional
+limitations described in the [detector notes](docs/backends.md).
+Schemas 1 and 2 retain their published configuration hashes and clipping
+behaviour; schema 3 records the explicit clipping choice. Record schema
+versions are separate from profile versions such as `fast_2m_detector@4`.
+
+### Optional backend check
 
 After installing the optional HCIPy dependencies:
 
@@ -435,6 +490,13 @@ the backend boundary. Calibration carries stable measurement-row and actuator
 identities through reconstruction. Invalid measurements remain explicit;
 the controller advances time and synchronizes its state with the command
 the mirror actually applies, including stroke and fault policies.
+
+Supplied interaction matrices must match the sensor response before the first
+frame. A matrix calibrated with noise must also match the noise and clipping
+settings; a noiseless calibration can be reused across changes that preserve
+its noiseless response. Missing or incompatible calibration identities are
+rejected. See the [calibration contract](docs/refactor/AO_REF_007_INTERACTION_MATRIX.md)
+and [control-loop checks](docs/refactor/AO_REF_009_CONTROL_LOOP.md).
 
 The canonical package is [src/shwfs_ao](src/shwfs_ao), with separate optical
 backends, detector, WFS, DM, calibration, control, science, experiment, I/O
