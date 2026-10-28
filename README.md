@@ -502,8 +502,13 @@ Further results:
   - At 12 m it scales as N_e^(−1.028 ± 0.010). That fails a strict 1/N_e
     test, because read noise and charge over the 15 × 15 window steepen the
     faint end, as the noise model predicts.
-  - Over a factor of 16 in flux it stays within a few per cent of the
-    model's prediction.
+  - Over a factor of 16 in flux it follows the model's prediction, but not
+    exactly:
+    - it grows as the model's variance to the power 0.95–0.96;
+    - there is an unexplained 6.7 % dip at 12 m (m_AB = 10);
+    - it drifts by 9 % at 2 m.
+
+    These departures are recorded in the execution record.
 - **Review fixes (2026-10-16).** An external review found seven issues, all
   now fixed, and the noise model is now `detector_covariance_v2`:
   - the response identity omitted the read-noise dither;
