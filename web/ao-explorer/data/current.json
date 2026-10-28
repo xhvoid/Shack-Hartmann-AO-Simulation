@@ -4,7 +4,7 @@
  "manifest": "series-2m1000-s624-c7241e4190d5-ef74a541b0e60/manifest.json",
  "manifest_bytes": 42464,
  "manifest_sha256": "a151da4b84b21029c03a9f373c586a8203781807e52cb0f9bedddef4ae1719ee",
- "code_build": "b495d8042c73ac5f",
+ "code_build": "c59c058c67176585",
  "galaxy": {
   "schema": "ao-explorer.galaxy-entry.v3",
   "derived_id": "ngc1705-f814w-2m1000-s624-c7241e4190d5-gda93ed5af026-m4adb5a4af111",
@@ -32,5 +32,12 @@
   "manifest": "../derived/aperture-comparison-9e23a2d666039918/manifest.json",
   "manifest_bytes": 2773,
   "manifest_sha256": "e592b56a705e60a74d1bd0da783178bc61fc586ff8185a94532136d3844f20f3"
+ },
+ "dmStroke": {
+  "schema": "ao-explorer.dm-stroke-entry.v1",
+  "id": "dm-stroke-5d085761bf15f53d",
+  "manifest": "../derived/dm-stroke-5d085761bf15f53d/manifest.json",
+  "manifest_bytes": 1343,
+  "manifest_sha256": "6fed7eb3f13d4447a6910d7003ab677b6b8e8b6e5e29aa89f985e5c527c57556"
  }
 }

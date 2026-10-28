@@ -1,0 +1,154 @@
+{
+  "schema": "ao-explorer.dm-stroke-publication.v1",
+  "scope": "Packaging completed postprocessing only; no simulation or analysis rerun.",
+  "source_recordings": {
+    "2m": "series-2m1000-s624-c7241e4190d5-ef74a541b0e60/cases/baseline",
+    "42m": "42m-500-31024b173527b7a6"
+  },
+  "source_input_files": {
+    "2m/raw/history.npz": {
+      "sha256": "16a0775730cb710e8c0d0c4316c4eda9ed1f5fb6ec7f0441dbbecbadca42158c",
+      "bytes": 334894
+    },
+    "2m/raw/case_record.json": {
+      "sha256": "c7db6320eec2d29e63dfd81780ca6beb3bc082eb385132690f598b6ce2dca507",
+      "bytes": 419531
+    },
+    "42m/raw/history.npz": {
+      "sha256": "961e05c2fc3ad31f65ded3e4db61d6875d8509bb1c3dfc0bf6f89315e42323cf",
+      "bytes": 52140394
+    },
+    "42m/raw/record.json": {
+      "sha256": "25181f2113c099d556a518c1613cea23dc9c199d7f151a057734df750ef16a48",
+      "bytes": 609024023
+    },
+    "42m/raw/plan.json": {
+      "sha256": "47a271ee6701a50e70ddd535ef8aac05fbc57f1c160f6f402c49773321078cb8",
+      "bytes": 15070
+    },
+    "web/ao-explorer/data/series-2m1000-s624-c7241e4190d5-ef74a541b0e60/cases/baseline/config.json": {
+      "sha256": "0ca557ae723b2ff57bcbb7e6fe4c9df11b486a39b16bf9318d944e204aba59d9",
+      "bytes": 8392
+    },
+    "web/ao-explorer/data/series-2m1000-s624-c7241e4190d5-ef74a541b0e60/cases/baseline/metrics.json": {
+      "sha256": "204e37c57d68e46693bde2e463661d7681c417b39ed3278c20e2939feba1e266",
+      "bytes": 212365
+    },
+    "web/ao-explorer/recordings/42m-500-31024b173527b7a6/data.json": {
+      "sha256": "419c05d6cba46a02e64f27dfe6cf37f2a93142f72c26c128aed09971fcac29d0",
+      "bytes": 207649
+    },
+    "src/shwfs_ao/dm/model.py": {
+      "sha256": "c3a6bbeb94a91ae616ab5da19e1454deaf800ab98bccb64ba8dabcca6a55f1da",
+      "bytes": 30080
+    },
+    "src/shwfs_ao/control/loop.py": {
+      "sha256": "b4e645c22e677fbdce2a9562efb4f1e4d41a02ccba97711d6011fccd1820d27f",
+      "bytes": 51075
+    },
+    "src/shwfs_ao/control/controller.py": {
+      "sha256": "e873297d0762ec2354e26e05dc314bdb935bcc35543ab438e512e40c9de170a8",
+      "bytes": 8659
+    },
+    "src/shwfs_ao/control/observation.py": {
+      "sha256": "f057b59ffa477708d3773f04c586546aa13c861543244d3053a6a08420874f06",
+      "bytes": 13734
+    },
+    "src/shwfs_ao/resources/benchmarks/eso_drm_42m_scao_derived.assumptions.v2.json": {
+      "sha256": "93d889e20529234cbdfecc73db0327612cb5da1a5e643ddc38e5af78dd14e1a5",
+      "bytes": 34504
+    },
+    "src/shwfs_ao/resources/synthetic_presets/det_emccd_2m_synthetic.v1.json": {
+      "sha256": "8ee39a63e9897539ef11b52b2409969a8dccb4a81e94b09598ab27269d9d801b",
+      "bytes": 5377
+    },
+    "src/shwfs_ao/resources/synthetic_presets/fast_2m_detector.v1.json": {
+      "sha256": "d2d93607afa6f0f21e5c3fde34c78324f8e443630825bdca7b39fe128288b961",
+      "bytes": 3428
+    },
+    "src/shwfs_ao/resources/synthetic_presets/fast_2m_detector.v2.json": {
+      "sha256": "caf33628b42f5944dc6891771424e8dcf0171f84d87324a73cd26c8031d27364",
+      "bytes": 3533
+    },
+    "src/shwfs_ao/resources/synthetic_presets/fast_2m_detector.v3.json": {
+      "sha256": "22ce39a7c2f3b783e75aef5ad01a49caececa64efcb88d660b42b1bbb7a1ba7c",
+      "bytes": 3763
+    },
+    "src/shwfs_ao/resources/synthetic_presets/fast_2m_detector.v4.json": {
+      "sha256": "97d37efa5f0915736d9cba69c3b331ca7c0ed0a70b4aff27eb2763b230f1edc1",
+      "bytes": 4069
+    },
+    "src/shwfs_ao/resources/synthetic_presets/det_ccd_42m_r3band_derived.v1.json": {
+      "sha256": "56d8a6bac412b56c995a359f56458eb4ad5383d6f5fe47b9fa60b58a3a6714ff",
+      "bytes": 7484
+    },
+    "web/ao-explorer/data/current.json": {
+      "sha256": "fe9090b69343ba7c8021344bcde6634e179b4b4a24e78b868e62799098950972",
+      "bytes": 1646
+    }
+  },
+  "original_analysis_source_sha256": "c3aa8b14d66934012a29ad19f2cd087b9347cf3ab0cfe9b7850b4d3516476306",
+  "original_report_sha256": "b49d89d3c772f4b41a8d941d54554dfb023909e4faccc894ed7e3d190aef8a72",
+  "original_provenance_sha256": "ef639e8b3fe09790cea7a446ad34cf0a5af3d22b11f0e698151bbae1cf58501b",
+  "copied_artifacts": {
+    "results.json": "67afc48595440c07d766d5c0a56c571934f48fe8a0333a104368bdd651d6ee15",
+    "frames-2m.csv": "f995f38f58df149ff1d5fd077354f99745987e5fbc76d81a7f52936c8a0646dd",
+    "frames-42m.csv": "1b2ad99c12a1da007992462a2a3c28ea99a30ace3d7ddba9e707e579ea92949f",
+    "stroke-saturation-comparison.png": "1ccb75d0ae3a1119a2d6c31a1929cdc1527bf7d7e62910055715bb15aa6bb11e",
+    "stroke-saturation-comparison.pdf": "8d55eb1822c7792f603f0f34d4e73e71dd71d83c5cc740ced8b3f90f119e4d4e"
+  },
+  "configuration_hashes": {
+    "2m": "5b9080ceb280ddedf8648f750166b5d87b6c7acf944e5b0e5c45e5e89c2f2620",
+    "42m": "1558ff690c01422d30e86ee97ea5c4756fae237bd90e413e81b3d7798569ddc6"
+  },
+  "producer_identities": {
+    "2m": {
+      "production_sha256": "c7241e4190d54b8896db391351e17d5973ab05e2c4063b453906521f3423c53e"
+    },
+    "42m": "d95f830601acfea74ce4a3b4e24769fc786fa7a8365e0fb4bec62fad875fe53d"
+  },
+  "root_seed": {
+    "2m": 1,
+    "42m": 1
+  },
+  "realization_index": {
+    "2m": 0,
+    "42m": 0
+  },
+  "analysis_environment": {
+    "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "numpy": "2.5.0",
+    "matplotlib": "3.11.0",
+    "native_thread_limits": {
+      "OMP_NUM_THREADS": "2",
+      "OPENBLAS_NUM_THREADS": "2",
+      "MKL_NUM_THREADS": "2",
+      "VECLIB_MAXIMUM_THREADS": "2",
+      "NUMEXPR_NUM_THREADS": "2"
+    }
+  },
+  "checks": {
+    "2m": {
+      "history_hash_matches_record": true,
+      "recorded_saturation_equals_independent_threshold": true,
+      "applied_equals_clip_requested_within_four_ulps_of_limit": true,
+      "clip_comparison_max_difference_m": 2.117582368135751e-22,
+      "clip_comparison_tolerance_m": 8.470329472543003e-22,
+      "published_time_saturation_and_rms_match_history": true,
+      "all_commands_and_strehl_finite": true,
+      "all_frames_reconstruction_usable": true
+    },
+    "42m": {
+      "history_hash_matches_record": true,
+      "recorded_saturation_equals_independent_threshold": true,
+      "applied_equals_clip_requested_within_four_ulps_of_limit": true,
+      "clip_comparison_max_difference_m": 0.0,
+      "clip_comparison_tolerance_m": 5.421010862427522e-20,
+      "published_time_saturation_and_rms_match_history": true,
+      "all_commands_and_strehl_finite": true,
+      "all_frames_reconstruction_usable": true
+    }
+  },
+  "all_inspected_analysis_inputs_unchanged": true,
+  "packager_sha256": "6e57d4708ad540f8b38d2b6be28d56c34dd399337049a52ee006cc73e60f0271"
+}

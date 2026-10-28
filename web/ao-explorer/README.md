@@ -33,7 +33,10 @@ A static, buildless site with five sections:
   existing 42 m wavefronts, matched color/time comparisons and differences,
   and a conditional explanation of Strehl stability. Includes a control-parameter
   comparison and explicitly labels the comparable-control-efficiency premise
-  as a naive assumption. No simulation is performed for this section.
+  as a naive assumption. A DM stroke check adds the saved saturation histories,
+  an ELT M4 parameter comparison and mechanical/OPD unit conventions. Stroke
+  affects the comparison, but its contribution to steadier Strehl is not causally
+  isolated. No simulation is performed for this section.
 - **Appendix** — collapsed records for the 12 m detector studies, analytical
   MCAO, historical 42 m runs and other experiments. All eight original groups
   (R1–R8), evidence downloads and deep links are retained. Full methods and
@@ -199,3 +202,18 @@ configuration comparison. The source recordings remain unchanged.
 postprocessing and losslessly converts its GIF to WebP. It checks all 99 decoded
 frames against the original. It never runs an AO simulation. See
 `docs/research/ao_aperture_comparison/README.md` for the evidence and limits.
+
+## DM stroke check
+
+The `dmStroke` entry binds a separate immutable derivative, loaded below the
+aperture discussion at `#dm-stroke`. `scripts/ao_explorer/dm_stroke_bundle.py`
+packages the completed local audit without executing its analysis or any AO
+simulation. Results, CSV histories and the PNG/PDF figure are copied verbatim;
+the public methods and provenance retain scientific source hashes while omitting
+workstation details. The underlying recordings and crop derivative are unchanged.
+
+The table uses native sampling over [0.2, 1.0) s. Saturation belongs to the issued
+update; the plot shifts it one update forward to align with the held command
+and pre-update optical metrics. The real M4 comparison cites the 2022 ESO paper
+and distinguishes a conditional mechanical-to-OPD conversion from a calibrated
+hardware specification.
