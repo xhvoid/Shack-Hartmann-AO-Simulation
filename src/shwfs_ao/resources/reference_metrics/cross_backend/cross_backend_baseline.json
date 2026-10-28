@@ -1,8 +1,8 @@
 {
   "acceptance": {
-    "accepted_at_utc": "2026-07-21T10:22:06.319256+00:00",
-    "reason": "Record the shared OPD-cube fixture and the both_loops_consumed_shared_opd_cube gate for the AO-REF-018 closed-loop comparison, so identical atmospheric input to both backends is hashed recorded evidence; every physical gating value is unchanged, only the new shared-input fixture, the new boolean gate, and informational runtime figures differ.",
-    "review_reference": "AO-REF-018 implementation review round 2: shared OPD-cube fixture (F4) and report/baseline contract hardening (F5-F10, F16)"
+    "accepted_at_utc": "2026-08-05T06:22:50.828159+00:00",
+    "reason": "Regenerate under generator version 3 and the structured statistical_definition contract, which records the sample count, estimator, lag pair and uncertainty method as individually validated fields and retains the reviewed paragraph as its narrative. Every physical gating value is bit-identical to the superseded baseline; only the informational runtime and memory figures differ.",
+    "review_reference": "P1-4 and P1-7 of the pre-sign-off review of f919fd4; code fixes committed as a0ec41d"
   },
   "artifact_schema_name": "shwfs_ao.cross_backend_baseline",
   "artifact_schema_version": 1,
@@ -287,7 +287,19 @@
           "value": 0.11859553285658325
         }
       ],
-      "statistical_definition": "4 independent realizations per backend at t=0; estimator: masked pupil RMS and the ratio of mean-square column differences at lags 4px/2px; uncertainty: first-order standard errors of each ratio estimator across the realizations, recorded as informational metrics, and every recorded value is verified at generation time to sit more than three standard errors inside its range criterion."
+      "statistical_definition": {
+        "bins_or_lags": {
+          "kind": "structure_function_lags_px",
+          "values": [
+            4,
+            2
+          ]
+        },
+        "estimator": "per realization: masked pupil RMS at t=0, and the ratio of mean-square column differences at the recorded lag pair (numerator lag first); each reported as the mean over the realizations, and the RMS additionally as the HCIPy-over-native ratio of those means",
+        "narrative": "4 independent realizations per backend at t=0; estimator: masked pupil RMS and the ratio of mean-square column differences at lags 4px/2px; uncertainty: first-order standard errors of each ratio estimator across the realizations, recorded as informational metrics, and every recorded value is verified at generation time to sit more than three standard errors inside its range criterion.",
+        "sample_count": 4,
+        "uncertainty_method": "first-order standard error of each ratio estimator across the independent realizations, recorded as informational metrics; generation additionally refuses any gating value that does not sit more than three of its standard errors inside its range"
+      }
     },
     {
       "attribution": "One shared tilt fixture drives both detector-level sensors through the identical repository detector and centroid chain; gain differences come from each backend's window truncation and the HCIPy full-field lenslet crosstalk.",
@@ -763,7 +775,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.00534418070067962
+          "value": 0.0056488194192449255
         },
         {
           "level": "informational",
@@ -773,7 +785,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.0023361803808559975
+          "value": 0.002473930362612009
         },
         {
           "level": "informational",
@@ -783,7 +795,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.0010593609573940437
+          "value": 0.0010976249662538369
         },
         {
           "level": "informational",
@@ -793,7 +805,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.0010093610423306625
+          "value": 0.0010495140838126342
         },
         {
           "level": "informational",
@@ -803,7 +815,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "mebibytes",
-          "value": 2.5275678634643555
+          "value": 2.527777671813965
         }
       ]
     }
@@ -845,8 +857,9 @@
   },
   "generator": {
     "generator_name": "scripts/generate_cross_backend_candidate.py",
-    "generator_version": "2",
-    "source_commit": "d1209bb3e4f2d4b59f614035bea8339d75b09e23",
+    "generator_version": "3",
+    "source_commit": "a0ec41d2a42a9d33a63f91392667603a1082e22a",
+    "source_patch_sha256": null,
     "source_tree_clean": true
   },
   "root_seed": 118
