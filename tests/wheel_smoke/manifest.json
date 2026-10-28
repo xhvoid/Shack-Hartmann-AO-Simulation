@@ -4,6 +4,11 @@
   "pytest_ini": "tests/wheel_smoke/pytest.ini",
   "entries": [
     {
+      "source": "README.md",
+      "kind": "fixture",
+      "requires": []
+    },
+    {
       "source": "tests/backends/hcipy/test_optional_import.py",
       "kind": "test",
       "requires": []
@@ -304,6 +309,11 @@
     },
     {
       "source": "scripts/run_notebook_smoke.py",
+      "kind": "support",
+      "requires": []
+    },
+    {
+      "source": "scripts/run_readme_smoke.py",
       "kind": "support",
       "requires": []
     }
