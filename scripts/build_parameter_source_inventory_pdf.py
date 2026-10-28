@@ -15,12 +15,14 @@ from pathlib import Path
 import textwrap
 from xml.sax.saxutils import escape
 
+from shwfs_ao.io.resources import open_text_resource
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
-PUBLIC = ROOT / "data" / "public"
+PUBLIC = Path("data/public")
 GENERATED = ROOT / "figures" / "detector_level_SCAO"
-REFERENCE = ROOT / "data" / "reference_metrics" / "fast_reference_metrics.json"
+REFERENCE = Path("data/reference_metrics/fast_reference_metrics.json")
 
 PDF_PATH = DOCS / "ao_realistic_demo_parameter_source_inventory.pdf"
 MD_PATH = DOCS / "ao_realistic_demo_parameter_source_inventory.md"
@@ -54,7 +56,8 @@ def build_inventory() -> dict[str, object]:
     science_metric_rows = _csv_rows(GENERATED / "science_psf_metrics.csv")
     error_budget_rows = _csv_rows(GENERATED / "error_budget_scenarios.csv")
     fast_validation_rows = _csv_rows(GENERATED / "fast_validation.csv")
-    fast_reference = json.loads(REFERENCE.read_text(encoding="utf-8"))
+    with open_text_resource(REFERENCE, encoding="utf-8") as handle:
+        fast_reference = json.load(handle)
 
     filter_rows = []
     for band, filename in (
@@ -86,7 +89,8 @@ def build_inventory() -> dict[str, object]:
     tmass_meta, tmass_data = _commented_csv(PUBLIC / "target_photometry_2mass_psc_demo_ngs_bright.csv")
     ps1_meta, ps1_data = _commented_csv(PUBLIC / "target_photometry_panstarrs_dr2_demo_ngs_bright.csv")
     asm_meta, asm_timeseries = _commented_csv(PUBLIC / "eso_asm_paranal_20240729_0300_0800_timeseries.csv")
-    asm_snapshot = json.loads((PUBLIC / "eso_asm_paranal_20240729_0300_0800_snapshot.json").read_text(encoding="utf-8"))
+    with open_text_resource(PUBLIC / "eso_asm_paranal_20240729_0300_0800_snapshot.json", encoding="utf-8") as handle:
+        asm_snapshot = json.load(handle)
     asm_measurements = asm_snapshot["measurements"]
 
     h_band_rows = [row for row in science_metric_rows if row["band_name"] == "H"]
@@ -436,7 +440,7 @@ def markdown_inventory(inv: dict[str, object]) -> str:
     _md_table(lines, "Selected visual/result artifacts", [{"artifact": a, "contents": b, "basis": c} for a, b, c in inv["artifacts"]], ["artifact", "contents", "basis"])
     _md_table(lines, "Sources explicitly not claimed as used", inv["not_claimed"], ["source", "identifier", "status"])
     _md_table(lines, "Source index", [{"id": a, "source": b, "identifier": c, "use": d} for a, b, c, d in inv["source_index"]], ["id", "source", "identifier", "use"])
-    return "\n".join(lines) + "\n"
+    return "\n".join(lines).rstrip("\n") + "\n"
 
 
 def write_pdf(inv: dict[str, object], path: Path) -> None:
@@ -701,7 +705,7 @@ def _md_table(lines: list[str], title: str, rows: object, columns: list[str]) ->
 def _commented_csv(path: Path) -> tuple[dict[str, str], list[dict[str, str]]]:
     metadata: dict[str, str] = {}
     data_lines: list[str] = []
-    with path.open(newline="", encoding="utf-8") as handle:
+    with open_text_resource(path, newline="", encoding="utf-8") as handle:
         for line in handle:
             stripped = line.strip()
             if not stripped:
@@ -717,7 +721,7 @@ def _commented_csv(path: Path) -> tuple[dict[str, str], list[dict[str, str]]]:
 
 
 def _csv_rows(path: Path) -> list[dict[str, str]]:
-    with path.open(newline="", encoding="utf-8") as handle:
+    with open_text_resource(path, newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
 
 

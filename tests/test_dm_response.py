@@ -122,3 +122,63 @@ def test_static_fit_reduces_simple_defocus_like_target():
     assert fit.residual_rms_nm < target_rms
     assert fit.rank > 0
     assert np.all(np.isfinite(fit.singular_values))
+
+
+def test_static_fit_round_trips_a_piston_removed_same_basis_surface():
+    model = _model(stroke_limit_nm=5000.0)
+    commands_nm = np.zeros(model.n_actuators)
+    commands_nm[0] = 35.0
+    commands_nm[model.n_actuators // 2] = -22.0
+    commands_nm[-1] = 17.0
+    target_nm = synthesize_dm_opd_nm(commands_nm, model, remove_piston=True).opd_nm
+
+    fit = fit_static_opd_with_dm(target_nm, model, rcond=1.0e-10)
+
+    assert fit.residual_rms_nm < 1.0e-9
+    assert np.allclose(fit.fitted_opd_nm[model.pupil_mask], target_nm[model.pupil_mask], atol=1.0e-9)
+
+
+def test_static_fit_solves_only_usable_actuators_and_honours_stuck_surface():
+    x_m, y_m, mask, _ = _pupil_grid()
+    model = build_dm_model(
+        x_m,
+        y_m,
+        mask,
+        DMConfig(
+            telescope_diameter_m=2.0,
+            n_actuators_across=7,
+            coupling_width_pitch=0.35,
+            stroke_limit_nm=500.0,
+            dead_actuator_indices=(0,),
+            stuck_actuator_indices=(1,),
+            stuck_command_nm=15.0,
+            source_class="synthetic_assumed",
+            source_note="Constrained static-fit unit-test model.",
+        ),
+    )
+    requested = np.zeros(model.n_actuators)
+    requested[0] = 80.0
+    requested[1] = -50.0
+    requested[model.n_actuators // 2] = 24.0
+    target_nm = synthesize_dm_opd_nm(requested, model, remove_piston=True).opd_nm
+
+    fit = fit_static_opd_with_dm(target_nm, model, rcond=1.0e-10)
+
+    assert fit.commands_nm[0] == pytest.approx(0.0)
+    assert fit.commands_nm[1] == pytest.approx(15.0)
+    assert fit.residual_rms_nm < 1.0e-9
+
+
+def test_static_fit_uses_bounded_least_squares_when_stroke_is_active():
+    limited_model = _model(stroke_limit_nm=25.0)
+    unlimited_model = _model(stroke_limit_nm=5000.0)
+    requested = np.zeros(unlimited_model.n_actuators)
+    requested[unlimited_model.n_actuators // 2] = 120.0
+    target_nm = synthesize_dm_opd_nm(requested, unlimited_model, remove_piston=True).opd_nm
+    target_rms = np.sqrt(np.mean(target_nm[limited_model.pupil_mask] ** 2))
+
+    fit = fit_static_opd_with_dm(target_nm, limited_model, rcond=1.0e-10)
+
+    assert np.max(np.abs(fit.commands_nm)) <= limited_model.config.stroke_limit_nm
+    assert np.any(np.isclose(np.abs(fit.commands_nm), limited_model.config.stroke_limit_nm, atol=1.0e-6))
+    assert 0.0 < fit.residual_rms_nm < target_rms

@@ -1,0 +1,21 @@
+include README.md
+include LICENSE
+include DATA_LICENSES.md
+include pyproject.toml
+include MANIFEST.in
+
+# Keep the canonical package, build hook, and every installed compatibility
+# shim in an sdist so its rebuilt wheel matches a direct wheel.
+include src/*.py
+recursive-include src/shwfs_ao *.py
+recursive-include build_support *.py
+
+# Only the canonical resource tree belongs in the source distribution. The
+# ao_simulation_data alias is generated later under build_lib by build_py.
+recursive-include src/shwfs_ao/resources *.md
+recursive-include src/shwfs_ao/resources *.csv
+recursive-include src/shwfs_ao/resources *.json
+
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude .DS_Store

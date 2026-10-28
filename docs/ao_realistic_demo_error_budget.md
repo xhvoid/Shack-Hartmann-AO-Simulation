@@ -2,7 +2,11 @@
 
 # Error-Budget Notes
 
-The error-budget layer adds `src/ao_error_budget.py`, which joins the detector-level control loop and science PSF diagnostics into a single scenario table.
+The installed `ao_error_budget` API and its historical `ScenarioResult` table
+remain compatibility contracts. Its behavior-compatible control execution is
+adapted to the canonical `shwfs_ao.control` runner, command projector, and
+controller rather than owning another production loop engine. It joins those
+loop histories with science PSF diagnostics into a single scenario table.
 
 The shared result object is `ScenarioResult`. Its required fields are:
 
@@ -33,9 +37,9 @@ ncpa
 all_effects
 ```
 
-The fast default uses a synthetic multi-component dynamic phase sequence in the controlled DM subspace. This keeps the test/runtime small while exercising the same data path as notebook 11: detector measurement, TSVD reconstruction, integrator control, residual OPD, and J/H/K science metrics.
+The fast default uses a synthetic multi-component dynamic phase sequence in the controlled DM subspace. This keeps the test/runtime small while exercising the same data path as notebook 11: detector measurement, TSVD reconstruction, typed command projection, applied-command-aware integrator control, residual OPD, and J/H/K science metrics. Scenario isolation resets random, atmosphere, controller, and DM state before a comparison.
 
-The scenario-level `source_class` remains `synthetic_assumed` because the detector, DM, control, and effect rows are still simulation proxies. Bandpass provenance is handled separately by the module science-metric layer; when the public caches are present, J/H/Ks metrics use the tracked SVO direct public filter curves in `data/public/`.
+The scenario-level `source_class` remains `synthetic_assumed` because the detector, DM, control, and effect rows are still simulation proxies. Bandpass provenance is handled separately by the module science-metric layer; J/H/Ks metrics use the tracked SVO direct public filter curves under `src/shwfs_ao/resources/public/`, addressed through compatible `data/public/...` logical names.
 
 Several effects are explicitly synthetic proxies:
 
@@ -65,4 +69,4 @@ figures/detector_level_SCAO/error_budget_scenarios.csv
 figures/detector_level_SCAO/error_budget_scenarios.png
 ```
 
-The table is an observatory-style error-budget demonstrator for a compact 2 m SCAO system. It is not a calibrated performance prediction, not an ELT-scale claim, and does not use private AO telemetry.
+The table is an observatory-style error-budget demonstrator for a compact 2 m SCAO system. It is not a calibrated performance prediction, not an ELT-scale claim, and does not use private AO telemetry. Canonical control timing and provenance improve reproducibility, not physical fidelity; see the [AO-REF-009 control-loop contract](refactor/AO_REF_009_CONTROL_LOOP.md).

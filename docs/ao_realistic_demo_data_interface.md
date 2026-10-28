@@ -2,16 +2,24 @@
 
 # Data-Source Interface Notes
 
-The data-source interface adds the first reusable data-ingestion layer for the detector-level AO extension. The loaders live in `src/data_sources.py` and return typed Python objects rather than raw dictionaries or notebook-only parsing snippets.
+The data-source interface adds the first reusable data-ingestion layer for the detector-level AO extension. The loaders currently live in `src/shwfs_ao/legacy/data_sources.py`, are re-exported through the installed `data_sources` compatibility module, and return typed Python objects rather than raw dictionaries or notebook-only parsing snippets.
 
 The implementation keeps two tracks:
 
 ```text
-data/public/      small tracked direct-public-data caches
-data/samples/     offline synthetic or literature-inspired fallback fixtures
+src/shwfs_ao/resources/public/   small tracked direct-public-data caches
+src/shwfs_ao/resources/samples/  offline synthetic or literature-inspired fallback fixtures
 ```
 
-Current direct public caches are:
+These canonical source files are installed in `shwfs_ao.resources` and opened
+through `importlib.resources`. A byte-identical `ao_simulation_data` alias is
+generated only while building distributions. Relative `data/...` names remain
+supported logical compatibility inputs; installed execution does not require a
+repository root. If a direct SVO cache is
+unavailable, the selected fallback is retained in the returned bandpass
+provenance instead of being silent.
+
+Current direct public cache logical names are:
 
 ```text
 data/public/svo_2mass_j_direct.csv

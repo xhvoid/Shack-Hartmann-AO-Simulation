@@ -26,10 +26,13 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 
+from shwfs_ao.io.resources import render_resource_manifest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 EXTERNAL_DIR = ROOT / "data" / "external"
-PUBLIC_DIR = ROOT / "data" / "public"
+RESOURCE_DIR = ROOT / "src" / "shwfs_ao" / "resources"
+PUBLIC_DIR = RESOURCE_DIR / "public"
 
 SVO_FILTERS = {
     "J": {
@@ -152,6 +155,9 @@ def main() -> None:
         access_time=access_time,
     )
 
+    manifest_path = RESOURCE_DIR / "resource_manifest.json"
+    manifest_path.write_text(render_resource_manifest(RESOURCE_DIR), encoding="utf-8")
+
     print("Fetched public reference data:")
     for path in svo_outputs:
         print(f"  {path.relative_to(ROOT)}")
@@ -162,6 +168,7 @@ def main() -> None:
     print(f"  {eso_json.relative_to(ROOT)}")
     print(f"  {(PUBLIC_DIR / f'eso_asm_paranal_{ESO_ASM_WINDOW_TAG}_snapshot.json').relative_to(ROOT)}")
     print(f"  {(PUBLIC_DIR / f'eso_asm_paranal_{ESO_ASM_WINDOW_TAG}_timeseries.csv').relative_to(ROOT)}")
+    print(f"  {manifest_path.relative_to(ROOT)}")
 
 
 def fetch_url(url: str, output_path: Path) -> None:

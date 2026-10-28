@@ -8,7 +8,7 @@ context.
 
 ## What is checked (internal sanity checks)
 
-The checks below are implemented in [`src/ao_validation.py`](../src/ao_validation.py)
+The checks below are implemented in [`src/shwfs_ao/legacy/ao_validation.py`](../src/shwfs_ao/legacy/ao_validation.py)
 and exercised by [`tests/test_validation_checks.py`](../tests/test_validation_checks.py),
 [`tests/test_detector_centroids.py`](../tests/test_detector_centroids.py), and the
 fast integration test [`tests/test_integration_fast.py`](../tests/test_integration_fast.py).
@@ -20,7 +20,7 @@ The fast 2 m integration reports a pass/fail count for the first six.
 | Diffraction scale | The ideal-PSF FWHM is near the `lambda/D` diffraction scale. | `check_diffraction_scale` |
 | Photon → centroid noise | Centroid noise / uncertainty decreases as photon count increases. | `check_centroid_noise_photon_monotonicity` |
 | Read noise → centroid quality | Higher read noise degrades centroid quality and valid-centroid fraction. | `test_high_read_noise_reduces_centroid_validity` |
-| Latency → residual | Closed-loop residual worsens with increasing frame delay. | `check_latency_residual_monotonicity` |
+| Latency → residual | Closed-loop residual is compared under frame-exact delays with point-local random/atmosphere/controller/DM resets. | `check_latency_residual_monotonicity` |
 | DM fitting trend | Static fitting residual does not worsen as actuator count increases. | `check_dm_fitting_trend` |
 | Reproducibility | Fixed seeds reproduce key scenario metrics. | `check_scenario_reproducibility` |
 | Centroid validity (faint photons) | Sub-photon / low-SNR WFS budgets report a low valid-centroid fraction instead of plausible-looking centroids built from noise. | `CentroidValidityConfig` + `measure_detector_shwfs`, tested in `tests/test_detector_centroids.py` |
@@ -28,6 +28,11 @@ The fast 2 m integration reports a pass/fail count for the first six.
 These are **trend and consistency checks**, not absolute-accuracy validation: they
 confirm the model behaves the right way as inputs change, and that runs are
 reproducible.
+
+The canonical latency definition, unusable-measurement queue behavior,
+applied-command acknowledgement, history denominators, and sweep replay policy
+are documented in the
+[AO-REF-009 control-loop contract](refactor/AO_REF_009_CONTROL_LOOP.md).
 
 ## How to run the checks
 

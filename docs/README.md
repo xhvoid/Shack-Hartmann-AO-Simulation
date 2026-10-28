@@ -11,6 +11,15 @@ This directory provides supporting technical notes for the detector-level adapti
 - [Parameter-source inventory (Markdown)](ao_realistic_demo_parameter_source_inventory.md) — tracked public caches, derived quantities, synthetic parameters, and result provenance.
 - [Parameter-source inventory (PDF)](ao_realistic_demo_parameter_source_inventory.pdf) — formatted version of the source inventory.
 
+## Canonical API contracts
+
+- [AO-REF-007 interaction-matrix calibration](refactor/AO_REF_007_INTERACTION_MATRIX.md)
+- [AO-REF-008 mask-aware reconstructors](refactor/AO_REF_008_RECONSTRUCTORS.md)
+- [AO-REF-009 backend-independent control loop](refactor/AO_REF_009_CONTROL_LOOP.md)
+- [AO-REF-010 science propagation and physical-grid metrics](refactor/AO_REF_010_SCIENCE.md)
+- [AO-REF-011 shared SCAO construction and profiles](refactor/AO_REF_011_SCAO.md)
+- [AO-REF-012 artifact and packaged-resource boundary](refactor/AO_REF_012_ARTIFACTS.md)
+
 ## Simulation components
 
 - [Data-source interface](ao_realistic_demo_data_interface.md)

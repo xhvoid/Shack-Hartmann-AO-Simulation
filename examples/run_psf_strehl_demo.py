@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import matplotlib
@@ -14,9 +13,6 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
 
 from psf_tools import compute_psf_from_phase, marechal_strehl, strehl_ratio
 from zernike import make_pupil_grid, rms, synthesize_wavefront, zernike_named_modes

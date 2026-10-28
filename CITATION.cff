@@ -6,7 +6,6 @@ authors:
   - family-names: Han
     given-names: Xu
 version: 0.1.0
-date-released: "2026-06-25"
 license: MIT
 repository-code: "https://github.com/xhvoid/Shack-Hartmann-AO-Simulation"
 keywords:
