@@ -21,11 +21,19 @@ import subprocess
 import sys
 import types
 
+import numpy as np
 import pytest
 
+from shwfs_ao.core.hashing import stable_hash
+from shwfs_ao.validation.numerical_identity import (
+    numerical_input_failure,
+    numerical_input_record,
+    numerical_input_values,
+)
 from shwfs_ao.validation.regression import (
     load_cross_backend_baseline,
     validate_cross_backend_baseline,
+    validate_cross_backend_report,
 )
 
 
@@ -202,6 +210,7 @@ class TestDiffContentCompleteness:
                     "new_value": "a|b\nc",
                 }
             ],
+            "numerical_inputs": [],
             "changes": [
                 {
                     "path": "comparisons[k].metrics[m].units",
@@ -259,6 +268,297 @@ class TestDiffContentCompleteness:
         assert [entry["path"] for entry in diff["changes"]] == [
             "generator.source_commit"
         ]
+
+
+# Longest line a reviewed Markdown diff may contain: a table row of short
+# fields or one evaluator failure message.  Rendering the witness subtree as a
+# plain leaf put 136,574 characters on a single line for the 343f3c1 -> a66db3d
+# (schema v1 -> v2) baseline diff.
+_REVIEWABLE_LINE_CHARACTERS = 300
+
+
+def _reviewable_markdown(diff: dict) -> str:
+    rendered = script._render_diff_markdown(diff)
+    longest = max(rendered.splitlines(), key=len)
+    assert len(longest) <= _REVIEWABLE_LINE_CHARACTERS, longest[:200]
+    return rendered
+
+
+def _rewitness(document: dict, name: str, values: np.ndarray) -> None:
+    """Replace one fixture witness exactly as generation would record it.
+
+    The raw fixture hash is re-derived from the new samples too, so the
+    candidate stays a valid report and only the samples differ in substance.
+    """
+
+    record = document["numerical_inputs"][name]
+    source_hash = stable_hash(values, namespace="cross_backend_fixture")
+    document["numerical_inputs"][name] = numerical_input_record(
+        values,
+        source_hash=source_hash,
+        configuration_hash=record["configuration_hash"],
+    )
+    document["fixture_hashes"][name] = source_hash
+    validate_cross_backend_report(document)
+
+
+def _witness(diff: dict, name: str) -> dict:
+    (entry,) = [
+        entry for entry in diff["numerical_inputs"] if entry["witness"] == name
+    ]
+    return entry
+
+
+def _scaled_largest_sample(name: str, factor: float) -> dict:
+    """A candidate whose largest-magnitude sample of ``name`` is scaled."""
+
+    document = _candidate_document()
+    values = numerical_input_values(document["numerical_inputs"][name]).copy()
+    index = np.unravel_index(int(np.nanargmax(np.abs(values))), values.shape)
+    scaled = values[index] * factor
+    assert scaled != values[index]
+    values[index] = scaled
+    _rewitness(document, name, values)
+    return document
+
+
+class TestWitnessReview:
+    """The reviewed diff tells roundoff from input drift without printing blobs.
+
+    Each witness present on both sides is compared at the evaluator's own
+    ``NUMERICAL_INPUTS`` tolerances with the candidate as the observation and
+    the packaged baseline as the expectation, and its verdict is the one
+    ``numerical_input_failure`` returns for that pair.
+    """
+
+    def test_roundoff_in_one_sample_is_within_the_contract_tolerance(
+        self,
+        packaged_tree,
+    ):
+        document = _scaled_largest_sample("static_opd_m", 1.0 + 1.0e-15)
+        diff = script._build_diff(document, script._canonical_bytes(document))
+        witness = _witness(diff, "static_opd_m")
+        assert witness["change"] == "changed"
+        assert witness["changed_fields"] == ["data", "source_hash", "values_sha256"]
+        comparison = witness["comparison"]
+        assert comparison["shape_equal"] is True
+        assert comparison["nan_mask_equal"] is True
+        assert comparison["max_abs_delta"] > 0.0
+        # A few ulp of a ~1.7e-7 m sample against 1e-20 m + 1e-12 * |sample|.
+        assert 0.0 < comparison["max_delta_over_allowed"] < 1.0e-2
+        assert comparison["passes_contract"] is True
+        assert comparison["contract_failure"] is None
+        for other in diff["numerical_inputs"]:
+            if other["witness"] != "static_opd_m":
+                assert other["change"] == "unchanged"
+                assert other["comparison"]["max_abs_delta"] == 0.0
+        # Acceptance compares the recomputed diff with the one read back from
+        # disk, so the reported magnitudes must survive the JSON round trip.
+        assert json.loads(script._canonical_bytes(diff)) == diff
+
+        rendered = _reviewable_markdown(diff)
+        old = load_cross_backend_baseline()["numerical_inputs"]["static_opd_m"]
+        new = document["numerical_inputs"]["static_opd_m"]
+        row = next(
+            line for line in rendered.splitlines()
+            if line.startswith("| `static_opd_m` | changed |")
+        )
+        assert f"`{old['values_sha256'][:12]}` → `{new['values_sha256'][:12]}`" in row
+        assert "| same |" in row  # configuration_hash
+        assert any(
+            line.startswith("| `static_opd_m` | 1e-20 m_opd")
+            and line.endswith("| equal | pass |")
+            for line in rendered.splitlines()
+        )
+        assert "Contract failures:" not in rendered
+        assert new["data"] not in rendered and old["data"] not in rendered
+
+    def test_a_relative_drift_of_1e_9_exceeds_the_contract_tolerance(
+        self,
+        packaged_tree,
+    ):
+        document = _scaled_largest_sample("static_opd_m", 1.0 + 1.0e-9)
+        diff = script._build_diff(document, script._canonical_bytes(document))
+        comparison = _witness(diff, "static_opd_m")["comparison"]
+        assert comparison["max_delta_over_allowed"] > 1.0e2
+        assert comparison["passes_contract"] is False
+        # The verdict is the evaluator's, not a re-derivation of it.
+        assert comparison["contract_failure"] == numerical_input_failure(
+            "static_opd_m",
+            document["numerical_inputs"]["static_opd_m"],
+            load_cross_backend_baseline()["numerical_inputs"]["static_opd_m"],
+        )
+        assert comparison["contract_failure"].startswith("sample ")
+
+        rendered = _reviewable_markdown(diff)
+        assert any(
+            line.startswith("| `static_opd_m` | 1e-20 m_opd")
+            and line.endswith("| equal | fail |")
+            for line in rendered.splitlines()
+        )
+        assert (
+            f"- `static_opd_m`: {comparison['contract_failure']}" in rendered
+        )
+
+    @pytest.mark.parametrize(
+        ("name", "rendered_shape", "nan_mask", "failure"),
+        (
+            ("time_grid_s", "[4] → [5]", "n/a", "shape observed=(5,) expected=(4,)"),
+            (
+                "atmosphere_opd_cube_m",
+                "[4, 48, 48]",
+                "differs",
+                "non-finite pupil-mask locations differ",
+            ),
+        ),
+    )
+    def test_a_shape_or_nan_mask_change_is_reported_and_fails(
+        self,
+        packaged_tree,
+        name,
+        rendered_shape,
+        nan_mask,
+        failure,
+    ):
+        document = _candidate_document()
+        values = numerical_input_values(document["numerical_inputs"][name]).copy()
+        if name == "time_grid_s":
+            values = np.append(values, values[-1] + (values[1] - values[0]))
+        else:
+            # One pupil-mask sample becomes finite; every other sample is kept.
+            values[np.unravel_index(int(np.argmax(np.isnan(values))), values.shape)] = 0.0
+        _rewitness(document, name, values)
+        diff = script._build_diff(document, script._canonical_bytes(document))
+        comparison = _witness(diff, name)["comparison"]
+        assert comparison["shape_equal"] is (name != "time_grid_s")
+        assert comparison["nan_mask_equal"] is (
+            None if name == "time_grid_s" else False
+        )
+        assert comparison["passes_contract"] is False
+        assert comparison["contract_failure"] == failure
+
+        rendered = _reviewable_markdown(diff)
+        assert f"| `{name}` | changed | {rendered_shape} |" in rendered
+        assert any(
+            line.startswith(f"| `{name}` |") and line.endswith(f"| {nan_mask} | fail |")
+            for line in rendered.splitlines()
+        )
+        assert f"- `{name}`: {failure}" in rendered
+
+    def test_a_dm_payload_change_is_fingerprinted_not_printed(
+        self,
+        packaged_tree,
+    ):
+        document = _candidate_document()
+        record = document["numerical_inputs"]["native_dm"]
+        old_payload = record["backend_source_payload"]
+        record["backend_source_payload"] = old_payload.replace("{", "{ ", 1)
+        diff = script._build_diff(document, script._canonical_bytes(document))
+        witness = _witness(diff, "native_dm")
+        assert witness["changed_fields"] == ["backend_source_payload"]
+        # The samples did not move, and the evaluator's check does not read
+        # the payload, so the contract still passes.
+        assert witness["comparison"]["passes_contract"] is True
+        assert witness["new"]["backend_source_payload"] == {
+            "characters": len(old_payload) + 1,
+            "sha256": hashlib.sha256(
+                record["backend_source_payload"].encode("utf-8")
+            ).hexdigest(),
+        }
+        # The machine-readable change list still carries the payload in full.
+        assert {
+            "path": "numerical_inputs.native_dm.backend_source_payload",
+            "old": old_payload,
+            "new": record["backend_source_payload"],
+        } in diff["changes"]
+
+        rendered = _reviewable_markdown(diff)
+        new_digest = witness["new"]["backend_source_payload"]["sha256"]
+        assert (
+            f"- `native_dm` backend_source_payload: {len(old_payload)} chars, "
+            f"SHA-256 `{witness['old']['backend_source_payload']['sha256'][:12]}` "
+            f"→ {len(old_payload) + 1} chars, SHA-256 `{new_digest[:12]}`"
+        ) in rendered
+        assert old_payload not in rendered
+        assert record["backend_source_payload"] not in rendered
+        assert "numerical_inputs.native_dm" not in rendered
+
+    def test_an_undecodable_baseline_witness_is_reported_not_compared(
+        self,
+        packaged_tree,
+    ):
+        # The packaged baseline is not re-validated by the diff, so a record it
+        # cannot decode must be named in the review rather than crash it.
+        baseline_path = packaged_tree / "cross_backend_baseline.json"
+        baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+        baseline["numerical_inputs"]["static_opd_m"]["note"] = "x" * 500
+        baseline_path.write_bytes(script._canonical_bytes(baseline))
+
+        document = _candidate_document()
+        diff = script._build_diff(document, script._canonical_bytes(document))
+        witness = _witness(diff, "static_opd_m")
+        assert witness["change"] == "changed"
+        assert witness["changed_fields"] == ["note"]
+        assert witness["comparison"] is None
+        assert witness["old"]["decode_error"] == (
+            "numerical input must have exactly the required fields"
+        )
+        assert witness["new"]["decode_error"] is None
+
+        rendered = _reviewable_markdown(diff)
+        assert "- `static_opd_m` note: not summarised" in rendered
+        assert (
+            "- `static_opd_m` (old side does not decode): numerical input must "
+            "have exactly the required fields"
+        ) in rendered
+        assert "x" * 100 not in rendered
+
+    def test_a_v1_baseline_diff_summarises_the_added_witnesses(
+        self,
+        packaged_tree,
+    ):
+        # The 343f3c1 -> a66db3d acceptance: the old baseline is schema v1 and
+        # carries no witnesses at all, so every witness is added at once.
+        baseline_path = packaged_tree / "cross_backend_baseline.json"
+        v1_baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+        del v1_baseline["numerical_inputs"]
+        v1_baseline["artifact_schema_version"] = 1
+        baseline_path.write_bytes(script._canonical_bytes(v1_baseline))
+
+        document = _candidate_document()
+        diff = script._build_diff(document, script._canonical_bytes(document))
+        records = document["numerical_inputs"]
+        assert [entry["witness"] for entry in diff["numerical_inputs"]] == sorted(
+            records
+        )
+        assert all(
+            entry["change"] == "added"
+            and entry["old"] is None
+            and entry["comparison"] is None
+            for entry in diff["numerical_inputs"]
+        )
+        # Complete for machines: the added subtree is recorded verbatim.
+        assert [
+            entry for entry in diff["changes"]
+            if entry["path"].startswith("numerical_inputs")
+        ] == [{"path": "numerical_inputs", "old": None, "new": records}]
+
+        rendered = _reviewable_markdown(diff)
+        for name, record in records.items():
+            assert (
+                f"| `{name}` | added | {record['shape']} | "
+                f"`{record['values_sha256'][:12]}` | "
+                f"`{record['source_hash'][:12]}` | "
+                f"`{record['configuration_hash'][:12]}` | n/a |"
+            ) in rendered
+            assert record["data"][:40] not in rendered
+            for payload in ("source_payload", "backend_source_payload"):
+                if record[payload] is not None:
+                    assert record[payload][:40] not in rendered
+        assert "None: no witness is present and decodable on both sides" in rendered
+        assert "| `artifact_schema_version` | 1 | 2 |" in rendered
+        assert "`numerical_inputs`" not in rendered
+        assert len(rendered) < 20_000
 
 
 # The declared prose for each tag, inverted from the script's own table so a
@@ -1249,5 +1549,34 @@ class TestAcceptanceFreshness:
             script._accept_reviewed_candidate(
                 candidate_dir,
                 reason="stale diff",
+                review_reference="AO-REF-018-TEST",
+            )
+
+    def test_a_diff_in_an_earlier_diff_format_is_named_as_such(
+        self,
+        packaged_tree,
+        tmp_path,
+    ):
+        # Neither document moved, only the diff format did, so the refusal says
+        # that instead of reporting a post-review edit.
+        candidate_dir = tmp_path / "candidate"
+        diff = _write_candidate(candidate_dir, _candidate_document())
+        earlier = {
+            key: value for key, value in diff.items() if key != "numerical_inputs"
+        }
+        earlier["schema_version"] = 1
+        (candidate_dir / script.DIFF_JSON).write_bytes(
+            script._canonical_bytes(earlier)
+        )
+        with pytest.raises(
+            SystemExit,
+            match=(
+                "shwfs_ao.cross_backend_diff version 1, but this script writes "
+                f"version {script.DIFF_SCHEMA_VERSION}"
+            ),
+        ):
+            script._accept_reviewed_candidate(
+                candidate_dir,
+                reason="earlier diff format",
                 review_reference="AO-REF-018-TEST",
             )
