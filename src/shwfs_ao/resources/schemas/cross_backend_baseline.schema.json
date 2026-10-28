@@ -147,7 +147,8 @@
       "properties": {
         "generator_name": {"$ref": "#/$defs/nonempty_string"},
         "generator_version": {"$ref": "#/$defs/nonempty_string"},
-        "source_commit": {"$ref": "#/$defs/nonempty_string"}
+        "source_commit": {"$ref": "#/$defs/nonempty_string"},
+        "source_tree_clean": {"type": "boolean"}
       }
     },
     "root_seed": {"type": "integer"}
