@@ -41,7 +41,10 @@ jobs:
         run: python -m pip check
 
       - name: Run tests
-        run: python -m pytest -q
+        # The hcipy marker is reserved for the dedicated HCIPy lane below;
+        # --strict-markers comes from pyproject so an unregistered marker or
+        # a typo cannot silently widen this selection.
+        run: python -m pytest -q -m "not hcipy and not slow"
 
       - name: Run example scripts
         if: matrix.python-version == '3.14'
@@ -64,3 +67,50 @@ jobs:
       - name: Ensure generators did not modify tracked artifacts
         if: matrix.python-version == '3.14'
         run: git diff --exit-code -- src/shwfs_ao/resources/reference_metrics src/shwfs_ao/resources/resource_manifest.json figures/detector_level_SCAO
+
+  hcipy:
+    name: HCIPy Python 3.11
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONPATH: ""
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: constraints/hcipy-py311.txt
+
+      - name: Install build frontend
+        run: python -m pip install -c constraints/hcipy-py311.txt build
+
+      - name: Build distributions
+        run: |
+          mkdir -p "$RUNNER_TEMP/dist"
+          python -m build --outdir "$RUNNER_TEMP/dist"
+
+      - name: Install test and HCIPy dependencies
+        run: python -m pip install -c constraints/hcipy-py311.txt ".[test,hcipy]"
+
+      - name: Replace the source install with the built wheel
+        run: |
+          python -m pip uninstall -y shack-hartmann-ao-simulation
+          python -m pip install --no-deps "$RUNNER_TEMP"/dist/*.whl
+          python -m pip check
+
+      - name: Prepare the portable wheel-smoke bundle
+        run: python scripts/prepare_wheel_smoke_bundle.py --include-hcipy --output "$RUNNER_TEMP/wheel-smoke"
+
+      - name: Run conversion and optional-import tests from the wheel
+        # One step so `cd` persists; the collection guard fails the job if
+        # the hcipy selection would silently collect zero tests.
+        run: |
+          cd "$RUNNER_TEMP/wheel-smoke"
+          PYTHONPATH= python -m pytest -c pytest.ini -q --strict-markers --collect-only -m "hcipy and not slow" tests > hcipy-collection.txt
+          test "$(grep -c '::' hcipy-collection.txt)" -ge 1
+          PYTHONPATH= python -m pytest -c pytest.ini -q --strict-markers -m "hcipy and not slow" tests
+          PYTHONPATH= python -m pytest -c pytest.ini -q --strict-markers -m "not hcipy and not slow" tests

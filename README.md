@@ -270,8 +270,17 @@ install stays lightweight. Add only what you need:
 python3 -m pip install -e ".[test]"               # pytest
 python3 -m pip install -e ".[notebooks]"           # jupyter, ipykernel
 python3 -m pip install -e ".[docs]"                # reportlab (provenance PDF)
-python3 -m pip install -e ".[test,notebooks,docs]" # everything
+python3 -m pip install -e ".[hcipy]"               # optional HCIPy backend layer
+python3 -m pip install -e ".[test,notebooks,docs]" # everything for development
 ```
+
+The `hcipy` extra is optional: the native backends never import HCIPy, and
+`import shwfs_ao` works without it. Currently the extra provides the
+`shwfs_ao.backends.hcipy.conversion` layer (grid, field, aperture, and
+wavefront round trips); HCIPy atmosphere, DM, Shack-Hartmann, and science
+propagation backends arrive in later tickets. Calling HCIPy-backed
+functionality without the extra raises an error naming the exact
+`pip install 'shack-hartmann-ao-simulation[hcipy]'` command.
 
 `requirements.txt` lists the runtime dependencies only, mirroring the
 `pyproject.toml` core dependencies. For an exactly pinned test environment,

@@ -121,6 +121,8 @@ flowchart TD
 | `shwfs_ao.science.bandpass` | Immutable metre wavelength axes, transmission, provenance, and normalized quadrature weights for scalar band summaries. |
 | `shwfs_ao.science.propagation` | Backend-independent residual-OPD construction helper and immutable focal-sampling contract; it selects a backend but contains no FFT. |
 | `shwfs_ao.backends.native.propagation` | Fixed-pupil NumPy `SciencePropagator` and the one native centered, padded FFT kernel returning physical `PsfResult` grids. |
+| `shwfs_ao.backends.hcipy` | Lazy optional-dependency boundary: availability probe, versioned requirement, and the documented `OptionalDependencyError` install hint; never imported eagerly by any other module. |
+| `shwfs_ao.backends.hcipy.conversion` | Validated repository↔HCIPy grid, field, aperture, and wavefront conversions with exact coordinates, C-order/x-fastest flattening, NaN-outside-pupil restoration, and strict in-pupil finiteness checked before the dependency is resolved. |
 | `shwfs_ao.science.metrics` | Physical-axis scalar Strehl, Marechal, FWHM, EE50/EE80, halo, lambda/D, and arcsecond metrics with explicit flux semantics. |
 | `synthetic_instrument_data.py` | Compatibility-facing SH-WFS geometry, reference-centroid calibration, and detector-level measurement orchestration. |
 | `shwfs_detector.py` | Compatibility-facing lenslet diffraction spots and finite detector windows; detector and centroid calls delegate to `shwfs_ao.detector`. |
