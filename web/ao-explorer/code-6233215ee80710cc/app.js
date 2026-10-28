@@ -22,7 +22,7 @@
 import { BundleError, fetchVerified, fetchVerifiedImage, fetchVerifiedJson, isFiniteOrNull, require } from "./integrity.js";
 import { PALETTE, lineChart, redrawWhenResized } from "./charts.js";
 import { renderResults, renderProjectEvidence, initNgs22 } from "./results.js";
-import { initNgsReplay } from "./ngs-replay.js";
+import { initNgsReplay, initNgsControl } from "./ngs-replay.js";
 import { initReplay42, initApertureComparison, initDmStroke } from "./replay42.js";
 import { initGalaxy, showGalaxyCase } from "./galaxy.js";
 import * as playback from "./playback.js";
@@ -426,7 +426,14 @@ function renderCaseSummary() {
   const c = state.case.json;
   const p = c.effective_parameters;
   const changes = Object.entries(c.override).map(([k, v]) => ({ r0_scale: `r0 × ${v}`, ab_magnitude: `guide AB magnitude ${v}`, gain: `gain ${v}`, latency_frames: `queued delay ${v} frames` }[k])).join(", ");
-  $("case-summary").innerHTML = `<p><strong>${c.label}</strong> — ${changes ? `changed from the baseline: <span class="changed">${changes}</span>` : "the baseline: profile det_emccd_2m_synthetic@1 with the explorer overrides only"}. ${c.question}</p><ul class="params">${paramRows(p, c.override)}</ul>`;
+  $("case-summary").innerHTML = `<p><strong>${c.label}</strong> — ${changes ? `changed from the baseline: <span class="changed">${changes}</span>` : "the baseline: profile det_emccd_2m_synthetic@1 with the explorer overrides only"}. ${c.question}</p><details><summary>Full selected-case parameters</summary><ul class="params">${paramRows(p, c.override)}</ul></details>`;
+  $("evidence-2m-title").textContent = `Parameters & evidence · 2 m ${c.label}`;
+  $("e2-pupil").textContent = `${p.telescope_diameter_m} m; ${p.pupil_pixels}² pupil samples; ${p.lenslets_across} × ${p.lenslets_across} lenslet grid; ${p.actuators_across} × ${p.actuators_across} DM grid.`;
+  $("e2-wavelength").textContent = `${(p.wfs_wavelength_m*1e9).toFixed(0)} nm WFS reference / ${(p.explorer_science_wavelength_m*1e6).toFixed(2)} µm science; on-axis.`;
+  $("e2-atmosphere").textContent = `Single frozen-flow layer; r₀ = ${p.r0_m.toFixed(4)} m at ${(p.r0_reference_wavelength_m*1e9).toFixed(0)} nm; L₀ = ${p.outer_scale_m} m; wind ${p.wind_m_per_s[0]} m/s along +x.`;
+  $("e2-source").textContent = `Synthetic AB ${p.source_ab_magnitude.toFixed(1)}, flat fν; ${p.camera_preset}; detector noise ${p.detector_noise_in_loop?'on':'off'}.`;
+  $("e2-control").textContent = `${p.frame_rate_hz} Hz; gain ${p.controller_gain}; leak ${p.controller_leak}; ${p.queued_latency_frames} queued frames (${(p.queued_latency_frames/p.frame_rate_hz*1000).toFixed(1)} ms); ±${(p.dm_stroke_limit_opd_m*1e6).toFixed(1)} µm OPD.`;
+  $("e2-record").textContent = `Seed ${p.root_seed}; ${p.n_steps} frames, ${(p.n_steps/p.frame_rate_hz).toFixed(3)} s; analysis [0.2, 1.0) s. One realization, no confidence interval over realizations.`;
 }
 
 function setupColorbars() {
@@ -866,6 +873,7 @@ async function start() {
     initDmStroke(entry, galaxyEntryUrl);
     initNgs22(entry, galaxyEntryUrl);
     initNgsReplay(entry, galaxyEntryUrl);
+    initNgsControl(entry, galaxyEntryUrl);
     const [display, scene, diagnostics, blocks] = await Promise.all([
       fetchVerifiedJson(manifest.display, manifestUrl),
       fetchVerifiedJson(manifest.scene, manifestUrl),
@@ -904,7 +912,7 @@ async function start() {
     }
     if (wantsResults()) await loadResults();
     // Restore a direct section link after the asynchronous 2 m tables settle.
-    if (location.hash === initialHash && ["#project", "#replay42", "#aperture-comparison", "#dm-stroke", "#elt-m4-stroke", "#ngs22", "#ngs22-replay", "#appendix", "#results"].includes(initialHash)) {
+    if (location.hash === initialHash && ["#project", "#replay42", "#aperture-comparison", "#dm-stroke", "#elt-m4-stroke", "#ngs22", "#ngs22-replay", "#ngs22-control", "#evidence-2m", "#evidence-42m", "#evidence-ngs22", "#references", "#appendix", "#results"].includes(initialHash)) {
       document.getElementById(initialHash.slice(1))?.scrollIntoView({ behavior: "instant", block: "start" });
     }
   } catch (error) {
