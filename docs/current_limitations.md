@@ -4,6 +4,10 @@ Last reviewed: **2026-10-18** (Europe/Berlin), against revision `2312502`
 during the [repository cleanup](refactor/CLEANUP_REFACTOR_STATUS.md). The
 first review was on 2026-10-15, while the detector-level work was in progress.
 
+Focused addition on **2026-10-23**: LIM-20 records open tip/tilt questions
+from the one-second 2 m explorer dataset. This does not revalidate the other
+entries or change their recorded review dates.
+
 This is a living record of the simulation's modelling assumptions, known
 issues and remaining validation work. It reflects the current code, now
 including the completed detector-level work and its review fixes; it is not a
@@ -555,6 +559,134 @@ and LIM-07.
   [HCIPy propagation](../src/shwfs_ao/backends/hcipy/propagation.py),
   audit oracle `reviewers/atmosphere_science/oracles/science_window_oracle.py`
   (main checkout `outputs/pre_refactor_audit/20261017T143700Z/`).
+
+### LIM-20 — The one-second 2 m record does not isolate the cause of residual tip/tilt
+
+- **Status:** Observed incomplete tilt rejection; unresolved causal attribution
+  and model-design questions. Added 2026-10-23 from read-only source inspection
+  and analysis of existing archives. No new simulation, tests or CI were run.
+- **Affected scope:** `det_emccd_2m_synthetic@1`, native detector-level SCAO,
+  dataset `series-2m1000-s624-c7241e4190d5`; one realization per case, root seed
+  1, 1000 frames at 1 kHz. This entry concerns that synthetic configuration,
+  not a demonstrated limitation of deformable mirrors in general.
+- **Implemented configuration:** 13 retained actuators from a nominal
+  5-across layout, Gaussian influence functions with width 0.4 actuator
+  pitch, command limits of +/-1 micrometre OPD equivalent, actuator-space
+  TSVD reconstruction (`rcond=1e-8`) and an identity command projector.
+  The baseline uses gain 0.2, leak 0.02 per frame and a two-frame command
+  queue: a measurement's correction is first seen by the WFS three frames
+  later. There is no separate tip/tilt mirror or dedicated tilt controller
+  in this configuration.
+
+**Observed evidence, not an isolated error budget.** A least-squares fit of
+`a + b*x + c*y` to each saved atmospheric, held-correction and pre-update
+residual OPD map separates its fitted tilt from its remaining wavefront.
+The fit uses the recorded uniform 52-by-52 pupil coordinates spanning
+[-1, 1] m and equal weights over the saved pupil mask. All values below are
+arithmetic means of per-frame RMS in nm OPD over the indicated half-open
+100 ms intervals; they are not instantaneous values or transfer functions.
+
+| Baseline interval (s) | Atmospheric fitted-tilt RMS | Residual fitted-tilt RMS | Residual RMS after plane removal |
+| --- | ---: | ---: | ---: |
+| [0.700, 0.800) | 67.09 | 54.63 | 193.93 |
+| [0.800, 0.900) | 216.88 | 191.53 | 196.81 |
+| [0.900, 1.000) | 510.38 | 291.64 | 214.19 |
+
+The incoming tilt grows substantially and the DM still supplies a partial
+correction. A larger absolute residual alone does not establish a sudden
+loss of rejection efficiency. A smaller increase in detilted RMS also does
+not establish that every higher-order mode is well corrected. The fixed
+atmosphere parameters were not increased during the trajectory.
+
+Two existing comparisons limit simple explanations:
+
+- Raising gain from 0.2 to 0.3 changes the final-block residual tilt RMS
+  from 291.64 to 283.74 nm, while the number of updates with at least one
+  clipped actuator rises from 52 to 61 out of 100. This modest improvement
+  does not support treating a gain increase as a complete remedy, but it
+  does not independently isolate temporal error either.
+- The weaker-turbulence case has no clipped updates in its final 200 frames,
+  yet its final-block atmospheric and residual tilt RMS are 423.77 and
+  241.76 nm. Clipping cannot be the sole explanation of incomplete rejection.
+  This is a different disturbance amplitude, not a controlled removal of
+  saturation from the baseline experiment.
+
+The clipping counts refer to updates within each interval. The saved
+pre-update residual uses the correction already held at frame start;
+causal comparisons must align the applied-command history and latency.
+RMS magnitudes cannot be subtracted to recover correction vectors, and
+squares of block-mean RMS values are not an exact variance decomposition.
+
+**Questions worth investigating further (deferred, not executed here):**
+
+1. **Spatial authority over tilt:** How closely can the actual influence
+   basis reproduce pure x and y pupil tilt, first without command limits
+   and then within the declared stroke? Quantify the remaining tilt,
+   induced higher-order structure and edge effects. Local Gaussian
+   influences do not guarantee exact reproduction of a plane; the absence
+   of a separate tilt mirror does not prove that the DM cannot correct it.
+2. **Sensing and reconstruction:** Does a known tilt produce the expected
+   common spot displacement throughout the operating range? Separate pupil
+   plane-fit tilt from pupil-averaged slope and measured image centroid;
+   they need not coincide for an aberrated wavefront. Examine finite-window
+   centroid bias, partially illuminated lenslets, calibration response and
+   coupling from other modes. Compare measurement-space residual reduction
+   with true OPD/tilt reduction. Accepted WFS rows do not prove unbiased
+   measurements; establish which singular modes are actually retained
+   before attributing the result to TSVD filtering.
+3. **Temporal rejection and leakage:** Compare signed x/y tilt coefficients
+   of the atmospheric wavefront, held correction and residual at matching
+   times. Determine effective modal response and any lag, rather than
+   inferring a bandwidth from frame rate or the visual steepness of an RMS
+   curve. Account for leakage, queued updates and mode coupling. Existing
+   gain cases constrain hypotheses but are not a modal transfer analysis.
+4. **Stroke competition:** Identify which actuators clip and whether tilt,
+   other modes or command offsets consume their range. Determine whether
+   loss of tilt authority precedes clipping or persists without it. Keep
+   saturation, spatial fitting and temporal errors distinct.
+5. **Dedicated tilt correction:** Would a separately calibrated two-axis
+   steering channel improve this configuration, or would better DM fitting
+   and reconstruction already address the limitation? Any future comparison
+   must specify angular range, bandwidth, latency, sensing and allocation
+   between the DM and steering mirror. An instantaneous subtraction of the
+   true atmospheric tilt would be an idealized bound, not a realistic
+   sensor-driven correction. Avoid double correction of the same modes.
+
+**Instrument context and interpretation.** A tip/tilt mirror changes the
+orientation of a nominally flat surface, providing two global steering
+degrees of freedom. It does not correct defocus, astigmatism or all
+low-order aberrations. A deformable mirror can also supply tilt when its
+basis, stroke, sensing and control permit it. Dedicated steering/offload
+can reserve the deformable mirror's stroke for other aberrations, but is
+not universally faster and does not remove measurement errors or delay.
+ESO's ELT control description explicitly separates M4 deformation, M5
+image stabilization and stroke-management offloading; its hardware numbers
+are not specifications for this 2 m model. The broader division of
+high-stroke low-order and lower-stroke higher-order correction is also
+demonstrated in the dual-DM work of Zou and Burns (2012).
+
+**Evidence and provenance:** The local numerical inputs are retained under
+`outputs/ao_explorer_1s/series-2m1000-s624-c7241e4190d5/cases/<case>/attempt-01/`:
+`frames/atmosphere_opd_m.npy`, `frames/held_correction_opd_m.npy`,
+`frames/pre_update_residual_opd_m.npy`, `mean_psfs.npz` (pupil mask),
+`history.npz` (applied commands and saturation) and `case_record.json`
+(source identities and member hashes). The series `plan.json` records the
+geometry and effective parameters. These local archives are not implied
+to be distributed with the website. The decomposition above was an
+in-memory descriptive analysis; it did not create a new validation artifact
+or mutate the archives, PSFs, galaxy images or averaging window.
+
+- [One-second dataset and interpretation](research/ao_2m_interactive_v1/ONE_SECOND_DATASET.md)
+- [Synthetic profile](../src/shwfs_ao/resources/synthetic_presets/det_emccd_2m_synthetic.v1.json),
+  [native DM basis](../src/shwfs_ao/backends/native/dm.py),
+  [stroke policy](../src/shwfs_ao/dm/model.py),
+  [reconstruction](../src/shwfs_ao/calibration/reconstructors.py),
+  [controller](../src/shwfs_ao/control/controller.py),
+  [frame timing](../src/shwfs_ao/control/loop.py).
+- [ESO ELT controls: M4, M5 and stroke management](https://elt.eso.org/telescope/controls/)
+  (consulted 2026-10-23).
+- [Zou and Burns (2012), Testing of Lagrange multiplier damped least-squares control algorithm for woofer-tweeter adaptive optics](https://doi.org/10.1364/AO.51.001198)
+  (primary paper consulted 2026-10-23).
 
 ## Keeping this record current
 
