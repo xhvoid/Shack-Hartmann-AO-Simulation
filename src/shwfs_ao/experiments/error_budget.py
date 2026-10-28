@@ -898,14 +898,21 @@ def summarize_scenario(
         open_rms.append(_opd_rms_nm(open_opd, dm_model.pupil_mask))
         closed_rms.append(_opd_rms_nm(closed_opd, dm_model.pupil_mask))
         for band in bandpasses:
-            open_metrics = band_averaged_psf_metrics_from_opd(
-                open_opd,
-                dm_model.pupil_mask,
-                band,
-                telescope_diameter_m=telescope_diameter_m,
-                case_name=f"{scenario.scenario_name}_open",
-                pad_factor=pad_factor,
-            )
+            if band.name == "H":
+                # Only the open-loop H-band peak Strehl enters the result.
+                # Facade metrics depend only on their arguments, so skipping
+                # the unused open-loop J and K evaluations (over a third of all
+                # facade calls with the packaged JHK curves) leaves every
+                # reported value bit-identical.
+                open_metrics = band_averaged_psf_metrics_from_opd(
+                    open_opd,
+                    dm_model.pupil_mask,
+                    band,
+                    telescope_diameter_m=telescope_diameter_m,
+                    case_name=f"{scenario.scenario_name}_open",
+                    pad_factor=pad_factor,
+                )
+                open_h_strehl.append(open_metrics.strehl_peak)
             closed_metrics = band_averaged_psf_metrics_from_opd(
                 closed_opd,
                 dm_model.pupil_mask,
@@ -914,8 +921,6 @@ def summarize_scenario(
                 case_name=scenario.scenario_name,
                 pad_factor=pad_factor,
             )
-            if band.name == "H":
-                open_h_strehl.append(open_metrics.strehl_peak)
             metrics_by_band[band.name]["strehl"].append(closed_metrics.strehl_peak)
             metrics_by_band[band.name]["ee50"].append(closed_metrics.ee50_lambda_over_d)
             metrics_by_band[band.name]["ee80"].append(closed_metrics.ee80_lambda_over_d)

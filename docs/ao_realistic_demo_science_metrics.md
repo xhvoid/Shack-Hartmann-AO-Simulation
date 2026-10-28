@@ -63,6 +63,8 @@ widths on coarse grids; use the canonical estimator for new measurements.
 Compatibility EE50/EE80 also fix the historical scalar quicksort ordering of
 equal-radius pixels. NumPy's accelerated CPU-specific sort can permute those
 ties and change interpolation between adjacent rings even for identical PSFs.
+Their radii are exact square roots of integer pixel offsets, so a platform
+`hypot` that is not correctly rounded cannot split those ties either.
 The canonical estimator continues to use a stable sort.
 
 For the fast 2 m demonstrator, residual OPD RMS, sampled-peak Strehl and halo

@@ -255,8 +255,10 @@ def science_psf_metrics_from_opd(
         historical_annulus_edges=True,
     ) / focal_pixel_scale_rad
     # Preserve the historical scalar quicksort tie order in the frozen pixel
-    # facade, independent of CPU SIMD dispatch.  The public canonical physical
-    # metric remains deterministically stable-sorted.
+    # facade, independent of CPU SIMD dispatch and of the platform hypot: the
+    # compatibility path takes exact-sqrt radii from integer pixel offsets and
+    # reuses one cached object-quicksort permutation per offset grid.  The
+    # public canonical physical metric remains deterministically stable-sorted.
     ee50_px = _canonical_ee_radius(
         psf.intensity,
         psf.x_angle_rad,
