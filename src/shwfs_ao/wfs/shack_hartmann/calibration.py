@@ -26,6 +26,10 @@ from .geometry import ShackHartmannGeometry
 from .optics import validate_spot_intensity_result
 
 
+NOISE_STREAM_IDENTITY_SCHEMA = "shwfs_ao.shack_hartmann_noise_stream_identity.v1"
+"""Schema of the declared sensor identity keying runtime noise streams."""
+
+
 class ShackHartmannCalibrationError(ValueError):
     """Raised when calibration inputs or stored metadata disagree."""
 
@@ -359,14 +363,95 @@ def shack_hartmann_calibration_hash(
         "provenance": provenance.to_record(),
     }
     # The frozen throughput_scaled default stays out of the payload: this
-    # hash keys runtime RNG scope derivation and frozen seeded baselines, so
-    # the historical allocation must keep hashing byte-identically while any
-    # non-default choice becomes hash-visible.
+    # hash is recorded calibration provenance, so the historical allocation
+    # must keep hashing byte-identically while any non-default choice becomes
+    # hash-visible.
     if photon_allocation != "throughput_scaled":
         payload["photon_allocation"] = str(photon_allocation)
     return stable_hash(
         payload,
         namespace="shack_hartmann_calibration",
+    )
+
+
+def shack_hartmann_noise_stream_identity(
+    calibration: ShackHartmannCalibration,
+    detector_realization: DetectorRealization,
+    *,
+    optics_backend: ShackHartmannOpticsBackend,
+) -> str:
+    """Hash the declared sensor identity that keys runtime noise streams.
+
+    :func:`shack_hartmann_calibration_hash` binds realized floating-point
+    content: reference centroids computed through the FFT and the realization
+    hash over the drawn PRNU map.  Both can differ in their low bits between
+    hosts, so keying temporal noise on that hash gives one seed unrelated
+    noise draws on different hosts.  This identity is built only from
+    declared inputs: geometry, IDs, wavelength, detector sampling, detector
+    and centroid configuration, photon allocation, and the optics backend
+    name and configuration hash.  Reference centroids and the calibration
+    provenance record are omitted.  A realization drawn from
+    ``detector.realization`` is named by its derivation (configuration hash,
+    root seed, stream ID, window shape) because NumPy's ziggurat normal
+    sampler calls libm in its rejection and tail branches; a realization that
+    draws nothing holds only declared maps and also contributes its content
+    hash.  The calibration hash remains the provenance identity.
+    """
+
+    if not isinstance(calibration, ShackHartmannCalibration):
+        raise ShackHartmannCalibrationError(
+            "calibration must be a ShackHartmannCalibration."
+        )
+    if not isinstance(detector_realization, DetectorRealization):
+        raise ShackHartmannCalibrationError(
+            "detector_realization must be a DetectorRealization."
+        )
+    if detector_realization.realization_hash != (
+        calibration.detector_realization_hash
+    ):
+        raise ShackHartmannCalibrationError(
+            "detector realization hash does not match calibration."
+        )
+    backend_name, backend_hash = _backend_identity(optics_backend)
+    for reference in (
+        f"optics_backend_name={backend_name}",
+        f"optics_backend_config_hash={backend_hash}",
+    ):
+        if reference not in calibration.provenance.references:
+            raise ShackHartmannCalibrationError(
+                "optics backend identity does not match calibration metadata."
+            )
+    payload = {
+        "schema": NOISE_STREAM_IDENTITY_SCHEMA,
+        "geometry_hash": calibration.geometry.geometry_hash,
+        "wfs_wavelength_m": float(calibration.wfs_wavelength_m),
+        "subaperture_ids": tuple(calibration.subaperture_ids),
+        "row_ids": tuple(calibration.row_ids),
+        "measurement_unit": "pixel",
+        "detector_sampling_hash": calibration.detector_sampling.sampling_hash,
+        "detector_config_hash": calibration.detector_config.config_hash,
+        "centroid_config_hash": component_config_hash(
+            "centroid",
+            calibration.centroid_config,
+        ),
+        "photon_allocation": str(calibration.photon_allocation),
+        "optics_backend_name": backend_name,
+        "optics_backend_config_hash": backend_hash,
+        "detector_realization": {
+            "realization_config_hash": detector_realization.config_hash,
+            "root_seed": detector_realization.root_seed,
+            "stream_id": detector_realization.stream_id,
+            "window_shape_px": detector_realization.window_shape_px,
+            "realization_hash": (
+                detector_realization.realization_hash
+                if detector_realization.stream_id is None
+                else None
+            ),
+        },
+    }
+    return stable_hash(
+        payload,
+        namespace="shack_hartmann_noise_stream_identity",
     )
 
 
@@ -616,10 +701,12 @@ def _nonempty_string(value: object, *, label: str) -> str:
 
 
 __all__ = (
+    "NOISE_STREAM_IDENTITY_SCHEMA",
     "ShackHartmannCalibrationError",
     "ShackHartmannCalibration",
     "row_ids_for_subapertures",
     "calibrate_zero_phase_reference",
     "shack_hartmann_calibration_hash",
+    "shack_hartmann_noise_stream_identity",
     "legacy_calibration_seeds",
 )
