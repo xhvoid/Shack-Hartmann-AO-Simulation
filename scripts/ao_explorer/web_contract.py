@@ -24,12 +24,17 @@ modules (``protocol`` for v1, ``long_series`` for v2).  The display and export
 constants that ``long_export.py``, ``render.py`` and ``binary_scene.py`` define
 next to NumPy code are restated here so that this module and the validator stay
 importable without NumPy; ``tests/ao_explorer/test_validate_contracts.py``
-checks that the restated values still equal the exporters'.
+checks that the restated values still equal the exporters'.  The v2 producer's
+record checks (the ``checks`` mapping every case record carries and the v2
+provenance copies) are read from the source of ``long_series.run_case`` and the
+observers it uses, without importing them (``producer_checks_v2``).
 """
 
 from __future__ import annotations
 
+import ast
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Dict, FrozenSet, Optional, Tuple
 
 import long_series
@@ -150,6 +155,115 @@ class UnsupportedContract(Exception):
 
 
 @dataclass(frozen=True)
+class ProducerChecks:
+    """The ``checks`` mapping a producer writes into every case record, as its own source defines it.
+
+    ``required_true`` are the checks without which the producer refuses to write the record, so a record it
+    wrote carries each of them literally ``true``; ``window_fields`` name the recorded analysis frames
+    (half-open ``[first, last + 1)``) and count, which the producer also requires to equal the contract's;
+    ``diagnostics`` are the numeric records kept beside them: their keys and whether every value is an absolute
+    deviation (so non-negative).  The diagnostics carry no tolerance here; the producer judged them already.
+    """
+
+    source: str
+    recorded: Tuple[str, ...]
+    required_true: Tuple[str, ...]
+    window_fields: Tuple[str, str]
+    diagnostics: Dict[str, Tuple[Tuple[str, ...], bool]]
+
+
+def _function(tree: ast.AST, name: str, owner: Optional[str] = None) -> ast.FunctionDef:
+    scope: Optional[ast.AST] = tree
+    if owner is not None:
+        scope = next((node for node in ast.walk(tree) if isinstance(node, ast.ClassDef) and node.name == owner), None)
+    for node in ast.walk(scope) if scope is not None else ():
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            return node
+    raise ValueError(f"producer source has no {owner + '.' if owner else ''}{name}")
+
+
+def _string_keys(node: ast.Dict, where: str) -> Tuple[str, ...]:
+    keys = tuple(key.value for key in node.keys if isinstance(key, ast.Constant) and isinstance(key.value, str))
+    if len(keys) != len(node.keys):
+        raise ValueError(f"{where}: every key must be a string literal")
+    return keys
+
+
+def _absolute(node: ast.AST) -> bool:
+    """Whether the expression takes an absolute value (``abs(...)`` or ``np.abs(...)``)."""
+
+    return any(isinstance(call, ast.Call) and ((isinstance(call.func, ast.Name) and call.func.id == "abs") or (isinstance(call.func, ast.Attribute) and call.func.attr == "abs"))
+               for call in ast.walk(node))
+
+
+def _assigned_dict(function: ast.FunctionDef, target: str) -> ast.Dict:
+    """The dict literal assigned to ``target`` (a name or ``self.<attribute>``) inside ``function``."""
+
+    for node in ast.walk(function):
+        if isinstance(node, (ast.Assign, ast.AnnAssign)) and isinstance(node.value, ast.Dict):
+            for name in node.targets if isinstance(node, ast.Assign) else [node.target]:
+                if ast.unparse(name) == target:
+                    return node.value
+    raise ValueError(f"{function.name}: no dict literal assigned to {target}")
+
+
+def producer_checks_v2() -> ProducerChecks:
+    """Read the one-second producer's record checks from ``long_series.run_case`` and its observers' source.
+
+    Parsed, never imported (both modules need NumPy and the AO package).  Any change to the shape read here --
+    the ``checks`` literal and its later entries, the ``failed`` names the producer refuses a record on, the
+    analysis-count guard, the observers' diagnostic dicts -- raises instead of guessing.
+    """
+
+    series_path = Path(long_series.__file__)
+    series = ast.parse(series_path.read_text(encoding="utf-8"))
+    observer = ast.parse(series_path.with_name("observer.py").read_text(encoding="utf-8"))
+    run_case = _function(series, "run_case")
+    literal = _assigned_dict(run_case, "checks")
+    values = dict(zip(_string_keys(literal, "run_case checks"), literal.values))
+    for node in ast.walk(run_case):
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Subscript) and ast.unparse(node.targets[0].value) == "checks":
+            key = node.targets[0].slice
+            if not (isinstance(key, ast.Constant) and isinstance(key.value, str)) or key.value in values:
+                raise ValueError("run_case: a later checks entry is not a new string-literal key")
+            values[key.value] = node.value
+    failed = next((node.value for node in ast.walk(run_case) if isinstance(node, ast.Assign) and [ast.unparse(t) for t in node.targets] == ["failed"]), None)
+    names = failed.generators[0].iter if isinstance(failed, ast.ListComp) and len(failed.generators) == 1 else None
+    if not isinstance(names, ast.Tuple) or not all(isinstance(item, ast.Constant) and isinstance(item.value, str) for item in names.elts):
+        raise ValueError("run_case: the checks the producer refuses a record on are not a literal tuple of names")
+    required = tuple(item.value for item in names.elts)
+    missing = [name for name in required if name not in values]
+    if missing:
+        raise ValueError(f"run_case: required checks {missing} are not recorded")
+    if "checks['analysis_count'] != N_STEPS - STARTUP_EXCLUSION_FRAMES" not in {ast.unparse(node) for node in ast.walk(run_case) if isinstance(node, ast.Compare)}:
+        raise ValueError("run_case: the producer no longer requires analysis_count == N_STEPS - STARTUP_EXCLUSION_FRAMES")
+    window = ("analysis_frames", "analysis_count")
+    if [ast.unparse(values[key]) if key in values else None for key in window] != ["[finish['analysis_frames'][0], finish['analysis_frames'][-1] + 1]", "finish['analysis_count']"]:
+        raise ValueError("run_case: the recorded analysis frames and count are no longer the observer's half-open window and count")
+    returned = next((node.value for node in ast.walk(_function(observer, "finish", "ExplorerObserver")) if isinstance(node, ast.Return) and isinstance(node.value, ast.Dict)), None)
+    if returned is None:
+        raise ValueError("ExplorerObserver.finish no longer returns a dict literal")
+    finish = dict(zip(_string_keys(returned, "ExplorerObserver.finish"), returned.values))
+    archive_keys = _string_keys(_assigned_dict(_function(series, "__init__", "ArchiveObserver"), "self.max_errors"), "ArchiveObserver.max_errors")
+    archive_errors = _assigned_dict(_function(series, "observe", "ArchiveObserver"), "errors")
+    if _string_keys(archive_errors, "ArchiveObserver.observe errors") != archive_keys:
+        raise ValueError("ArchiveObserver: the per-frame errors and their running maxima name different keys")
+    diagnostics: Dict[str, Tuple[Tuple[str, ...], bool]] = {}
+    for key, value in values.items():
+        if key in required or key in window:
+            continue
+        if ast.unparse(value) == "archive.max_errors":
+            diagnostics[key] = (archive_keys, all(_absolute(item) for item in archive_errors.values))
+            continue
+        if isinstance(value, ast.Subscript) and ast.unparse(value.value) == "finish" and isinstance(value.slice, ast.Constant):
+            value = finish.get(value.slice.value, value)
+        if not isinstance(value, ast.Dict):
+            raise ValueError(f"run_case: checks entry {key!r} is neither a required check, the analysis window nor a diagnostic record")
+        diagnostics[key] = (_string_keys(value, f"checks[{key!r}]"), all(_absolute(item) for item in value.values))
+    return ProducerChecks(source="long_series.run_case", recorded=tuple(values), required_true=required, window_fields=window, diagnostics=diagnostics)
+
+
+@dataclass(frozen=True)
 class Contract:
     name: str
     entry_schema: str
@@ -189,6 +303,7 @@ class Contract:
     shared_images: bool                 # paired cases reference the baseline's atmosphere-side images (v2)
     raw_layout: str                     # "movie_npz" (v1) or "frame_stacks" (v2)
     metrics_display_indices: bool
+    producer_checks: Optional[ProducerChecks] = None   # v2: the producer's record checks copied into the provenance
     extras: Dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -321,6 +436,7 @@ V2 = Contract(
     shared_images=True,
     raw_layout="frame_stacks",
     metrics_display_indices=True,
+    producer_checks=producer_checks_v2(),
 )
 
 CONTRACTS: Dict[str, Contract] = {V1.manifest_schema: V1, V2.manifest_schema: V2}

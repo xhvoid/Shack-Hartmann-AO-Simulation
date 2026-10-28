@@ -471,6 +471,138 @@ def test_v2_member_defects_are_refused(web_dir, tmp_path, name, apply, expected)
     assert not [failure for failure in report["failures"] if any(word in failure for word in DIGEST_FAILURES)], report["failures"][:5]
 
 
+# ---------------------------------------------------------------------------
+# The producer's record checks copied into the v2 provenance
+
+
+# Written out from long_series.run_case and the observers by hand: the oracle for the parsed contract.
+PRODUCER_REQUIRED_TRUE = (
+    "atmosphere_rms_matches_history", "residual_rms_matches_history", "times_match_history", "times_are_k_over_1000",
+    "frame_indices_complete", "usable_matches_history", "saturation_matches_history", "per_frame_reductions_within_tolerance",
+    "streaming_within_tolerance", "instantaneous_unit_flux",
+)
+PRODUCER_DIAGNOSTICS = {
+    "per_frame_independent_reductions_max": (("atmosphere_rms_abs_error_m", "residual_rms_abs_error_m", "uncorrected_strehl_abs_error",
+                                              "corrected_strehl_abs_error", "held_correction_identity_max_abs_m"), True),
+    "streaming_max_abs_difference": (("uncorrected", "corrected"), True),
+    "mean_unit_flux": (("uncorrected", "corrected"), False),
+    "archive_mean_vs_own_mean_max_abs": (("uncorrected", "corrected"), True),
+    "archive_mean_vs_accumulator_max_abs": (("uncorrected", "corrected"), True),
+}
+
+
+def test_v2_producer_checks_are_read_from_the_producer_source(web_dir):
+    checks = web_contract.V2.producer_checks
+    assert web_contract.V1.producer_checks is None  # legacy v1 provenance keeps its own (job id) checks
+    assert checks.source == "long_series.run_case" and checks.required_true == PRODUCER_REQUIRED_TRUE
+    assert checks.window_fields == ("analysis_frames", "analysis_count")
+    assert checks.diagnostics == PRODUCER_DIAGNOSTICS
+    assert set(checks.recorded) == set(PRODUCER_REQUIRED_TRUE) | set(checks.window_fields) | set(PRODUCER_DIAGNOSTICS) and len(checks.recorded) == 17
+    # The parsed modules are the ones that produced the committed dataset (its recorded production identity).
+    site = _bundle_or_skip(web_dir)
+    manifest = _manifest(site)
+    if manifest.get("schema") != web_contract.V2.manifest_schema:
+        pytest.skip("the committed dataset is not a v2 (one-second) dataset")
+    recorded = json.loads((_dataset_dir(site) / "cases" / "baseline" / "provenance.json").read_text())["production_identity"]["material"]["producer_modules"]
+    for name in ("long_series.py", "observer.py"):
+        assert hashlib.sha256((Path(long_series.__file__).with_name(name)).read_bytes()).hexdigest() == recorded[name]
+
+
+@pytest.mark.parametrize("old,new,reason", [
+    ('        for name in (\n            "atmosphere_rms_matches_history",', '        for name in EXTRA + (\n            "atmosphere_rms_matches_history",', "literal tuple of names"),
+    ('checks["analysis_count"] != N_STEPS - STARTUP_EXCLUSION_FRAMES', 'checks["analysis_count"] < 0', "no longer requires analysis_count"),
+    ('        "mean_unit_flux": {\n            "uncorrected": float(np.sum(finish["mean_psf_uncorrected"])),\n'
+     '            "corrected": float(np.sum(finish["mean_psf_corrected"])),\n        },',
+     '        "mean_unit_flux": float(np.sum(finish["mean_psf_corrected"])),', "neither a required check"),
+])
+def test_v2_producer_check_contract_refuses_a_changed_producer_shape(tmp_path, monkeypatch, old, new, reason):
+    # The contract is read, never guessed: a producer whose source no longer has the expected shape is refused.
+    source = Path(long_series.__file__)
+    text = source.read_text(encoding="utf-8")
+    assert text.count(old) == 1
+    changed = text.replace(old, new)
+    compile(changed, "long_series.py", "exec")
+    (tmp_path / "long_series.py").write_text(changed, encoding="utf-8")
+    shutil.copy2(source.with_name("observer.py"), tmp_path / "observer.py")
+    monkeypatch.setattr(long_series, "__file__", str(tmp_path / "long_series.py"))
+    with pytest.raises(ValueError, match=reason):
+        web_contract.producer_checks_v2()
+
+
+def _checks(mutate):
+    def apply(provenance):
+        mutate(provenance["checks"])
+
+    return apply
+
+
+def _drop(key):
+    def mutate(payload):
+        del payload[key]
+
+    return mutate
+
+
+PRODUCER_CHECK_DEFECTS = [
+    ("required-missing", "baseline", _checks(_drop("atmosphere_rms_matches_history")),
+     ["baseline: every producer check recorded in the provenance passed (required checks present and literally true; ['atmosphere_rms_matches_history missing'])",
+      "baseline: provenance records exactly the producer's check fields (missing ['atmosphere_rms_matches_history'], unexpected [])"]),
+    ("required-false", "baseline", _checks(_set(("residual_rms_matches_history",), False)), ["literally true; ['residual_rms_matches_history=False']"]),
+    ("required-string-false", "baseline", _checks(_set(("atmosphere_rms_matches_history",), "false")), ["literally true; [\"atmosphere_rms_matches_history='false'\"]"]),
+    ("required-string-true", "baseline", _checks(_set(("times_are_k_over_1000",), "true")), ["literally true; [\"times_are_k_over_1000='true'\"]"]),
+    ("required-null", "baseline", _checks(_set(("times_match_history",), None)), ["literally true; ['times_match_history=None']"]),
+    ("required-integer-one", "baseline", _checks(_set(("streaming_within_tolerance",), 1)), ["literally true; ['streaming_within_tolerance=1']"]),
+    ("required-integer-zero", "baseline", _checks(_set(("instantaneous_unit_flux",), 0)), ["literally true; ['instantaneous_unit_flux=0']"]),
+    ("required-false-other-case", "lower-gain", _checks(_set(("per_frame_reductions_within_tolerance",), False)),
+     ["lower-gain: every producer check recorded in the provenance passed (required checks present and literally true; ['per_frame_reductions_within_tolerance=False'])"]),
+    ("analysis-count-zero", "baseline", _checks(_set(("analysis_count",), 0)), ["baseline: producer analysis count is the v2 contract's 800 (recorded 0)"]),
+    ("analysis-count-off-by-one", "baseline", _checks(_set(("analysis_count",), 799)), ["producer analysis count is the v2 contract's 800 (recorded 799)"]),
+    ("analysis-count-float", "baseline", _checks(_set(("analysis_count",), 800.0)), ["producer analysis count is the v2 contract's 800 (recorded 800.0)"]),
+    ("analysis-count-missing", "baseline", _checks(_drop("analysis_count")), ["producer analysis count is the v2 contract's 800 (recorded None)", "missing ['analysis_count']"]),
+    ("analysis-window-start", "baseline", _checks(_set(("analysis_frames",), [100, 1000])), ["baseline: producer analysis frames are the v2 window [200, 1000) (recorded [100, 1000])"]),
+    ("analysis-window-closed-end", "baseline", _checks(_set(("analysis_frames",), [200, 999])), ["producer analysis frames are the v2 window [200, 1000) (recorded [200, 999])"]),
+    ("analysis-window-float", "baseline", _checks(_set(("analysis_frames",), [200.0, 1000])), ["producer analysis frames are the v2 window [200, 1000) (recorded [200.0, 1000])"]),
+    ("diagnostic-string", "baseline", _checks(_set(("streaming_max_abs_difference", "corrected"), "0.0")), ["producer diagnostics", "streaming_max_abs_difference.corrected='0.0'"]),
+    ("diagnostic-negative-maximum", "baseline", _checks(_set(("archive_mean_vs_own_mean_max_abs", "uncorrected"), -1e-18)), ["archive_mean_vs_own_mean_max_abs.uncorrected=-1e-18"]),
+    ("diagnostic-null", "baseline", _checks(_set(("mean_unit_flux", "corrected"), None)), ["mean_unit_flux.corrected=None"]),
+    ("diagnostic-boolean", "baseline", _checks(_set(("per_frame_independent_reductions_max", "held_correction_identity_max_abs_m"), False)), ["per_frame_independent_reductions_max.held_correction_identity_max_abs_m=False"]),
+    ("diagnostic-keys", "baseline", _checks(lambda checks: checks["mean_unit_flux"].pop("corrected")), ["mean_unit_flux keys ['uncorrected']"]),
+    ("diagnostic-type", "baseline", _checks(_set(("per_frame_independent_reductions_max",), True)), ["per_frame_independent_reductions_max keys bool"]),
+    ("unexpected-field", "baseline", _checks(_set(("operator_override",), True)), ["provenance records exactly the producer's check fields (missing [], unexpected ['operator_override'])"]),
+    ("checks-not-object", "baseline", _set(("checks",), [True]), ["baseline: every producer check recorded in the provenance passed (the checks record is list, not an object)"]),
+    ("checks-absent", "baseline", _drop("checks"), ["(the checks record is NoneType, not an object)"]),
+]
+
+
+@pytest.mark.parametrize("name,case_id,mutate,expected", PRODUCER_CHECK_DEFECTS, ids=[item[0] for item in PRODUCER_CHECK_DEFECTS])
+def test_v2_producer_check_defects_are_refused(web_dir, tmp_path, name, case_id, mutate, expected):
+    site = _copy(web_dir, tmp_path)
+    _v2_or_skip(site)
+    _case_member(case_id, "provenance.json", mutate)(site)
+    report = _run(site)
+    assert not report["valid"]
+    for reason in expected:
+        assert any(reason in failure for failure in report["failures"]), (reason, report["failures"][:5])
+    # Coherently re-hashed: only the producer-check checks of this case fail, no digest or reference check.
+    assert all(failure.startswith(f"{case_id}: ") and "producer" in failure for failure in report["failures"]), report["failures"][:5]
+    assert not [failure for failure in report["failures"] if any(word in failure for word in DIGEST_FAILURES)], report["failures"][:5]
+
+
+def test_v2_producer_checks_unchanged_and_legitimate_diagnostics_are_accepted(web_dir, tmp_path):
+    # Control: the unchanged record validates, and so do other finite diagnostic values (no tolerance is invented).
+    site = _copy(web_dir, tmp_path)
+    _v2_or_skip(site)
+    control = _run(site)
+    assert control["valid"], control["failures"][:5]
+    # Five producer-check checks per case: field set, required checks, analysis frames, analysis count, diagnostics.
+    assert control["checks_by_area"]["provenance"]["failed"] == 0 and control["checks_by_area"]["provenance"]["passed"] >= 5 * len(protocol.CASES)
+    _case_member("baseline", "provenance.json", _checks(lambda checks: checks["streaming_max_abs_difference"].update(corrected=1e-17)))(site)
+    _case_member("baseline", "provenance.json", _checks(lambda checks: checks["mean_unit_flux"].update(corrected=0.9999999999999996)))(site)
+    report = _run(site)
+    assert report["valid"], report["failures"][:5]
+    assert report["checks_passed"] == control["checks_passed"]
+
+
 def test_coherent_rehash_of_every_member_kind_is_accepted(web_dir, tmp_path):
     # Control for the fixtures above: the same rewrite chain with unchanged content validates.
     site = _copy(web_dir, tmp_path)

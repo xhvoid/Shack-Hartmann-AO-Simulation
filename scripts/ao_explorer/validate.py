@@ -26,9 +26,12 @@ and flux bookkeeping, a recorded reason for every missing value, per-frame
 series and CSV coherence, summary values recomputed from the per-frame rows
 with the metrics of the mean intensity image kept apart from the mean
 instantaneous metrics, v2 block summaries and playback/screen/series
-metadata, eight research groups with quantitative content, byte-identical
-source copies and source-bound extracts), and the page code's content build
-must equal the one the entry records.
+metadata, the v2 provenance's copy of the producer's record checks against
+the producer's own contract -- every required check literally true, the
+analysis frames and count, the diagnostics' keys and types -- eight research
+groups with quantitative content, byte-identical source copies and
+source-bound extracts), and the page code's content build must equal the one
+the entry records.
 
 Raw-evidence mode (``--series-dir``): additionally binds every case to its
 retained attempt directory and files (the layout is the contract's: the v1
@@ -807,12 +810,46 @@ class Checker:
             self.check(screen.get("generated_screen_px") == c.screen_grid_size and screen.get("option") == {"screen_grid_size": c.screen_grid_size}, f"{case_id}: provenance records the {c.screen_grid_size} px screen option", area="provenance")
             horizon = run.get("horizon_runtime_check", {})
             self.check(horizon.get("equal") is True and horizon.get("exceeded_travel_budget") is False, f"{case_id}: the atmosphere travelled exactly the admitted distance within the budget", area="provenance")
-            checks = provenance.get("checks", {})
-            self.check(bool(checks) and all(value for value in checks.values() if isinstance(value, bool)), f"{case_id}: every producer check recorded in the provenance passed", area="provenance")
+            if c.producer_checks is not None:
+                self.check_producer_checks(case_id, provenance.get("checks"))
             self.check(provenance.get("derived_export", {}).get("dataset_id") == self.manifest["dataset_id"], f"{case_id}: provenance names this dataset as its derived export", area="provenance")
             self.check(provenance.get("atmosphere_pairing") == case.get("pairing"), f"{case_id}: provenance pairing equals the case pairing", area="provenance")
         else:
             self.check(provenance.get("job_id") == f"case-{case_id}", f"{case_id}: provenance names the case job", area="provenance")
+
+    def check_producer_checks(self, case_id: str, checks: Any) -> None:
+        """The provenance's copy of the producer's record checks against the producer's own contract.
+
+        Each check the producer refuses a record without must be recorded and literally ``true`` (a string,
+        number or null is not a pass); the recorded analysis frames and count must be the selected contract's
+        window; the numeric diagnostics must carry the producer's keys with finite numbers, absolute deviations
+        non-negative.  No tolerance is applied to the diagnostics' values.
+        """
+
+        c = self.c
+        expected = c.producer_checks
+        assert expected is not None
+        if not isinstance(checks, dict):
+            self.check(False, f"{case_id}: every producer check recorded in the provenance passed (the checks record is {type(checks).__name__}, not an object)", area="provenance")
+            return
+        missing = [name for name in expected.recorded if name not in checks]
+        unexpected = sorted(name for name in checks if name not in expected.recorded)
+        self.check(not missing and not unexpected, f"{case_id}: provenance records exactly the producer's check fields (missing {missing}, unexpected {unexpected})", area="provenance")
+        not_true = [f"{name}={checks[name]!r}" if name in checks else f"{name} missing" for name in expected.required_true if checks.get(name) is not True]
+        self.check(not not_true, f"{case_id}: every producer check recorded in the provenance passed (required checks present and literally true; {not_true})", area="provenance")
+        frames_key, count_key = expected.window_fields
+        frames, count = checks.get(frames_key), checks.get(count_key)
+        self.check(isinstance(frames, list) and all(type(v) is int for v in frames) and frames == list(c.analysis_window),
+                   f"{case_id}: producer analysis frames are the {c.name} window [{c.burn_in}, {c.frames}) (recorded {frames!r})", area="provenance")
+        self.check(type(count) is int and count == c.analysis_count, f"{case_id}: producer analysis count is the {c.name} contract's {c.analysis_count} (recorded {count!r})", area="provenance")
+        bad = []
+        for name, (keys, absolute) in expected.diagnostics.items():
+            record = checks.get(name)
+            if not isinstance(record, dict) or sorted(record) != sorted(keys):
+                bad.append(f"{name} keys {sorted(record) if isinstance(record, dict) else type(record).__name__}")
+                continue
+            bad.extend(f"{name}.{key}={record[key]!r}" for key in keys if not _finite(record[key]) or (absolute and record[key] < 0))
+        self.check(not bad, f"{case_id}: producer diagnostics carry the producer's keys and finite numbers, absolute deviations non-negative ({bad})", area="provenance")
 
     def check_pairing(self, case_id: str, case: Dict[str, Any], protocol_case: Dict[str, Any]) -> None:
         c = self.c
