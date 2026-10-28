@@ -472,6 +472,94 @@ def test_v2_member_defects_are_refused(web_dir, tmp_path, name, apply, expected)
 
 
 # ---------------------------------------------------------------------------
+# Review R18-03: the observation parents' mean-file digest is the provenance's mean-archive digest
+
+
+ARCHIVE_ROLES_AGREE = "baseline: the uncorrected and corrected parents name one mean archive with one file digest"
+ARCHIVE_BOUND = "baseline: provenance binds the retained mean archive mean_psfs.npz by SHA-256"
+
+
+def _archive_binding(role):
+    return f"baseline: {role} observation parent's file digest equals the provenance's mean_psfs.npz digest"
+
+
+def _parent(role, key, value):
+    return _case_member("baseline", "observation.json", _set(("roles", role, "parent", key), value))
+
+
+def _both_parents(key, value):
+    def apply(site):
+        _parent("uncorrected", key, value)(site)
+        _parent("corrected", key, value)(site)
+
+    return apply
+
+
+def _drop_parent_key(role, key):
+    return _case_member("baseline", "observation.json", lambda payload: payload["roles"][role]["parent"].pop(key))
+
+
+def _drop_bound_archive(payload):
+    payload["raw_evidence"]["files"].pop("mean_psfs.npz")
+
+
+MEAN_ARCHIVE_DEFECTS = [
+    ("wrong-observation-file-digest", _both_parents("file_sha256", "a" * 64), [_archive_binding("uncorrected"), _archive_binding("corrected")]),
+    ("wrong-provenance-file-digest", _case_member("baseline", "provenance.json", _set(("raw_evidence", "files", "mean_psfs.npz", "sha256"), "b" * 64)),
+     [_archive_binding("uncorrected"), _archive_binding("corrected")]),
+    ("inconsistent-roles", _parent("corrected", "file_sha256", "a" * 64), [ARCHIVE_ROLES_AGREE, _archive_binding("corrected")]),
+    ("parent-names-another-file", _parent("uncorrected", "file", "metrics.json"),
+     [ARCHIVE_ROLES_AGREE, _archive_binding("uncorrected"), "baseline: uncorrected parent records its array, file and configuration digests"]),
+    ("missing-parent-file-digest", _drop_parent_key("corrected", "file_sha256"),
+     [ARCHIVE_ROLES_AGREE, _archive_binding("corrected"), "baseline: corrected parent records its array, file and configuration digests"]),
+    ("missing-provenance-binding", _case_member("baseline", "provenance.json", _drop_bound_archive),
+     [ARCHIVE_BOUND, _archive_binding("uncorrected"), _archive_binding("corrected"), "baseline: raw-evidence file digests recorded"]),
+]
+
+
+def _site_of(contract, web_dir, tmp_path):
+    if contract == "v1":
+        return _v1_fixture(web_dir, tmp_path)
+    site = _copy(web_dir, tmp_path)
+    _v2_or_skip(site)
+    return site
+
+
+@pytest.mark.parametrize("contract", ["v1", "v2"])
+@pytest.mark.parametrize("name,apply,expected", MEAN_ARCHIVE_DEFECTS, ids=[item[0] for item in MEAN_ARCHIVE_DEFECTS])
+def test_observation_parents_must_name_the_provenance_mean_archive(web_dir, tmp_path, contract, name, apply, expected):
+    site = _site_of(contract, web_dir, tmp_path)
+    apply(site)
+    report = _run(site)
+    assert not report["valid"]
+    for reason in expected:
+        assert any(reason in failure for failure in report["failures"]), (reason, report["failures"][:6])
+    # Coherently re-hashed: exactly the expected checks fail, no digest or reference check.
+    assert len(report["failures"]) == len(expected), report["failures"][:8]
+
+
+@pytest.mark.parametrize("contract", ["v1", "v2"])
+def test_the_mean_archive_binding_holds_on_the_committed_datasets(web_dir, tmp_path, contract):
+    # Control: every case of the unchanged dataset passes the join, re-hashed or not.
+    site = _site_of(contract, web_dir, tmp_path)
+    report = _run(site)
+    assert report["valid"], report["failures"][:5]
+    checker = validate.Checker(site)
+    checker.run(series_dir=None, repo_root=None)
+    case_ids = sorted(_manifest(site)["cases"])
+    assert len(case_ids) == len(protocol.CASES) == 8
+    for case_id in case_ids:
+        assert any(message.startswith(f"{case_id}: the uncorrected and corrected parents name one mean archive with one file digest") for message in checker.passed)
+        assert f"{case_id}: provenance binds the retained mean archive mean_psfs.npz by SHA-256" in " ".join(checker.passed)
+        for role in ("uncorrected", "corrected"):
+            assert any(message.startswith(f"{case_id}: {role} observation parent's file digest equals the provenance's mean_psfs.npz digest") for message in checker.passed)
+    _write_case_member(site, "baseline", "observation.json", _member(site, "baseline", "observation.json"))
+    _write_case_member(site, "baseline", "provenance.json", _member(site, "baseline", "provenance.json"))
+    rehashed = _run(site)
+    assert rehashed["valid"] and rehashed["checks_passed"] == report["checks_passed"], rehashed["failures"][:5]
+
+
+# ---------------------------------------------------------------------------
 # The producer's record checks copied into the v2 provenance
 
 

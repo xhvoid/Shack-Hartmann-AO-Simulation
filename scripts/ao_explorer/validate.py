@@ -36,8 +36,10 @@ the entry records.
 Raw-evidence mode (``--series-dir``): additionally binds every case to its
 retained attempt directory and files (the layout is the contract's: the v1
 ``jobs/<job>/<attempt>`` with ``movie.npz``, or the v2
-``cases/<case>/<attempt>`` with per-frame ``.npy`` stacks), checks each
-observation parent's array digest against ``mean_psfs.npz``, and decodes the
+``cases/<case>/<attempt>`` with per-frame ``.npy`` stacks), checks that the
+bytes of ``mean_psfs.npz`` are the file both observation parents name by
+SHA-256, checks each parent's array digest against that archive's arrays
+(read from the same bytes), and decodes the
 residual atlas tiles at the first, burn-in and last frames to confirm they
 equal the declared colour mapping of the raw maps (no axis flip, no hidden
 normalization).  Without ``--series-dir`` nothing about raw arrays is
@@ -92,6 +94,9 @@ RECORD_SCHEMA = "ao-explorer.manifest-validation.v2"
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 _RGB = re.compile(r"^#[0-9a-f]{6}$")
 PAIRING_STATUSES = ("reference", "paired", "different_atmosphere")
+# The retained mean archive both observation parents are averaged into, under its name in the raw evidence.
+MEAN_ARCHIVE = "mean_psfs.npz"
+ROLES = ("uncorrected", "corrected")
 # What reading a retained raw archive raises when it is missing, truncated, mis-shaped or not the declared kind of file.
 RAW_READ_ERRORS = (OSError, ValueError, KeyError, IndexError, EOFError, zipfile.BadZipFile)
 # Atmosphere-side images that paired cases share with the baseline (long_export stores them once).
@@ -617,6 +622,7 @@ class Checker:
         self.check_config(case_id, config, case, protocol_case)
         provenance = self.json_member(f"{prefix}/provenance.json")
         self.check_provenance(case_id, provenance, config, run_hashes, case)
+        self.check_mean_archive_binding(case_id, observation, provenance)
         self.check_pairing(case_id, case, protocol_case)
         return {"case": case, "metrics": metrics, "observation": observation, "provenance": provenance, "prefix": prefix}
 
@@ -819,6 +825,26 @@ class Checker:
             self.check(provenance.get("atmosphere_pairing") == case.get("pairing"), f"{case_id}: provenance pairing equals the case pairing", area="provenance")
         else:
             self.check(provenance.get("job_id") == f"case-{case_id}", f"{case_id}: provenance names the case job", area="provenance")
+
+    def check_mean_archive_binding(self, case_id: str, observation: Dict[str, Any], provenance: Dict[str, Any]) -> None:
+        """The observation parents' file digest is the mean archive's digest the provenance binds (review R18-03).
+
+        Both parents must name one archive with one digest, and the provenance must record that archive's
+        digest; without this join a parent could name other bytes than the ones the provenance (and raw-evidence
+        mode) verifies.  The parents' array digests are a separate check, made in raw-evidence mode against the
+        archive's arrays.
+        """
+
+        parents = {role: observation["roles"][role]["parent"] for role in ROLES}
+        named = {role: (parent.get("file"), parent.get("file_sha256")) for role, parent in parents.items()}
+        shown = ", ".join(f"{role} {name!r} {str(digest)[:12]}" for role, (name, digest) in named.items())
+        self.check(len(set(named.values())) == 1, f"{case_id}: the uncorrected and corrected parents name one mean archive with one file digest ({shown})", area="observation")
+        bound = provenance.get("raw_evidence", {}).get("files", {}).get(MEAN_ARCHIVE)
+        recorded = bound.get("sha256") if isinstance(bound, dict) else None
+        self.check(_hex64(recorded), f"{case_id}: provenance binds the retained mean archive {MEAN_ARCHIVE} by SHA-256 (recorded {recorded!r})", area="provenance")
+        for role, (name, digest) in named.items():
+            self.check(name == MEAN_ARCHIVE and _hex64(digest) and digest == recorded,
+                       f"{case_id}: {role} observation parent's file digest equals the provenance's {MEAN_ARCHIVE} digest (parent {name!r} {str(digest)[:12]}, provenance {str(recorded)[:12]})", area="provenance")
 
     def check_producer_checks(self, case_id: str, checks: Any) -> None:
         """The provenance's copy of the producer's record checks against the producer's own contract.
@@ -1164,8 +1190,16 @@ class Checker:
         for name, info in provenance["raw_evidence"]["files"].items():
             path = attempt / name
             self.check(path.is_file() and path.stat().st_size == info["bytes"] and _sha_file(path) == info["sha256"], f"{case_id}: raw {name} matches its provenance digest", area="raw")
+        # The archive's bytes are read once: their digest is joined to the parents' file digest, and the same bytes
+        # are decoded for the array checks, so the arrays checked are those of the archive whose digest was checked.
+        archive = (attempt / MEAN_ARCHIVE).read_bytes()
+        archive_sha256 = _sha(archive)
+        for role in ROLES:
+            parent = bundle["observation"]["roles"][role]["parent"]
+            self.check(parent.get("file") == MEAN_ARCHIVE and parent.get("file_sha256") == archive_sha256,
+                       f"{case_id}: raw {MEAN_ARCHIVE} is the file the {role} observation parent names (name and SHA-256 of its bytes)", area="raw")
         retained_mask = None
-        with np.load(attempt / "mean_psfs.npz", allow_pickle=False) as data:
+        with np.load(io.BytesIO(archive), allow_pickle=False) as data:
             for role, name in (("uncorrected", "mean_psf_uncorrected"), ("corrected", "mean_psf_corrected")):
                 digest = _sha(np.ascontiguousarray(data[name]).tobytes())
                 self.check(digest == bundle["observation"]["roles"][role]["parent"]["array_sha256"], f"{case_id}: {role} observation parent digest equals the retained numeric mean", area="raw")
