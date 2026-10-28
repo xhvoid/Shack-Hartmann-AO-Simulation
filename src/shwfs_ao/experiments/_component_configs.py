@@ -21,9 +21,14 @@ because it is public and refuses a configuration without a
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from numbers import Integral
 from typing import Any
 
+import numpy as np
+
 from ..control import LoopConfig
+from ..control.loop import EXPOSURE_SAMPLE_RULES
 from ..core.wavefront import opd_to_phase
 from ..detector import CentroidConfig, CentroidValidityConfig, DetectorConfig
 from ..dm import DMConfig
@@ -31,6 +36,7 @@ from ..io.configs import SystemConfig
 
 
 __all__ = (
+    "ExposureOverride",
     "target_rms_rad",
     "detector_config",
     "centroid_config",
@@ -39,6 +45,46 @@ __all__ = (
     "loop_config",
     "exposure_keywords",
 )
+
+
+class ExposureOverrideError(ValueError):
+    """Raised for an invalid WFS exposure override."""
+
+
+@dataclass(frozen=True)
+class ExposureOverride:
+    """Run-time override of the WFS exposure quadrature (T2, G2, 2026-10-21).
+
+    ``subsamples`` replaces the profile's ``detector_physics.exposure_subsamples``
+    (``None`` keeps it); ``sample_rule`` selects the sample times:
+    ``"left_point"`` (the legacy rule, samples at ``t + j*tau/n``) or
+    ``"midpoint"`` (``t + (j + 1/2)*tau/n``; ``None`` keeps ``left_point``).  The
+    override never enters ``SystemConfig``; it is identity-bearing through the
+    loop's effective exposure (``wfs_exposure`` in the history's hash and
+    metadata).  A profile without a ``detector_physics`` block keeps its
+    compatibility sensor, which provides no ``measure_exposure``, so an
+    override that integrates (``subsamples > 1`` or ``midpoint``) is refused by
+    the loop for it.
+    """
+
+    subsamples: int | None = None
+    sample_rule: str | None = None
+
+    def __post_init__(self) -> None:
+        count = self.subsamples
+        if count is not None:
+            if isinstance(count, (bool, np.bool_)) or not isinstance(count, Integral) or int(count) < 1:
+                raise ExposureOverrideError("subsamples must be a positive integer or None.")
+            object.__setattr__(self, "subsamples", int(count))
+        rule = self.sample_rule
+        if rule is not None and (not isinstance(rule, str) or rule not in EXPOSURE_SAMPLE_RULES):
+            raise ExposureOverrideError(
+                f"sample_rule must be one of {EXPOSURE_SAMPLE_RULES} or None; got {rule!r}."
+            )
+
+    @property
+    def is_default(self) -> bool:
+        return self.subsamples is None and self.sample_rule in (None, "left_point")
 
 
 def target_rms_rad(config: SystemConfig) -> float | None:
@@ -127,13 +173,34 @@ def loop_config(config: SystemConfig) -> LoopConfig:
     )
 
 
-def exposure_keywords(config: SystemConfig) -> dict[str, Any]:
-    """DET-08 time quadrature, passed only when a profile asks for it."""
+def exposure_keywords(
+    config: SystemConfig, exposure: ExposureOverride | None = None
+) -> dict[str, Any]:
+    """DET-08 time quadrature, passed only when a profile (or an override) asks for it.
 
+    Without ``exposure`` the result is exactly the historical one: ``{}`` for a
+    single left-point sample, else the count and the duration.  An
+    :class:`ExposureOverride` replaces the count and/or selects the midpoint
+    rule; the rule keyword is added only when it is not the default, so every
+    legacy left-point call keeps its keywords, hash and metadata.
+    """
+
+    if exposure is not None and not isinstance(exposure, ExposureOverride):
+        raise ExposureOverrideError("exposure must be an ExposureOverride or None.")
     physics = config.detector_physics
-    if physics is None or physics.exposure_subsamples == 1:
+    subsamples = 1 if physics is None else int(physics.exposure_subsamples)
+    rule = "left_point"
+    if exposure is not None:
+        if exposure.subsamples is not None:
+            subsamples = exposure.subsamples
+        if exposure.sample_rule is not None:
+            rule = exposure.sample_rule
+    if rule == "left_point" and subsamples == 1:
         return {}
-    return {
-        "exposure_subsamples": int(physics.exposure_subsamples),
+    keywords: dict[str, Any] = {
+        "exposure_subsamples": subsamples,
         "exposure_s": float(config.detector.exposure_s),
     }
+    if rule != "left_point":
+        keywords["exposure_sample_rule"] = rule
+    return keywords

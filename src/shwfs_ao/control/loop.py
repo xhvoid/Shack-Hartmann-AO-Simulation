@@ -56,6 +56,7 @@ from .history import (
 
 
 __all__ = (
+    "EXPOSURE_SAMPLE_RULES",
     "ControlLoopError",
     "ControlLoopWarning",
     "validate_closed_loop_components",
@@ -64,10 +65,25 @@ __all__ = (
 
 
 _COMMAND_UNIT: Final = "m_opd_equivalent"
-# WFS exposure quadratures: n samples at t + j * T / n with the DM held, and
-# the default single sample at the frame time.
+# WFS exposure quadratures: n samples at t + j * tau / n (left point) or at
+# t + (j + 1/2) * tau / n (midpoint) with the DM held, and the default single
+# sample at the frame time.
 _EXPOSURE_SCHEME: Final = "left_point_uniform_held_dm.v1"
+_MIDPOINT_EXPOSURE_SCHEME: Final = "midpoint_uniform_held_dm.v1"
 _SINGLE_SAMPLE_SCHEME: Final = "single_sample_at_frame_time.v1"
+EXPOSURE_SAMPLE_RULES: Final = ("left_point", "midpoint")
+"""Sample-time rules of an integrated WFS exposure (T2, G2, 2026-10-21).
+
+``left_point`` is the legacy DET-08 rule: samples at ``t + j*tau/n``, the
+first being the frame-start sample itself, so the mean sample time is
+``t + tau*(n-1)/(2n)`` and moves with ``n``.  ``midpoint`` samples at
+``t + (j + 1/2)*tau/n`` for every ``n``, ``n = 1`` included (one sample at
+``t + tau/2``, a changed measurement, not the frame-start snapshot); its mean
+sample time is ``t + tau/2`` for every ``n``, so refining ``n`` isolates the
+smoothing.  For a centroid drifting linearly with slope ``v`` the midpoint
+mean exceeds the left-point mean by ``v*tau/(2n)``.  Both rules keep the
+frame-start sample for the residual metrics and the observer maps, hold the
+DM through the exposure and apply camera noise and readout once per frame."""
 
 
 class ControlLoopError(ValueError):
@@ -140,6 +156,7 @@ def run_closed_loop(
     observers: Sequence[FrameObserver] = (),
     exposure_subsamples: int = 1,
     exposure_s: float | None = None,
+    exposure_sample_rule: str = "left_point",
     recovery: ClosedLoopRecoveryPolicy | None = None,
 ) -> LoopHistory:
     """Run one deterministic, fixed-length canonical AO control sequence.
@@ -150,18 +167,28 @@ def run_closed_loop(
     must provide ``measure_exposure``, which averages the optical intensities
     and applies detector noise once.  With ``n = 1`` the loop makes exactly one
     atmosphere call per frame at ``t``, as always.  The frame's residual metrics
-    always use the ``j = 0`` sample.
+    always use the frame-start sample at ``t``.
+
+    ``exposure_sample_rule`` (T2, G2; see :data:`EXPOSURE_SAMPLE_RULES`)
+    selects ``"left_point"`` (the rule above) or ``"midpoint"``, whose ``n``
+    samples lie at ``t + (j + 1/2) * exposure_s / n`` and are all taken after
+    the frame-start sample, ``n = 1`` included.  The midpoint rule needs a
+    positive ``exposure_s`` within the frame period and ``measure_exposure``
+    at every ``n``; it carries its own scheme in the run identity and in
+    ``wfs_exposure`` (with the sample-time offsets and the frame-start
+    convention of the residual metrics), so no midpoint run shares an identity
+    with a left-point run.
 
     These arguments take precedence over any exposure the WFS was configured
     with.  The effective quadrature is part of the run's identity: with
     ``n > 1`` the history's ``config_hash`` and its metadata entry
-    ``wfs_exposure`` carry the count and the duration.  With ``n = 1``
-    ``exposure_s`` has no effect, so it changes neither; a single-sample run
-    keeps the identity and metadata it always had, except that ``wfs_exposure``
-    is recorded when the WFS declares a different configured count
-    (``exposure_subsamples``), so the override stays visible.  Before
-    2026-10-18 (GPT pre-refactor audit F-02) runs that differed only in these
-    arguments shared one ``config_hash``.
+    ``wfs_exposure`` carry the count and the duration.  With ``n = 1`` under
+    the left-point rule ``exposure_s`` has no effect, so it changes neither; a
+    single-sample run keeps the identity and metadata it always had, except
+    that ``wfs_exposure`` is recorded when the WFS declares a different
+    configured count (``exposure_subsamples``), so the override stays visible.
+    Before 2026-10-18 (GPT pre-refactor audit F-02) runs that differed only in
+    these arguments shared one ``config_hash``.
 
     ``recovery`` (opt-in, default ``None``) is a
     :class:`~shwfs_ao.control.recovery.ClosedLoopRecoveryPolicy`.  It may
@@ -203,14 +230,34 @@ def run_closed_loop(
         or exposure_subsamples < 1
     ):
         raise ControlLoopError("exposure_subsamples must be a positive integer.")
-    if exposure_subsamples > 1:
-        if exposure_s is None or not np.isfinite(exposure_s) or exposure_s <= 0.0:
-            raise ControlLoopError("exposure sub-samples need a positive exposure_s.")
+    if (
+        not isinstance(exposure_sample_rule, str)
+        or exposure_sample_rule not in EXPOSURE_SAMPLE_RULES
+    ):
+        raise ControlLoopError(
+            f"exposure_sample_rule must be one of {EXPOSURE_SAMPLE_RULES}."
+        )
+    midpoint = exposure_sample_rule == "midpoint"
+    # An integrated exposure: several left-point samples, or the midpoint
+    # rule at any count (its single sample lies at t + tau/2, not at t).
+    integrated = exposure_subsamples > 1 or midpoint
+    if integrated:
+        if (
+            exposure_s is None
+            or isinstance(exposure_s, bool)
+            or not isinstance(exposure_s, Real)
+            or not np.isfinite(exposure_s)
+            or exposure_s <= 0.0
+        ):
+            raise ControlLoopError(
+                "exposure sub-samples (and the midpoint rule) need a positive exposure_s."
+            )
         if exposure_s > 1.0 / config.frame_rate_hz * (1.0 + 1.0e-12):
             raise ControlLoopError("exposure_s must not exceed the frame period.")
         if not callable(getattr(wfs, "measure_exposure", None)):
             raise ControlLoopError(
-                "exposure sub-samples need a WFS that provides measure_exposure."
+                "exposure sub-samples (and the midpoint rule) need a WFS that provides "
+                "measure_exposure."
             )
     configured_subsamples = getattr(wfs, "exposure_subsamples", None)
     if configured_subsamples is not None:
@@ -222,14 +269,17 @@ def run_closed_loop(
         ):
             raise ControlLoopError("wfs.exposure_subsamples must be a positive integer.")
         configured_subsamples = int(configured_subsamples)
-    # The quadrature the loop actually applies (GPT audit F-02).
+    # The quadrature the loop actually applies (GPT audit F-02).  The
+    # left-point payload is exactly the historical one; the midpoint rule
+    # carries its own scheme and names its rule at every count.
     effective_exposure: dict[str, Any] | None = (
         None
-        if exposure_subsamples == 1
+        if not integrated
         else {
-            "scheme": _EXPOSURE_SCHEME,
+            "scheme": _MIDPOINT_EXPOSURE_SCHEME if midpoint else _EXPOSURE_SCHEME,
             "subsamples": int(exposure_subsamples),
             "duration_s": float(cast(float, exposure_s)),
+            **({"sample_rule": "midpoint"} if midpoint else {}),
         }
     )
     if recovery is not None:
@@ -370,7 +420,7 @@ def run_closed_loop(
 
         assert pupil_mask is not None
         residual_before = atmospheric_opd - current_correction
-        if exposure_subsamples == 1:
+        if not integrated:
             raw_measurement = wfs.measure(
                 residual_before,
                 random_streams=random_streams,
@@ -378,17 +428,33 @@ def run_closed_loop(
             )
         else:
             assert exposure_s is not None
-            samples = [residual_before]
-            for sample_index in range(1, exposure_subsamples):
-                sample_opd = _atmospheric_opd(
-                    atmosphere.opd_at(
-                        float(frame_time_s)
-                        + sample_index * float(exposure_s) / exposure_subsamples
-                    ),
-                    expected_shape=sampled_shape,
-                )
-                samples.append(sample_opd - current_correction)
-            raw_measurement = wfs.measure_exposure(  # type: ignore[attr-defined]
+            if midpoint:
+                # Every midpoint sample lies after the frame-start sample
+                # (t + (j + 1/2) tau / n < t + tau <= t + T), so the
+                # atmosphere's time never retreats; the frame-start sample
+                # keeps the residual metrics and the observer maps at t.
+                samples = []
+                for sample_index in range(exposure_subsamples):
+                    sample_opd = _atmospheric_opd(
+                        atmosphere.opd_at(
+                            float(frame_time_s)
+                            + (sample_index + 0.5) * float(exposure_s) / exposure_subsamples
+                        ),
+                        expected_shape=sampled_shape,
+                    )
+                    samples.append(sample_opd - current_correction)
+            else:
+                samples = [residual_before]
+                for sample_index in range(1, exposure_subsamples):
+                    sample_opd = _atmospheric_opd(
+                        atmosphere.opd_at(
+                            float(frame_time_s)
+                            + sample_index * float(exposure_s) / exposure_subsamples
+                        ),
+                        expected_shape=sampled_shape,
+                    )
+                    samples.append(sample_opd - current_correction)
+            raw_measurement = wfs.measure_exposure(
                 samples,
                 random_streams=random_streams,
                 include_noise=include_noise,
@@ -587,12 +653,31 @@ def run_closed_loop(
         configured_subsamples is not None and configured_subsamples != exposure_subsamples
     ):
         metadata["wfs_exposure"] = {
-            "scheme": _EXPOSURE_SCHEME if effective_exposure is not None else _SINGLE_SAMPLE_SCHEME,
+            "scheme": (
+                effective_exposure["scheme"]
+                if effective_exposure is not None
+                else _SINGLE_SAMPLE_SCHEME
+            ),
             "subsamples": int(exposure_subsamples),
             "duration_s": None if effective_exposure is None else effective_exposure["duration_s"],
             "source": "run_closed_loop arguments",
             "wfs_configured_subsamples": configured_subsamples,
         }
+        if midpoint:
+            # The midpoint rule's distinct time conventions, recorded beside
+            # the legacy keys (which stay exactly as the left-point rule writes them).
+            duration = float(cast(float, exposure_s))
+            metadata["wfs_exposure"].update(
+                {
+                    "sample_rule": "midpoint",
+                    "sample_time_offsets_s": tuple(
+                        (index + 0.5) * duration / exposure_subsamples
+                        for index in range(exposure_subsamples)
+                    ),
+                    "mean_sample_time_offset_s": 0.5 * duration,
+                    "residual_metric_time": "frame_start",
+                }
+            )
     history = LoopHistory(
         time_s=time_s,
         open_loop_opd_rms_m=open_loop_rms,

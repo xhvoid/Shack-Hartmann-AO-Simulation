@@ -535,6 +535,7 @@ loop/result types.
 | `science_propagator` | configured physical-axis PSF backend |
 | `component_hashes`, `config_hash`, `source_config` | immutable component map, serialized profile identity, and the `SystemConfig` the system was built from (`config_hash` equals `source_config.config_hash`) |
 | `recovery_policy` | the opt-in `controller.recovery` loop supervisor, or `None` (the freeze-on-rejection loop); when set, its identity joins `component_hashes` as `"recovery"` |
+| `atmosphere_options` | the identity-bearing fixed-physics pairing options (`LayeredAtmosphereOptions`: reference-grid band draw, common band, screen-period rule; ticket T2) the native layered atmosphere was built with, or `None` for every default build; it names the realization the `"atmosphere"` component hash carries, is recorded in the build attestation, and the supplied-system verification rebuilds with the same options |
 | `build_attestation` | evidence that `build_scao_system` produced exactly these component identities from exactly this configuration and supplied matrix, so verifying the system before a run costs a comparison instead of a second build and its interaction-matrix calibration. It is checked against the system carrying it and never widens what is accepted: a system with no matching attestation is verified by rebuilding its configuration, which stays the authority |
 
 The detector layer also returns detector-state and detector-local records;

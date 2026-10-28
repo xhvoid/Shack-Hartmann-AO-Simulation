@@ -246,3 +246,265 @@ def test_inconsistent_configurations_are_refused(overrides, message) -> None:
         LayeredFrozenFlowAtmosphereConfig(**values)
     with pytest.raises(NativeAtmosphereError, match="cn2_fraction"):
         FrozenFlowLayer(0.0, (1.0, 0.0))
+
+
+# -- T2 G1 (2026-10-21): fixed-physics pairing options ------------------------------
+
+from dataclasses import asdict  # noqa: E402
+
+from shwfs_ao.backends.native.layered_atmosphere import (  # noqa: E402
+    PAIRED_BAND_ALGORITHM,
+    SCREEN_PERIOD_RULES,
+    _QUADRATURE_SUBSAMPLES,
+    canonical_identity_payload,
+    common_band_mask,
+    signed_fft_indices,
+)
+from shwfs_ao.core.hashing import component_config_hash, stable_hash  # noqa: E402
+
+PAIRING_FIELDS = ("band_draw_reference_screen_size", "band_limit_screen_size", "screen_period_rule")
+PAIRING_METADATA = (
+    *PAIRING_FIELDS,
+    "band_limit_half_width_index",
+    "paired_band_algorithm",
+    "band_power_retained_fraction",
+    "frequency_unit",
+    "frequency_spacing_per_m",
+    "reference_draw_normals_per_layer",
+    "nyquist_index_handling",
+)
+
+
+def _paired_config(grid: int, **extra) -> LayeredFrozenFlowAtmosphereConfig:
+    return LayeredFrozenFlowAtmosphereConfig(
+        grid_size=grid,
+        delta_m=2.0 / (grid - 1),  # the geometry's D / (N - 1)
+        pupil_diameter_m=2.0,
+        r0_m=R0_M,
+        layers=_eso_layers(),
+        outer_scale_m=OUTER_SCALE_M,
+        root_seed=5,
+        **extra,
+    )
+
+
+def _pre_change_identity(atmosphere: LayeredFrozenFlowAtmosphere) -> str:
+    """The identity formula from before the pairing fields existed, rebuilt from the instance.
+
+    Its payload is the raw ``asdict(config)`` of the pre-change dataclass (the
+    current one without the three trailing fields).  The digest binds the
+    pupil mask and the stream ids, so it is rebuilt here rather than pinned.
+    """
+
+    payload = asdict(atmosphere.config)
+    for name in PAIRING_FIELDS:
+        payload.pop(name)
+    streams = atmosphere._random_streams
+    return component_config_hash(
+        "native.layered_frozen_flow_atmosphere",
+        {
+            "config": payload,
+            "pupil_mask_hash": stable_hash(atmosphere.pupil_mask, namespace="native-atmosphere-pupil"),
+            "spectrum_model": LAYERED_SPECTRUM_MODEL,
+            "quadrature_subsamples": _QUADRATURE_SUBSAMPLES,
+            "random_derivation_scheme_id": streams.derivation_scheme_id,
+            "random_scope_stream_id": streams.stream_id("atmosphere", key=("realization", 0)),
+        },
+    )
+
+
+def _normals(atmosphere: LayeredFrozenFlowAtmosphere, layer: int = 0) -> np.ndarray:
+    """The standard normals behind a layer's band coefficients (zero where the band has no power)."""
+
+    config = atmosphere.config
+    power = _periodic_band_power(config, atmosphere._frequencies_per_m)
+    amplitude = config.layer_r0_m[layer] ** (-5.0 / 6.0)
+    scale = np.sqrt(power) * amplitude * config.screen_size**2
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return np.where(power > 0.0, atmosphere._band_coefficients[layer] / np.where(power > 0.0, scale, 1.0), 0.0)
+
+
+def test_the_default_keeps_the_pre_change_identity_payload_draw_and_metadata() -> None:
+    atmosphere = LayeredFrozenFlowAtmosphere(_paired_config(48))
+    assert atmosphere.config.pairing_active is False
+    assert atmosphere.config_hash == _pre_change_identity(atmosphere)
+    payload = canonical_identity_payload(atmosphere.config)
+    assert set(payload) == set(asdict(atmosphere.config)) - set(PAIRING_FIELDS)
+    assert "paired_band_algorithm" not in payload
+    assert not any(key in atmosphere.metadata for key in PAIRING_METADATA)
+    # An explicit default rule is the default: same identity, same draw.
+    explicit = LayeredFrozenFlowAtmosphere(_paired_config(48, screen_period_rule="pupil_array"))
+    assert explicit.config_hash == atmosphere.config_hash
+    np.testing.assert_array_equal(explicit.opd_at(0.001), atmosphere.opd_at(0.001))
+    assert SCREEN_PERIOD_RULES == ("pupil_array", "pupil_diameter")
+
+
+def test_a_reference_equal_to_the_screen_is_the_same_draw_under_its_own_identity() -> None:
+    default = LayeredFrozenFlowAtmosphere(_paired_config(48))
+    same = LayeredFrozenFlowAtmosphere(_paired_config(48, band_draw_reference_screen_size=96))
+    for time_s in (0.0, 0.002):
+        np.testing.assert_array_equal(same.opd_at(time_s), default.opd_at(time_s))
+    for left, right in zip(same._band_coefficients, default._band_coefficients):
+        np.testing.assert_array_equal(left, right)
+    for left_blocks, right_blocks in zip(same._low_frequency_blocks, default._low_frequency_blocks):
+        for left, right in zip(left_blocks, right_blocks):
+            np.testing.assert_array_equal(left.coefficients, right.coefficients)
+    # Explicit means identity-bearing, numbers notwithstanding.
+    assert same.config_hash != default.config_hash
+    assert same.config_hash != _pre_change_identity(same)
+    assert canonical_identity_payload(same.config)["paired_band_algorithm"] == PAIRED_BAND_ALGORITHM
+    assert canonical_identity_payload(same.config)["band_draw_reference_screen_size"] == 96
+    assert "band_limit_screen_size" not in canonical_identity_payload(same.config)
+    metadata = same.metadata
+    assert all(key in metadata for key in PAIRING_METADATA)
+    assert metadata["band_draw_reference_screen_size"] == 96 and metadata["band_limit_screen_size"] is None
+    assert metadata["paired_band_algorithm"] == PAIRED_BAND_ALGORITHM
+    assert metadata["band_power_retained_fraction"] == 1.0
+    assert metadata["frequency_unit"] == "cycles_per_m"
+    assert metadata["frequency_spacing_per_m"] == pytest.approx(1.0 / same.config.screen_period_m)
+    assert metadata["reference_draw_normals_per_layer"] == 2 * 96 * 96
+
+
+def test_a_coarser_screen_reads_its_sub_band_from_the_reference_draw() -> None:
+    """Default rule: equal signed index, equal normals; the low-frequency draws follow the same state."""
+
+    fine = LayeredFrozenFlowAtmosphere(_paired_config(64, band_draw_reference_screen_size=128))
+    coarse = LayeredFrozenFlowAtmosphere(_paired_config(48, band_draw_reference_screen_size=128))
+    position = signed_fft_indices(96) % 128
+    fine_normals = _normals(fine)[np.ix_(position, position)]
+    coarse_normals = _normals(coarse)
+    live = _periodic_band_power(coarse.config, coarse._frequencies_per_m) > 0.0
+    np.testing.assert_allclose(coarse_normals[live], fine_normals[live], rtol=1.0e-12, atol=0.0)
+    # Both draw the same 2 R**2 normals first, so the generator state the
+    # low-frequency draws see is the same; their power tables differ under
+    # the default rule (another step), so the coefficients differ by the
+    # ratio of the table amplitudes only.
+    coarse_block = coarse._low_frequency_blocks[0][0]
+    fine_block = fine._low_frequency_blocks[0][0]
+    coarse_power = _low_frequency_tables(coarse.config)[0][1]
+    fine_power = _low_frequency_tables(fine.config)[0][1]
+    live = (coarse_power > 0.0) & (fine_power > 0.0)
+    ratio = coarse_block.coefficients[live] / fine_block.coefficients[live]
+    np.testing.assert_allclose(ratio, np.sqrt(coarse_power[live] / fine_power[live]), rtol=1.0e-12, atol=0.0)
+    # Different hashes: the screen size and the reference both enter.
+    assert fine.config_hash != coarse.config_hash
+    # An unpaired fine screen draws other normals at those indices.
+    unpaired = LayeredFrozenFlowAtmosphere(_paired_config(48))
+    assert not np.allclose(_normals(unpaired)[live[: 0] if False else slice(None)], coarse_normals)
+
+
+def test_the_pupil_diameter_rule_pairs_physical_frequencies_exactly() -> None:
+    coarse = LayeredFrozenFlowAtmosphere(_paired_config(48, screen_period_rule="pupil_diameter", band_draw_reference_screen_size=126))
+    fine = LayeredFrozenFlowAtmosphere(_paired_config(64, screen_period_rule="pupil_diameter", band_draw_reference_screen_size=126))
+    assert coarse.config.screen_size == 94 and fine.config.screen_size == 126
+    assert coarse.config.screen_period_m == pytest.approx(4.0, rel=1.0e-12)
+    assert fine.config.screen_period_m == pytest.approx(4.0, rel=1.0e-12)
+    # The physical coefficient (inverse-FFT scaling undone) is the same number
+    # at the same signed index on both grids; the low-frequency coefficients are identical.
+    position = signed_fft_indices(94) % 126
+    np.testing.assert_allclose(
+        coarse._band_coefficients[0] / 94**2,
+        fine._band_coefficients[0][np.ix_(position, position)] / 126**2,
+        rtol=1.0e-12,
+        atol=0.0,
+    )
+    for left_blocks, right_blocks in zip(coarse._low_frequency_blocks, fine._low_frequency_blocks):
+        for left, right in zip(left_blocks, right_blocks):
+            np.testing.assert_array_equal(left.coefficients, right.coefficients)
+    assert coarse.metadata["screen_period_rule"] == "pupil_diameter"
+    assert coarse.metadata["screen_period_m"] == pytest.approx(4.0)
+    # The rule alone is identity-bearing and recorded; the sub-band algorithm is named only with a draw option.
+    alone = LayeredFrozenFlowAtmosphere(_paired_config(48, screen_period_rule="pupil_diameter"))
+    assert alone.config_hash != LayeredFrozenFlowAtmosphere(_paired_config(48)).config_hash
+    assert alone.metadata["paired_band_algorithm"] is None
+    assert "paired_band_algorithm" not in canonical_identity_payload(alone.config)
+    assert canonical_identity_payload(alone.config)["screen_period_rule"] == "pupil_diameter"
+
+
+def test_the_common_band_zeroes_exactly_the_outside_modes_and_records_its_power() -> None:
+    config = _paired_config(64, screen_period_rule="pupil_diameter", band_draw_reference_screen_size=126, band_limit_screen_size=94)
+    atmosphere = LayeredFrozenFlowAtmosphere(config)
+    mask = common_band_mask(126, 94)
+    indices = signed_fft_indices(126)
+    assert config.band_limit_half_width_index == 46
+    assert np.array_equal(mask, (np.abs(indices) <= 46)[:, None] & (np.abs(indices) <= 46)[None, :])
+    coefficients = atmosphere._band_coefficients[0]
+    assert np.all(coefficients[~mask] == 0.0)
+    assert np.all(coefficients[mask & (_periodic_band_power(config, atmosphere._frequencies_per_m) > 0.0)] != 0.0)
+    unlimited = LayeredFrozenFlowAtmosphere(_paired_config(64, screen_period_rule="pupil_diameter", band_draw_reference_screen_size=126))
+    np.testing.assert_array_equal(coefficients[mask], unlimited._band_coefficients[0][mask])
+    power = _periodic_band_power(config, atmosphere._frequencies_per_m)
+    assert atmosphere.band_power_retained_fraction == pytest.approx(float(np.sum(power * mask) / np.sum(power)))
+    assert 0.98 < atmosphere.band_power_retained_fraction < 1.0
+    assert atmosphere.metadata["band_power_retained_fraction"] == atmosphere.band_power_retained_fraction
+    assert atmosphere.metadata["band_limit_half_width_index"] == 46
+    # The coarsest screen limited to its own size drops its own Nyquist row and column.
+    own = LayeredFrozenFlowAtmosphere(_paired_config(48, screen_period_rule="pupil_diameter", band_draw_reference_screen_size=126, band_limit_screen_size=94))
+    nyquist = signed_fft_indices(94) == -47
+    assert np.all(own._band_coefficients[0][nyquist, :] == 0.0) and np.all(own._band_coefficients[0][:, nyquist] == 0.0)
+    assert own.config_hash != LayeredFrozenFlowAtmosphere(_paired_config(48, screen_period_rule="pupil_diameter", band_draw_reference_screen_size=126)).config_hash
+
+
+def test_storage_modes_resets_and_realizations_agree_under_the_pairing_options() -> None:
+    options = dict(screen_period_rule="pupil_diameter", band_draw_reference_screen_size=126, band_limit_screen_size=94)
+    materialized = LayeredFrozenFlowAtmosphere(_paired_config(64, **options))
+    regenerated = LayeredFrozenFlowAtmosphere(_paired_config(64, **options), band_coefficient_storage="regenerate")
+    assert materialized.config_hash == regenerated.config_hash
+    for time_s in (0.0, 0.0015, 0.004):
+        np.testing.assert_array_equal(materialized.opd_at(time_s), regenerated.opd_at(time_s))
+    first = materialized.opd_at(0.004)
+    materialized.reset(realization_index=1)
+    other = materialized.opd_at(0.004)
+    pupil = materialized.pupil_mask
+    assert not np.allclose(other[pupil], first[pupil])
+    materialized.reset(realization_index=0)
+    np.testing.assert_array_equal(materialized.opd_at(0.004), first)
+    assert materialized.metadata["realization_index"] == 0
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"band_draw_reference_screen_size": 90}, "at least the screen size"),
+        ({"band_limit_screen_size": 10}, "keeps no periodic mode"),
+        ({"band_draw_reference_screen_size": True}, "must be an integer"),
+        ({"band_draw_reference_screen_size": 96.0}, "must be an integer"),
+        ({"band_limit_screen_size": 100}, "must not exceed the screen size"),
+        ({"band_limit_screen_size": 1}, "must be >= 2"),
+        ({"band_limit_screen_size": np.True_}, "must be an integer"),
+        ({"screen_period_rule": "diameter"}, "screen_period_rule"),
+        ({"screen_period_rule": None}, "screen_period_rule"),
+        ({"band_draw_reference_screen_size": 100, "band_limit_screen_size": 98}, "must not exceed the screen size"),
+    ],
+)
+def test_invalid_pairing_options_are_refused_before_allocation(overrides, message) -> None:
+    with pytest.raises(NativeAtmosphereError, match=message):
+        _paired_config(48, **overrides)
+
+
+def test_the_pupil_diameter_rule_needs_a_whole_number_of_spacings_and_a_screen_holding_the_pupil() -> None:
+    with pytest.raises(NativeAtmosphereError, match="whole number of grid spacings"):
+        LayeredFrozenFlowAtmosphereConfig(
+            grid_size=48, delta_m=2.0 / 47.5, pupil_diameter_m=2.0, r0_m=R0_M, layers=_eso_layers(),
+            screen_period_rule="pupil_diameter",
+        )
+    with pytest.raises(NativeAtmosphereError, match="must hold the pupil array"):
+        LayeredFrozenFlowAtmosphereConfig(
+            grid_size=48, delta_m=2.0 / 47.0, pupil_diameter_m=2.0, r0_m=R0_M, layers=_eso_layers(),
+            screen_period_rule="pupil_diameter", screen_period_factor=1,
+        )
+
+
+def test_signed_indices_and_the_common_band_mask_follow_numpy_conventions() -> None:
+    assert signed_fft_indices(8).tolist() == [0, 1, 2, 3, -4, -3, -2, -1]
+    assert signed_fft_indices(7).tolist() == [0, 1, 2, 3, -3, -2, -1]
+    assert np.array_equal(signed_fft_indices(8), np.rint(np.fft.fftfreq(8) * 8).astype(int))
+    mask = common_band_mask(8, 8)
+    kept = np.abs(signed_fft_indices(8)) <= 3
+    assert np.array_equal(mask, kept[:, None] & kept[None, :])  # the Nyquist index -4 is outside its own band
+    assert np.array_equal(common_band_mask(8, 7), mask)  # an odd 7-grid holds |k| <= 3 as well
+    assert common_band_mask(8, 2).sum() == 1 and common_band_mask(8, 3).sum() == 9
+    with pytest.raises(NativeAtmosphereError):
+        common_band_mask(8, 9)
+    with pytest.raises(NativeAtmosphereError):
+        common_band_mask(8, 1)

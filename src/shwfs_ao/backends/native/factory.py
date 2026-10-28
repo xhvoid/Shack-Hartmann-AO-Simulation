@@ -7,7 +7,7 @@ chooses observing defaults from the backend name.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -43,6 +43,7 @@ from .atmosphere import (
     TRANSLATION_FOURIER_SUBPIXEL_V2,
     FrozenFlowAtmosphere,
     FrozenFlowAtmosphereConfig,
+    NativeAtmosphereError,
     StaticOpdAtmosphere,
 )
 from .layered_atmosphere import (
@@ -136,7 +137,32 @@ class NativeScaoComponentFactory:
         static_opd_rms_m: float,
         layers: Sequence[Any] = (),
         band_coefficient_storage: str = "materialized",
+        band_draw_reference_screen_size: int | None = None,
+        band_limit_screen_size: int | None = None,
+        screen_period_rule: str | None = None,
     ) -> AtmosphereModel:
+        """Build the atmosphere named by ``model``.
+
+        The three trailing keywords are the fixed-physics pairing options of
+        the native layered atmosphere (T2, G1).  They are identity-bearing,
+        accepted only for ``native_layered`` and passed only when set, so
+        every other model and every default build is unchanged.
+        """
+
+        pairing = {
+            name: value
+            for name, value in (
+                ("band_draw_reference_screen_size", band_draw_reference_screen_size),
+                ("band_limit_screen_size", band_limit_screen_size),
+                ("screen_period_rule", screen_period_rule),
+            )
+            if value is not None
+        }
+        if pairing and model != "native_layered":
+            raise NativeScaoFactoryError(
+                "the fixed-physics pairing options "
+                f"{sorted(pairing)} apply to the 'native_layered' atmosphere only."
+            )
         builders: dict[str, Callable[[], AtmosphereModel]] = {
             "static": lambda: StaticOpdAtmosphere(
                 _static_opd(
@@ -214,6 +240,7 @@ class NativeScaoComponentFactory:
                 normalize_rms=normalize_rms,
                 layers=layers,
                 band_coefficient_storage=band_coefficient_storage,
+                pairing=pairing,
             ),
         }
         try:
@@ -425,14 +452,15 @@ def _layered_atmosphere(
     normalize_rms: bool,
     layers: Sequence[Any],
     band_coefficient_storage: str = "materialized",
+    pairing: Mapping[str, Any] | None = None,
 ) -> LayeredFrozenFlowAtmosphere:
     if normalize_rms or target_rms_rad is not None:
         raise NativeScaoFactoryError(
             "the native_layered atmosphere is absolutely normalized; it takes "
             "neither normalize_rms nor a target RMS."
         )
-    return LayeredFrozenFlowAtmosphere(
-        LayeredFrozenFlowAtmosphereConfig(
+    try:
+        config = LayeredFrozenFlowAtmosphereConfig(
             grid_size=geometry.pupil_shape[0],
             delta_m=geometry.pupil_geometry.pixel_spacing_xy_m[0],
             pupil_diameter_m=geometry.telescope_diameter_m,
@@ -448,7 +476,14 @@ def _layered_atmosphere(
             outer_scale_m=outer_scale_m,
             phase_reference_wavelength_m=phase_reference_wavelength_m,
             root_seed=random_streams.root_seed,
-        ),
+            # Pairing options are passed only when set, so the default config
+            # (and its identity payload) is exactly the historical one.
+            **dict(pairing or {}),
+        )
+    except NativeAtmosphereError as exc:
+        raise NativeScaoFactoryError(f"invalid layered atmosphere configuration: {exc}") from exc
+    return LayeredFrozenFlowAtmosphere(
+        config,
         pupil_mask=geometry.pupil_mask,
         random_streams=random_streams.scoped("native-atmosphere"),
         band_coefficient_storage=band_coefficient_storage,

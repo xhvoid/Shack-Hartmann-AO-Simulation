@@ -37,6 +37,24 @@ scale needs a deeper subharmonic hierarchy.
 The periodic band repeats after a layer has travelled one screen period
 (``screen_period_m``); the low-frequency modes do not.  Repetition makes
 long-exposure statistics less independent but introduces no discontinuity.
+
+``fixed-physics pairing`` (ticket T2, G1, 2026-10-21)
+    Three optional configuration fields pair the realizations of two pupil
+    samplings.  ``band_draw_reference_screen_size`` draws the band normals on
+    a reference grid and lets a smaller screen take the entries at its own
+    signed FFT indices, so the coarse screen is a sub-band of the reference
+    draw and the low-frequency draws that follow see the same generator state.
+    ``band_limit_screen_size`` zeroes every mode outside the band a smaller
+    screen can hold (``|k| <= (B - 1) // 2`` per axis), the common band of a
+    pupil scan.  ``screen_period_rule = "pupil_diameter"`` makes the screen
+    ``factor * (N - 1)`` samples instead of ``factor * N``, so its period is
+    ``factor * D`` metres on every grid and equal indices are equal physical
+    frequencies; under the default rule the period is ``factor * D * N/(N-1)``
+    and equal indices differ in frequency by ``N/(N-1)`` between grids (the
+    dilation of the approximate pairing, quantified by
+    :mod:`shwfs_ao.validation.atmosphere_pairing`).  All three
+    default to today's model: the default draw, hash and metadata are
+    unchanged, and only an explicitly set option enters the identity.
 """
 
 from __future__ import annotations
@@ -58,9 +76,14 @@ from .atmosphere import NativeAtmosphereError, _von_karman_psd
 
 __all__ = (
     "LAYERED_SPECTRUM_MODEL",
+    "PAIRED_BAND_ALGORITHM",
+    "SCREEN_PERIOD_RULES",
     "FrozenFlowLayer",
     "LayeredFrozenFlowAtmosphereConfig",
     "LayeredFrozenFlowAtmosphere",
+    "canonical_identity_payload",
+    "common_band_mask",
+    "signed_fft_indices",
 )
 
 LAYERED_SPECTRUM_MODEL = "periodic_band_analytic_low_frequency_v1"
@@ -75,9 +98,29 @@ BAND_COEFFICIENT_STORAGE = ("materialized", "regenerate")
 coefficients in memory.  ``regenerate`` redraws them each frame from the
 layer's keyed random generator with the identical arithmetic, so every frame
 is bit-identical while about ``16 * n_layers * screen_size**2`` bytes are not
-held; it costs one regeneration per layer and frame.  The mode is not part of
-the atmosphere's identity."""
+held; it costs one regeneration per layer and frame (``2 R**2`` normals per
+layer when ``band_draw_reference_screen_size = R`` is set).  The mode is not
+part of the atmosphere's identity."""
 _QUADRATURE_SUBSAMPLES = 4
+SCREEN_PERIOD_RULES = ("pupil_array", "pupil_diameter")
+"""How the periodic band's screen size follows from the pupil grid.
+
+``pupil_array`` (the default): ``screen_size = screen_period_factor *
+grid_size``, the period ``factor * grid_size * delta_m``.  ``pupil_diameter``:
+``screen_size = screen_period_factor * round(pupil_diameter_m / delta_m)``
+(``factor * (N - 1)`` for the geometry's ``delta = D / (N - 1)``), so the
+period is ``factor * pupil_diameter_m`` on every grid and equal signed FFT
+indices are equal physical frequencies between two pupil samplings."""
+PAIRED_BAND_ALGORITHM = "reference_subband_signed_index.v1"
+"""Identifier of the paired band draw: reference-grid normals read at the
+screen's own signed FFT indices, an optional common band ``|k| <= (B-1)//2``."""
+_PAIRING_DEFAULTS: Mapping[str, Any] = MappingProxyType(
+    {
+        "band_draw_reference_screen_size": None,
+        "band_limit_screen_size": None,
+        "screen_period_rule": "pupil_array",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -115,9 +158,22 @@ class LayeredFrozenFlowAtmosphereConfig:
     ``r0_m`` is the integrated Fried parameter at
     ``phase_reference_wavelength_m``; the layer fractions must sum to one.
     ``screen_period_factor`` sets the periodic band's period as a multiple of
-    the pupil array, ``inner_quadrature_cells`` (``K``) the half-width of the
-    block of FFT cells evaluated analytically, and ``subharmonic_depth`` the
-    number of 3x3 subharmonic levels below the FFT band.
+    the pupil array (or of the pupil diameter under
+    ``screen_period_rule = "pupil_diameter"``), ``inner_quadrature_cells``
+    (``K``) the half-width of the block of FFT cells evaluated analytically,
+    and ``subharmonic_depth`` the number of 3x3 subharmonic levels below the
+    FFT band.
+
+    The three trailing fields pair realizations across pupil samplings (T2,
+    G1; module docstring).  ``band_draw_reference_screen_size`` (``R >=
+    screen_size``) draws the band normals on an ``R x R`` grid and reads the
+    screen's own signed indices from it; ``band_limit_screen_size`` (``2K + 3
+    <= B <= screen_size`` so that the band keeps a periodic mode, and ``B <=
+    screen_size <= R`` when both are set) zeroes the modes outside ``|k| <= (B
+    - 1) // 2`` per axis; ``screen_period_rule``
+    selects the screen-size rule.  With the defaults the identity payload
+    (:func:`canonical_identity_payload`), draw order, numerics and metadata
+    are exactly those of the model before these fields existed.
     """
 
     grid_size: int
@@ -131,15 +187,53 @@ class LayeredFrozenFlowAtmosphereConfig:
     screen_period_factor: int = 2
     inner_quadrature_cells: int = 4
     subharmonic_depth: int = 3
+    band_draw_reference_screen_size: int | None = None
+    band_limit_screen_size: int | None = None
+    screen_period_rule: str = "pupil_array"
 
     def __post_init__(self) -> None:
         grid_size = _integer("grid_size", self.grid_size, minimum=2)
         factor = _integer("screen_period_factor", self.screen_period_factor, minimum=1)
         inner = _integer("inner_quadrature_cells", self.inner_quadrature_cells, minimum=0)
-        if 2 * inner + 1 > factor * grid_size:
+        rule = self.screen_period_rule
+        if not isinstance(rule, str) or rule not in SCREEN_PERIOD_RULES:
+            raise NativeAtmosphereError(
+                f"screen_period_rule must be one of {SCREEN_PERIOD_RULES}; got {rule!r}."
+            )
+        delta_m = _positive("delta_m", self.delta_m)
+        pupil_diameter_m = _positive("pupil_diameter_m", self.pupil_diameter_m)
+        screen = _screen_size(rule, factor, grid_size, delta_m, pupil_diameter_m)
+        if screen < grid_size:
+            raise NativeAtmosphereError(
+                f"the screen ({screen} samples) must hold the pupil array ({grid_size} samples); "
+                "raise screen_period_factor."
+            )
+        if 2 * inner + 1 > screen:
             raise NativeAtmosphereError(
                 "inner_quadrature_cells leaves no periodic band on this screen."
             )
+        reference = self.band_draw_reference_screen_size
+        if reference is not None:
+            reference = _integer("band_draw_reference_screen_size", reference, minimum=2)
+            if reference < screen:
+                raise NativeAtmosphereError(
+                    f"band_draw_reference_screen_size ({reference}) must be at least the "
+                    f"screen size ({screen}); a screen reads its sub-band from the reference."
+                )
+        limit = self.band_limit_screen_size
+        if limit is not None:
+            limit = _integer("band_limit_screen_size", limit, minimum=2)
+            if limit > screen:
+                raise NativeAtmosphereError(
+                    f"band_limit_screen_size ({limit}) must not exceed the screen size "
+                    f"({screen}); the common band is the coarsest screen's."
+                )
+            if (limit - 1) // 2 <= inner:
+                raise NativeAtmosphereError(
+                    f"band_limit_screen_size ({limit}) keeps no periodic mode: |k| <= "
+                    f"{(limit - 1) // 2} lies inside the analytic inner block of half-width "
+                    f"{inner}; a common band needs at least {2 * inner + 3} samples."
+                )
         if not isinstance(self.layers, tuple) or not self.layers:
             raise NativeAtmosphereError("layers must be a non-empty tuple.")
         if not all(isinstance(layer, FrozenFlowLayer) for layer in self.layers):
@@ -159,12 +253,10 @@ class LayeredFrozenFlowAtmosphereConfig:
         else:
             outer_scale_m = _positive("outer_scale_m", self.outer_scale_m)
         object.__setattr__(self, "grid_size", grid_size)
-        object.__setattr__(self, "delta_m", _positive("delta_m", self.delta_m))
-        object.__setattr__(
-            self,
-            "pupil_diameter_m",
-            _positive("pupil_diameter_m", self.pupil_diameter_m),
-        )
+        object.__setattr__(self, "delta_m", delta_m)
+        object.__setattr__(self, "pupil_diameter_m", pupil_diameter_m)
+        object.__setattr__(self, "band_draw_reference_screen_size", reference)
+        object.__setattr__(self, "band_limit_screen_size", limit)
         object.__setattr__(self, "r0_m", _positive("r0_m", self.r0_m))
         object.__setattr__(self, "outer_scale_m", outer_scale_m)
         object.__setattr__(
@@ -183,15 +275,37 @@ class LayeredFrozenFlowAtmosphereConfig:
 
     @property
     def screen_size(self) -> int:
-        """Samples per side of the periodic band's screen."""
+        """Samples per side of the periodic band's screen (``screen_period_rule``)."""
 
-        return self.screen_period_factor * self.grid_size
+        return _screen_size(
+            self.screen_period_rule,
+            self.screen_period_factor,
+            self.grid_size,
+            self.delta_m,
+            self.pupil_diameter_m,
+        )
 
     @property
     def screen_period_m(self) -> float:
         """Travel after which a layer's periodic band repeats, in metres."""
 
         return self.screen_size * self.delta_m
+
+    @property
+    def pairing_active(self) -> bool:
+        """True when any fixed-physics pairing field differs from its default."""
+
+        return any(
+            getattr(self, name) != default for name, default in _PAIRING_DEFAULTS.items()
+        )
+
+    @property
+    def band_limit_half_width_index(self) -> int | None:
+        """Largest retained signed index per axis under the common band, else None."""
+
+        if self.band_limit_screen_size is None:
+            return None
+        return (self.band_limit_screen_size - 1) // 2
 
     @property
     def layer_r0_m(self) -> tuple[float, ...]:
@@ -255,7 +369,9 @@ class LayeredFrozenFlowAtmosphere:
         self._config_hash = component_config_hash(
             "native.layered_frozen_flow_atmosphere",
             {
-                "config": asdict(config),
+                # The legacy payload is ``asdict(config)``; the pairing fields
+                # enter only when set (K2 of the stage-05 plan).
+                "config": canonical_identity_payload(config),
                 "pupil_mask_hash": self._pupil_mask_hash,
                 "spectrum_model": LAYERED_SPECTRUM_MODEL,
                 "quadrature_subsamples": _QUADRATURE_SUBSAMPLES,
@@ -270,6 +386,18 @@ class LayeredFrozenFlowAtmosphere:
         self._frequencies_per_m = frequencies
         self._coordinates_m = np.arange(config.grid_size, dtype=float) * config.delta_m
         self._band_power_rad2 = _periodic_band_power(config, frequencies)
+        # The common band of a pupil scan (None: every mode of the screen).
+        self._common_band_mask: np.ndarray | None = (
+            None
+            if config.band_limit_screen_size is None
+            else common_band_mask(size, config.band_limit_screen_size)
+        )
+        total_power = float(np.sum(self._band_power_rad2))
+        self._band_power_retained_fraction = (
+            1.0
+            if self._common_band_mask is None or total_power <= 0.0
+            else float(np.sum(self._band_power_rad2 * self._common_band_mask)) / total_power
+        )
         self._low_frequency_tables = _low_frequency_tables(config)
         self._band_coefficients: tuple[np.ndarray, ...] = ()
         self._low_frequency_blocks: tuple[tuple[_LowFrequencyBlock, ...], ...] = ()
@@ -370,12 +498,39 @@ class LayeredFrozenFlowAtmosphere:
         self._refresh_metadata()
 
     def _band_draw(self, rng: np.random.Generator, amplitude: float) -> np.ndarray:
-        """One layer's periodic-band coefficients from its keyed generator."""
+        """One layer's periodic-band coefficients from its keyed generator.
 
-        size = self._config.screen_size
-        draws = rng.normal(size=(size, size)) + 1j * rng.normal(size=(size, size))
+        With a reference screen size ``R`` the normals are drawn as two
+        ``R x R`` arrays (the same call sequence as the default with ``R`` equal
+        to the screen size) and the screen reads the entries at its own signed
+        FFT indices; a common band zeroes the modes outside it.  The band
+        power is always the screen's own (``_periodic_band_power`` at its own
+        frequencies).
+        """
+
+        config = self._config
+        size = config.screen_size
+        reference = (
+            size
+            if config.band_draw_reference_screen_size is None
+            else config.band_draw_reference_screen_size
+        )
+        draws = rng.normal(size=(reference, reference)) + 1j * rng.normal(
+            size=(reference, reference)
+        )
+        if reference != size:
+            index = signed_fft_indices(size) % reference
+            draws = draws[np.ix_(index, index)]
+        if self._common_band_mask is not None:
+            draws = draws * self._common_band_mask
         # numpy's inverse FFT divides by size**2; fold that back in here.
         return draws * (np.sqrt(self._band_power_rad2) * amplitude * size**2)
+
+    @property
+    def band_power_retained_fraction(self) -> float:
+        """Band power inside the common band over the screen's own band power (1 without a limit)."""
+
+        return self._band_power_retained_fraction
 
     def _layer_band_coefficients(self) -> Iterator[np.ndarray]:
         """Yield each layer's band coefficients, stored or regenerated."""
@@ -447,6 +602,33 @@ class LayeredFrozenFlowAtmosphere:
 
     def _refresh_metadata(self) -> None:
         config = self._config
+        pairing: dict[str, Any] = {}
+        if config.pairing_active:
+            # Recorded only when a pairing option is set, so the default
+            # metadata keeps exactly its historical keys.
+            reference = config.band_draw_reference_screen_size
+            pairing = {
+                "band_draw_reference_screen_size": reference,
+                "band_limit_screen_size": config.band_limit_screen_size,
+                "band_limit_half_width_index": config.band_limit_half_width_index,
+                "screen_period_rule": config.screen_period_rule,
+                "paired_band_algorithm": (
+                    PAIRED_BAND_ALGORITHM
+                    if reference is not None or config.band_limit_screen_size is not None
+                    else None
+                ),
+                "band_power_retained_fraction": self._band_power_retained_fraction,
+                "frequency_unit": "cycles_per_m",
+                "frequency_spacing_per_m": 1.0 / config.screen_period_m,
+                "reference_draw_normals_per_layer": (
+                    None if reference is None else 2 * reference * reference
+                ),
+                "nyquist_index_handling": (
+                    "signed FFT indices; an even screen holds -S/2 without +S/2; a common "
+                    "band keeps |k| <= (B-1)//2 per axis, so an even B excludes its own "
+                    "Nyquist row and column"
+                ),
+            }
         self._metadata = MappingProxyType(
             {
                 "schema_name": "shwfs_ao.native_atmosphere",
@@ -493,8 +675,77 @@ class LayeredFrozenFlowAtmosphere:
                 "frozen_flow_discretization": "exact_fourier_subpixel_unbounded_travel",
                 "wind_convention": "pattern_advects_with_positive_wind",
                 "band_coefficient_storage": self._band_storage,
+                **pairing,
             }
         )
+
+
+def canonical_identity_payload(config: LayeredFrozenFlowAtmosphereConfig) -> dict[str, Any]:
+    """The configuration as the atmosphere's ``config_hash`` digests it.
+
+    ``asdict(config)`` with the three pairing fields removed while they hold
+    their defaults, so every identity published before they existed is
+    unchanged; a set field stays with its value, and a reference draw or a
+    common band adds ``paired_band_algorithm``.  Nothing else is stripped: an
+    unrelated ``None`` or default value keeps its place in the payload.
+    """
+
+    payload = asdict(config)
+    for name, default in _PAIRING_DEFAULTS.items():
+        if payload[name] == default:
+            del payload[name]
+    if (
+        config.band_draw_reference_screen_size is not None
+        or config.band_limit_screen_size is not None
+    ):
+        payload["paired_band_algorithm"] = PAIRED_BAND_ALGORITHM
+    return payload
+
+
+def signed_fft_indices(size: int) -> np.ndarray:
+    """The signed FFT index of every position of a length-``size`` axis.
+
+    ``numpy.fft.fftfreq(size) * size``: ``0 .. size//2 - 1`` then
+    ``-size//2 .. -1`` for an even ``size`` (the Nyquist index is ``-size/2``
+    and ``+size/2`` is absent); symmetric for an odd ``size``.
+    """
+
+    count = _integer("size", size, minimum=1)
+    return np.rint(np.fft.fftfreq(count) * count).astype(int)
+
+
+def common_band_mask(size: int, limit: int) -> np.ndarray:
+    """Boolean ``(size, size)`` mask of the modes a ``limit``-sample screen can hold.
+
+    A mode is kept when both its signed indices satisfy ``|k| <= (limit - 1)
+    // 2``, the symmetric band of a ``limit`` grid: for an even ``limit`` this
+    excludes that grid's Nyquist index ``-limit/2`` (which has no ``+limit/2``
+    partner), so every retained mode has its conjugate partner on every grid
+    of at least ``limit`` samples and the band is one real trigonometric
+    polynomial on all of them.
+    """
+
+    count = _integer("size", size, minimum=1)
+    bound = _integer("limit", limit, minimum=2)
+    if bound > count:
+        raise NativeAtmosphereError("limit must not exceed size.")
+    keep = np.abs(signed_fft_indices(count)) <= (bound - 1) // 2
+    return keep[:, None] & keep[None, :]
+
+
+def _screen_size(
+    rule: str, factor: int, grid_size: int, delta_m: float, pupil_diameter_m: float
+) -> int:
+    if rule == "pupil_array":
+        return factor * grid_size
+    samples = pupil_diameter_m / delta_m
+    rounded = int(round(samples))
+    if rounded < 1 or abs(samples - rounded) > 1.0e-9 * max(1.0, abs(samples)):
+        raise NativeAtmosphereError(
+            "screen_period_rule 'pupil_diameter' needs pupil_diameter_m to be a whole "
+            f"number of grid spacings; pupil_diameter_m / delta_m = {samples!r}."
+        )
+    return factor * rounded
 
 
 def _periodic_band_power(

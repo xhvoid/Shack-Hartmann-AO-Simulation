@@ -33,6 +33,8 @@ from .public_data_conditioned import (
     theta0_rad_from_arcsec,
 )
 from .scao import (
+    ExposureOverride,
+    LayeredAtmosphereOptions,
     ScaoBackendComponentFactory,
     ScaoConstructionError,
     ScaoExecutionOptions,
@@ -74,6 +76,8 @@ __all__ = (
     "theta0_rad_from_arcsec",
     "ScaoConstructionError",
     "ScaoExecutionOptions",
+    "LayeredAtmosphereOptions",
+    "ExposureOverride",
     "ScaoBackendComponentFactory",
     "ScaoSystem",
     "register_scao_backend_factory",

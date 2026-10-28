@@ -98,6 +98,17 @@ The periodic band repeats after a layer has travelled one screen period
 when that has happened. Repetition makes long-exposure statistics less
 independent but introduces no discontinuity.
 
+Paired realizations across pupil samplings (ticket T2, 2026-10-21): three
+optional configuration fields, all defaulting to the model above, draw the
+band on a reference grid (`band_draw_reference_screen_size`), keep a common
+band (`band_limit_screen_size`) and, with `screen_period_rule =
+"pupil_diameter"`, give every pupil sampling the same physical period so that
+equal FFT indices are equal physical frequencies. They are identity-bearing
+when set and enter the SCAO build through
+`experiments.scao.LayeredAtmosphereOptions`; see the technical reference,
+section 5.1, for the definitions and the quantified limits of the default-rule
+(equal-index) pairing.
+
 Cost per frame with all ten ESO layers is 3.1 ms on a 72 px pupil and 36 ms
 on a 384 px pupil. A single `native_frozen_flow_v2` layer, with its exact
 spectral replay, costs 26 ms and 810 ms on the same grids.

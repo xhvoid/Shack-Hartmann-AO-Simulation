@@ -96,6 +96,7 @@ flowchart BT
     EXPERIMENTS --> CONTROL
     EXPERIMENTS --> SCIENCE
     EXPERIMENTS --> IO
+    EXPERIMENTS -- "convergence study: validation-only references" --> VALIDATION
     EXPERIMENTS -. "deferred backend factory" .-> NATIVE
     EXPERIMENTS -. "deferred backend factory" .-> HCIPY
     VALIDATION --> CORE
@@ -152,7 +153,7 @@ canonical shared SCAO contracts directly.
 | `shwfs_ao.control` | typed command projection, gain/leak, sole latency queue, applied-command acknowledgement, loop sequencing, history, replay-safe sweeps | optical kernels, artifact writing |
 | `shwfs_ao.science` | wavelength quadrature, propagation selection, physical-axis PSF metrics | detector effects, controller state |
 | `shwfs_ao.experiments` | versioned-profile assembly, preflight identity checks, shared SCAO runner, conditioned scenarios, and a retained legacy-shape error-budget adapter | new low-level physics kernels, output paths |
-| `shwfs_ao.validation` | physical estimators, regression governance, native-versus-HCIPy comparison | baseline mutation during ordinary runs |
+| `shwfs_ao.validation` | physical estimators, regression governance, native-versus-HCIPy comparison, and the validation-only references of ticket T2 (Fourier encircled energy, Richardson analysis, atmosphere pairing checks), none of which production code imports | baseline mutation during ordinary runs; changing a production metric definition |
 | `shwfs_ao.io` | strict profile/public-data/resource loading and explicit artifact serialization | physical propagation or control |
 | `shwfs_ao.experimental.pwfs` | frozen exploratory PWFS forward model | stable SH-WFS protocol conformance or validated PWFS control |
 | `shwfs_ao.runtime` | standard-library desktop resource policy: memory-budget preflight, native thread limits, process-group supervision | numerics (it never imports NumPy), physics |
