@@ -127,6 +127,9 @@ _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
     # Version 2 after its E3 magnitude scan: bright internal calibration source
     # and validity gating on the detector_covariance_v1 domain.
     ("det_emccd_12m_medium_derived", 2): "synthetic_presets/det_emccd_12m_medium_derived.v2.json",
+    # Version 3 after the m_AB = 11 excursion study: Tikhonov damping 0.1 and
+    # the reset-to-flat recovery policy.
+    ("det_emccd_12m_medium_derived", 3): "synthetic_presets/det_emccd_12m_medium_derived.v3.json",
 }
 
 BackendName = Literal["native", "hcipy"]

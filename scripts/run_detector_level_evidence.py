@@ -15,6 +15,9 @@ Every record stores the command, versions, configuration hashes and seeds.
 gated runs of prompt section 2.5.  They were enabled by the user on
 2026-10-16; anyone rerunning them must obtain the same enablement.
 
+``e3-v3`` and ``e4-v3`` rerun E3 and E4 on ``det_emccd_12m_medium_derived@3``
+(Tikhonov damping 0.1 and the reset policy), same seeds and settings as @2.
+
 ``e3-recovery --arm NAME`` reruns E3 on ``det_emccd_12m_medium_derived@2`` at
 m_AB 10, 11 and 12 over root seeds 21-25 with one closed-loop recovery policy
 (``controller.recovery``) set in code, or with none (``off``).  Every arm
@@ -375,6 +378,15 @@ def e2_12m(arguments: argparse.Namespace) -> None:
     print(result["slope_variance_ratio_measured_over_predicted"], result["command_trace_ratio"], flush=True)
 
 
+# Version 3 of the 12 m profile was published, and its E3/E4 rerun enabled,
+# by the user's go-ahead of 2026-10-16.
+V3_ENABLEMENT = "2026-10-16: the user's go-ahead for det_emccd_12m_medium_derived@3, which names its E3/E4 rerun"
+
+
+def _enablement(version: int) -> dict[str, str]:
+    return {"enabled_by_user": V3_ENABLEMENT} if version == 3 else {}
+
+
 def e3(arguments: argparse.Namespace, *, version: int = 1) -> None:
     from shwfs_ao.experiments.detector_level import with_magnitude
 
@@ -385,7 +397,7 @@ def e3(arguments: argparse.Namespace, *, version: int = 1) -> None:
         for seed in (21, 22, 23, 24, 25)
     ]
     name = "det09_e3_magnitude_scan_12m.json" if version == 1 else f"det09_e3_magnitude_scan_12m_v{version}.json"
-    _gated_series(name, f"e3 (profile @{version})", plan, n_steps=400, burn_in=100, execution=_summary_execution())
+    _gated_series(name, f"e3 (profile @{version})", plan, n_steps=400, burn_in=100, execution=_summary_execution(), **_enablement(version))
 
 
 def e4(arguments: argparse.Namespace, *, version: int = 1) -> None:
@@ -399,7 +411,7 @@ def e4(arguments: argparse.Namespace, *, version: int = 1) -> None:
             for seed in (31, 32, 33):
                 plan.append((f"{camera}@1 m{magnitude:g}", with_magnitude(cam_config, magnitude), seed))
     name = "det09_e4_camera_comparison_12m.json" if version == 1 else f"det09_e4_camera_comparison_12m_v{version}.json"
-    _gated_series(name, f"e4 (profile @{version})", plan, n_steps=400, burn_in=100, execution=_summary_execution())
+    _gated_series(name, f"e4 (profile @{version})", plan, n_steps=400, burn_in=100, execution=_summary_execution(), **_enablement(version))
 
 
 def e6(arguments: argparse.Namespace, *, version: int = 1) -> None:
@@ -565,6 +577,8 @@ def main() -> int:
         "e3-v2": lambda arguments: e3(arguments, version=2),
         "e4-v2": lambda arguments: e4(arguments, version=2),
         "e6-v2": lambda arguments: e6(arguments, version=2),
+        "e3-v3": lambda arguments: e3(arguments, version=3),
+        "e4-v3": lambda arguments: e4(arguments, version=3),
     }
     for name in commands:
         if name != "gain-scan":
