@@ -879,8 +879,8 @@ identity `2312502` with an empty source digest). Evidence:
 | --- | --- | --- |
 | S1 | `run_detector_level_evidence.py --output det09_e5_42m_noise_on_current_2312502.json --enabled-by-user "…" e5`: `det_ccd_42m_r3band_derived@1`, root seed 1, 2000 frames, burn-in 200, summary telemetry, regenerated bands | **done 18:51–19:52**: 173.2 nm, Strehl 0.753, valid 0.999; every scientific field of the run (residual and open-loop series, valid fractions, science metrics, lock flag) bit-identical to the 2026-10-16 record; 1.797 s/frame (machine shared, load about 4.6), 1.60 GiB `ru_maxrss`; code identity `2312502`, empty source digest. The S2 driver's protocol for seed 1 reproduces this record's protocol hash. The record's `argv` holds the absolute script path (the run was started by absolute path); the S2 and S3 records avoid it. Copied byte for byte into this branch's evidence directory; LIM-17, the README, the roadmap and the reference now cite it |
 | S2 | `s2/run_one_seed.py` through the same runner machinery: root seeds 2–6 (stage 1, five realizations), then 7–11 (ten), one fresh process each, same protocol as S1 | queued after the verification |
-| S3 | `scripts/eso_scao_paired_convergence_study.py`: paired pupil, WFS and science sampling scans on the 12 m and 42 m ESO tiers (protocol and criterion declared in its docstring) | 5 m self-check passed (pairing: first-frame open-loop 540.57 vs 540.05 nm at 12 vs 16 samples). **12 m done 20:13–20:24** (`s3/medium/paired_convergence_medium.json`, code identity `2312502`, clean): pupil 12→16→20 Strehl 0.7618→0.7603→0.7584, finest two 0.25 % (paired −0.25 ± 0.05 %), EE50 0.55 %: converged; WFS pad 2→3→4: 0.00 %: converged; science pad 2→3→4: Strehl identical (on-axis), EE50 32.56→31.65→30.35 mas, finest two 4.3 % (paired 4.27 ± 0.11 %): **EE50 not converged in science sampling**. 42 m queued after S2 |
-| S2 progress | — | Seed 2 ran 20:24–21:25: 175.0 nm, Strehl 0.748, 1.808 s/frame, 1.68 GiB (`det09_s2_42m_seed2.json`, relative `argv`, code identity `2312502`, clean). The queue then stopped: `run_s2.sh` assigned zsh's read-only `status` parameter after the seed, which aborts a zsh script (kept as written; the logged end of seed 2 was added afterwards). Because the queue still reported completion, the 42 m S3 study started at 21:26 as designed. `s2/run_s2_continue.sh` (the same driver, protocol and note; `rc` instead of `status`; skips recorded seeds) runs seeds 3–11 after S3 finishes |
+| S3 | `scripts/eso_scao_paired_convergence_study.py`: paired pupil, WFS and science sampling scans on the 12 m and 42 m ESO tiers (protocol and criterion declared in its docstring) | 5 m self-check passed (pairing: first-frame open-loop 540.57 vs 540.05 nm at 12 vs 16 samples). **12 m done 20:13–20:24** (`s3/medium/paired_convergence_medium.json`, code identity `2312502`, clean): pupil 12→16→20 Strehl 0.7618→0.7603→0.7584, finest two 0.25 % (paired −0.25 ± 0.05 %), EE50 0.55 %: converged; WFS pad 2→3→4: 0.00 %: converged; science pad 2→3→4: Strehl identical (on-axis), EE50 32.56→31.65→30.35 mas, finest two 4.3 % (paired 4.27 ± 0.11 %): **EE50 not converged in science sampling**. **42 m done 21:26–23:32** (`s3/full/paired_convergence_full.json`, same identity): pupil 12→16 Strehl 0.7832→0.7832 (0.01 % ± 0.04 %), EE50 0.01 %: converged; WFS pad 2→3→4 Strehl 0.04 %, EE50 0.12 %: converged; science pad 2→3→4 Strehl identical, EE50 8.684→8.473→8.384 mas, finest two 1.05 % ± 0.26 %: within 2 %, pad 2 reads 3.6 % high. Every 42 m run: no rejected solve, every frame usable, no DM saturation; 18 runs, 113 min, 1.57–3.16 GiB per run |
+| S2 progress | — | Seed 2 ran 20:24–21:25: 175.0 nm, Strehl 0.748, 1.808 s/frame, 1.68 GiB (`det09_s2_42m_seed2.json`, relative `argv`, code identity `2312502`, clean). The queue then stopped: `run_s2.sh` assigned zsh's read-only `status` parameter after the seed, which aborts a zsh script (kept as written; the logged end of seed 2 was added afterwards). Because the queue still reported completion, the 42 m S3 study started at 21:26 as designed. `s2/run_s2_continue.sh` (the same driver, protocol and note; `rc` instead of `status`; skips recorded seeds) ran seeds 3–11 from 23:33 to 08:19 on 2026-10-19, each exit 0. **Ensemble (seeds 2–11):** 173.59 ± 0.94 nm, Strehl 0.7511 ± 0.0018 (sample SD; SE 0.30 nm, 0.0006); range 172.5–175.0 nm and 0.748–0.753; none lost lock; lowest per-frame valid fraction 0.982; 3498–3661 s and 1.68–1.97 GiB per seed. Seed 1 (S1) is typical (z = −0.42). Every record relative `argv`, code identity `2312502`, clean |
 
 ## Post-audit reconciliation (2026-10-18)
 
@@ -912,3 +912,29 @@ The large experiments (S1, S2, S3) were produced by `2312502` in their own
 worktree; they are bound to that producer, not to these repairs. None of
 units A–C affects their configurations (CCD/EMCCD uniform maps or noiseless
 tiers, single-sample exposure, one record per seed).
+
+### Change unit U14: the S2 and S3 results in the documents (2026-10-19)
+
+The user asked to wait until the post-audit reconciliation run in this
+worktree (another session) had settled, and then to apply the S2/S3 update as
+its own change. That run was accepted and committed as `fab2f29`; this unit
+starts from it (the six documents below at `fab2f29` are byte-identical to the
+snapshot in `u14_s2_s3_docs/before/`), and at the user's request it is
+committed on its own, on top of `fab2f29`.
+
+- Records added, byte copies from the experiments worktree:
+  `docs/refactor/detector_level_evidence/det09_s2_42m_seed2.json` …
+  `det09_s2_42m_seed11.json` and
+  `docs/refactor/eso_scao_evidence/paired_convergence_medium.json`,
+  `paired_convergence_full.json`. None holds a local path; the runner test
+  that recomputes every saved record's protocol hashes and summaries passes
+  with the ten S2 records included.
+- Documents: LIM-07 (42 m S3 result, EE50 at the default science sampling as
+  an upper estimate) and LIM-17 (eleven-seed ensemble); the roadmap (C3 cost
+  1.6–2.0 GiB, the 42 m bullet, S2 met, S3 done for the ESO tiers); the
+  technical reference (claims row, §7.4 sampling, §7.5 spatial convergence,
+  §7.6, the S2 and S3 resource rows, the scenarios now measured); the ESO
+  notes (EE50 caveat and a sampling-convergence section); the README (42 m
+  ensemble, convergence paragraph); this record.
+- Patch of exactly this unit: `u14_s2_s3_docs/u14.patch` (tracked files) and
+  `u14_s2_s3_docs/added_records.txt` (the twelve records with SHA-256).

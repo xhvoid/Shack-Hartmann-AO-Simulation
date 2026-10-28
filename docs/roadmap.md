@@ -18,7 +18,7 @@ concrete run. Costs are categories, not quotes:
 | C0 | documentation or code reading only |
 | C1 | bounded tests or 2 m / `ci` fixtures, minutes |
 | C2 | one governed 12 m study, roughly 1–3 hours serial |
-| C3 | one governed 42 m realization, roughly 1 hour and 1.7 GiB |
+| C3 | one governed 42 m realization, roughly 1 hour and 1.6–2.0 GiB |
 | C4 | several 42 m realizations or a full convergence study, many hours |
 | C5 | new model implementation plus validation, or external data |
 
@@ -30,7 +30,7 @@ maintainability.
 
 Neither changes through rewording; only a new evidence record can move them.
 
-- **The 42 m noise-on result is one realization.**
+- **The 42 m noise-on result now has a realization ensemble.**
   `det_ccd_42m_r3band_derived@1`, 2000 frames (burn-in 200), root seed 1, one
   realization: 173.2 nm residual, long-exposure Strehl 0.753 at 2.2 µm,
   1.749 s per frame, 1.61 GiB peak. The run started on 2026-10-16 at 02:51
@@ -38,8 +38,11 @@ Neither changes through rewording; only a new evidence record can move them.
   [`det09_e5_42m_noise_on.json`](refactor/detector_level_evidence/det09_e5_42m_noise_on.json),
   predates the runner's code-identity field. Its rerun on current code (S1,
   2026-10-18, revision `2312502`) reproduced every recorded value bit for bit:
-  [`det09_e5_42m_noise_on_current_2312502.json`](refactor/detector_level_evidence/det09_e5_42m_noise_on_current_2312502.json). Its realization scatter
-  is S2.
+  [`det09_e5_42m_noise_on_current_2312502.json`](refactor/detector_level_evidence/det09_e5_42m_noise_on_current_2312502.json).
+  Ten further realizations on the same code (S2, root seeds 2–11) give
+  173.6 ± 0.9 nm and Strehl 0.751 ± 0.002 (sample standard deviations); seed 1
+  is typical of them. The ensemble is one profile and one configuration, and
+  every run repeats the fastest layers' periodic bands (LIM-08, S11).
 - **The 12 m pure inverse-photon law failed.** The isolated detector-noise
   variance at 12 m scales as N_e^(−1.028 ± 0.010), 2.7 standard errors from
   −1: a failure of the predeclared test. The noise model predicts a steeper
@@ -52,8 +55,8 @@ Neither changes through rewording; only a new evidence record can move them.
 | ID | Question | Affected path | Proposed experiment | Evidence needed | Success criterion | Priority | Cost |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | S1 | Does the 42 m noise-on result hold on the current code? | `det_ccd_42m_r3band_derived@1`; `scripts/run_detector_level_evidence.py e5` | The same configuration, seed 1, 2000 frames, summary telemetry, regenerated atmosphere bands, written to a new record with `--output-dir` | A new record whose code identity names the current revision | The record exists; any change from 173.2 nm / 0.753 is reported with its cause, not tuned away. **Met 2026-10-18:** bit-identical | P1 | C3 |
-| S2 | How large is the realization scatter at 42 m? | same profile | Five, then ten, serial realizations (new root seeds), each in a fresh process | Per-seed residual and Strehl, seed scatter, per-run peak RSS | Mean and seed standard deviation reported; no ensemble claim before this exists. **In progress (producer `2312502`):** seeds 1 (S1) and 2 recorded (173.2 and 175.0 nm, Strehl 0.753 and 0.748); seeds 3–11 queued (status of 2026-10-18, 23:10) | P2 | C4 |
-| S3 | Are quoted metrics converged in spatial sampling? | `eso_scao_*` tiers, the 12 m detector profiles | Refine pupil, WFS and science sampling one at a time, holding the physical field of view fixed, with paired atmospheric inputs | Metric changes with uncertainty at medium and full scale | Changes below the declared 2 % Strehl/EE50 criterion, or the quoted scale is restated as unconverged. **12 m done (producer `2312502`, `scripts/eso_scao_paired_convergence_study.py`):** Strehl converged in all three samplings; EE50 not converged in science sampling (4.3 %); 42 m running (status of 2026-10-18, 23:10) | P2 | C4 |
+| S2 | How large is the realization scatter at 42 m? | same profile | Five, then ten, serial realizations (new root seeds), each in a fresh process | Per-seed residual and Strehl, seed scatter, per-run peak RSS | Mean and seed standard deviation reported; no ensemble claim before this exists. **Met 2026-10-19 (producer `2312502`, clean):** seeds 2–11 give 173.59 ± 0.94 nm and Strehl 0.7511 ± 0.0018 (sample SD; SE 0.30 nm and 0.0006), no lost lock, lowest per-frame valid fraction 0.982, 1.68–1.97 GiB per fresh process; seed 1 (S1) is typical (z = −0.4). Records `det09_s2_42m_seed2.json` … `seed11.json` | P2 | C4 |
+| S3 | Are quoted metrics converged in spatial sampling? | `eso_scao_*` tiers, the 12 m detector profiles | Refine pupil, WFS and science sampling one at a time, holding the physical field of view fixed, with paired atmospheric inputs | Metric changes with uncertainty at medium and full scale | Changes below the declared 2 % Strehl/EE50 criterion, or the quoted scale is restated as unconverged. **Done for the ESO tiers 2026-10-19 (producer `2312502`, `scripts/eso_scao_paired_convergence_study.py`, records `paired_convergence_medium.json`, `paired_convergence_full.json`):** peak Strehl converged in pupil, WFS and science sampling at 12 m and 42 m (finest two within 0.25 %); EE50 converged in pupil and WFS sampling, pixel-limited in science sampling (pad 2 reads 7.3 % high at 12 m and 3.6 % at 42 m against pad 4; at 12 m pads 3 and 4 still differ by 4.3 %), so pad-2 EE50 values are restated as unconverged. Not covered: the 12 m detector profiles and pupil sampling above 16 at 42 m | P2 | C4 |
 | S4 | Why does the noise law depart from the model? | `experiments.detector_level.paired_noise_run`, `detector.noise_model` | Repeat the 12 m points near m_AB 9–10 with more seeds; split ΔV by lenslet SNR, clipping and support flags; compare with the per-lenslet model sum | Isolated ΔV per lenslet class with uncertainty | The 6.7 % dip and the 0.95–0.96 power are explained, or bounded and kept as unexplained | P2 | C2 |
 | S5 | What sets the faint-end limit, camera or control? | `det_emccd_12m_medium_derived@3`, `controller.recovery`, reconstructor damping | Scan m_AB 11–12 with predeclared damping, gain and recovery arms; inspect validity and reconstruction telemetry, not the `lost_lock` heuristic alone | Per-frame validity, usable fraction and residual telemetry | A limit attributed to sensing (no lenslet in the supported domain) or to control, with evidence | P2 | C2 |
 | S6 | Is the 42 m profile under-regularized like 12 m @2? | `det_ccd_42m_r3band_derived@1` (Tikhonov damping 0.001, like @2) | Diagnose waffle-mode response and damping on the `ci`/12 m derived geometry first; then a gated 42 m arm if warranted | Singular spectrum and waffle response at 42 m geometry | Either damping is shown adequate at 42 m, or a new profile version is proposed with its own predeclared evidence | P2 | C1, then C3 |

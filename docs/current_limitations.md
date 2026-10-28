@@ -297,12 +297,22 @@ and LIM-07.
   4). Quoted EE50 values at the default science sampling are therefore
   unconverged. The 42 m scans were still running; this entry claims nothing
   about them.
+- Updated 2026-10-19 (roadmap S3, 42 m, the same protocol): peak Strehl
+  converged in pupil (12 → 16 samples: 0.7832 → 0.7832, 0.01 % ± 0.04 %), WFS
+  (0.04 %) and science sampling (identical, it is evaluated on axis); EE50
+  converged in pupil and WFS sampling and within 2 % between science pads 3
+  and 4 (1.05 % ± 0.26 %), but pad 2 reads 3.6 % above pad 4 (7.3 % at 12 m).
+  So the quoted Strehl values of the ESO tiers are converged in sampling, and
+  EE50 values at the default science sampling are upper estimates. Not
+  covered: the 12 m detector profiles and pupil sampling beyond 16 at 42 m.
 - **Consequence / next evidence:** Successful execution and solver convergence
   do not establish spatial accuracy. Refine pupil, WFS and science sampling
   separately, hold physical field of view fixed, and compare matched inputs
   with sufficient statistical precision.
 - **Evidence:** [Benchmark convergence record](refactor/ESO_SCAO_DEVELOPMENT_STATUS.md),
-  [R3-band sampling decision](refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md).
+  [R3-band sampling decision](refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md),
+  paired study [12 m](refactor/eso_scao_evidence/paired_convergence_medium.json)
+  and [42 m](refactor/eso_scao_evidence/paired_convergence_full.json).
 
 ### LIM-08 — Long runs and short demonstrations have statistical limits
 
@@ -410,11 +420,19 @@ and LIM-07.
   Strehl and the lock flag (173.2 nm, 0.753). Only the timing (1.797 s per
   frame on a shared machine) and the peak memory (1.60 GiB) differ. The result
   therefore holds on current code.
-- **Consequence / next evidence:** Quote it as a single realization on current
-  code. The realization ensemble (roadmap S2) is a governed series; until it
-  exists, no 42 m statement covers the realization scatter.
+- **Update 2026-10-19 (roadmap S2):** ten further realizations with the same
+  protocol and code (root seeds 2–11, one fresh process each) give
+  173.6 ± 0.9 nm and Strehl 0.751 ± 0.002 (sample standard deviations; range
+  172.5–175.0 nm and 0.748–0.753). None lost lock, and the lowest per-frame
+  valid fraction is 0.982. Seed 1 is typical of them.
+- **Consequence / next evidence:** Quote the 42 m result as this eleven-seed
+  ensemble of one profile and one configuration. Every run still repeats the
+  fastest layers' periodic bands (LIM-08, roadmap S11), and the 0.001 damping
+  question is open (roadmap S6).
 - **Evidence:** [E5 record](refactor/detector_level_evidence/det09_e5_42m_noise_on.json),
   [S1 rerun](refactor/detector_level_evidence/det09_e5_42m_noise_on_current_2312502.json),
+  S2 records `det09_s2_42m_seed2.json` … `det09_s2_42m_seed11.json` in the same
+  directory,
   [detector execution record](refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md).
 
 ### LIM-18 — The 12 m isolated detector noise departs from a pure inverse-photon law
