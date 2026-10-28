@@ -520,7 +520,11 @@ provenance), which is
 development version (`b3a1f84cc465c8994c2cb8578e8abf7ab8ec4d4171949955b24d1d6b52b9039d` over ten
 before the correction); and the generation identity recorded in this dataset, which stays
 `6e1ad796b7ce0c0ef695b2117ca87f644754dd65b95f2ac01392ebb11ffe2c8f` (aggregate) with
-`long_export.py` at `c6c53ce6…`. Nothing was exported with the development versions. `rms_diagnostics.py`, which wrote
+`long_export.py` at `c6c53ce6…`. Nothing was exported with the development versions. **Offline cleanup, 2026-10-27:** the
+v1 exporter `render.py` and the shared rule `web_contract.py`, both listed in `CODE_FILES`, changed for the v1
+producer check (`long_export.py` itself unchanged at `67692bca…`), so the development aggregate becomes
+`c534080a59f63859c0b24090ae60808372a357582d1e483385052a1c7964178e`; the generation identity of this dataset stays
+`6e1ad796…`; nothing was exported. `rms_diagnostics.py`, which wrote
 the RMS derivative, is
 `e7e343b4f8dac065f6714618f379f6c245b92040f091fb06f0e64ca85d202cf6`.
 
