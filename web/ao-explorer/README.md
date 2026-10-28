@@ -177,6 +177,22 @@ checks the bundle's structure and semantics; add
 evidence. Its rules were written for the 180-frame schemas (`*.v1`); it has
 not been extended to, or run on, the 1000-frame dataset (`*.v2`) or its galaxy
 derivative.
+Because the entry names that `*.v2` manifest, `validate.py` currently stops at
+the entry ("unsupported manifest schema").
+
+```bash
+python scripts/ao_explorer/check_bindings.py --web-dir web/ao-explorer
+```
+
+checks the bindings of every bundle the entry names (the 2 m dataset and each
+entry object with a `manifest`): each manifest's size and SHA-256 against the
+entry, identities against directory names, every listed member and every
+hash-bound reference in the manifest against its recorded size and SHA-256,
+and no unlisted file or symlink in a bundle's own directory. Members listed in
+place elsewhere are verified; directories that no entry owns are listed for
+information. It checks bindings, not content semantics, needs only the
+standard library, and runs in the Pages workflow's validation job and before
+every upload.
 
 ## The fixed 42 m recording
 

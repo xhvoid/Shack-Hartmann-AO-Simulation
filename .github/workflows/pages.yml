@@ -57,6 +57,8 @@ jobs:
       - run: python -m pip check
       - name: Check content-addressed frontend
         run: python scripts/ao_explorer/site_build.py --web-dir web/ao-explorer
+      - name: Check every bundle binding
+        run: python scripts/ao_explorer/check_bindings.py --web-dir web/ao-explorer
       - name: Validate committed distribution
         run: python scripts/ao_explorer/validate.py --web-dir web/ao-explorer
       - name: Run explorer contract checks and report evidence skips
@@ -85,6 +87,10 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
+      # Runs on every publication, including a manual one without the validation job:
+      # standard library only, it refuses a changed, missing or unlisted bundle file.
+      - name: Check every bundle binding before upload
+        run: python3 scripts/ao_explorer/check_bindings.py --web-dir web/ao-explorer
       - name: Configure Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - name: Upload committed explorer
