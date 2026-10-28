@@ -525,7 +525,13 @@ the RMS derivative, is
   not determined, one on-axis kernel over the field.
 - `validate.py` was written for the 180-frame (`*.v1`) schemas. It was not
   extended to, or run on, this dataset or its derivatives, and no browser or
-  runtime check was made of the updated page.
+  runtime check was made of the updated page. **Update 2026-10-27:**
+  `validate.py` now selects this dataset's contract from the committed schemas
+  (`scripts/ao_explorer/web_contract.py`, values from `long_series.py`) and
+  accepted the committed bundle as it stands, verifying the preserved
+  dataset's Research Results in place; the galaxy and RMS derivatives are still
+  covered only by `check_bindings.py`, and raw-evidence mode was not run
+  against the archives.
 - The RMS diagnostic describes the saved wavefronts only. Fitted tilt is not
   image-centroid motion, and the decomposition does not attribute causes.
 
