@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import subprocess
 import sys
 import time
 
@@ -207,7 +208,7 @@ def test_warning_pressure_stops_the_group(tmp_path: Path):
 
 
 def test_timeout_terminates_the_whole_process_group_including_grandchildren(
-    tmp_path: Path,
+    tmp_path: Path, orphan_reaper
 ):
     pid_file = tmp_path / "grandchild.pid"
     script = (
@@ -227,26 +228,69 @@ def test_timeout_terminates_the_whole_process_group_including_grandchildren(
     assert result.status == "INTERRUPTED"
     assert "wall-clock" in result.reason
     grandchild = int(pid_file.read_text())
-    deadline = time.monotonic() + 5.0
-    while time.monotonic() < deadline:
-        try:
-            os.kill(grandchild, 0)
-        except ProcessLookupError:
-            break
-        time.sleep(0.05)
-    else:
-        pytest.fail("grandchild survived process-group cleanup")
+    assert _wait_until_dead(grandchild), "grandchild survived process-group cleanup"
+
+
+def _process_state(pid: int) -> str:
+    completed = subprocess.run(
+        ["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True
+    )
+    return completed.stdout.strip()
 
 
 def _wait_until_dead(pid: int, *, seconds: float = 5.0) -> bool:
+    """Whether ``pid`` stops running within ``seconds``.
+
+    The check never relies on PID 1 reaping orphans, which some containers
+    never do.  A process this test may reap (a child, or an orphan inherited
+    through ``orphan_reaper``) is reaped here; any other process that has
+    exited counts as stopped once it is a zombie.
+    """
+
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
+        try:
+            if os.waitpid(pid, os.WNOHANG)[0] == pid:
+                return True
+        except ChildProcessError:
+            pass  # not ours to reap
         try:
             os.kill(pid, 0)
         except ProcessLookupError:
             return True
+        except PermissionError:
+            pass  # macOS answers EPERM for a zombie; the state decides
+        if _process_state(pid).startswith("Z"):
+            return True
         time.sleep(0.05)
     return False
+
+
+@pytest.fixture
+def orphan_reaper():
+    """Make this test the reaper of the processes it orphans (Linux).
+
+    These tests stop a supervised child while its workers still run, so the
+    workers are orphaned.  As a child subreaper (Linux 3.4+) the test
+    process inherits them and ``_wait_until_dead`` reaps them, instead of
+    leaving them to a PID 1 that may never reap.  Elsewhere the system
+    reaper (launchd on macOS) collects them.  Yields whether it is active.
+    """
+
+    if not sys.platform.startswith("linux"):
+        yield False
+        return
+    import ctypes
+
+    libc = ctypes.CDLL(None, use_errno=True)
+    pr_set_child_subreaper = 36
+    if libc.prctl(pr_set_child_subreaper, 1, 0, 0, 0) != 0:
+        yield False
+        return
+    try:
+        yield True
+    finally:
+        libc.prctl(pr_set_child_subreaper, 0, 0, 0, 0)
 
 
 def _spawning_child(pid_file: Path, done_file: Path, *, sleep_s: float) -> str:
@@ -263,7 +307,9 @@ def _spawning_child(pid_file: Path, done_file: Path, *, sleep_s: float) -> str:
     )
 
 
-def test_workers_left_by_the_child_stay_supervised_until_they_exit(tmp_path: Path):
+def test_workers_left_by_the_child_stay_supervised_until_they_exit(
+    tmp_path: Path, orphan_reaper
+):
     pid_file, done_file = tmp_path / "worker.pid", tmp_path / "worker.done"
     result = run_supervised(
         [sys.executable, "-c", _spawning_child(pid_file, done_file, sleep_s=1.0)],
@@ -279,7 +325,9 @@ def test_workers_left_by_the_child_stay_supervised_until_they_exit(tmp_path: Pat
     assert _wait_until_dead(int(pid_file.read_text()), seconds=0.5)
 
 
-def test_workers_left_by_the_child_are_stopped_at_the_limits(tmp_path: Path):
+def test_workers_left_by_the_child_are_stopped_at_the_limits(
+    tmp_path: Path, orphan_reaper
+):
     pid_file, done_file = tmp_path / "worker.pid", tmp_path / "worker.done"
     result = run_supervised(
         [sys.executable, "-c", _spawning_child(pid_file, done_file, sleep_s=60.0)],
@@ -301,6 +349,7 @@ pid_file = sys.argv[1]
 joiner = "import os; os.setpgid(0, int(os.environ['JOIN_PGID']))"
 parent = (
     "import os, subprocess, sys, time\\n"
+    "os.setpgid(0, 0)\\n"  # a group of its own; Popen(process_group=) needs 3.11
     f"child = subprocess.Popen([sys.executable, '-c', {joiner!r}])\\n"
     f"open({pid_file!r}, 'w').write(f'{{os.getpid()}} {{child.pid}}')\\n"
     "time.sleep(60)\\n"  # never reaps its child
@@ -309,7 +358,6 @@ parent = (
 # joins the supervised group, exits there, and stays a zombie.
 subprocess.Popen(
     [sys.executable, "-c", parent],
-    process_group=0,
     env={**os.environ, "JOIN_PGID": str(os.getpgid(0))},
 )
 deadline = time.monotonic() + 20.0
@@ -327,12 +375,16 @@ sys.exit(3)
 '''
 
 
-def test_a_zombie_left_in_the_group_does_not_hold_a_finished_job(tmp_path: Path):
+def test_a_zombie_left_in_the_group_does_not_hold_a_finished_job(
+    tmp_path: Path, orphan_reaper
+):
     """A worker that has exited but is never reaped must not count as running.
 
     In a container whose PID 1 does not reap orphans, finished workers stay
     zombies.  The test builds that state directly: the zombie sits in the
     supervised group while its parent, outside the group, never reaps it.
+    Cleanup does not rely on PID 1 either: on Linux this test inherits the
+    orphaned parent and its zombie (``orphan_reaper``) and reaps both.
     """
 
     leader, pid_file = tmp_path / "leader.py", tmp_path / "pids"
@@ -353,12 +405,10 @@ def test_a_zombie_left_in_the_group_does_not_hold_a_finished_job(tmp_path: Path)
         if pid_file.exists() and len(pid_file.read_text().split()) == 2:
             os.kill(int(pid_file.read_text().split()[0]), signal.SIGKILL)
     assert _wait_until_dead(parent_pid)
-    assert _wait_until_dead(zombie_pid)  # reaped once its parent is gone
+    assert _wait_until_dead(zombie_pid)
 
 
 def test_stopping_a_group_of_zombies_neither_raises_nor_waits_out_the_grace():
-    import subprocess
-
     import shwfs_ao.runtime.resource_guard as guard
 
     # A group leader that has exited and is not yet reaped: a zombie-only
@@ -444,9 +494,7 @@ def test_a_child_ignoring_sigterm_is_killed_after_the_grace_period(tmp_path: Pat
     assert time.monotonic() - started < 10.0
 
 
-def test_group_rss_aggregates_every_process_in_the_group(tmp_path: Path):
-    import subprocess
-
+def test_group_rss_aggregates_every_process_in_the_group(tmp_path: Path, orphan_reaper):
     script = (
         "import subprocess, sys, time;"
         "c = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(20)']);"
@@ -458,6 +506,7 @@ def test_group_rss_aggregates_every_process_in_the_group(tmp_path: Path):
         text=True,
         start_new_session=True,
     )
+    grandchild = None
     try:
         assert process.stdout is not None
         grandchild = int(process.stdout.readline())
@@ -473,6 +522,8 @@ def test_group_rss_aggregates_every_process_in_the_group(tmp_path: Path):
     finally:
         os.killpg(process.pid, signal.SIGKILL)
         process.wait(timeout=5)
+        if grandchild is not None:
+            assert _wait_until_dead(grandchild)
 
 
 def test_argument_validation_refuses_unsafe_supervision_settings(tmp_path: Path):
