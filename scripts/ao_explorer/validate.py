@@ -50,7 +50,11 @@ claimed; the report says so.
 ``--record`` writes the external validation record (bound to the manifest's
 SHA-256; the manifest never hashes itself).  Exit status 0 means every check
 passed; 1 lists the failures; 2 means the bundle could not be read against a
-supported contract.
+supported contract.  A case record whose ``time_domain`` is absent or not an
+object is a recorded failure of that case (the report completes with exit 1,
+naming the case and what was recorded; the checks that would read fields from
+it are reported as not evaluated instead of reading the value), whereas an
+unreadable entry, manifest or JSON member is the fatal exit 2.
 """
 
 from __future__ import annotations
@@ -149,6 +153,32 @@ def _finite(value: Any) -> bool:
 
 def _hex64(value: Any) -> bool:
     return isinstance(value, str) and bool(_HEX64.fullmatch(value))  # fullmatch: "$" alone would admit a trailing newline
+
+
+def _json_kind(value: Any) -> str:
+    """The JSON kind of a decoded value, for a refusal message: null, boolean, integer, number, string, array or object."""
+
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, int):
+        return "integer"
+    if isinstance(value, float):
+        return "number"
+    if isinstance(value, str):
+        return "string"
+    if isinstance(value, list):
+        return f"array ({len(value)} items)"
+    if isinstance(value, dict):
+        return "object"
+    return type(value).__name__
+
+
+def _recorded_kind(record: Any, key: str) -> str:
+    """How ``key`` is recorded in ``record``: ``absent`` when the key is missing, else the JSON kind of its value."""
+
+    return "absent" if not isinstance(record, dict) or key not in record else _json_kind(record[key])
 
 
 def _close(a: Any, b: float, rel: float = 1e-9, absolute: float = 0.0) -> bool:
@@ -438,7 +468,7 @@ class Checker:
                        "Research Results are referenced in place from the preserved previous dataset", area="manifest")
             self.check(isinstance(m.get("results_origin"), str) and previous_name is not None and previous_name in m["results_origin"], "results_origin names the previous dataset", area="manifest")
         if c.time_domain_in_manifest:
-            self.check_time_domain(m.get("time_domain"), "manifest")
+            self.check_time_domain(m.get("time_domain"), "manifest", _recorded_kind(m, "time_domain"))
         if c.playback_required:
             self.check_playback(m.get("playback"))
         if c.screen_grid_size is not None:
@@ -450,18 +480,25 @@ class Checker:
             self.check(isinstance(series_id, str) and dataset_id == f"{series_id}-e{key}" and len(key) == 12 and all(ch in "0123456789abcdef" for ch in key),
                        "dataset id is the series id with a 12-hex export key", area="manifest")
 
-    def check_time_domain(self, t: Any, where: str) -> None:
+    def check_time_domain(self, t: Any, where: str, recorded: Optional[str] = None) -> bool:
+        """The time-domain fields of ``t`` against the contract; whether ``t`` is an object whose fields were read.
+
+        When ``t`` is not an object (absent, null, an array, a scalar) the one recorded failure names what was
+        recorded (``recorded``, else its JSON kind) and nothing is read from it; the caller must not read fields
+        from the value either (review R25-01).
+        """
+
         c = self.c
         if not isinstance(t, dict):
-            self.check(False, f"{where}: time domain is an object", area="time_domain")
-            return
+            self.check(False, f"{where}: time domain is an object (recorded {recorded or _json_kind(t)})", area="time_domain")
+            return False
         self.check(t.get("frames") == c.frames and t.get("burn_in_frames") == c.burn_in, f"{where}: {c.frames} frames, burn-in {c.burn_in}", area="time_domain")
         self.check(t.get("frame_rate_hz") == c.frame_rate_hz and t.get("frame_period_s") == c.frame_period_s, f"{where}: frame rate {c.frame_rate_hz:g} Hz, period {c.frame_period_s:g} s", area="time_domain")
         self.check(t.get("analysis_window") == list(c.analysis_window) and t.get("analysis_count") == c.analysis_count,
                    f"{where}: analysis window [{c.burn_in}, {c.frames}), {c.analysis_count} samples", area="time_domain")
         self.check(t.get("sampling") == web_contract.SAMPLING_RULE, f"{where}: sampling rule is one atmosphere sample per frame at its start", area="time_domain")
         if not c.time_domain_in_manifest:
-            return
+            return True
         last_time = c.display_time(c.last_frame)
         times = t.get("sample_times_s")
         self.check(t.get("frame_indices") == [0, c.last_frame] and isinstance(times, list) and len(times) == 2 and times[0] == 0.0 and _close(times[1], last_time, 1e-12)
@@ -476,6 +513,7 @@ class Checker:
         self.check(t.get("display_rule") == c.display_rule, f"{where}: display rule text is the exporter's", area="time_domain")
         self.check(t.get("retained_full_precision_frames") == c.frames, f"{where}: all {c.frames} frames retained at full precision", area="time_domain")
         self.check(isinstance(t.get("analysis_rule"), str) and "predeclared" in t["analysis_rule"], f"{where}: analysis window declared as predeclared", area="time_domain")
+        return True
 
     def check_playback(self, p: Any) -> None:
         c = self.c
@@ -591,16 +629,23 @@ class Checker:
                    f"{case_id}: science wavelength {_wavelength(parameters.get('explorer_science_wavelength_m'))} is {_wavelength(SCIENCE_WAVELENGTH_M)}", area="case")
         self.check(parameters.get("n_steps") == c.frames and parameters.get("frame_rate_hz") == c.frame_rate_hz and parameters.get("root_seed") == protocol.ROOT_SEED,
                    f"{case_id}: effective parameters record {c.frames} frames at {c.frame_rate_hz:g} Hz with root seed {protocol.ROOT_SEED}", area="case")
-        t = case["time_domain"]
+        # The time domain is read only after its container is judged (review R25-01): an absent, null, array or
+        # scalar ``time_domain`` is a recorded failure of this case, and the checks that read its fields are reported
+        # as not evaluated rather than reading from the value or from a substitute.
+        t = case.get("time_domain")
+        time_domain_kind = _recorded_kind(case, "time_domain")
         movie = list(c.display_indices)
-        self.check_time_domain(t, case_id)
-        self.check(t.get("movie_indices") == movie, f"{case_id}: movie indices equal the frozen rule ({c.display_count} unique, incl. 0, {c.burn_in}, {c.last_frame})", area="time_domain")
-        movie_times = t.get("movie_times_s")
-        self.check(isinstance(movie_times, list) and len(movie_times) == c.display_count and all(_close(time, c.display_time(index), 1e-12) for time, index in zip(movie_times, movie)),
-                   f"{case_id}: movie times are the frame starts", area="time_domain")
-        if c.time_domain_in_manifest:
-            without_movie = {key: value for key, value in t.items() if key not in ("movie_indices", "movie_times_s")}
-            self.check(without_movie == self.manifest.get("time_domain"), f"{case_id}: case time domain equals the manifest time domain", area="time_domain")
+        if self.check_time_domain(t, case_id, time_domain_kind):
+            self.check(t.get("movie_indices") == movie, f"{case_id}: movie indices equal the frozen rule ({c.display_count} unique, incl. 0, {c.burn_in}, {c.last_frame})", area="time_domain")
+            movie_times = t.get("movie_times_s")
+            self.check(isinstance(movie_times, list) and len(movie_times) == c.display_count and all(_close(time, c.display_time(index), 1e-12) for time, index in zip(movie_times, movie)),
+                       f"{case_id}: movie times are the frame starts", area="time_domain")
+            if c.time_domain_in_manifest:
+                without_movie = {key: value for key, value in t.items() if key not in ("movie_indices", "movie_times_s")}
+                self.check(without_movie == self.manifest.get("time_domain"), f"{case_id}: case time domain equals the manifest time domain", area="time_domain")
+        else:
+            self.check(False, f"{case_id}: the case time domain's movie indices, movie times and contract fields are evaluated "
+                              f"(not evaluated: time_domain is {time_domain_kind}, not an object)", area="time_domain")
         self.check(case.get("validation", {}).get("producer_checks_passed") is True, f"{case_id}: the producer's record checks passed", area="case")
 
         images = case["images"]
@@ -864,7 +909,7 @@ class Checker:
         else:
             self.check(provenance.get("job_id") == f"case-{case_id}", f"{case_id}: provenance names the case job", area="provenance")
             if c.producer_checks is not None:
-                self.check_v1_producer_checks(case_id, provenance.get("checks"), case.get("time_domain"))
+                self.check_v1_producer_checks(case_id, provenance.get("checks"), case.get("time_domain"), _recorded_kind(case, "time_domain"))
 
     def check_mean_archive_binding(self, case_id: str, observation: Dict[str, Any], provenance: Dict[str, Any]) -> None:
         """The observation parents' file digest is the mean archive's digest the provenance binds (review R18-03).
@@ -886,7 +931,7 @@ class Checker:
             self.check(name == MEAN_ARCHIVE and _hex64(digest) and digest == recorded,
                        f"{case_id}: {role} observation parent's file digest equals the provenance's {MEAN_ARCHIVE} digest (parent {name!r} {str(digest)[:12]}, provenance {str(recorded)[:12]})", area="provenance")
 
-    def check_v1_producer_checks(self, case_id: str, checks: Any, time_domain: Any) -> None:
+    def check_v1_producer_checks(self, case_id: str, checks: Any, time_domain: Any, recorded: Optional[str] = None) -> None:
         """The v1 provenance's copy of the producer's record checks, judged on the window the case record names.
 
         The v1 exporter (``render.py``) applies the shared contract at the export boundary; the validator applies the
@@ -898,8 +943,10 @@ class Checker:
         rule compares the recorded values with the production contract's ``[40, 180)`` and 140 frames.
         """
 
-        record = time_domain if isinstance(time_domain, dict) else {}
-        shown = ", ".join(f"{key} {record.get(key)!r}" for key in V1_TIME_DOMAIN_FIELDS)
+        if isinstance(time_domain, dict):
+            shown = ", ".join(f"{key} {time_domain.get(key)!r}" for key in V1_TIME_DOMAIN_FIELDS)
+        else:
+            shown = f"time_domain is {recorded or _json_kind(time_domain)}, not an object"
         self.check(v1_window_consistent(time_domain),
                    f"{case_id}: the case record's time domain names the analysis window [burn_in_frames, frames) with analysis_count = frames - burn_in_frames "
                    f"as exact integers (recorded {shown})", area="provenance")
