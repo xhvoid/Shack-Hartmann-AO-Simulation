@@ -101,7 +101,7 @@ inheritance is not required.
 | `ShackHartmannOpticsBackend` | `backend_name`, `config_hash`, `spot_intensities(residual_opd_m)` | returns `SpotIntensityResult`; owns no detector or validity behavior |
 | `WavefrontSensor` | `config_hash`, `row_ids`, `measure(residual_opd_m, random_streams=..., include_noise=...)` | returns `WfsMeasurement` in the immutable row layout |
 | `DeformableMirrorModel` | `config_hash`, `n_actuators`, `actuator_ids`, `controllable_actuator_ids`, `opd_from_commands(DmCommandVector)` | validates full ordered IDs and returns correction OPD plus requested/applied diagnostics |
-| `Reconstructor` | `matrix_hash`, `reconstruct(MeasurementVector)` | returns `ReconstructionEstimate` or `None` when coverage/rank policy fails |
+| `Reconstructor` | `config_hash`, `matrix_hash`, `reconstruct(MeasurementVector)` | returns `ReconstructionEstimate` or `None` when coverage/rank policy fails |
 | `CommandProjector` | `config_hash`, `input_coordinate_ids`, `input_coordinate_kind`, `input_coordinate_unit`, `output_actuator_ids`, `project(estimate)` | checks coordinate identity/kind/unit and returns a full-layout `DmCommandVector` |
 | `Controller` | `config_hash`, `actuator_ids`, `reset()`, `update(delta_or_none)`, `accept_applied_commands(commands)` | sole gain/leak/latency owner; `None` advances the queue; applied DM command becomes next state |
 | `SciencePropagator` | `backend_name`, `config_hash`, `psf_from_opd(opd_m, wavelength_m)` | explicit wavelength; returns physical-axis `PsfResult` |

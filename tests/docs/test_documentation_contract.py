@@ -116,6 +116,52 @@ def test_every_public_protocol_and_member_is_documented():
             )
 
 
+def test_each_protocol_row_lists_that_protocol_s_own_members():
+    """Presence somewhere on the page is not the same as presence in the row.
+
+    The tables are what a reader consults to learn a protocol's surface, and a
+    member named in some other protocol's row satisfies a whole-page search
+    while leaving its own row wrong — which is how `Reconstructor.config_hash`
+    went missing from the row that is supposed to enumerate it, in a document
+    that mentions `config_hash` more than a dozen times.  Each row is therefore
+    matched against the members of the protocol it names.
+    """
+
+    text = (ROOT / "docs" / "backends.md").read_text(encoding="utf-8")
+    documented = [
+        *(getattr(core_protocols, name) for name in core_protocols.__all__),
+        CentroidEstimator,
+        DmBackend,
+        ProbeBasis,
+        ScaoBackendComponentFactory,
+    ]
+    by_name = {protocol.__name__: protocol for protocol in documented}
+
+    rows_seen: set[str] = set()
+    for line in text.splitlines():
+        if not line.startswith("| `"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        name = cells[0].strip("`")
+        protocol = by_name.get(name)
+        if protocol is None or len(cells) < 2:
+            continue
+        rows_seen.add(name)
+        row = cells[1]
+        for member in _protocol_members(protocol):
+            assert re.search(rf"\b{re.escape(member)}\b", row), (
+                f"docs/backends.md row for {name} omits {name}.{member}; "
+                f"the row lists {row!r}"
+            )
+
+    # A row that stopped being found would silently stop being checked, so the
+    # rows themselves are inventoried rather than assumed present.
+    missing_rows = sorted(set(by_name) - rows_seen)
+    assert not missing_rows, (
+        f"docs/backends.md has no protocol table row for {missing_rows}"
+    )
+
+
 def test_every_shared_result_field_is_documented():
     text = (ROOT / "docs" / "backends.md").read_text(encoding="utf-8")
     core_results = [
