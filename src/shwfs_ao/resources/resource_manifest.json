@@ -108,7 +108,7 @@
     },
     {
       "logical_name": "schemas/cross_backend_baseline.schema.json",
-      "sha256": "b4df431824eea0cf0ac040e0cc45187b3f0c8e6603b0c26652fdf743e8453acb"
+      "sha256": "2c19e5294ffaceeed9c9f7419d05944d6705d4ef8cb0bde2974ee2d66426009f"
     },
     {
       "logical_name": "schemas/fast_reference_metrics.schema.json",

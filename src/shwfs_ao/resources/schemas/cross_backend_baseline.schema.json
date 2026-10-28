@@ -47,14 +47,19 @@
       "const": 1
     },
     "comparison_config": {
+      "description": "Open record of the comparison's own inputs, pinned by its config_hash rather than by a field list. The runtime contract in shwfs_ao.validation.regression additionally recomputes config_hash from these contents and requires root_seed to equal the top-level root_seed; JSON Schema can state neither a content hash nor a cross-field equality, so those two rules live only there.",
       "type": "object",
       "minProperties": 2,
       "required": [
-        "config_hash"
+        "config_hash",
+        "root_seed"
       ],
       "properties": {
         "config_hash": {
           "$ref": "#/$defs/content_hash"
+        },
+        "root_seed": {
+          "$ref": "#/$defs/root_seed"
         }
       }
     },
@@ -2615,13 +2620,18 @@
       ]
     },
     "root_seed": {
-      "type": "integer"
+      "$ref": "#/$defs/root_seed"
     }
   },
   "$defs": {
     "nonempty_string": {
       "type": "string",
       "minLength": 1
+    },
+    "root_seed": {
+      "description": "A seed is a non-negative integer. JSON booleans are not integers here, so a document seeded with true is rejected rather than read as seed 1.",
+      "type": "integer",
+      "minimum": 0
     },
     "content_hash": {
       "type": "string",
@@ -2660,6 +2670,54 @@
           }
         },
         "statistical_definition": {
+          "$ref": "#/$defs/statistical_definition"
+        }
+      }
+    },
+    "statistical_definition": {
+      "description": "What a comparison estimated from repeated realizations must state, as fields rather than as prose: an average means nothing without the sample count, estimator, bins or lags, and uncertainty method behind it, and a sentence saying so cannot be checked. The narrative is required beside them, not instead of them. Mirrors STATISTICAL_DEFINITION_FIELDS in shwfs_ao.validation.regression.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bins_or_lags",
+        "estimator",
+        "narrative",
+        "sample_count",
+        "uncertainty_method"
+      ],
+      "properties": {
+        "bins_or_lags": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "values"
+          ],
+          "properties": {
+            "kind": {
+              "$ref": "#/$defs/nonempty_string"
+            },
+            "values": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "estimator": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "narrative": {
+          "$ref": "#/$defs/nonempty_string"
+        },
+        "sample_count": {
+          "description": "One realization has no dispersion, so it cannot carry the uncertainty this comparison reports.",
+          "type": "integer",
+          "minimum": 2
+        },
+        "uncertainty_method": {
           "$ref": "#/$defs/nonempty_string"
         }
       }

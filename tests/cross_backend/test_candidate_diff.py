@@ -14,10 +14,12 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import itertools
 import json
 from pathlib import Path
 import subprocess
 import sys
+import types
 
 import pytest
 
@@ -604,6 +606,88 @@ class TestEnvironmentVerification:
         with pytest.raises(SystemExit, match="could not be read"):
             script._source_patch_sha256()
 
+    @pytest.mark.parametrize(
+        ("bit", "remedy"),
+        (
+            ("--assume-unchanged", "--no-assume-unchanged"),
+            ("--skip-worktree", "--no-skip-worktree"),
+        ),
+    )
+    def test_an_index_bit_that_hides_a_modification_is_refused(
+        self,
+        tmp_path,
+        monkeypatch,
+        bit,
+        remedy,
+    ):
+        # The review's reproduction.  Both bits tell git to believe the worktree
+        # copy of an entry matches the index, so ``git diff HEAD`` and ``git
+        # status`` report nothing at all for a file that has in fact been
+        # edited.  The patch hash is built from exactly those two commands, so
+        # such a tree reproduced as source_tree_clean=true with no patch hash
+        # while the run read modified source.
+        repository = tmp_path / "repo"
+        repository.mkdir()
+        _git_init(repository)
+        monkeypatch.setattr(script, "REPO_ROOT", repository)
+        assert script._source_patch_sha256() is None
+
+        subprocess.run(
+            ["git", "update-index", bit, "tracked.txt"],
+            cwd=repository,
+            check=True,
+            capture_output=True,
+        )
+        (repository / "tracked.txt").write_text(
+            "edited behind git's back\n",
+            encoding="utf-8",
+        )
+        # git itself now reports an unmodified tree, which is what makes the
+        # concealment silent rather than merely inconvenient.
+        assert (
+            subprocess.run(
+                ["git", "status", "--porcelain", "--untracked-files=all"],
+                cwd=repository,
+                check=True,
+                capture_output=True,
+            ).stdout
+            == b""
+        )
+
+        with pytest.raises(
+            SystemExit, match="assume-unchanged or skip-worktree"
+        ) as excinfo:
+            script._source_patch_sha256()
+        message = str(excinfo.value)
+        assert "tracked.txt" in message
+        assert remedy in message
+        # ``_source_tree_clean()`` is defined as ``_source_patch_sha256() is
+        # None``, so the refusal has to cover the clean answer as well: this
+        # tree must never be reported as matching HEAD.
+        with pytest.raises(SystemExit, match="assume-unchanged or skip-worktree"):
+            script._source_tree_clean()
+
+    def test_concealed_index_paths_are_parsed_as_raw_bytes(self):
+        # ``git ls-files -v`` tags every index entry: a lowercase tag marks
+        # assume-unchanged, 'S' marks skip-worktree, and 's' is an entry
+        # carrying both.  -z emits the paths raw, so a name with a space or an
+        # undecodable byte is reported exactly as it exists on disk and the
+        # refusal can name it without decoding anything.
+        listing = (
+            b"H tracked.py\0"
+            b"h assumed unchanged.npy\0"
+            b"S skipped.npy\0"
+            b"s both-\xff\xfe.npy\0"
+            b"C modified.py\0"
+            b"R removed.py\0"
+        )
+        assert script._concealed_index_paths(listing) == [
+            b"assumed unchanged.npy",
+            b"both-\xff\xfe.npy",
+            b"skipped.npy",
+        ]
+        assert script._concealed_index_paths(b"") == []
+
     def test_the_platform_tag_names_the_architecture(self):
         # A lock is resolved for one operating system and one architecture; an
         # arch-blind tag could be claimed by a machine it was never resolved on.
@@ -769,8 +853,11 @@ class TestGenerationOrdering:
         monkeypatch,
     ):
         # Evidence that does not describe the tree the results came from is not
-        # evidence, so a suite that dirtied the tree invalidates the run.
-        answers = iter(["a" * 64, "b" * 64])
+        # evidence, so a suite that dirtied the tree invalidates the run.  Each
+        # side samples until two consecutive reads agree, so the stub answers in
+        # pairs: a settled dirty tree before the run and a different settled one
+        # after it.
+        answers = iter(["a" * 64, "a" * 64, "b" * 64, "b" * 64])
         monkeypatch.setattr(script, "_source_patch_sha256", lambda: next(answers))
         monkeypatch.setattr(
             script, "_verified_constraint_identity", lambda: ("constraints/x.txt", "0" * 64)
@@ -784,6 +871,89 @@ class TestGenerationOrdering:
         )
         with pytest.raises(SystemExit, match="changed while the comparison suite ran"):
             script._generate_candidate(tmp_path / "candidate")
+
+    def test_a_checkout_that_will_not_hold_still_never_reaches_the_suite(
+        self,
+        packaged_tree,
+        tmp_path,
+        monkeypatch,
+    ):
+        # The commit and the patch hash are separate git invocations, so a HEAD
+        # that moves between them yields a pair describing two different states
+        # — and the pre-run and post-run pairs could then agree field by field
+        # while the suite ran against a commit neither of them names.  A
+        # checkout that never presents one self-consistent identity cannot be
+        # recorded at all, and refusing before the run is what saves the
+        # maintainer the minutes the suite would spend producing a discard.
+        moving = itertools.cycle(("a" * 40, "b" * 40))
+        monkeypatch.setattr(script, "_source_commit", lambda: next(moving))
+        monkeypatch.setattr(script, "_source_patch_sha256", lambda: None)
+        monkeypatch.setattr(
+            script,
+            "_verified_constraint_identity",
+            lambda: ("constraints/x.txt", "0" * 64),
+        )
+
+        import shwfs_ao.validation.cross_backend as cross_backend
+
+        def spy_suite(**kwargs: object) -> dict:
+            raise AssertionError("the suite must not run on a moving checkout")
+
+        monkeypatch.setattr(cross_backend, "run_cross_backend_report", spy_suite)
+
+        with pytest.raises(SystemExit, match="did not settle"):
+            script._generate_candidate(tmp_path / "candidate")
+
+    def test_the_executed_package_is_rechecked_after_the_validation_imports(
+        self,
+        packaged_tree,
+        tmp_path,
+        monkeypatch,
+    ):
+        # The guard walks ``sys.modules``, so it can only judge what has already
+        # been imported.  ``shwfs_ao.validation.cross_backend`` — the module
+        # that computes the numbers — is imported *after* the opening call, so a
+        # foreign copy of it cached there would never be examined by a check
+        # that ran once at the top.  The recording shim reports this checkout's
+        # own file, so nothing here weakens the guard itself; it only observes
+        # when the import happens relative to the guard.
+        order: list[str] = []
+
+        import shwfs_ao.validation.cross_backend as cross_backend
+
+        class _RecordingModule(types.ModuleType):
+            def __getattr__(self, name: str) -> object:
+                order.append("import")
+                return getattr(cross_backend, name)
+
+        shim = _RecordingModule("shwfs_ao.validation.cross_backend")
+        shim.__file__ = cross_backend.__file__
+        monkeypatch.setitem(
+            sys.modules, "shwfs_ao.validation.cross_backend", shim
+        )
+        monkeypatch.setattr(
+            script,
+            "_require_executed_package_is_this_checkout",
+            lambda: order.append("check"),
+        )
+        monkeypatch.setattr(
+            script,
+            "_verified_constraint_identity",
+            lambda: ("constraints/x.txt", "0" * 64),
+        )
+        monkeypatch.setattr(script, "_source_commit", lambda: "a" * 40)
+        monkeypatch.setattr(script, "_source_patch_sha256", lambda: None)
+
+        def spy_suite(**kwargs: object) -> dict:
+            order.append("suite")
+            raise SystemExit("stop before the suite does any work")
+
+        monkeypatch.setattr(cross_backend, "run_cross_backend_report", spy_suite)
+
+        with pytest.raises(SystemExit, match="stop before the suite"):
+            script._generate_candidate(tmp_path / "candidate")
+        assert order[0] == "check", order
+        assert "check" in order[order.index("import") : order.index("suite")], order
 
 
 class TestAcceptanceFreshness:
@@ -891,6 +1061,30 @@ class TestAcceptanceFreshness:
             script._accept_reviewed_candidate(
                 candidate_dir,
                 reason="foreign generator",
+                review_reference="AO-REF-018-TEST",
+            )
+
+    def test_acceptance_retires_candidates_from_the_pre_fix_generator(
+        self,
+        packaged_tree,
+        tmp_path,
+    ):
+        # Everything the provenance fixes added is invisible in the candidate
+        # document: a candidate generated before them looks exactly like one
+        # generated after, while its clean-tree claim was never checked against
+        # concealed index entries and its commit and patch were sampled
+        # non-atomically.  The generator version is the only field that can
+        # separate the two, so leaving it at the pre-fix value "2" would let
+        # those candidates keep passing acceptance.
+        candidate_dir = tmp_path / "candidate"
+        document = _candidate_document()
+        document["generator"]["generator_version"] = "2"
+        _write_candidate(candidate_dir, document)
+        assert script.GENERATOR_VERSION != "2"
+        with pytest.raises(SystemExit, match="generator.generator_version is '2'"):
+            script._accept_reviewed_candidate(
+                candidate_dir,
+                reason="candidate from the pre-provenance-fix generator",
                 review_reference="AO-REF-018-TEST",
             )
 

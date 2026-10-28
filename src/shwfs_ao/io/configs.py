@@ -187,6 +187,52 @@ class DetectorSystemConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class _WfsConfigSchemaV1:
+    """The exact :class:`WfsConfig` shape the schema-v1 records published under.
+
+    :func:`~shwfs_ao.core.hashing.canonicalize_for_hash` walks a dataclass
+    through its *declared* fields and stamps the payload with a schema id taken
+    from the type, so a nested component hash is a function of the field list
+    and of the class name as much as of the values.  Adding
+    ``photon_allocation`` to :class:`WfsConfig` therefore moved the published
+    ``component_config_hashes["wfs"]`` of every v1 profile, although those
+    records were never edited and the field only restates the allocation they
+    already ran with.  ``SystemConfig.config_hash`` survived that because it
+    hashes :func:`system_config_to_mapping`, which drops the field for a v1
+    record; the nested hash had no such basis and moved.
+
+    This stand-in restores it: the twelve v1 fields in their published order,
+    and ``__hash_schema_id__`` pinned to the name :class:`WfsConfig` carried
+    when those digests were published, so the canonical bytes are the historical
+    ones rather than a re-derivation that merely resembles them.  It is a
+    separate frozen declaration on purpose.  A filtered view of the live class
+    would track every later edit to it, which is exactly the coupling that moved
+    these hashes once already; a schema v3 that adds a WFS field must leave this
+    declaration untouched and add its own.  No validation is repeated here
+    because nothing constructs it from untrusted input: the only caller is
+    :meth:`WfsConfig.config_hash_for_record_schema`, which copies fields off an
+    already-validated block.
+    """
+
+    __hash_schema_id__ = "shwfs_ao.io.configs.WfsConfig"
+
+    min_fill_fraction: float
+    pad_factor: int | None
+    detector_window_px: int | None
+    centroid_estimator: Literal[
+        "center_of_gravity", "thresholded_center_of_gravity"
+    ]
+    threshold_fraction: float
+    subtract_minimum: bool
+    min_flux_e: float
+    min_peak_snr: float
+    max_centroid_sigma_px: float
+    max_window_clipping_fraction: float
+    central_obstruction_ratio: float
+    spider_width_m: float
+
+
+@dataclass(frozen=True, slots=True)
 class WfsConfig:
     min_fill_fraction: float
     pad_factor: int | None
@@ -248,7 +294,96 @@ class WfsConfig:
 
     @property
     def config_hash(self) -> str:
-        return component_config_hash("scao.wfs_config", self)
+        """This block's identity under the current profile record schema.
+
+        A :class:`WfsConfig` on its own belongs to no record, so it answers for
+        the shape the class actually has — the same convention as
+        :attr:`SystemConfig.record_schema_version`'s default.  That keeps this
+        property meaningful as a public identity: two blocks that differ only in
+        ``photon_allocation`` still hash differently, which is what callers
+        keying caches or result labels off it rely on.  A block that came from a
+        record published under an older schema must be hashed through
+        :meth:`config_hash_for_record_schema` instead, which is what
+        :attr:`SystemConfig.component_config_hashes` does.
+        """
+
+        return self.config_hash_for_record_schema(PROFILE_SCHEMA_VERSION)
+
+    def config_hash_for_record_schema(self, record_schema_version: int) -> str:
+        """Return this block's identity as the given record schema publishes it.
+
+        The schema version lives on :class:`SystemConfig`, not here, so the
+        caller must state it; a :class:`WfsConfig` cannot infer which record it
+        was parsed out of.  Only schema v1 needs a different payload, because it
+        predates ``photon_allocation`` — see :class:`_WfsConfigSchemaV1` for why
+        the historical bytes have to be reproduced rather than recomputed.
+
+        Refusing an unknown version matters as much as reproducing the known
+        ones: treating an unrecognized schema as "probably the newest" would
+        publish a digest under a schema whose field set nobody has checked, and
+        the mistake would only surface as results that no longer reproduce their
+        own identity.
+        """
+
+        version = _integer(
+            record_schema_version, "record_schema_version", minimum=1
+        )
+        if version not in SUPPORTED_PROFILE_SCHEMA_VERSIONS:
+            raise SystemConfigError(
+                f"unsupported profile schema_version={record_schema_version!r}; "
+                f"supported={list(SUPPORTED_PROFILE_SCHEMA_VERSIONS)}."
+            )
+        if version >= 2:
+            return component_config_hash("scao.wfs_config", self)
+        # Schema v1 has no field to carry a non-default allocation, so hashing
+        # such a block under it would publish an identity that silently omits a
+        # real change to the WFS photon budget: two physically different sensors
+        # would share one digest.  :meth:`SystemConfig.__post_init__` already
+        # refuses that pairing for a whole configuration; this is the same rule
+        # at the one other door into the v1 payload.
+        if self.photon_allocation != _V1_PHOTON_ALLOCATION:
+            raise SystemConfigError(
+                "record_schema_version=1 cannot express "
+                f"wfs.photon_allocation={self.photon_allocation!r}: that schema "
+                "has no such field, so the value would be missing from the hash "
+                "rather than recorded in it. Hash this block under schema "
+                f"{PROFILE_SCHEMA_VERSION} instead."
+            )
+        # The v1 payload is frozen, so it must not quietly absorb a field this
+        # class gains later: a schema v3 addition has to decide for itself what
+        # a v1 record's WFS block looks like.  Comparing the declared names in
+        # order — the canonical payload is an ordered field list, so a reordering
+        # moves the digest just as an addition does — turns that decision into a
+        # failure here instead of ten silently relabelled published records.
+        historical = tuple(_WfsConfigSchemaV1.__dataclass_fields__)
+        declared = tuple(
+            name for name in self.__dataclass_fields__ if name != "photon_allocation"
+        )
+        if declared != historical:
+            raise SystemConfigError(
+                f"WfsConfig declares {list(declared)} beside photon_allocation, "
+                f"but the frozen schema-1 hash payload declares {list(historical)}; "
+                "a schema that changes the WFS field set needs its own payload, "
+                "because editing the schema-1 one moves every published v1 "
+                "nested WFS hash."
+            )
+        return component_config_hash(
+            "scao.wfs_config",
+            _WfsConfigSchemaV1(
+                min_fill_fraction=self.min_fill_fraction,
+                pad_factor=self.pad_factor,
+                detector_window_px=self.detector_window_px,
+                centroid_estimator=self.centroid_estimator,
+                threshold_fraction=self.threshold_fraction,
+                subtract_minimum=self.subtract_minimum,
+                min_flux_e=self.min_flux_e,
+                min_peak_snr=self.min_peak_snr,
+                max_centroid_sigma_px=self.max_centroid_sigma_px,
+                max_window_clipping_fraction=self.max_window_clipping_fraction,
+                central_obstruction_ratio=self.central_obstruction_ratio,
+                spider_width_m=self.spider_width_m,
+            ),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -557,12 +692,30 @@ class SystemConfig:
 
     @property
     def component_config_hashes(self) -> Mapping[str, str]:
+        """Per-component identities as this configuration's record publishes them.
+
+        These are public identities: a stored result cites the ``"wfs"`` entry to
+        say which sensing policy produced it, so they are subject to the same
+        rule as :attr:`config_hash` — a record's identity may not move because a
+        later schema version was added elsewhere.  ``"wfs"`` is the one entry
+        that cannot simply delegate to its component's ``config_hash``, because
+        the nested hash is taken from the :class:`WfsConfig` dataclass rather
+        than from :func:`system_config_to_mapping`, and schema v2 added a field
+        to that dataclass.  Passing the record schema down is what keeps a v1
+        record's nested WFS hash at the value it was published with, exactly as
+        deleting the field from the serialized mapping keeps ``config_hash``
+        there.  Every other component's field set is schema-independent, so
+        their plain ``config_hash`` is already the published value.
+        """
+
         return MappingProxyType(
             {
                 "profile": self.profile.config_hash,
                 "atmosphere": self.atmosphere.config_hash,
                 "detector": self.detector.config_hash,
-                "wfs": self.wfs.config_hash,
+                "wfs": self.wfs.config_hash_for_record_schema(
+                    self.record_schema_version
+                ),
                 "dm": self.dm.config_hash,
                 "calibration": self.calibration.config_hash,
                 "reconstructor": self.reconstructor.config_hash,

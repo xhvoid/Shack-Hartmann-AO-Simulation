@@ -51,6 +51,7 @@ and their committed outputs are never modified by the smoke run.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Iterator
 import json
 import os
 import shutil
@@ -76,6 +77,11 @@ DEFAULT_NETWORK_ISOLATION = "required"
 # ``$0``/``$@`` carry the real command, so no argument is ever re-parsed by the
 # shell — a notebook path may contain any character a path can contain.
 _NAMESPACE_SHELL = 'ip link set lo up && exec "$0" "$@"'
+
+# Run by _kill_process_group when the group it must end is owned by root.  The
+# process group id arrives as an argument rather than being interpolated, so
+# nothing is re-parsed and the call is the same killpg the parent just tried.
+_REISSUE_KILLPG = "import os, signal, sys; os.killpg(int(sys.argv[1]), signal.SIGKILL)"
 
 # Injected as the first executed cell so it is active for every real cell.
 # The namespace around the process is what actually denies the network; this
@@ -329,32 +335,96 @@ def _execute_in_process(
         client.execute(env=_kernel_environment())
 
 
+def _namespace_prefix_candidates() -> Iterator[list[str]]:
+    """The prefixes worth probing here, cheapest and least privileged first.
+
+    Which form works is an environment question, not a platform one, so all
+    three are offered and the caller decides by trying them:
+
+    1. ``unshare --net`` alone, for a process that already holds CAP_SYS_ADMIN —
+       a root shell, most CI containers.  It costs one syscall and leaves the
+       kernel running as the invoking user.
+    2. ``unshare --user --map-root-user --net``, which asks for a user namespace
+       first.  This is the ordinary unprivileged path.
+    3. the same thing behind passwordless ``sudo``.
+
+    The order matters in both directions.  Escalating when a cheaper form would
+    have worked runs the notebook kernel as root for nothing, so sudo comes
+    last; but leaving it out entirely is what made this function unable to serve
+    its own contract on the configured hosted runner.  ``ubuntu-latest`` is
+    Ubuntu 24.04, which ships ``kernel.apparmor_restrict_unprivileged_userns=1``:
+    AppArmor denies the capabilities form 2 needs, form 1 wants a CAP_SYS_ADMIN
+    the runner user does not have, and with only those two probed the required
+    notebook lanes had no namespace at all and aborted.  GitHub-hosted runners
+    do provide passwordless sudo, so form 3 is what keeps ``required`` a
+    contract the lane can actually meet rather than one it dies on.
+
+    Generating the list lazily is deliberate: the sudo probe below runs a real
+    command, and a process that already satisfies form 1 must not pay for — or
+    ask for — an elevation it does not need.
+    """
+
+    unshare = shutil.which("unshare")
+    if unshare is None or shutil.which("ip") is None:
+        return
+    yield [unshare, "--net", "--"]
+    yield [unshare, "--user", "--map-root-user", "--net", "--"]
+    sudo = shutil.which("sudo")
+    if sudo is None:
+        return
+    # ``-n`` never prompts.  A sudo that would ask for a password is the same
+    # answer as no sudo at all here, because nothing is watching a CI step to
+    # type one, and offering the form regardless would spend a probe proving it.
+    try:
+        elevation = subprocess.run(
+            [sudo, "-n", "true"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return
+    if elevation.returncode != 0:
+        return
+    yield [sudo, "-n", unshare, "--net", "--"]
+
+
+def _sudo_escalation(isolation_prefix: list[str]) -> list[str]:
+    """The ``sudo`` invocation that reaches processes started by ``prefix``.
+
+    Empty for every unelevated prefix, because there is nothing to escalate
+    through and pretending otherwise would hide a failure the caller must see.
+    """
+
+    if (
+        len(isolation_prefix) >= 2
+        and isolation_prefix[1] == "-n"
+        and Path(isolation_prefix[0]).name == "sudo"
+    ):
+        return [isolation_prefix[0], "-n"]
+    return []
+
+
 def _network_namespace_prefix() -> list[str] | None:
     """A command prefix that runs its argument in a loopback-only namespace.
 
-    Returns ``None`` when this platform cannot provide one.  Availability is
+    Returns ``None`` when this environment cannot provide one.  Availability is
     established by *doing* it rather than by inspecting the platform: unshare
     and ip must exist, the namespace must actually be created, and it must
     contain loopback and nothing else.  A probe that merely started is not
     evidence, so the interface list is read back and checked — an unexpected
-    result means the prefix is not returned rather than silently used.
+    result means the prefix is not returned rather than silently used.  That
+    check is what makes an ``unshare`` which silently did not take, or a sudo
+    rule that ran the command outside a namespace, a refusal instead of a lane
+    reporting an offline contract with a route to the outside still in place.
 
-    Two forms are tried because which one works is an environment question, not
-    a platform one.  A process that already has CAP_SYS_ADMIN — a root shell,
-    most CI containers — needs only a network namespace; everyone else needs a
-    user namespace first, which some hardened kernels and AppArmor profiles
-    refuse to hand to an unprivileged process.
+    The forms probed, and why they are ordered as they are, are documented on
+    :func:`_namespace_prefix_candidates`.
     """
 
     if sys.platform != "linux":
         return None
-    unshare = shutil.which("unshare")
-    if unshare is None or shutil.which("ip") is None:
-        return None
-    for prefix in (
-        [unshare, "--net", "--"],
-        [unshare, "--user", "--map-root-user", "--net", "--"],
-    ):
+    for prefix in _namespace_prefix_candidates():
         try:
             probe = subprocess.run(
                 [*prefix, "sh", "-c", "ip link set lo up && ip -o link show"],
@@ -396,9 +466,12 @@ def _resolve_network_isolation(mode: str) -> list[str]:
             "notebooks cannot be executed under the offline contract: the "
             "in-kernel guard is a tripwire, not a sandbox, and a subprocess or "
             "a direct _socket call reaches the network past it. Linux with "
-            "unshare(1), ip(8) and unprivileged user namespaces provides it; "
-            "pass --network-isolation auto to run anyway with the tripwire "
-            "alone, knowing the contract is not enforced."
+            "unshare(1) and ip(8) provides it, through unprivileged user "
+            "namespaces, an existing CAP_SYS_ADMIN, or passwordless sudo; on "
+            "Ubuntu 24.04 and later the first of those needs "
+            "kernel.apparmor_restrict_unprivileged_userns=0. Pass "
+            "--network-isolation auto to run anyway with the tripwire alone, "
+            "knowing the contract is not enforced."
         )
     print(
         "WARNING: no network namespace available; notebooks run with the "
@@ -429,17 +502,51 @@ def _runner_command(
         runner.append("--fast-smoke")
     if not isolation_prefix:
         return runner
-    return [*isolation_prefix, "sh", "-c", _NAMESPACE_SHELL, *runner]
+    # sudo resets the environment it hands on (env_reset is the sudoers
+    # default), so the MPLBACKEND this process set for the kernel would be
+    # dropped on the way through and a notebook could reach for an interactive
+    # backend on a headless runner.  Re-stating it inside the namespace costs
+    # one exec and keeps every isolation form running the same kernel
+    # environment; _NAMESPACE_SHELL ends in exec "$0" "$@", so env is simply the
+    # first positional argument.
+    inner = (
+        ["env", "MPLBACKEND=Agg", *runner]
+        if _sudo_escalation(isolation_prefix)
+        else runner
+    )
+    return [*isolation_prefix, "sh", "-c", _NAMESPACE_SHELL, *inner]
 
 
-def _kill_process_group(process: subprocess.Popen) -> None:
-    """Kill the runner and its kernel; both live in one session/group."""
+def _kill_process_group(process: subprocess.Popen, escalation: list[str]) -> None:
+    """Kill the runner and its kernel; both live in one session/group.
+
+    ``escalation`` is :func:`_sudo_escalation` for the isolation prefix that
+    started the process, and is empty for every unelevated one.  It exists
+    because kill(2) delivers a signal only when the sender's real or effective
+    uid matches the target's real or saved uid: everything behind sudo has both
+    set to root, so an unprivileged parent's killpg raises EPERM.  Left
+    unhandled the budget would surface a PermissionError instead of its own
+    message while the notebook it was meant to bound kept running.
+
+    Reissuing through the same interpreter rather than kill(1) keeps the
+    semantics identical to the call that just failed — one signal to one process
+    group, no shell, no dependency on procps being installed.  With nothing to
+    escalate through, EPERM is raised rather than swallowed: a budget that
+    silently failed to kill is a budget that was never enforced.
+    """
 
     if os.name == "posix":
         try:
             os.killpg(process.pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
+        except PermissionError:
+            if not escalation:
+                raise
+            subprocess.run(
+                [*escalation, sys.executable, "-c", _REISSUE_KILLPG, str(process.pid)],
+                check=False,
+            )
     else:
         process.kill()
     process.wait()
@@ -455,11 +562,12 @@ def _run_with_budget(
 ) -> float:
     """Execute one notebook in a subprocess killed at the wall-clock budget."""
 
+    prefix = [] if isolation_prefix is None else isolation_prefix
     command = _runner_command(
         notebook_path,
         cell_timeout_s=cell_timeout_s,
         fast_smoke=fast_smoke,
-        isolation_prefix=[] if isolation_prefix is None else isolation_prefix,
+        isolation_prefix=prefix,
     )
     start = time.perf_counter()
     process = subprocess.Popen(
@@ -470,7 +578,7 @@ def _run_with_budget(
     try:
         returncode = process.wait(timeout=budget_s)
     except subprocess.TimeoutExpired:
-        _kill_process_group(process)
+        _kill_process_group(process, _sudo_escalation(prefix))
         raise SystemExit(
             f"{notebook_path.name} exceeded the whole-notebook budget: "
             f"killed after {budget_s}s"

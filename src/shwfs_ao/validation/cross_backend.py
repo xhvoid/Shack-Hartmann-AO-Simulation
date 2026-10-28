@@ -33,7 +33,7 @@ optional dependency and raises ``OptionalDependencyError`` without it.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 import math
 import platform
 import sys
@@ -65,6 +65,8 @@ _ID_HASH_NAMESPACE = "cross_backend_identity"
 __all__ = (
     "CrossBackendError",
     "CrossBackendConfig",
+    "comparison_config_record",
+    "comparison_config_hash",
     "run_cross_backend_report",
 )
 
@@ -174,7 +176,7 @@ def run_cross_backend_report(
     report: dict[str, Any] = {
         "artifact_schema_name": CROSS_BACKEND_REPORT_SCHEMA_NAME,
         "artifact_schema_version": CROSS_BACKEND_BASELINE_SCHEMA_VERSION,
-        "comparison_config": _config_record(resolved),
+        "comparison_config": comparison_config_record(resolved),
         "root_seed": resolved.root_seed,
         "conventions": {
             "command_unit": "m_opd_equivalent",
@@ -812,6 +814,37 @@ def _compare_atmosphere_statistics(context: _ComparisonContext) -> dict[str, Any
         "every recorded value is verified at generation time to sit more "
         "than three standard errors inside its range criterion."
     )
+    # The four elements AO-REF-018 requires of an estimated comparison are
+    # recorded as separate fields, not as a sentence a reader has to parse: a
+    # sample count, an estimator, the bins or lags it was evaluated over, and
+    # the uncertainty method.  Every one of them is derived from the same
+    # configuration the loop above actually ran — the realization count the
+    # ``statistics`` closure iterates and the lag pair it differences — so a
+    # change to the suite cannot leave the recorded definition describing a run
+    # that never happened.  The paragraph is kept verbatim beside them because
+    # the structured fields are what a validator can compare and the narrative
+    # is what a reviewer reads; neither replaces the other.
+    statistical_definition = {
+        "sample_count": config.atmosphere_realizations,
+        "estimator": (
+            "per realization: masked pupil RMS at t=0, and the ratio of "
+            "mean-square column differences at the recorded lag pair "
+            "(numerator lag first); each reported as the mean over the "
+            "realizations, and the RMS additionally as the HCIPy-over-native "
+            "ratio of those means"
+        ),
+        "bins_or_lags": {
+            "kind": "structure_function_lags_px",
+            "values": [long_lag, short_lag],
+        },
+        "uncertainty_method": (
+            "first-order standard error of each ratio estimator across the "
+            "independent realizations, recorded as informational metrics; "
+            "generation additionally refuses any gating value that does not "
+            "sit more than three of its standard errors inside its range"
+        ),
+        "narrative": statistical_note,
+    }
     return {
         "comparison_kind": "atmosphere_statistics",
         "attribution": (
@@ -821,7 +854,7 @@ def _compare_atmosphere_statistics(context: _ComparisonContext) -> dict[str, Any
             "sampling pull both structure-function ratios below the pure "
             f"Kolmogorov value {kolmogorov_ratio:.3f}."
         ),
-        "statistical_definition": statistical_note,
+        "statistical_definition": statistical_definition,
         "metrics": [
             _metric(
                 "rms_ratio_hcipy_over_native",
@@ -1734,7 +1767,16 @@ def _masked_fixture(context: _ComparisonContext) -> np.ndarray:
     return np.asarray(context.static_opd_m, dtype=float)
 
 
-def _config_record(config: CrossBackendConfig) -> dict[str, Any]:
+def comparison_config_record(config: CrossBackendConfig) -> dict[str, Any]:
+    """Return the report's ``comparison_config``: the fields plus their hash.
+
+    The record is the configuration written out field by field so a reader can
+    see what ran, together with the ``config_hash`` that every consumer
+    compares.  The two are one statement, not two: :func:`comparison_config_hash`
+    recomputes the hash from the fields, and the report contract refuses a
+    document where they disagree.
+    """
+
     from dataclasses import asdict
 
     record = asdict(config)
@@ -1744,6 +1786,56 @@ def _config_record(config: CrossBackendConfig) -> dict[str, Any]:
     )
     record["config_hash"] = config.config_hash
     return record
+
+
+def comparison_config_hash(record: Mapping[str, Any]) -> str:
+    """Recompute the identity hash a ``comparison_config`` record must carry.
+
+    Reconstructing the configuration and asking it for its own hash is
+    deliberate: the digest the suite mints is the canonical serialization of
+    :class:`CrossBackendConfig` itself, so hashing the record as a plain mapping
+    would be a second, different definition of the same identity — every
+    baseline accepted so far would stop verifying, and the two definitions would
+    drift apart the first time either side changed.  Reconstruction also makes
+    the record's completeness part of the check: a document that dropped or
+    invented a configuration field cannot name a configuration at all, so it is
+    refused here rather than hashed into something that happens to match.
+
+    JSON has no tuple, so the sequence-valued fields arrive as lists and are
+    restored to tuples.  The canonical hash schema serializes both as one
+    sequence, so this changes no digest; it only keeps the reconstruction a
+    faithful ``CrossBackendConfig`` rather than a lookalike.
+    """
+
+    if not isinstance(record, Mapping):
+        raise CrossBackendError("comparison_config must be a mapping.")
+    contents = {
+        key: value for key, value in record.items() if key != "config_hash"
+    }
+    declared = {field.name for field in fields(CrossBackendConfig)}
+    missing = sorted(declared - set(contents))
+    unexpected = sorted(set(contents) - declared)
+    if missing or unexpected:
+        raise CrossBackendError(
+            "comparison_config must record exactly the fields of "
+            f"CrossBackendConfig beside its config_hash; missing={missing}, "
+            f"unexpected={unexpected}."
+        )
+    # Annotated rather than inferred: the comprehension's value type widens to a
+    # union that mypy cannot match against the constructor's per-field
+    # parameters, and the field set has already been checked exactly above, so
+    # the constructor call below is the check that matters.
+    restored: dict[str, Any] = {
+        key: tuple(value) if isinstance(value, list) else value
+        for key, value in contents.items()
+    }
+    try:
+        return CrossBackendConfig(**restored).config_hash
+    except (TypeError, ValueError) as exc:
+        raise CrossBackendError(
+            "comparison_config does not describe a usable "
+            f"CrossBackendConfig, so it has no identity hash: {exc}"
+        ) from exc
 
 
 def _fixture_hash(values: np.ndarray) -> str:
