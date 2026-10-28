@@ -323,6 +323,67 @@ def test_unregistered_hcipy_backend_never_falls_back_to_native(
         scao.build_scao_system(config)
 
 
+def test_hcipy_backend_resolves_through_the_shipped_registry_fail_closed() -> None:
+    # The registry entry itself is dependency-free: resolving the factory and
+    # rejecting profiles the HCIPy backend cannot represent must work whether
+    # or not the optional dependency is installed.
+    assert set(scao._BUILTIN_FACTORY_LOADERS) == {"native", "hcipy"}
+    factory = scao._factory_for("hcipy")
+    assert factory.backend_name == "hcipy"
+    assert isinstance(factory, scao.ScaoBackendComponentFactory)
+
+    from shwfs_ao.backends.hcipy.factory import HcipyScaoFactoryError
+
+    base = _tiny_system_config("detector_level")
+    native_atmosphere_on_hcipy = replace(base, backend="hcipy")
+    with pytest.raises(HcipyScaoFactoryError, match="builds only 'hcipy'"):
+        scao.build_scao_system(native_atmosphere_on_hcipy)
+
+    normalized_hcipy = replace(
+        base,
+        backend="hcipy",
+        atmosphere_model="hcipy",
+    )
+    with pytest.raises(HcipyScaoFactoryError, match="no RMS normalization"):
+        scao.build_scao_system(normalized_hcipy)
+
+    # The detector-window contract is checked before any optical
+    # construction: the HCIPy lenslet model measures on fixed block windows
+    # of pupil_pixels // lenslets_across.
+    geometry = factory.build_geometry(
+        telescope_diameter_m=base.telescope_diameter_m,
+        pupil_pixels=base.pupil_pixels,
+        lenslets_across=base.lenslets_across,
+        min_fill_fraction=base.wfs.min_fill_fraction,
+        central_obstruction_ratio=base.wfs.central_obstruction_ratio,
+        spider_width_m=base.wfs.spider_width_m,
+    )
+    with pytest.raises(HcipyScaoFactoryError, match="fixed block windows"):
+        factory.build_wfs(
+            model="detector_level",
+            geometry=geometry,
+            wfs_wavelength_m=base.wfs_wavelength_m,
+            pad_factor=2,
+            detector_window_px=8,
+            detector_config=None,
+            centroid_config=None,
+            validity_config=None,
+            random_streams=scao.NamedRandomStreams(base.random.root_seed),
+        )
+    with pytest.raises(HcipyScaoFactoryError, match="geometric"):
+        factory.build_wfs(
+            model="geometric",
+            geometry=geometry,
+            wfs_wavelength_m=base.wfs_wavelength_m,
+            pad_factor=None,
+            detector_window_px=None,
+            detector_config=None,
+            centroid_config=None,
+            validity_config=None,
+            random_streams=scao.NamedRandomStreams(base.random.root_seed),
+        )
+
+
 def test_numerical_scale_is_hashed_separately_from_observing_conditions() -> None:
     config = _tiny_system_config()
     scaled = replace(

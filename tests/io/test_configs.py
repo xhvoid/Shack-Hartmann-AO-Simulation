@@ -38,6 +38,7 @@ EXPECTED_PROFILES = (
     ("portfolio_2m_detector", 1),
     ("research_2m_detector", 1),
     ("high_order_10m_geometric", 1),
+    ("high_order_10m_hcipy", 1),
 )
 
 
@@ -66,7 +67,7 @@ def test_profile_loader_has_no_latest_alias() -> None:
     with pytest.raises(SystemConfigError, match="unknown system profile"):
         load_system_profile("fast_2m_detector", 2)
     with pytest.raises(SystemConfigError, match="unknown system profile"):
-        load_system_profile("high_order_10m_hcipy", 1)
+        load_system_profile("high_order_10m_hcipy", 2)
 
 
 def test_profile_round_trip_is_exact_and_deterministic() -> None:
@@ -125,6 +126,66 @@ def test_high_order_profile_matches_notebook_09_extreme_mode_in_si_units() -> No
     assert config.dm.stroke_limit_opd_m == pytest.approx(
         180.0 * 750.0e-9 / (2.0 * math.pi)
     )
+
+
+def test_high_order_hcipy_profile_pairs_the_geometric_scale_through_hcipy() -> None:
+    config = load_system_profile("high_order_10m_hcipy", 1)
+    geometric = load_system_profile("high_order_10m_geometric", 1)
+
+    assert config.backend == "hcipy"
+    assert config.wfs_model == "detector_level"
+    assert config.atmosphere_model == "hcipy"
+
+    # Same observing target and numerical scale as the geometric profile.
+    assert config.telescope_diameter_m == geometric.telescope_diameter_m
+    assert (config.pupil_pixels, config.lenslets_across, config.actuators_across) == (
+        geometric.pupil_pixels,
+        geometric.lenslets_across,
+        geometric.actuators_across,
+    )
+    assert config.wfs_wavelength_m == geometric.wfs_wavelength_m
+    assert config.science_wavelengths_m == geometric.science_wavelengths_m
+    assert config.atmosphere.r0_m == geometric.atmosphere.r0_m
+    assert (
+        config.atmosphere.r0_reference_wavelength_m
+        == geometric.atmosphere.r0_reference_wavelength_m
+    )
+    assert config.atmosphere.outer_scale_m == geometric.atmosphere.outer_scale_m
+    assert config.atmosphere.wind_m_per_s == geometric.atmosphere.wind_m_per_s
+    assert config.dm == geometric.dm
+    assert config.calibration == geometric.calibration
+    assert config.controller == geometric.controller
+    assert config.science == geometric.science
+    assert config.random == geometric.random
+
+    # The HCIPy atmosphere adapter has no RMS normalization, so this is the
+    # one deliberate observing-condition difference from the geometric pair.
+    assert config.atmosphere.normalize_rms is False
+    assert config.atmosphere.target_rms_opd_m is None
+    assert geometric.atmosphere.normalize_rms is True
+    assert (
+        config.observing_conditions_hash != geometric.observing_conditions_hash
+    )
+
+    # Detector-level sensing on the fixed HCIPy block window with the
+    # established cross-backend spot sampling of 4 px per lambda/d.
+    assert config.wfs.detector_window_px == (
+        config.pupil_pixels // config.lenslets_across
+    )
+    assert config.wfs.detector_window_px == 8
+    assert config.wfs.pad_factor == 4
+    assert config.detector.enabled
+    assert config.detector.photons_per_subap_frame == 8000.0
+    assert config.detector.read_noise_e == 1.0
+    assert config.detector.exposure_s == pytest.approx(
+        1.0 / config.controller.frame_rate_hz
+    )
+
+    # The small block windows legitimately clip strongly displaced open-loop
+    # spots, so the validity floor sits below the measured open-loop
+    # fraction (0.82-0.84) instead of the geometric profile's 1.0.
+    assert config.reconstructor.min_valid_fraction == 0.75
+    assert config.wfs.max_window_clipping_fraction == 0.15
 
 
 @pytest.mark.parametrize(

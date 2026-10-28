@@ -143,6 +143,10 @@
       "sha256": "c736d06195f2c293ddb8f1b06c95716181a8e06898e8b2b9da2f51d5655a239c"
     },
     {
+      "logical_name": "synthetic_presets/high_order_10m_hcipy.v1.json",
+      "sha256": "83ccd4cfedd708a46fb65321f24c0bf8a70fbbd48f2255c5324bad4c96048a94"
+    },
+    {
       "logical_name": "synthetic_presets/portfolio_2m_detector.v1.json",
       "sha256": "63deef9e2721ce02217ff0452b7803c4aab46324b69241cfb0617637cea25297"
     },

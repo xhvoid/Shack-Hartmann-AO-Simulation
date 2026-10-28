@@ -181,8 +181,9 @@ Packaged, versioned profiles include:
 
 - `fast_2m_detector`;
 - `portfolio_2m_detector`;
-- `research_2m_detector`; and
-- `high_order_10m_geometric`.
+- `research_2m_detector`;
+- `high_order_10m_geometric`; and
+- `high_order_10m_hcipy` (requires the optional `[hcipy]` extra to build).
 
 A profile name never means “latest defaults.” Backend selection does not
 silently change seeing, photon budget, detector noise, or controller settings.

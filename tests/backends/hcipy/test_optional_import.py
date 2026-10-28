@@ -52,6 +52,7 @@ _HCIPY_MARKED_TEST_FILES = (
     Path(__file__).with_name("test_hcipy_dm.py"),
     Path(__file__).with_name("test_hcipy_shwfs.py"),
     Path(__file__).with_name("test_hcipy_propagation.py"),
+    Path(__file__).with_name("test_hcipy_factory.py"),
 )
 
 
@@ -82,8 +83,16 @@ def test_importing_shwfs_ao_never_imports_hcipy_eagerly():
         "from shwfs_ao.backends.hcipy import HcipyDmError\n"
         "from shwfs_ao.backends.hcipy import HcipyShackHartmannOptics\n"
         "from shwfs_ao.backends.hcipy import HcipySciencePropagator\n"
+        "import shwfs_ao.backends.hcipy.factory\n"
         "import shwfs_ao.experiments.scao\n"
         "import shwfs_ao.io.configs\n"
+        # Resolving the shipped hcipy registry entry and loading the packaged
+        # HCIPy profile are construction-free and must stay dependency-free.
+        "factory = shwfs_ao.experiments.scao._factory_for('hcipy')\n"
+        "assert factory.backend_name == 'hcipy'\n"
+        "config = shwfs_ao.io.configs.load_system_profile("
+        "'high_order_10m_hcipy', 1)\n"
+        "assert config.backend == 'hcipy'\n"
         "raise SystemExit(1 if 'hcipy' in sys.modules else 0)\n"
     )
     result = subprocess.run(
@@ -333,3 +342,57 @@ class TestWithoutHcipy:
             match="pixels_per_resolution_element",
         ):
             HcipyFocalSampling(pixels_per_resolution_element=-2.0)
+
+    def test_building_the_hcipy_profile_raises_optional_dependency_error(self):
+        from shwfs_ao.experiments.scao import build_scao_system
+        from shwfs_ao.io.configs import load_system_profile
+
+        config = load_system_profile("high_order_10m_hcipy", 1)
+        with pytest.raises(OptionalDependencyError) as excinfo:
+            build_scao_system(config)
+        assert "pip install 'shack-hartmann-ao-simulation[hcipy]'" in str(
+            excinfo.value
+        )
+
+    def test_factory_model_validation_precedes_the_dependency_requirement(self):
+        from shwfs_ao.backends.hcipy.factory import (
+            HCIPY_SCAO_COMPONENT_FACTORY,
+            HcipyScaoFactoryError,
+        )
+        from shwfs_ao.core.random import NamedRandomStreams
+
+        factory = HCIPY_SCAO_COMPONENT_FACTORY
+        geometry = factory.build_geometry(
+            telescope_diameter_m=1.0,
+            pupil_pixels=16,
+            lenslets_across=2,
+            min_fill_fraction=0.3,
+            central_obstruction_ratio=0.0,
+            spider_width_m=0.0,
+        )
+        streams = NamedRandomStreams(7)
+        with pytest.raises(HcipyScaoFactoryError, match="not registered"):
+            factory.build_atmosphere(
+                model="native_frozen_flow",
+                geometry=geometry,
+                random_streams=streams,
+                r0_m=0.15,
+                outer_scale_m=25.0,
+                phase_reference_wavelength_m=500.0e-9,
+                wind_m_per_s=(10.0, 0.0),
+                target_rms_rad=None,
+                normalize_rms=False,
+                static_opd_rms_m=0.0,
+            )
+        with pytest.raises(HcipyScaoFactoryError, match="geometric"):
+            factory.build_wfs(
+                model="geometric",
+                geometry=geometry,
+                wfs_wavelength_m=700.0e-9,
+                pad_factor=2,
+                detector_window_px=8,
+                detector_config=None,
+                centroid_config=None,
+                validity_config=None,
+                random_streams=streams,
+            )
