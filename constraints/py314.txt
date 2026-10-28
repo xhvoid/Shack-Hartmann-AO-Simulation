@@ -1,4 +1,4 @@
-# Exact CI/test environment resolved from PyPI for CPython 3.14 on Linux.
+# Exact CI/test environment resolved from PyPI for CPython 3.14 on Linux-x86-64.
 # Runtime lower bounds remain in pyproject.toml; this file is a reproducible
 # tested-install profile, not the package's public dependency policy.
 # Complete resolved lock: every distribution any py314 CI lane installs is

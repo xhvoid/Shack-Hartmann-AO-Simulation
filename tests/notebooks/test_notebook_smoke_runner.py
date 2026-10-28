@@ -187,13 +187,57 @@ def test_network_guard_blocks_name_resolution_before_any_dns_query_leaves():
         # No external name ever reached the recorder underneath the guard.
         assert resolved == []
 
+        # socket.getaddrinfo is a Python-level wrapper, so it also takes its
+        # target by keyword.  Reading only positional arguments left the target
+        # unseen and the call resolved freely — the same leak, one call shape
+        # over.  A shape carrying no recognisable target is refused outright.
+        for keyword_attempt in (
+            lambda: socket.getaddrinfo(host="example.com", port=80),
+            lambda: socket.getaddrinfo(host="example.com"),
+            lambda: socket.getaddrinfo(port=80),
+        ):
+            with pytest.raises(OSError, match="denies outbound network"):
+                keyword_attempt()
+        assert resolved == []
+
+        def guard_allows(*args, **kwargs) -> bool:
+            """Whether the guard let the call through to the resolver.
+
+            What the resolver then answers is the platform's business: a
+            loopback alias such as ``localhost.localdomain`` is a Linux
+            ``/etc/hosts`` convention and does not resolve everywhere.  Only a
+            refusal by the guard itself counts as denied.
+            """
+
+            try:
+                socket.getaddrinfo(*args, **kwargs)
+            except OSError as exc:
+                return "denies outbound network" not in str(exc)
+            return True
+
         # Loopback resolution still works, so Jupyter's own transport and any
-        # local server a notebook starts keep functioning.
-        assert socket.getaddrinfo("localhost", 0)
-        assert socket.getaddrinfo("127.0.0.1", 0)
-        assert socket.getaddrinfo("::1", 0)
-        assert socket.getaddrinfo(None, 0)
+        # local server a notebook starts keep functioning.  DNS names are
+        # case-insensitive and getaddrinfo accepts bytes, so those spellings of
+        # loopback must not be refused.
+        for allowed in (
+            ("localhost", 0),
+            ("LOCALHOST", 0),
+            ("Localhost.", 0),
+            (b"localhost", 0),
+            (b"127.0.0.1", 0),
+            ("localhost.localdomain", 0),
+            ("127.0.0.1", 0),
+            ("::1", 0),
+            (None, 0),
+        ):
+            assert guard_allows(*allowed), allowed
+        assert guard_allows(host=None, port=0)
         assert socket.getnameinfo(("127.0.0.1", 0), 0)
+
+        # A name that merely *starts* with "localhost" is still a public name.
+        for public in ("localhost.evil.example", b"example.com", "localhostage.example"):
+            with pytest.raises(OSError, match="denies outbound network"):
+                socket.getaddrinfo(public, 0)
     finally:
         for name, original in saved.items():
             setattr(socket, name, original)

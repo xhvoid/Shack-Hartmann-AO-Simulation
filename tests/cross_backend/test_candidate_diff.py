@@ -12,6 +12,7 @@ comparison suite runs and no packaged resource is touched.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -479,21 +480,46 @@ class TestEnvironmentVerification:
             == "linux-x86-64"
         )
 
-    def test_every_selectable_lock_declares_a_platform_and_architecture(self):
-        # Generation selects its profile by Python version alone, so every lock
-        # it can select must declare the platform to match against — and the
-        # declaration has to be findable in the file as written, not only in a
-        # synthetic header.  (The py3xx CI locks are AO-REF-000 frozen contract
-        # evidence and are never selected here.)
-        locks = sorted((ROOT / "constraints").glob("hcipy-py*.txt"))
-        assert locks, "no selectable constraint profiles"
-        for lock in locks:
-            tag = script._lock_platform_tag(
+    def test_every_packaged_lock_declares_a_platform_and_architecture(self):
+        # A lock is resolved for one operating system AND one architecture, so
+        # naming only the operating system does not identify the environment it
+        # reproduces.  Every packaged profile must say which, and the
+        # declaration has to be findable in the file as written — not only in a
+        # synthetic header, which is what let the pre-fix matcher pass while
+        # matching nothing in the real locks.
+        locks = sorted((ROOT / "constraints").glob("*.txt"))
+        assert len(locks) == 4, [lock.name for lock in locks]
+        declared = {
+            lock.name: script._lock_platform_tag(
                 lock.read_text(encoding="utf-8"), lock.name
             )
-            assert tag in set(script._LOCK_PLATFORMS.values())
+            for lock in locks
+        }
+        assert set(declared.values()) <= set(script._LOCK_PLATFORMS.values())
+        assert all("-" in tag for tag in declared.values()), declared
         # The lock this interpreter would actually select is one of them.
         assert (ROOT / script._constraint_profile_name()) in set(locks)
+
+    def test_the_frozen_contract_records_the_current_ci_lock_hashes(self):
+        # The CI lock hashes in the AO-REF-000 contract manifest are a
+        # deliberate-change gate, not immutable evidence: the documented relock
+        # procedure requires updating them in the same commit as a lock edit.
+        # This pins that they were in fact updated together.
+        manifest = json.loads(
+            (
+                ROOT
+                / "src/shwfs_ao/resources/reference_metrics/refactor_contract_manifest.json"
+            ).read_text(encoding="utf-8")
+        )
+        for item in manifest["ci_contract"]["matrix"]:
+            lock = ROOT / item["constraints"]
+            assert (
+                hashlib.sha256(lock.read_bytes()).hexdigest()
+                == item["constraints_sha256"]
+            ), item["constraints"]
+            assert script._lock_platform_tag(
+                lock.read_text(encoding="utf-8"), lock.name
+            ) == "linux-x86-64"
 
     def test_generation_refuses_a_foreign_platform_lock(
         self,

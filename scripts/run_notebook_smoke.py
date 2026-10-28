@@ -11,11 +11,15 @@ The kernel environment (``MPLBACKEND=Agg``) is passed explicitly through
 has no ``env`` trait, so a constructor argument would be silently dropped.
 The runner imports only the installed package, so it validates that a
 notebook runs from a built, non-editable wheel without source-tree imports
-or hidden local files.  Offline execution is actively enforced, not merely
-assumed: an injected first cell denies outbound IPv4/IPv6 connections and
-non-loopback name resolution inside the kernel (blocking, for example,
-``pandas.read_csv(url)`` before it can even emit a DNS query) while leaving
-loopback — Jupyter's own ZMQ transport — and local Unix sockets working.
+or hidden local files.  Offline execution is actively enforced inside the
+kernel process rather than merely assumed: an injected first cell denies
+outbound IPv4/IPv6 connections and non-loopback name resolution there
+(blocking, for example, ``pandas.read_csv(url)`` before it can even emit a DNS
+query) while leaving loopback — Jupyter's own ZMQ transport — and local Unix
+sockets working.  It is an in-process tripwire, not a sandbox: a cell that
+spawns a subprocess (``!curl``, ``%pip``, ``subprocess.run``) or calls the
+private ``_socket`` module directly reaches the network regardless, so a
+canonical notebook must not do those things.
 
 Usage::
 
@@ -73,13 +77,39 @@ def _install_offline_guard():
     real_connect_ex = _socket.socket.connect_ex
     ip_families = (_socket.AF_INET, _socket.AF_INET6)
 
+    # The standard loopback aliases: none of these can name a public host, and
+    # refusing them would break a notebook for no gain.  Comparison is
+    # case-folded because DNS names are case-insensitive, and a trailing root
+    # dot is stripped, so "LOCALHOST." is the same name as "localhost".
+    loopback_names = frozenset(
+        (
+            "localhost",
+            "localhost.localdomain",
+            "localhost4",
+            "localhost4.localdomain4",
+            "localhost6",
+            "localhost6.localdomain6",
+        )
+    )
+
     def _host_denied(host):
         # None is a wildcard bind (AI_PASSIVE), and loopback stays reachable so
         # Jupyter's own ZMQ transport keeps working; every other name or
         # address is refused.
         if host is None:
             return False
-        if host == "localhost":
+        if isinstance(host, (bytes, bytearray)):
+            # getaddrinfo accepts a bytes host; decode it rather than refuse a
+            # loopback name for its type.
+            try:
+                host = host.decode("ascii")
+            except UnicodeDecodeError:
+                return True
+        if not isinstance(host, str):
+            # Anything else is a shape this guard does not understand, so it
+            # cannot be shown to be loopback: refuse it.
+            return True
+        if host.rstrip(".").lower() in loopback_names:
             return False
         try:
             return not _ipaddress.ip_address(host).is_loopback
@@ -114,33 +144,54 @@ def _install_offline_guard():
 
     # Every real client resolves before it connects, so a guard that watched
     # only connect() still let the query leave the machine.  Cover the whole
-    # resolution surface, forward and reverse: the host is the first argument
-    # of each of these, or the first element of the sockaddr getnameinfo takes.
-    def _guard_resolver(name, host_of):
+    # resolution surface, forward and reverse.  The target is the first
+    # positional argument of each of these — but socket.getaddrinfo is a
+    # Python-level wrapper, so it also accepts the target by keyword, and
+    # reading only args would let getaddrinfo(host=...) resolve freely.
+    _unknown_target = object()
+
+    def _guard_resolver(name, keywords, host_of):
         real = getattr(_socket, name, None)
         if real is None:
             return
 
         def guarded(*args, **kwargs):
-            host = host_of(args)
+            if args:
+                target = args[0]
+            else:
+                target = _unknown_target
+                for keyword in keywords:
+                    if keyword in kwargs:
+                        target = kwargs[keyword]
+                        break
+            # An unrecognised call shape is refused rather than passed through:
+            # a target this guard cannot locate has not been shown to be
+            # loopback, and failing open here is how the query escapes.
+            if target is _unknown_target:
+                _refuse(kwargs)
+            host = host_of(target)
             if _host_denied(host):
                 _refuse(host)
             return real(*args, **kwargs)
 
         setattr(_socket, name, guarded)
 
-    def _first_argument(args):
-        return args[0] if args else None
+    def _itself(target):
+        return target
 
-    def _sockaddr_host(args):
-        address = args[0] if args else None
-        if isinstance(address, (tuple, list)) and address:
-            return address[0]
-        return address
+    def _sockaddr_host(target):
+        if isinstance(target, (tuple, list)) and target:
+            return target[0]
+        return target
 
-    for _resolver in ("getaddrinfo", "gethostbyname", "gethostbyname_ex", "gethostbyaddr"):
-        _guard_resolver(_resolver, _first_argument)
-    _guard_resolver("getnameinfo", _sockaddr_host)
+    for _name, _keywords in (
+        ("getaddrinfo", ("host",)),
+        ("gethostbyname", ("hostname",)),
+        ("gethostbyname_ex", ("hostname",)),
+        ("gethostbyaddr", ("ip_address",)),
+    ):
+        _guard_resolver(_name, _keywords, _itself)
+    _guard_resolver("getnameinfo", ("sockaddr",), _sockaddr_host)
 
     # sendto is universal, but sendmsg is a Unix-only API.  Patch each only
     # where it exists, so the guard installs on every platform instead of

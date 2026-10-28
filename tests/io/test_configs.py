@@ -141,6 +141,68 @@ def test_each_record_schema_version_has_an_exact_field_set() -> None:
         system_config_from_mapping(v1_record)
 
 
+def test_a_schema_v1_record_cannot_claim_a_later_profile_identity() -> None:
+    """The two version axes are independent, but not every pairing is coherent.
+
+    Schema v1 omits ``wfs.photon_allocation``, so a record claiming a profile
+    version from the v2 review would present a *defaulted* allocation as the
+    reviewed explicit one — the ambiguity schema v2 exists to remove, wearing
+    the identity that says it was removed.
+    """
+
+    record = copy.deepcopy(
+        system_config_to_mapping(load_system_profile("fast_2m_detector", 1))
+    )
+    record["schema_version"] = 1
+    del record["config"]["wfs"]["photon_allocation"]
+    assert system_config_from_mapping(record).profile.profile_id == "fast_2m_detector@1"
+
+    record["profile_version"] = 2
+    record["provenance"]["source_id"] = "shwfs_ao.system_profile.fast_2m_detector.v2"
+    with pytest.raises(
+        SystemConfigError, match="cannot be recorded under schema version 1"
+    ):
+        system_config_from_mapping(record)
+
+    # The converse is legitimate and must stay accepted: it is exactly what the
+    # serializer emits for a version-1 profile.
+    v1 = load_system_profile("fast_2m_detector", 1)
+    current = system_config_to_mapping(v1)
+    assert (current["schema_version"], current["profile_version"]) == (
+        PROFILE_SCHEMA_VERSION,
+        1,
+    )
+    assert system_config_from_mapping(current) == v1
+
+
+def test_every_packaged_profile_identity_is_pinned() -> None:
+    """A published profile's identity must never move without being noticed.
+
+    ``config_hash`` covers ``baseline_rationale`` and the provenance note, so an
+    edit to a profile's *prose* silently relabels every result that cites it.
+    These hashes are the tripwire: a change here is only ever correct alongside
+    a deliberate profile-version bump, or before the profile is released.
+    """
+
+    expected = {
+        ("fast_2m_detector", 1): "52f295fe19e74c80ea01576979c9a03c3698ceb5cea4478e03b1a149d3ed482f",
+        ("fast_2m_detector", 2): "7f225305b5d6e1e1b56ceff73cad945856c13a2b2c4f9d81b725a287d090626b",
+        ("portfolio_2m_detector", 1): "0a104b02ba3d1368c8f5732d12c95f6e993a36e8675318e74edec90a545ce5f6",
+        ("portfolio_2m_detector", 2): "ff9d43c343dccb9e22364fa04fc69bedeae96be0578cd5d0e3713dd25946b06e",
+        ("research_2m_detector", 1): "192112852cf6874410f1c7e1a32c041cf5f519a3159a1f8bedf647e06a540ec7",
+        ("research_2m_detector", 2): "38fc980bddaf60543eb46bb3ac48d9b6b0432e3e978922f8369ec7b607932dcc",
+        ("high_order_10m_geometric", 1): "248b27246b1023235abf96a719dfa49e9d4c22562ce8bde17c5e8fc2db5f375b",
+        ("high_order_10m_geometric", 2): "f8b6f9da7b42ab42b4ead3d1e17da385dece3b568c196d5251d261e6ae2a4ad2",
+        ("high_order_10m_hcipy", 1): "2a51940f5945e882789e0613172e64470cb760ab39cb9816ce993c235b22f23f",
+        ("high_order_10m_hcipy", 2): "50a1f9ea0a2abb4a07c7e9a151f76d366e64369f99df7f61c894217c2dd80d4a",
+    }
+    observed = {
+        key: load_system_profile(*key).config_hash for key in available_system_profiles()
+    }
+    assert set(observed) == set(expected)
+    assert observed == expected
+
+
 def test_profile_round_trip_is_exact_and_deterministic() -> None:
     first = load_system_profile("fast_2m_detector", 2)
     second = load_system_profile("fast_2m_detector", 2)
