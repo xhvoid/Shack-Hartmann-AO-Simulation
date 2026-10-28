@@ -61,6 +61,7 @@ import producer
 import protocol
 import render
 import rms_diagnostics
+import web_contract
 
 
 CODE_FILES = (
@@ -118,6 +119,23 @@ class LongExportError(RuntimeError):
 def _require(condition: bool, message: str) -> None:
     if not condition:
         raise LongExportError(message)
+
+
+def producer_check_problems(checks: Any) -> web_contract.ProducerCheckProblems:
+    """A case record's producer checks judged by the validator's rule (``web_contract``) on this exporter's window.
+
+    Every reader applies the same contract: the recorded fields, each required check literally ``True``, the
+    analysis frames and count as ints, the diagnostics' keys and finite values.  A truthiness filter over the
+    booleans alone would pass a missing check, a string ``"false"`` or ``null``.
+    """
+
+    return web_contract.producer_check_problems(checks, web_contract.V2.producer_checks, (START, N_STEPS), COUNT)
+
+
+def case_validation(record: Dict[str, Any]) -> Dict[str, bool]:
+    """The ``validation`` record of a case entry, by the same rule :func:`bind_cases` requires."""
+
+    return {"producer_checks_passed": producer_check_problems(record["observer"]["checks"]).ok}
 
 
 def display_indices() -> List[int]:
@@ -290,9 +308,10 @@ def bind_cases(series_dir: Path, plan: Dict[str, Any]) -> Dict[str, Dict[str, An
         _require(record["series_id"] == plan["series_id"] and record["case"]["case_id"] == case_id, f"{case_id}: the record names another series or case")
         _require(record["config_hash"] == case["config_hash"] and record["admission_sha256"] == case["admission_sha256"], f"{case_id}: the record's configuration or admission differs from the plan")
         _require(record["identities"]["production_sha256"] == plan["identities"]["production"]["sha256"], f"{case_id}: produced by another producer identity")
-        checks = record["observer"]["checks"]
-        _require(all(value for value in checks.values() if isinstance(value, bool)), f"{case_id}: a production record check failed")
-        _require(checks["analysis_frames"] == [START, N_STEPS] and checks["analysis_count"] == COUNT, f"{case_id}: the analysis window is not [200, 1000)")
+        problems = producer_check_problems(record["observer"]["checks"])
+        _require(problems.kind is None and not (problems.missing or problems.unexpected or problems.not_true or problems.diagnostics),
+                 f"{case_id}: the production record checks do not meet the producer's contract ({problems})")
+        _require(not (problems.frames_wrong or problems.count_wrong), f"{case_id}: the analysis window is not [{START}, {N_STEPS}) with {COUNT} frames")
         _require(record["screen"]["generated_screen_px"] == long_series.SCREEN_GRID_SIZE and record["screen"]["option"] == {"screen_grid_size": long_series.SCREEN_GRID_SIZE}, f"{case_id}: not the 624 x 624 screen")
         rehashed = {}
         for relative, item in record["files"].items():
@@ -1125,7 +1144,7 @@ def export(arguments: argparse.Namespace) -> Dict[str, Any]:
                 "observation": ref(observation_entry, defining),
             },
             "pairing": pairing,
-            "validation": {"producer_checks_passed": all(value for value in record["observer"]["checks"].values() if isinstance(value, bool))},
+            "validation": case_validation(record),
             "limitations": [
                 f"Single-realization synthetic SCAO demonstration (one seed, {N_STEPS} frames = 1.000 s); no ensemble uncertainty is shown.",
                 "Science samples are frame-start snapshots; averages are equal-weight means of sampled instantaneous images.",

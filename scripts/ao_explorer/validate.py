@@ -858,27 +858,17 @@ class Checker:
         c = self.c
         expected = c.producer_checks
         assert expected is not None
-        if not isinstance(checks, dict):
-            self.check(False, f"{case_id}: every producer check recorded in the provenance passed (the checks record is {type(checks).__name__}, not an object)", area="provenance")
+        problems = web_contract.producer_check_problems(checks, expected, c.analysis_window, c.analysis_count)
+        if problems.kind is not None:
+            self.check(False, f"{case_id}: every producer check recorded in the provenance passed (the checks record is {problems.kind}, not an object)", area="provenance")
             return
-        missing = [name for name in expected.recorded if name not in checks]
-        unexpected = sorted(name for name in checks if name not in expected.recorded)
+        missing, unexpected, not_true = list(problems.missing), list(problems.unexpected), list(problems.not_true)
         self.check(not missing and not unexpected, f"{case_id}: provenance records exactly the producer's check fields (missing {missing}, unexpected {unexpected})", area="provenance")
-        not_true = [f"{name}={checks[name]!r}" if name in checks else f"{name} missing" for name in expected.required_true if checks.get(name) is not True]
         self.check(not not_true, f"{case_id}: every producer check recorded in the provenance passed (required checks present and literally true; {not_true})", area="provenance")
-        frames_key, count_key = expected.window_fields
-        frames, count = checks.get(frames_key), checks.get(count_key)
-        self.check(isinstance(frames, list) and all(type(v) is int for v in frames) and frames == list(c.analysis_window),
-                   f"{case_id}: producer analysis frames are the {c.name} window [{c.burn_in}, {c.frames}) (recorded {frames!r})", area="provenance")
-        self.check(type(count) is int and count == c.analysis_count, f"{case_id}: producer analysis count is the {c.name} contract's {c.analysis_count} (recorded {count!r})", area="provenance")
-        bad = []
-        for name, (keys, absolute) in expected.diagnostics.items():
-            record = checks.get(name)
-            if not isinstance(record, dict) or sorted(record) != sorted(keys):
-                bad.append(f"{name} keys {sorted(record) if isinstance(record, dict) else type(record).__name__}")
-                continue
-            bad.extend(f"{name}.{key}={record[key]!r}" for key in keys if not _finite(record[key]) or (absolute and record[key] < 0))
-        self.check(not bad, f"{case_id}: producer diagnostics carry the producer's keys and finite numbers, absolute deviations non-negative ({bad})", area="provenance")
+        frames, count = checks.get(expected.window_fields[0]), checks.get(expected.window_fields[1])
+        self.check(not problems.frames_wrong, f"{case_id}: producer analysis frames are the {c.name} window [{c.burn_in}, {c.frames}) (recorded {frames!r})", area="provenance")
+        self.check(not problems.count_wrong, f"{case_id}: producer analysis count is the {c.name} contract's {c.analysis_count} (recorded {count!r})", area="provenance")
+        self.check(not problems.diagnostics, f"{case_id}: producer diagnostics carry the producer's keys and finite numbers, absolute deviations non-negative ({list(problems.diagnostics)})", area="provenance")
 
     def check_pairing(self, case_id: str, case: Dict[str, Any], protocol_case: Dict[str, Any]) -> None:
         c = self.c
