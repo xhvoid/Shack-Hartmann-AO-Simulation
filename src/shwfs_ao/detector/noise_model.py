@@ -264,14 +264,16 @@ def detector_covariance_quality(
     offset = 0.0 if offsets is None else np.asarray(offsets, dtype=float)
     # Expected background removed by processing, input-e equivalent.
     if processing.mode == "raw_readout":
-        if camera.adc_bits is not None:
-            pedestal_xt = (float(camera.bias_adu) + offset) * float(
-                camera.conversion_gain_e_per_adu
-            ) * relative / gain_left / float(camera.em_gain)
-        else:
-            pedestal_xt = (float(camera.bias_adu) + offset) * float(
-                camera.conversion_gain_e_per_adu
-            ) / gain_left / float(camera.em_gain)
+        # The camera adds the bias and offset pedestal after the gain-map
+        # division, so the raw frame's pedestal carries no gain map.  On the
+        # model's scale (the raw frame times conversion / G with the ADC on,
+        # or 1 / G with it off) it is the same expression either way.
+        pedestal_xt = (
+            (float(camera.bias_adu) + offset)
+            * float(camera.conversion_gain_e_per_adu)
+            / float(camera.em_gain)
+            * np.ones(source.shape)
+        )
         subtracted = -pedestal_xt
         nominal_subtracted = subtracted
         flat_values = np.ones(source.shape)
