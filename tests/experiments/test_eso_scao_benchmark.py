@@ -132,6 +132,31 @@ def test_ci_tier_runs_end_to_end_and_records_its_evidence(ci_manifest):
         assert telemetry["applied_command_history_opd_m"].shape == (32, counts["retained_layout"])
 
 
+def test_close_science_wavelengths_keep_their_own_files_and_keys(monkeypatch, tmp_path):
+    manifest = benchmark.run_tier(
+        "ci",
+        output_dir=tmp_path / "close",
+        n_steps=6,
+        burn_in_frames=2,
+        wavelengths=(1.65e-6, 1.6501e-6),
+    )
+    tags = {"1650nm", "1650.1nm"}
+    assert set(manifest["science_files"]) == tags
+    assert set(manifest["science_sha256"]) == tags
+    assert len(set(manifest["science_sha256"].values())) == 2
+    for name in manifest["science_files"].values():
+        assert (tmp_path / "close" / name).is_file()
+    assert benchmark._science_file_tag(2.2e-6) == "2200nm"  # historical names kept
+    assert benchmark._science_file_tag(1.65e-6) == "1650nm"
+    # Wavelengths that would still share a file are refused before any build.
+    monkeypatch.setattr(scao, "build_scao_system", _refuse_build)
+    with pytest.raises(ValueError, match="file tags"):
+        benchmark.run_tier(
+            "ci", output_dir=tmp_path / "same", wavelengths=(1.65e-6, 1.65e-6 + 1e-17)
+        )
+    assert not (tmp_path / "same").exists()
+
+
 def test_repeated_ci_runs_reproduce_their_outputs(ci_manifest, tmp_path):
     first, _ = ci_manifest
     second = benchmark.run_tier("ci", output_dir=tmp_path)

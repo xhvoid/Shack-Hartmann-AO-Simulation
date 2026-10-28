@@ -311,6 +311,19 @@ def _counts(system: Any, matrix: Any) -> dict[str, Any]:
     }
 
 
+def _science_file_tag(wavelength_m: float) -> str:
+    """File-name and manifest key for one science wavelength, in nanometres.
+
+    Integer nanometres keep their short form (``2200nm``); other values keep
+    their decimals down to 1e-6 nm (``1650.1nm``), so distinct wavelengths do
+    not share a file.  :func:`run_tier` refuses wavelengths whose tags would
+    still coincide.
+    """
+
+    text = f"{float(wavelength_m) * 1e9:.6f}".rstrip("0").rstrip(".")
+    return f"{text}nm"
+
+
 def run_tier(
     tier: str,
     *,
@@ -359,6 +372,12 @@ def run_tier(
     science_wavelengths = tuple(
         config.science_wavelengths_m if wavelengths is None else wavelengths
     )
+    tags = [_science_file_tag(wavelength) for wavelength in science_wavelengths]
+    if len(set(tags)) != len(tags):
+        raise ValueError(
+            f"science wavelengths {science_wavelengths} map to the file tags {tags}; "
+            "each wavelength must have its own image file and manifest key."
+        )
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     cache = (
@@ -480,7 +499,7 @@ def run_tier(
 
     images: dict[str, str] = {}
     for image in science.images:
-        tag = f"{image.psf.wavelength_m * 1e9:.0f}nm"
+        tag = _science_file_tag(image.psf.wavelength_m)
         path = output / f"science_{tag}.npz"
         np.savez_compressed(
             path,
@@ -600,7 +619,7 @@ def run_tier(
             "pre_update_residual_opd_rms_m": _array_sha256(history.pre_update_residual_opd_rms_m),
         },
         "science_sha256": {
-            f"{image.psf.wavelength_m * 1e9:.0f}nm": _array_sha256(image.psf.intensity)
+            _science_file_tag(image.psf.wavelength_m): _array_sha256(image.psf.intensity)
             for image in science.images
         },
     }
