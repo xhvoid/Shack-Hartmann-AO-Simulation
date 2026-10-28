@@ -28,6 +28,9 @@ test = [
     "setuptools>=77",
     "wheel",
 ]
+hcipy = [
+    "hcipy>=0.7,<0.8",
+]
 docs = [
     "reportlab>=4.0",
 ]
@@ -88,3 +91,8 @@ editable_wheel = "build_support.resource_alias.EditableWheelWithResourceAlias"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "--strict-markers"
+markers = [
+    "hcipy: requires the optional HCIPy backend dependency (deselected in native CI)",
+    "slow: long-running; excluded from fast CI selections",
+]

@@ -19,6 +19,7 @@ This directory provides supporting technical notes for the detector-level adapti
 - [AO-REF-010 science propagation and physical-grid metrics](refactor/AO_REF_010_SCIENCE.md)
 - [AO-REF-011 shared SCAO construction and profiles](refactor/AO_REF_011_SCAO.md)
 - [AO-REF-012 artifact and packaged-resource boundary](refactor/AO_REF_012_ARTIFACTS.md)
+- [AO-REF-013 optional HCIPy dependency and conversion layer](refactor/AO_REF_013_HCIPY.md)
 
 ## Simulation components
 
