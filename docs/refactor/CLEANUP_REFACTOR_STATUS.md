@@ -987,3 +987,30 @@ the repair, its ledger keeps it `FIXED_PENDING_VERIFICATION`.
 | Unit | Finding | Change | Behaviour and identity |
 | --- | --- | --- | --- |
 | K | OBS-15–OBS-18 (review RV-01–RV-04; P3) | `scripts/run_detector_level_evidence.py` and `scripts/eso_scao_paired_convergence_study.py`: `_package_sha256` returns null, and the code identity is unknown, when the package is not a directory with `__init__.py` or holds a symlinked directory, a sourceless `.pyc` outside `__pycache__` (OBS-15) or a source whose cache, where this interpreter reads it, Python would run unchecked (review RV-05, RV-07; an unreadable cache is skipped, as Python skips it, RV-08); the Git commands read paths literally (`--literal-pathspecs`, OBS-16); the runner's version refusal gives version 3's reason only for version-3 runs (OBS-18), and a runner resume with nothing to add stops instead of verifying when the package has no digest (review RV-06); tests in both test files for each case and for file names in the digest (OBS-17); the docstrings and LIM-11 (with the timestamp-cache race) | a normal package's identity is unchanged (package digest and Git fields equal before and after), so series protocol 4 and S3 run protocol 2 stay; the changed layouts now count as unknown code, under which no runs are added; the scripts' own digests change, as with any edit |
+
+## Versioned detector ledgers: AR-008 and roadmap G11 (2026-10-20)
+
+The post-audit reconciliation deferred the packaged-ledger part of AR-008
+(GPT audit F-08) to a governed resource version (unit E above). Ticket T3 of
+the next-stage plan carried it out from `e486b18`; it is commit `d4403e6`
+(tree `15fb1e17`) on `claude/t3-g11-ledger-v2`, and its implementation record
+is in `outputs/t3_g11_ledger_v2/2026-10-20-opus-e486b18/`.
+
+| Unit | Finding | Change | Behaviour and identity |
+| --- | --- | --- | --- |
+| L | AR-008 (GPT F-08; P3), roadmap G11 | `detector_source_ledger.v2.json` and `detector_level.assumptions.v2.json` beside the version 1 files: B14 states the current uncertainty model `detector_covariance_v2`, its support gates and the separate calibration-ensemble sigma; B18 and `historical_producers` attribute the `@2` gating decision and its records to version 1; D4 was checked against the publisher PDF of Thomas et al. (2006) and attributes the thresholding rule to the repository; the profile generator writes and checks version 2, and a test pins the version 1 bytes; the technical reference and the roadmap | descriptions only: the profiles keep referencing version 1, so every profile file and configuration hash is unchanged; the manifest gains the two resources (81); the package digest of both evidence scripts changes with them |
+
+An independent review, `outputs/t3_g11_ledger_v2/review-2026-10-20-gpt/`,
+read the uncommitted change that `d4403e6` commits byte for byte (base
+`e486b18`, tracked diff SHA-256 `d7f4303e…`, new files `fa56a8d4…` and
+`20cf6dd3…`) and accepted it, `PASS_WITH_DECLARED_VALIDATION_LIMITS`, with no
+material finding. Its declared limits: CI has not run on the change; the
+checks ran in the local macOS environment, not the constraint lock; the DOI
+page could not be opened, so the paper was read in the owner's copy of the
+publisher PDF, SHA-256
+`4f26c5c1f1ff9cc372c43725fc93297e6be47b35390f626a082c0b6b9b215f59` (the
+implementation record and the review assignment give this digest with two
+characters missing; review observation T3-OBS-01, P3). As the review
+proposes, this record closes AR-008 and roadmap G11 for that change; the
+frozen reconciliation ledgers and the implementation record are left as
+they are.
