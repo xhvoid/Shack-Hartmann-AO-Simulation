@@ -1,8 +1,8 @@
 {
   "acceptance": {
-    "accepted_at_utc": "2026-08-12T19:33:05.223725+00:00",
-    "reason": "Regenerate under generator version 4, which runs from a controlled bytecode cache, samples provenance ahead of every repository import, and brackets each source-identity sample. Every physical gating value is bit-identical to the superseded baseline; only the informational runtime and memory figures differ.",
-    "review_reference": "P1-2 and P1-3 of the second sign-off review; code fixes committed as 15c1612"
+    "accepted_at_utc": "2026-08-13T08:43:47.948725+00:00",
+    "reason": "Regenerate under generator version 5, which establishes the controlled-interpreter conditions by checking the interpreter rather than by trusting the environment marker that claims them. Every physical gating value is bit-identical to the superseded baseline; only the informational runtime and memory figures differ.",
+    "review_reference": "P1-3 of the third sign-off review; code fixes committed as 7b53f27"
   },
   "artifact_schema_name": "shwfs_ao.cross_backend_baseline",
   "artifact_schema_version": 1,
@@ -775,7 +775,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.005591333378106356
+          "value": 0.005800388753414154
         },
         {
           "level": "informational",
@@ -785,7 +785,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.0023539443500339985
+          "value": 0.0026159719564020634
         },
         {
           "level": "informational",
@@ -795,7 +795,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.0010877915968497593
+          "value": 0.0010793888941407204
         },
         {
           "level": "informational",
@@ -805,7 +805,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.000902930274605751
+          "value": 0.0010474859736859798
         },
         {
           "level": "informational",
@@ -815,7 +815,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "mebibytes",
-          "value": 2.527651786804199
+          "value": 2.52744197845459
         }
       ]
     }
@@ -857,8 +857,8 @@
   },
   "generator": {
     "generator_name": "scripts/generate_cross_backend_candidate.py",
-    "generator_version": "4",
-    "source_commit": "15c16121b194e358c1512c73e334f2255e9d6489",
+    "generator_version": "5",
+    "source_commit": "7b53f27c52e406f2b11c09387e3beee772e85df6",
     "source_patch_sha256": null,
     "source_tree_clean": true
   },
