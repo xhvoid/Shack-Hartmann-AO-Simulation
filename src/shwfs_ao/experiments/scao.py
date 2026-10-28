@@ -133,10 +133,25 @@ def _load_native_factory() -> ScaoBackendComponentFactory:
     return NATIVE_SCAO_COMPONENT_FACTORY
 
 
+def _load_hcipy_factory() -> ScaoBackendComponentFactory:
+    # Importing the factory module never needs HCIPy itself; the adapters
+    # defer require_hcipy to construction, so a missing optional dependency
+    # surfaces as the canonical OptionalDependencyError with its install
+    # hint, never as an unregistered backend or a native fallback.
+    from ..backends.hcipy.factory import HCIPY_SCAO_COMPONENT_FACTORY
+
+    return HCIPY_SCAO_COMPONENT_FACTORY
+
+
 _BUILTIN_FACTORY_LOADERS: Mapping[
     str,
     Callable[[], ScaoBackendComponentFactory],
-] = MappingProxyType({"native": _load_native_factory})
+] = MappingProxyType(
+    {
+        "native": _load_native_factory,
+        "hcipy": _load_hcipy_factory,
+    }
+)
 
 
 def register_scao_backend_factory(

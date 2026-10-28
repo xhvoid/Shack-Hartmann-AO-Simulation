@@ -34,11 +34,13 @@ The installed schema-v1 presets are:
 - `fast_2m_detector@1`;
 - `portfolio_2m_detector@1`;
 - `research_2m_detector@1`;
-- `high_order_10m_geometric@1`.
+- `high_order_10m_geometric@1`;
+- `high_order_10m_hcipy@1`.
 
-`high_order_10m_hcipy` remains a later optional-backend profile.  Loading is
-always by an explicit `(name, version)` pair; there is no implicit “latest”
-selection.
+`high_order_10m_hcipy@1` pairs the geometric 10 m scale through the registered
+HCIPy backend factory; loading it needs no optional dependency, building it
+does.  Loading is always by an explicit `(name, version)` pair; there is no
+implicit “latest” selection.
 
 Every numerical scale and observing input is serialized.  In particular,
 pupil pixels, lenslet count, actuator count, seeing strength, wind, photon

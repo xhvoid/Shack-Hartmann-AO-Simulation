@@ -31,6 +31,7 @@ _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
     ("portfolio_2m_detector", 1): "synthetic_presets/portfolio_2m_detector.v1.json",
     ("research_2m_detector", 1): "synthetic_presets/research_2m_detector.v1.json",
     ("high_order_10m_geometric", 1): "synthetic_presets/high_order_10m_geometric.v1.json",
+    ("high_order_10m_hcipy", 1): "synthetic_presets/high_order_10m_hcipy.v1.json",
 }
 
 BackendName = Literal["native", "hcipy"]

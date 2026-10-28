@@ -34,6 +34,7 @@ AO_REF_011_PROFILE_RESOURCES = (
     "synthetic_presets/portfolio_2m_detector.v1.json",
     "synthetic_presets/research_2m_detector.v1.json",
     "synthetic_presets/high_order_10m_geometric.v1.json",
+    "synthetic_presets/high_order_10m_hcipy.v1.json",
 )
 
 # AO-REF-000 hashes remain historical pre-refactor evidence.  Later tickets
