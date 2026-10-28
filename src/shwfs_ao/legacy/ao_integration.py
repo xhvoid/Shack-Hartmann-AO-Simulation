@@ -307,7 +307,10 @@ def run_integration(
     from ..io.artifacts import ArtifactConfig, write_integration_artifacts
 
     written_files = write_integration_artifacts(
-        result,
+        # The frozen IntegrationRunResult supplies every attribute the writer
+        # reads, but the protocol's settable/invariant members block a static
+        # structural match, so the boundary arg-type is silenced here.
+        result,  # type: ignore[arg-type]
         ArtifactConfig(
             output_dir=chosen.output_dir,
             reference_metrics_path=chosen.reference_metrics_path,
@@ -666,7 +669,9 @@ def _integration_provenance(source_class: str, source_note: str) -> _Provenance:
     """Build canonical provenance while retaining integration-specific errors."""
 
     try:
-        return _Provenance(source_class=source_class, source_note=str(source_note))
+        # source_class is a runtime-validated str; physical modules must not
+        # import SourceClass from core, so narrow it with a scoped ignore.
+        return _Provenance(source_class=source_class, source_note=str(source_note))  # type: ignore[arg-type]
     except (TypeError, ValueError) as exc:
         if source_class not in ALLOWED_SOURCE_CLASSES:
             raise AOIntegrationError(

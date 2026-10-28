@@ -1087,7 +1087,7 @@ def _validate_manifest(payload: Mapping[str, Any], members: Sequence[Path]) -> N
     records = payload.get("members")
     if not isinstance(records, list) or not records:
         raise ArtifactError("Artifact manifest members must be a non-empty list.")
-    filenames = [record.get("filename") for record in records if isinstance(record, Mapping)]
+    filenames: list[Any] = [record.get("filename") for record in records if isinstance(record, Mapping)]
     if len(filenames) != len(records) or filenames != sorted(filenames) or len(set(filenames)) != len(filenames):
         raise ArtifactError("Artifact manifest member filenames must be unique and sorted.")
     by_name = {path.name: path for path in members}
@@ -1399,7 +1399,8 @@ def _nonempty_text(value: object, label: str) -> str:
 
 def _finite(value: object, label: str) -> None:
     try:
-        finite = math.isfinite(float(value))
+        # Defensive coercion of arbitrary input; non-numeric raises here and is caught below.
+        finite = math.isfinite(float(value))  # type: ignore[arg-type]
     except (TypeError, ValueError) as exc:
         raise ArtifactError(f"{label} must be finite; got {value!r}.") from exc
     if not finite:

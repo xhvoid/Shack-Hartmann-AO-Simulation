@@ -17,8 +17,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 import math
 from numbers import Integral, Real
+from typing import Any, Literal, overload
 
 import numpy as np
+import numpy.typing as npt
 from scipy.special import eval_jacobi as _eval_jacobi
 
 from ...core import wavefront as _wavefront
@@ -74,6 +76,26 @@ def polar_pupil_coordinates(
         _readonly_array(rho, dtype=float),
         _readonly_array(theta, dtype=float),
     )
+
+
+@overload
+def normalize_mode_to_unit_pupil_rms(
+    mode: np.ndarray,
+    pupil_mask: np.ndarray,
+    *,
+    remove_piston: bool = ...,
+    return_scale: Literal[False] = ...,
+) -> np.ndarray: ...
+
+
+@overload
+def normalize_mode_to_unit_pupil_rms(
+    mode: np.ndarray,
+    pupil_mask: np.ndarray,
+    *,
+    remove_piston: bool = ...,
+    return_scale: Literal[True],
+) -> tuple[np.ndarray, float]: ...
 
 
 def normalize_mode_to_unit_pupil_rms(
@@ -511,7 +533,7 @@ def _mask(values: object, *, shape: tuple[int, ...], label: str) -> np.ndarray:
     return np.asarray(raw, dtype=bool)
 
 
-def _readonly_array(values: object, *, dtype: object) -> np.ndarray:
+def _readonly_array(values: npt.ArrayLike, *, dtype: npt.DTypeLike) -> np.ndarray:
     contiguous = np.ascontiguousarray(np.array(values, dtype=dtype, copy=True))
     immutable = np.frombuffer(contiguous.tobytes(order="C"), dtype=contiguous.dtype)
     return immutable.reshape(contiguous.shape)

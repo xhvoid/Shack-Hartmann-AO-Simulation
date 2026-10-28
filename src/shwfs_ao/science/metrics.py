@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, fields
 import math
-from typing import Literal, Sequence
+from typing import Final, Literal, Sequence, cast
 
 import numpy as np
 
@@ -26,10 +26,10 @@ from ..core import wavefront as _wavefront
 
 
 ARCSEC_PER_RAD = 206264.80624709636
-_DISCRETE_FLUX = "discrete_pixel_flux"
-_SURFACE_BRIGHTNESS = "angular_surface_brightness_per_sr"
-_MONOCHROMATIC = "monochromatic"
-_WEIGHTED_SCALARS = "weighted_scalar_average"
+_DISCRETE_FLUX: Final = "discrete_pixel_flux"
+_SURFACE_BRIGHTNESS: Final = "angular_surface_brightness_per_sr"
+_MONOCHROMATIC: Final = "monochromatic"
+_WEIGHTED_SCALARS: Final = "weighted_scalar_average"
 
 __all__ = (
     "ScienceMetricsError",
@@ -465,7 +465,10 @@ def _encircled_energy_radius_from_discrete_flux(
             "sort_kind must be 'stable', 'quicksort', or 'legacy_quicksort'."
         )
     numpy_sort_kind = "quicksort" if sort_kind == "legacy_quicksort" else sort_kind
-    order = np.argsort(radius, kind=numpy_sort_kind)
+    order = np.argsort(
+        radius,
+        kind=cast('Literal["quicksort", "stable"]', numpy_sort_kind),
+    )
     radius_sorted = radius[order]
     cumulative = np.cumsum(values[order])
     total = float(cumulative[-1])

@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 from numbers import Real
+from typing import Final
 
 import numpy as np
 
@@ -25,7 +26,7 @@ __all__ = ("NativeSciencePropagator",)
 
 _BACKEND_NAME = "native"
 _FFT_CONVENTION = "fftshift_fft2_ifftshift_centered-v1"
-_NORMALIZATION = "unit_total_flux"
+_NORMALIZATION: Final = "unit_total_flux"
 
 
 @dataclass(frozen=True, slots=True)

@@ -26,7 +26,10 @@ from ..backends.native.dm import (
 )
 from ..core import wavefront as _wavefront
 from ..core.types import DmCommandVector as _DmCommandVector
-from ..core.provenance import ALLOWED_SOURCE_CLASSES, Provenance as _Provenance
+from ..core.provenance import (
+    ALLOWED_SOURCE_CLASSES,
+    Provenance as _Provenance,
+)
 from ..dm import (
     DEFAULT_ACTUATOR_MARGIN_FRACTION,
     DEFAULT_DM_SOURCE_CLASS,
@@ -486,7 +489,9 @@ def fit_static_opd_with_dm(
         rank = 0
         singular_values = np.empty(0, dtype=float)
 
-    synthesis = synthesize_dm_opd_nm(commands_raw, model, remove_piston=True)
+    # synthesize_dm_opd_nm accepts array-likes at runtime (np.asarray); its
+    # public annotation is frozen as Sequence[float].
+    synthesis = synthesize_dm_opd_nm(commands_raw, model, remove_piston=True)  # type: ignore[arg-type]
     residual = np.where(model.pupil_mask, target - synthesis.opd_nm, np.nan)
     residual = _remove_piston(residual, model.pupil_mask)
     residual_rms = _rms(residual, model.pupil_mask)
@@ -739,7 +744,12 @@ def _dm_provenance(source_class: str, source_note: str) -> _Provenance:
     """Build canonical provenance while retaining legacy DM errors."""
 
     try:
-        return _Provenance(source_class=source_class, source_note=str(source_note))
+        # source_class is a runtime-validated str; physical modules must not
+        # import SourceClass from core, so narrow it with a scoped ignore.
+        return _Provenance(
+            source_class=source_class,  # type: ignore[arg-type]
+            source_note=str(source_note),
+        )
     except (TypeError, ValueError) as exc:
         if source_class not in ALLOWED_SOURCE_CLASSES:
             raise DMModelError(

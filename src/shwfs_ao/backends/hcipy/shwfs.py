@@ -493,10 +493,8 @@ def _validate_mla_assignment(
     """Require HCIPy's closest-centre lenslet map to equal the block partition."""
 
     count = geometry.n_lenslets_across
-    assignment = np.asarray(
-        micro_lens_array.mla_index,  # type: ignore[attr-defined]
-        dtype=int,
-    ).reshape(geometry.pupil_shape)
+    mla_index = micro_lens_array.mla_index  # type: ignore[attr-defined]
+    assignment = np.asarray(mla_index, dtype=int).reshape(geometry.pupil_shape)
     expected_rows = np.repeat(np.arange(count), window_rows)
     expected_columns = np.repeat(np.arange(count), window_columns)
     expected = (

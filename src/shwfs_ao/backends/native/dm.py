@@ -16,6 +16,7 @@ import math
 from numbers import Integral, Real
 
 import numpy as np
+import numpy.typing as npt
 
 from ...core.hashing import component_config_hash
 
@@ -419,7 +420,7 @@ def _real_numeric_array(values: object, *, label: str) -> np.ndarray:
         raise NativeDmError(f"{label} must be a real numeric array.") from exc
 
 
-def _readonly_array(values: object, *, dtype: object) -> np.ndarray:
+def _readonly_array(values: npt.ArrayLike, *, dtype: npt.DTypeLike) -> np.ndarray:
     contiguous = np.ascontiguousarray(np.array(values, dtype=dtype, copy=True))
     immutable = np.frombuffer(contiguous.tobytes(order="C"), dtype=contiguous.dtype)
     return immutable.reshape(contiguous.shape)

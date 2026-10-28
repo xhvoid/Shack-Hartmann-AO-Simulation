@@ -312,7 +312,7 @@ def _sequence(value: object, *, label: str) -> tuple[object, ...]:
     if isinstance(value, (str, bytes)):
         raise ControlSweepError(f"{label} must be a non-empty sequence.")
     try:
-        result = tuple(value)  # type: ignore[arg-type]
+        result: tuple[object, ...] = tuple(value)  # type: ignore[arg-type]
     except TypeError as exc:
         raise ControlSweepError(f"{label} must be a non-empty sequence.") from exc
     if not result:
@@ -323,4 +323,4 @@ def _sequence(value: object, *, label: str) -> tuple[object, ...]:
 def _factory(value: object, *, label: str) -> Callable[[float], WavefrontSensor]:
     if not callable(value):
         raise ControlSweepError(f"{label} must be callable.")
-    return value  # type: ignore[return-value]
+    return value

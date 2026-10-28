@@ -11,7 +11,7 @@ numeric decomposition to the one private masked kernel owned by
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, cast
 
 import numpy as np
 
@@ -166,7 +166,7 @@ def _legacy_least_squares_reconstructor(
     return _LegacyArrayReconstructor(
         response_matrix,
         solver="least_squares",
-        solver_parameter=rcond,
+        solver_parameter=cast("float | int | None", rcond),
         matrix_error=matrix_error,
         length_error=length_error,
         no_rows_error=no_rows_error,

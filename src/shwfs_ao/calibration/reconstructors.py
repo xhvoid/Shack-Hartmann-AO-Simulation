@@ -823,7 +823,8 @@ def _least_squares_retained(
         cutoff = _machine_singular_cutoff(singular_values, matrix_shape)
     else:
         try:
-            relative = float(rcond)
+            # Defensive coercion of arbitrary input; non-numeric raises here.
+            relative = float(rcond)  # type: ignore[arg-type]
         except (TypeError, ValueError) as exc:
             raise ReconstructionError("least-squares rcond must be numeric or None.") from exc
         # NumPy/LAPACK treats non-positive and infinite legacy values as the
@@ -862,7 +863,8 @@ def _nonnegative_finite_float(value: object, *, label: str) -> float:
     if isinstance(value, (bool, np.bool_)):
         raise ReconstructionError(f"{label} must be a finite number.")
     try:
-        result = float(value)
+        # Defensive coercion of arbitrary input; non-numeric raises here.
+        result = float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError) as exc:
         raise ReconstructionError(f"{label} must be a finite number.") from exc
     if not math.isfinite(result) or result < 0.0:

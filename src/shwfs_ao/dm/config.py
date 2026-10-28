@@ -10,11 +10,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 from numbers import Integral, Real
+from typing import cast
 
 import numpy as np
 
 from ..core.hashing import component_config_hash
-from ..core.provenance import ALLOWED_SOURCE_CLASSES, Provenance
+from ..core.provenance import ALLOWED_SOURCE_CLASSES, Provenance, SourceClass
 
 
 __all__ = (
@@ -240,7 +241,10 @@ def _nonnegative_float(value: object, *, label: str) -> float:
 
 def _dm_provenance(source_class: str, source_note: str) -> Provenance:
     try:
-        return Provenance(source_class=source_class, source_note=source_note)
+        return Provenance(
+            source_class=cast(SourceClass, source_class),
+            source_note=source_note,
+        )
     except (TypeError, ValueError) as exc:
         if (
             not isinstance(source_class, str)

@@ -278,7 +278,45 @@ class _RecordedOpdCubeAtmosphere:
 
 
 class _ComparisonContext:
-    """Shared deterministic components and fixtures for every comparison."""
+    """Shared deterministic components and fixtures for every comparison.
+
+    The backend components (optics, deformable mirrors, propagators, sensors,
+    geometry) are held as ``Any``: they come from optional and native backends
+    resolved lazily in :meth:`build`, and every comparison consumes them
+    through the same opaque, backend-neutral surface the rest of this module
+    uses.  The deterministic fixtures and recorded hashes are typed concretely
+    because they are this module's own evidence.
+    """
+
+    config: CrossBackendConfig
+    geometry: Any
+    pupil: Any
+    pixel_pitch_m: float
+    native_optics: Any
+    hcipy_optics: Any
+    native_dm: Any
+    hcipy_dm: Any
+    native_science: Any
+    hcipy_science: Any
+    native_sensor: Any
+    hcipy_sensor: Any
+    unit_modes: dict[str, np.ndarray]
+    static_opd_m: np.ndarray
+    tilt_slope_rad: float
+    tilt_x_opd_m: np.ndarray
+    tilt_y_opd_m: np.ndarray
+    command_fixture_opd_m: np.ndarray
+    time_grid_s: np.ndarray
+    shared_atmosphere: Any
+    actuator_centers_m: np.ndarray
+    actuator_pitch_m: float
+    fixture_hashes: dict[str, str]
+    component_hashes: dict[str, str]
+    # Memoized during the comparison run, not at build time.
+    native_interaction: Any
+    hcipy_interaction: Any
+    native_psf: Any
+    hcipy_psf: Any
 
     def __init__(self, **attributes: Any) -> None:
         self.__dict__.update(attributes)
@@ -400,10 +438,11 @@ class _ComparisonContext:
         )
         static_names = ("defocus", "astig_0", "coma_x")
         coefficients = coefficient_generator.standard_normal(len(static_names))
-        static_shape = sum(
-            float(coefficient) * np.where(geometry.pupil_mask, unit_modes[name], 0.0)
-            for coefficient, name in zip(coefficients, static_names)
-        )
+        static_shape = np.zeros(geometry.pupil_mask.shape, dtype=float)
+        for coefficient, name in zip(coefficients, static_names):
+            static_shape = static_shape + float(coefficient) * np.where(
+                geometry.pupil_mask, unit_modes[name], 0.0
+            )
         static_rms_m = masked_rms(
             np.where(geometry.pupil_mask, static_shape, np.nan),
             geometry.pupil_mask,

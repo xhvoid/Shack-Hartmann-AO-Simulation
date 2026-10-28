@@ -11,7 +11,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 import math
 from numbers import Integral, Real
-from typing import Protocol
+from typing import ClassVar, Protocol
 
 import numpy as np
 
@@ -108,6 +108,13 @@ class ScienceBandpass:
     source_class: str = DEFAULT_DIAGNOSTIC_SOURCE_CLASS
     source_note: str = DEFAULT_DIAGNOSTIC_SOURCE_NOTE
     filter_id: str | None = None
+
+    # Private post-init storage populated via ``object.__setattr__`` below.
+    # Declared as ClassVar so it stays out of the frozen dataclass field set
+    # (and therefore out of ``dataclasses.fields``/``asdict``) while still
+    # being visible to the type checker.
+    _weights: ClassVar[np.ndarray]
+    _provenance: ClassVar[Provenance]
 
     def __post_init__(self) -> None:
         array_provenance = _array_provenance(
@@ -303,8 +310,10 @@ def bandpass_from_filter_curve(
     column cannot be silently interpreted as metres.
     """
 
-    filter_id = _curve_attribute(curve, "filter_id")
-    _nonempty_string(filter_id, label="filter curve filter_id")
+    filter_id = _nonempty_string(
+        _curve_attribute(curve, "filter_id"),
+        label="filter curve filter_id",
+    )
     units = _curve_attribute(curve, "units")
     if not isinstance(units, Mapping):
         raise BandpassError("filter curve units must be a mapping.")

@@ -267,7 +267,7 @@ class FrozenFlowAtmosphere:
             dtype=float,
         )
         self._realization_index = 0
-        self._realization_seed = config.root_seed
+        self._realization_seed: int | None = config.root_seed
         self._random_stream_id = ""
         self._last_time_s = 0.0
         self._metadata: Mapping[str, Any] = MappingProxyType({})
