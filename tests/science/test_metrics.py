@@ -7,7 +7,8 @@ import math
 
 import numpy as np
 import pytest
-from scipy.special import j1
+from scipy.optimize import brentq
+from scipy.special import j0, j1
 
 from shwfs_ao.core import PsfResult
 from shwfs_ao.backends.native.propagation import NativeSciencePropagator
@@ -397,6 +398,134 @@ def test_irregular_grid_peak_and_default_center_use_surface_brightness() -> None
     )
     assert ee_default == ee_surface_brightness_center
     assert halo_default == halo_surface_brightness_center
+
+
+def _dihedral_images(image: np.ndarray) -> list[np.ndarray]:
+    """Return the four rotations of a square image and their mirrors."""
+
+    rotations = [np.rot90(image, turns) for turns in range(4)]
+    return rotations + [rotation[:, ::-1] for rotation in rotations]
+
+
+def _ring_interpolated_ee_radius_px(flux: np.ndarray, fraction: float) -> float:
+    """Independent EE radius in pixels about the central pixel of ``flux``.
+
+    Rings are grouped by exact integer squared offsets and summed with
+    ``math.fsum``.  Each ring's pixels straddle its radius, so the enclosed
+    fraction there counts the inner rings and half of that ring, and is
+    interpolated linearly between consecutive ring radii.
+    """
+
+    offsets = np.arange(flux.shape[0]) - flux.shape[0] // 2
+    rows, columns = np.meshgrid(offsets, offsets, indexing="ij")
+    squared_offset = (rows * rows + columns * columns).ravel()
+    keys = sorted({int(key) for key in squared_offset})
+    ring_flux = [math.fsum(flux.ravel()[squared_offset == key]) for key in keys]
+    total = math.fsum(ring_flux)
+    enclosed = [
+        math.fsum([*ring_flux[:index], 0.5 * ring_flux[index]]) / total
+        for index in range(len(keys))
+    ]
+    ring = next(index for index, value in enumerate(enclosed) if value >= fraction)
+    if ring == 0:
+        return 0.0
+    lower_radius, upper_radius = math.sqrt(keys[ring - 1]), math.sqrt(keys[ring])
+    weight = (fraction - enclosed[ring - 1]) / (enclosed[ring] - enclosed[ring - 1])
+    return lower_radius + weight * (upper_radius - lower_radius)
+
+
+@pytest.mark.parametrize("fraction", [0.50, 0.80])
+@pytest.mark.parametrize(
+    ("spacing_rad", "origin_px"),
+    [(1.0, 10.0), (3.0e-7, 7.0)],
+)
+def test_encircled_energy_is_invariant_under_grid_rotations_and_mirrors(
+    spacing_rad: float,
+    origin_px: float,
+    fraction: float,
+) -> None:
+    """Equal-radius rings are merged before cumulative-flux interpolation.
+
+    Pixel-by-pixel interpolation let the row-major first pixel of a tied ring
+    set the crossing, so EE50 of this elliptical Gaussian was 1.5727 px in two
+    orientations and 2.0 px in the other two.  On the off-origin axis the
+    rounding of ``x - center`` and ``np.hypot`` also splits each geometric
+    tie by a few ULPs.
+    """
+
+    offsets = np.arange(-10, 11, dtype=float)
+    rows, columns = np.meshgrid(offsets, offsets, indexing="ij")
+    flux = np.exp(-0.5 * (columns**2 + (rows / 2.0) ** 2))
+    axis = spacing_rad * (np.arange(21, dtype=float) - origin_px)
+    expected = spacing_rad * _ring_interpolated_ee_radius_px(flux, fraction)
+
+    radii = [
+        encircled_energy_radius_from_discrete_flux(image, axis, axis, fraction)
+        for image in _dihedral_images(flux)
+    ]
+
+    assert radii == pytest.approx([expected] * 8, rel=1.0e-12, abs=0.0)
+
+
+def test_encircled_energy_interpolates_across_the_whole_tied_ring() -> None:
+    flux = np.zeros((5, 5))
+    flux[2, 2] = 0.25
+    flux[1, 2], flux[2, 1], flux[3, 2], flux[2, 3] = 0.40, 0.03, 0.02, 0.30
+    axis = np.arange(-2.0, 3.0)
+
+    radii = [
+        encircled_energy_radius_from_discrete_flux(
+            np.rot90(flux, turns),
+            axis,
+            axis,
+            0.50,
+            center_angle_rad=(0.0, 0.0),
+        )
+        for turns in range(4)
+    ]
+
+    # Half of the centre pixel lies inside r = 0 and half of the unit ring
+    # inside r = 1, so the enclosed flux rises from 0.125 to 0.625 and crosses
+    # one half at r = 3/4 whichever neighbour carries which flux.  Placing the
+    # whole ring inside r = 1 would claim half the flux within r = 1/3,
+    # inside the centre pixel, which holds only a quarter.
+    assert radii == pytest.approx([0.75] * 4, rel=1.0e-14, abs=0.0)
+
+
+@pytest.mark.parametrize("fraction", [0.50, 0.80])
+@pytest.mark.parametrize("samples_per_lambda_over_d", [2, 3, 4, 6])
+def test_encircled_energy_of_a_sampled_airy_pattern_tracks_the_continuum(
+    samples_per_lambda_over_d: int,
+    fraction: float,
+) -> None:
+    """Coarse sampling quantizes EE radii but must not bias them by a ring gap.
+
+    Point samples of an unobscured Airy pattern over +/-16 lambda/D are
+    compared with the analytic enclosed energy ``1 - J0(pi r)**2 - J1(pi r)**2``.
+    Pixel-by-pixel interpolation was 21 percent low at EE80 on the Nyquist
+    grid, and putting each whole ring inside its radius is a third low at EE50.
+    """
+
+    spacing = 1.0 / samples_per_lambda_over_d
+    count = 32 * samples_per_lambda_over_d + 1
+    axis = spacing * (np.arange(count, dtype=float) - count // 2)
+    y_grid, x_grid = np.meshgrid(axis, axis, indexing="ij")
+    argument = np.pi * np.hypot(x_grid, y_grid)
+    flux = np.ones_like(argument)
+    nonzero = argument > 0.0
+    flux[nonzero] = (2.0 * j1(argument[nonzero]) / argument[nonzero]) ** 2
+    analytic = brentq(
+        lambda radius: 1.0
+        - j0(np.pi * radius) ** 2
+        - j1(np.pi * radius) ** 2
+        - fraction,
+        1.0e-6,
+        5.0,
+    )
+
+    radius = encircled_energy_radius_from_discrete_flux(flux, axis, axis, fraction)
+
+    assert radius == pytest.approx(analytic, rel=0.06)
 
 
 @pytest.mark.parametrize(

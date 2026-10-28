@@ -65,7 +65,11 @@ equal-radius pixels. NumPy's accelerated CPU-specific sort can permute those
 ties and change interpolation between adjacent rings even for identical PSFs.
 Their radii are exact square roots of integer pixel offsets, so a platform
 `hypot` that is not correctly rounded cannot split those ties either.
-The canonical estimator continues to use a stable sort.
+The canonical estimator instead merges each equal-radius ring before it
+interpolates between ring radii in cumulative flux, counting half of a ring's
+flux as enclosed at that ring's radius because its pixels straddle it. Its
+EE50/EE80 therefore do not depend on the order of tied pixels, and a 90-degree
+rotation or mirror of the PSF about its centre pixel leaves them unchanged.
 
 For the fast 2 m demonstrator, residual OPD RMS, sampled-peak Strehl and halo
 fraction are useful complementary diagnostics with the definitions above.

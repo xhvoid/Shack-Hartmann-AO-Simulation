@@ -31,6 +31,9 @@ _DISCRETE_FLUX: Final = "discrete_pixel_flux"
 _SURFACE_BRIGHTNESS: Final = "angular_surface_brightness_per_sr"
 _MONOCHROMATIC: Final = "monochromatic"
 _WEIGHTED_SCALARS: Final = "weighted_scalar_average"
+# Encircled-energy pixels whose sorted radii differ by at most this fraction
+# of the largest angular coordinate magnitude belong to one ring.
+_EQUAL_RADIUS_RELATIVE_TOLERANCE: Final = 1.0e-12
 
 __all__ = (
     "ScienceMetricsError",
@@ -419,7 +422,11 @@ def encircled_energy_radius_from_discrete_flux(
     *,
     center_angle_rad: tuple[float, float] | None = None,
 ) -> float:
-    """Return a physical encircled-energy radius for discrete pixel flux."""
+    """Return a physical encircled-energy radius for discrete pixel flux.
+
+    Equal-radius pixels form one ring, so the radius does not depend on the
+    order of tied pixels or on rotations and mirrors about the centre pixel.
+    """
 
     return _encircled_energy_radius_from_discrete_flux(
         discrete_pixel_flux,
@@ -445,7 +452,13 @@ def _encircled_energy_radius_from_discrete_flux(
     Flux samples are sorted by their angular distance from the supplied center
     (or the maximum-surface-brightness pixel derived from the flux and cell
     areas).  The radius is interpolated in cumulative flux, never converted
-    from a pixel-index radius.
+    from a pixel-index radius.  The canonical policies first merge every
+    equal-radius ring into one knot whose enclosed fraction counts half of
+    that ring's flux, and interpolate between consecutive ring radii, so the
+    result does not depend on the traversal order of tied pixels and is
+    invariant under grid rotations and mirrors about the centre.  Only the
+    frozen ``legacy_quicksort`` policy still interpolates between the
+    cumulative flux of individual pixels in its historical tie order.
     """
 
     flux, x_axis, y_axis = _validated_grid(
@@ -513,6 +526,19 @@ def _encircled_energy_radius_from_discrete_flux(
     if total <= 0.0:
         raise ScienceMetricsError("discrete_pixel_flux must have positive flux.")
     cumulative /= total
+    if sort_kind != "legacy_quicksort":
+        radius_sorted, cumulative = _equal_radius_ring_knots(
+            radius_sorted,
+            cumulative,
+            coordinate_scale=max(
+                abs(float(x_axis[0])),
+                abs(float(x_axis[-1])),
+                abs(float(y_axis[0])),
+                abs(float(y_axis[-1])),
+                abs(center_x),
+                abs(center_y),
+            ),
+        )
     index = int(np.searchsorted(cumulative, target, side="left"))
     if index <= 0:
         return float(radius_sorted[0])
@@ -525,6 +551,38 @@ def _encircled_energy_radius_from_discrete_flux(
         float(cumulative[index]),
         target,
     )
+
+
+def _equal_radius_ring_knots(
+    sorted_radius: np.ndarray,
+    cumulative_fraction: np.ndarray,
+    *,
+    coordinate_scale: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return one (radius, enclosed fraction) knot per equal-radius ring.
+
+    Pixel-by-pixel interpolation lets the first pixel of a tied ring set the
+    whole crossing, so a 90-degree rotation or mirror of the same PSF moves
+    EE50 by up to one ring gap.  Each knot here sits at the largest radius in
+    its ring and carries the flux enclosed by the inner rings plus half of its
+    own ring: the midpoint of the enclosed-flux step at that radius, since a
+    ring's pixels straddle their radius.  Both depend on ring totals but not
+    on the pixel order within a ring.  Placing the whole ring inside its
+    radius instead spreads that flux over the gap below and reads low, by a
+    third at EE50 for a Nyquist-sampled Airy pattern.  Tie classes are found
+    with a tolerance because rounding in the angular coordinates and in
+    ``np.hypot`` can split exact geometric ties by a few ULPs of the largest
+    coordinate.  Distinct rings of an ``N x N`` uniform grid are at least
+    about ``spacing / (2 sqrt(2) N)`` apart, which stays far above the
+    tolerance for any practical ``N``.  A radius without ties is its own ring.
+    """
+
+    tolerance = _EQUAL_RADIUS_RELATIVE_TOLERANCE * coordinate_scale
+    ring_end = np.flatnonzero(np.diff(sorted_radius) > tolerance)
+    ring_end = np.append(ring_end, sorted_radius.size - 1)
+    enclosed = cumulative_fraction[ring_end]
+    ring_flux = np.diff(enclosed, prepend=0.0)
+    return sorted_radius[ring_end], enclosed - 0.5 * ring_flux
 
 
 def _legacy_quicksort_order(

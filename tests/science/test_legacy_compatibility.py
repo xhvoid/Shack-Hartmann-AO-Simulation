@@ -109,9 +109,9 @@ def test_legacy_metric_facade_preserves_historical_pixel_conventions() -> None:
 @pytest.mark.parametrize(
     ("fraction", "historical_radius", "stable_radius"),
     [
-        (0.17, 1.7236289627606403, 1.9888421630928212),
-        (0.53, 3.113594362117866, 3.1622776601683795),
-        (0.93, 4.342538627255414, 4.47213595499958),
+        (0.17, 1.7236289627606403, 1.78864192047786),
+        (0.53, 3.113594362117866, 3.075583378655002),
+        (0.93, 4.342538627255414, 4.409434569310856),
     ],
 )
 def test_legacy_encircled_energy_freezes_equal_radius_tie_order(
@@ -120,7 +120,12 @@ def test_legacy_encircled_energy_freezes_equal_radius_tie_order(
     historical_radius: float,
     stable_radius: float,
 ) -> None:
-    """A crossing between rings exposes CPU-dependent quicksort permutations."""
+    """A crossing between rings exposes CPU-dependent quicksort permutations.
+
+    The canonical policy merges each equal-radius ring into one half-ring
+    midpoint knot before interpolating, so only the frozen policy still
+    depends on the tied-pixel order.
+    """
     flux = np.arange(1.0, 65.0).reshape(8, 8)
     axis = spacing * (np.arange(8, dtype=float) - 4.0)
     historical = _encircled_energy_radius_from_discrete_flux(
