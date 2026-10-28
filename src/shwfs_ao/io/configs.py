@@ -35,14 +35,24 @@ PROFILE_SCHEMA_NAME = "shwfs_ao.system_profile"
 # that cites it.  Each config therefore carries the record schema version it
 # belongs to (:attr:`SystemConfig.record_schema_version`), and that is the
 # version it serializes and hashes under.
-PROFILE_SCHEMA_VERSION = 2
-SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2)
+# Schema v3 adds wfs.clip_negative_pixels on the same terms.  The canonical
+# sensor used to clip negative detector pixels to zero unconditionally, which
+# turns zero-mean read noise into a positive pedestal under a center of
+# gravity; a v3 record states whether its sensor does.  v1 and v2 records
+# predate the field and keep the clipping their profiles were published with.
+PROFILE_SCHEMA_VERSION = 3
+SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2, 3)
 # The WFS photon allocation the schema-v1 profiles were reviewed and published
 # under.  A v1 record omits the field entirely, so this is the only allocation a
 # configuration claiming record schema 1 can legitimately hold.  It must stay
 # equal to :class:`WfsConfig`'s default, which is what a v1 record's omission
 # resolves to on load; ``tests/io/test_configs.py`` holds the two together.
 _V1_PHOTON_ALLOCATION = "throughput_scaled"
+# The negative-pixel policy every schema-v1 and schema-v2 profile ran with.
+# Those records omit wfs.clip_negative_pixels, so this is the only value a
+# configuration claiming either schema can hold; like the allocation above it
+# must equal :class:`WfsConfig`'s default.
+_PRE_V3_CLIP_NEGATIVE_PIXELS = True
 _PROFILE_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
     ("fast_2m_detector", 1): "synthetic_presets/fast_2m_detector.v1.json",
@@ -245,6 +255,38 @@ class _WfsConfigSchemaV1:
 
 
 @dataclass(frozen=True, slots=True)
+class _WfsConfigSchemaV2:
+    """The exact :class:`WfsConfig` shape the schema-v2 records published under.
+
+    Schema v3 added ``clip_negative_pixels``, which moves the declared field
+    list the nested WFS hash walks, exactly as ``photon_allocation`` once did
+    for the v1 records (see :class:`_WfsConfigSchemaV1`).  These thirteen
+    fields, in their published order and under the schema id those digests
+    were published with, keep every v2 record's
+    ``component_config_hashes["wfs"]`` at its published value.  It is a frozen
+    declaration of its own for the same reason as its v1 sibling.
+    """
+
+    __hash_schema_id__ = "shwfs_ao.io.configs.WfsConfig"
+
+    min_fill_fraction: float
+    pad_factor: int | None
+    detector_window_px: int | None
+    centroid_estimator: Literal[
+        "center_of_gravity", "thresholded_center_of_gravity"
+    ]
+    threshold_fraction: float
+    subtract_minimum: bool
+    min_flux_e: float
+    min_peak_snr: float
+    max_centroid_sigma_px: float
+    max_window_clipping_fraction: float
+    central_obstruction_ratio: float
+    spider_width_m: float
+    photon_allocation: Literal["throughput_scaled", "unit_sum"]
+
+
+@dataclass(frozen=True, slots=True)
 class WfsConfig:
     min_fill_fraction: float
     pad_factor: int | None
@@ -263,6 +305,12 @@ class WfsConfig:
     photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
         "throughput_scaled"
     )
+    # Whether the detector-level sensor clips negative pixels to zero before
+    # centroiding.  Clipping turns zero-mean read noise into a positive
+    # pedestal that pulls a center of gravity toward the window centre and
+    # lowers its response to spot motion; keeping negative pixels leaves it
+    # unbiased.  True is the behaviour every published profile ran with.
+    clip_negative_pixels: bool = True
 
     def __post_init__(self) -> None:
         fill = _fraction(self.min_fill_fraction, "min_fill_fraction")
@@ -303,6 +351,11 @@ class WfsConfig:
             raise SystemConfigError(
                 "photon_allocation must be 'throughput_scaled' or 'unit_sum'."
             )
+        object.__setattr__(
+            self,
+            "clip_negative_pixels",
+            _boolean(self.clip_negative_pixels, "clip_negative_pixels"),
+        )
 
     @property
     def config_hash(self) -> str:
@@ -326,9 +379,10 @@ class WfsConfig:
 
         The schema version lives on :class:`SystemConfig`, not here, so the
         caller must state it; a :class:`WfsConfig` cannot infer which record it
-        was parsed out of.  Only schema v1 needs a different payload, because it
-        predates ``photon_allocation`` — see :class:`_WfsConfigSchemaV1` for why
-        the historical bytes have to be reproduced rather than recomputed.
+        was parsed out of.  Schemas v1 and v2 need payloads of their own,
+        because they predate ``photon_allocation`` and ``clip_negative_pixels``
+        respectively — see :class:`_WfsConfigSchemaV1` for why the historical
+        bytes have to be reproduced rather than recomputed.
 
         Refusing an unknown version matters as much as reproducing the known
         ones: treating an unrecognized schema as "probably the newest" would
@@ -345,8 +399,52 @@ class WfsConfig:
                 f"unsupported profile schema_version={record_schema_version!r}; "
                 f"supported={list(SUPPORTED_PROFILE_SCHEMA_VERSIONS)}."
             )
-        if version >= 2:
+        if version >= 3:
             return component_config_hash("scao.wfs_config", self)
+        # Neither earlier schema has a field to keep negative pixels, so such a
+        # block would hash as a clipping sensor; refuse it, as for the
+        # allocation below.
+        if self.clip_negative_pixels != _PRE_V3_CLIP_NEGATIVE_PIXELS:
+            raise SystemConfigError(
+                f"record_schema_version={version} cannot express "
+                f"wfs.clip_negative_pixels={self.clip_negative_pixels!r}: that "
+                "schema has no such field, so the value would be missing from "
+                "the hash rather than recorded in it. Hash this block under "
+                f"schema {PROFILE_SCHEMA_VERSION} instead."
+            )
+        if version == 2:
+            historical_v2 = tuple(_WfsConfigSchemaV2.__dataclass_fields__)
+            declared_v2 = tuple(
+                name
+                for name in self.__dataclass_fields__
+                if name != "clip_negative_pixels"
+            )
+            if declared_v2 != historical_v2:
+                raise SystemConfigError(
+                    f"WfsConfig declares {list(declared_v2)} beside "
+                    "clip_negative_pixels, but the frozen schema-2 hash payload "
+                    f"declares {list(historical_v2)}; a schema that changes the "
+                    "WFS field set needs its own payload, because editing the "
+                    "schema-2 one moves every published v2 nested WFS hash."
+                )
+            return component_config_hash(
+                "scao.wfs_config",
+                _WfsConfigSchemaV2(
+                    min_fill_fraction=self.min_fill_fraction,
+                    pad_factor=self.pad_factor,
+                    detector_window_px=self.detector_window_px,
+                    centroid_estimator=self.centroid_estimator,
+                    threshold_fraction=self.threshold_fraction,
+                    subtract_minimum=self.subtract_minimum,
+                    min_flux_e=self.min_flux_e,
+                    min_peak_snr=self.min_peak_snr,
+                    max_centroid_sigma_px=self.max_centroid_sigma_px,
+                    max_window_clipping_fraction=self.max_window_clipping_fraction,
+                    central_obstruction_ratio=self.central_obstruction_ratio,
+                    spider_width_m=self.spider_width_m,
+                    photon_allocation=self.photon_allocation,
+                ),
+            )
         # Schema v1 has no field to carry a non-default allocation, so hashing
         # such a block under it would publish an identity that silently omits a
         # real change to the WFS photon budget: two physically different sensors
@@ -369,7 +467,9 @@ class WfsConfig:
         # failure here instead of ten silently relabelled published records.
         historical = tuple(_WfsConfigSchemaV1.__dataclass_fields__)
         declared = tuple(
-            name for name in self.__dataclass_fields__ if name != "photon_allocation"
+            name
+            for name in self.__dataclass_fields__
+            if name not in {"photon_allocation", "clip_negative_pixels"}
         )
         if declared != historical:
             raise SystemConfigError(
@@ -687,6 +787,21 @@ class SystemConfig:
                     f"this configuration from a schema-{PROFILE_SCHEMA_VERSION} "
                     "profile instead."
                 )
+        # Schemas v1 and v2 have no field to keep negative pixels, so a record
+        # under either would present a clipping sensor; refuse it by the same
+        # rule.  Recording it needs the current schema, for example through
+        # ``replace(config, record_schema_version=PROFILE_SCHEMA_VERSION)``.
+        if (
+            record_version < 3
+            and self.wfs.clip_negative_pixels != _PRE_V3_CLIP_NEGATIVE_PIXELS
+        ):
+            raise SystemConfigError(
+                f"record_schema_version={record_version} cannot express "
+                f"wfs.clip_negative_pixels={self.wfs.clip_negative_pixels!r}: "
+                "that schema has no such field, so the value would be lost. "
+                f"Record this configuration under schema {PROFILE_SCHEMA_VERSION} "
+                "instead."
+            )
         object.__setattr__(self, "record_schema_version", record_version)
 
     @property
@@ -784,9 +899,11 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
     published profile must stay readable for exactly as long as results cite it.
     Schema v2 requires ``wfs.photon_allocation``; schema v1 predates the field
     and must omit it, taking the ``throughput_scaled`` allocation the v1
-    profiles were reviewed and published under.  Each version's field set is
-    exact in both directions, so a v1 record can neither carry the v2 field nor
-    be silently upgraded, and a v2 record can never omit it.
+    profiles were reviewed and published under.  Schema v3 likewise requires
+    ``wfs.clip_negative_pixels``, which v1 and v2 records omit, taking the
+    clipping they were published with.  Each version's field set is exact in
+    both directions, so an older record can neither carry a later field nor be
+    silently upgraded, and a newer record can never omit one.
     """
 
     root = _mapping(record, "profile record")
@@ -837,7 +954,13 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
         wfs=_construct(
             WfsConfig,
             values["wfs"],
-            _WFS_FIELDS if schema_version >= 2 else _WFS_FIELDS_V1,
+            (
+                _WFS_FIELDS
+                if schema_version >= 3
+                else _WFS_FIELDS_V2
+                if schema_version == 2
+                else _WFS_FIELDS_V1
+            ),
             "wfs",
         ),
         dm=_construct(DmSystemConfig, values["dm"], _DM_FIELDS, "dm", tuple_fields={"dead_actuator_indices", "stuck_actuator_indices"}),
@@ -874,9 +997,11 @@ def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
         raise SystemConfigError("config must be a SystemConfig.")
     profile = config.profile
     wfs_fields = _dataclass_mapping(config.wfs)
+    # Earlier schemas lack these fields, and __post_init__ has already refused
+    # any configuration whose value an omission would lose.
+    if config.record_schema_version < 3:
+        del wfs_fields["clip_negative_pixels"]
     if config.record_schema_version < 2:
-        # Schema v1 has no such field, and __post_init__ has already refused any
-        # configuration whose value this omission would lose.
         del wfs_fields["photon_allocation"]
     return {
         "schema_name": PROFILE_SCHEMA_NAME,
@@ -912,13 +1037,16 @@ def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
 _SYSTEM_FIELDS = {"backend", "wfs_model", "atmosphere_model", "telescope_diameter_m", "pupil_pixels", "lenslets_across", "actuators_across", "wfs_wavelength_m", "science_wavelengths_m", "atmosphere", "detector", "wfs", "dm", "calibration", "reconstructor", "command_projector", "controller", "science", "random"}
 _ATMOSPHERE_FIELDS = {"r0_m", "r0_reference_wavelength_m", "outer_scale_m", "wind_m_per_s", "target_rms_opd_m", "normalize_rms"}
 _DETECTOR_FIELDS = {"enabled", "photons_per_subap_frame", "read_noise_e", "dark_e_per_s", "background_e_per_pixel_frame", "full_well_e", "qe", "prnu_rms", "exposure_s", "prnu_mode", "bad_pixel_fraction"}
-_WFS_FIELDS = {"min_fill_fraction", "pad_factor", "detector_window_px", "centroid_estimator", "threshold_fraction", "subtract_minimum", "min_flux_e", "min_peak_snr", "max_centroid_sigma_px", "max_window_clipping_fraction", "central_obstruction_ratio", "spider_width_m", "photon_allocation"}
+_WFS_FIELDS = {"min_fill_fraction", "pad_factor", "detector_window_px", "centroid_estimator", "threshold_fraction", "subtract_minimum", "min_flux_e", "min_peak_snr", "max_centroid_sigma_px", "max_window_clipping_fraction", "central_obstruction_ratio", "spider_width_m", "photon_allocation", "clip_negative_pixels"}
+# Schema v3 requires clip_negative_pixels for the same reason: whether negative
+# pixels are clipped changes every noisy centroid, so a v3 record states it.
+_WFS_FIELDS_V2 = _WFS_FIELDS - {"clip_negative_pixels"}
 # Schema v2 requires photon_allocation in every profile: it materially affects
 # the WFS photon budget and therefore the recorded identity, so a v2 record
 # never defaults it silently.  Schema v1 predates the field, so a v1 record must
 # omit it and takes the reviewed "throughput_scaled" default it was published
 # with; carrying it would make the record neither a valid v1 nor a valid v2.
-_WFS_FIELDS_V1 = _WFS_FIELDS - {"photon_allocation"}
+_WFS_FIELDS_V1 = _WFS_FIELDS_V2 - {"photon_allocation"}
 _DM_FIELDS = {"influence_model", "coupling_width_pitch", "stroke_limit_opd_m", "include_edge_actuators", "actuator_margin_fraction", "dead_actuator_indices", "stuck_actuator_indices", "stuck_command_opd_m"}
 _CALIBRATION_FIELDS = {"source", "method", "probe_kind", "amplitude_m", "include_noise", "repeats", "resource_name"}
 _RECONSTRUCTOR_FIELDS = {"kind", "rcond", "alpha", "min_valid_fraction", "min_rank", "max_cached_masks"}

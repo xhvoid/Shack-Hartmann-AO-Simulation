@@ -193,6 +193,7 @@ class NativeScaoComponentFactory:
         photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
             "throughput_scaled"
         ),
+        clip_negative_pixels: bool = True,
     ) -> WavefrontSensor:
         def geometric() -> WavefrontSensor:
             return NativeGeometricShackHartmannSensor(geometry)
@@ -213,6 +214,7 @@ class NativeScaoComponentFactory:
                 centroid_config=centroid_config,
                 validity_config=validity_config,
                 photon_allocation=photon_allocation,
+                clip_negative_pixels=clip_negative_pixels,
             )
 
         builders: dict[str, Callable[[], WavefrontSensor]] = {

@@ -55,6 +55,11 @@ class ShackHartmannCalibration:
     photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
         "throughput_scaled"
     )
+    # Whether measured frames clip negative pixels to zero before centroiding.
+    # The zero-phase reference is noiseless and never negative, so it does not
+    # depend on this; noisy centroids do, because clipping turns zero-mean
+    # read noise into a positive pedestal.
+    clip_negative_pixels: bool = True
 
     def __post_init__(self) -> None:
         if not isinstance(self.geometry, ShackHartmannGeometry):
@@ -108,6 +113,10 @@ class ShackHartmannCalibration:
             raise ShackHartmannCalibrationError(
                 "photon_allocation must be 'throughput_scaled' or 'unit_sum'."
             )
+        if not isinstance(self.clip_negative_pixels, bool):
+            raise ShackHartmannCalibrationError(
+                "clip_negative_pixels must be a boolean."
+            )
         config_hash = _nonempty_string(self.config_hash, label="config_hash")
         expected_hash = shack_hartmann_calibration_hash(
             geometry=self.geometry,
@@ -121,6 +130,7 @@ class ShackHartmannCalibration:
             detector_realization_hash=detector_realization_hash,
             provenance=self.provenance,
             photon_allocation=self.photon_allocation,
+            clip_negative_pixels=self.clip_negative_pixels,
         )
         if config_hash != expected_hash:
             raise ShackHartmannCalibrationError(
@@ -173,6 +183,7 @@ def calibrate_zero_phase_reference(
     photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
         "throughput_scaled"
     ),
+    clip_negative_pixels: bool = True,
 ) -> ShackHartmannCalibration:
     """Build a zero-OPD reference without advancing runtime noise streams.
 
@@ -182,7 +193,9 @@ def calibrate_zero_phase_reference(
     is the explicit photon-budget interpretation: ``"throughput_scaled"``
     multiplies each unit-sum spot by its relative lenslet throughput (the
     frozen compatibility model), while ``"unit_sum"`` gives every retained
-    subaperture the full configured budget.
+    subaperture the full configured budget.  ``clip_negative_pixels`` is
+    recorded for the measurements; the noiseless reference itself never has a
+    negative pixel to clip.
     """
 
     if not isinstance(geometry, ShackHartmannGeometry):
@@ -201,6 +214,8 @@ def calibrate_zero_phase_reference(
         raise ShackHartmannCalibrationError(
             "photon_allocation must be 'throughput_scaled' or 'unit_sum'."
         )
+    if not isinstance(clip_negative_pixels, bool):
+        raise ShackHartmannCalibrationError("clip_negative_pixels must be a boolean.")
     wavelength = _positive_float(wfs_wavelength_m, label="wfs_wavelength_m")
     _validate_realization(detector_config, detector_realization, random_streams)
     backend_name, backend_hash = _backend_identity(optics_backend)
@@ -306,6 +321,7 @@ def calibrate_zero_phase_reference(
         detector_realization_hash=detector_realization.realization_hash,
         provenance=resolved_provenance,
         photon_allocation=photon_allocation,
+        clip_negative_pixels=clip_negative_pixels,
     )
     return ShackHartmannCalibration(
         geometry=geometry,
@@ -321,6 +337,7 @@ def calibrate_zero_phase_reference(
         config_hash=config_hash,
         provenance=resolved_provenance,
         photon_allocation=photon_allocation,
+        clip_negative_pixels=clip_negative_pixels,
     )
 
 
@@ -339,6 +356,7 @@ def shack_hartmann_calibration_hash(
     photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
         "throughput_scaled"
     ),
+    clip_negative_pixels: bool = True,
 ) -> str:
     """Hash every configuration and realized datum defining a calibration."""
 
@@ -368,6 +386,9 @@ def shack_hartmann_calibration_hash(
     # hash-visible.
     if photon_allocation != "throughput_scaled":
         payload["photon_allocation"] = str(photon_allocation)
+    # Clipping negative pixels is the frozen default and stays out the same way.
+    if not clip_negative_pixels:
+        payload["clip_negative_pixels"] = False
     return stable_hash(
         payload,
         namespace="shack_hartmann_calibration",

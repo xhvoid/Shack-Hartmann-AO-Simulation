@@ -387,6 +387,7 @@ calibration, diagnostic, science, and experiment-result record is listed here.
 | `detector_realization_hash`, `config_hash` | stable strings | persistent detector state and full calibration identity |
 | `provenance` | `Provenance` | source classification and references |
 | `photon_allocation` | `"throughput_scaled"` or `"unit_sum"` | explicit photon-budget interpretation shared by reference and runtime frames; the frozen throughput-scaled default hashes identically, while `"unit_sum"` changes the calibration hash. Window clipping is judged on optical capture under either choice |
+| `clip_negative_pixels` | bool | whether measured frames clip negative pixels to zero before centroiding (`wfs.clip_negative_pixels`, profile schema 3); the frozen `True` default hashes identically, while `False` changes the calibration hash. The noiseless reference, the response identity, and the runtime noise streams do not depend on it |
 | `shack_hartmann_noise_stream_identity(...)`, `DetectorShackHartmannSensor.noise_stream_identity` | stable string | declared sensor identity keying runtime noise streams; unlike `config_hash` it binds no reference centroids or drawn detector maps, so one seed selects the same streams on every host |
 | `GeometricShackHartmannCalibration.geometry` | `ShackHartmannGeometry` | exact geometric-sensor layout |
 | `reference_slopes_rad` | `(n_subapertures, 2)` rad wavefront slope | finite local-slope references |
@@ -493,7 +494,12 @@ plain center of gravity, not a bound for other estimators or preprocessing.
 Negative clipping lowers the raw scatter of faint spots while biasing them
 toward the window centre, so at read-noise-dominated low flux the value can
 exceed `max_centroid_sigma_px` before the clipped detector frames scatter that
-much. Thresholding is not modelled: noise switches pixels near the threshold
+much. The rectified read noise acts as a pedestal: in a 14-pixel window it
+lowers the mean response to spot motion to 0.99 at 8000 photons and 1 e- read
+noise, and to 0.80 at 1500 photons and 3 e-, while a spot off the window centre
+is pulled toward it. `wfs.clip_negative_pixels=False` keeps negative pixels,
+which leaves the center of gravity unbiased (response 1.00) and makes this
+value describe its scatter directly; every published profile clips. Thresholding is not modelled: noise switches pixels near the threshold
 in and out, so a spot with a secondary peak near the threshold level can
 scatter many times the reported value while every frame still passes the
 uncertainty gate. PRNU, saturation, and bad pixels are not modelled either.
