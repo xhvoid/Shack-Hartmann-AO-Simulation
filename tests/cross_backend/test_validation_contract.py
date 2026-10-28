@@ -1169,6 +1169,70 @@ class TestEvaluationSemantics:
         assert len(failures) == 3
         assert all("standard_error" in failure for failure in failures)
 
+    def test_a_numpy_boolean_is_a_flag_and_not_a_number(self, packaged_baseline):
+        """NumPy's bool_ is not a Python bool, so the kind check must not ask.
+
+        ``numpy.bool_`` compares equal to 0 and 1 while failing
+        ``isinstance(x, bool)``, which inverts a bool-only guard exactly: the
+        flag satisfies the numeric gate and fails the boolean one.  A metric
+        producer that computes an identity as ``(a == b).all()`` hands back
+        precisely this type.
+        """
+
+        numpy = pytest.importorskip("numpy")
+
+        # A flag may not satisfy a gate on a count...
+        report = _report_copy(packaged_baseline)
+        _set_metric_value(
+            report,
+            "interaction_matrix_identity",
+            "rank_difference",
+            numpy.bool_(False),
+        )
+        failures = evaluate_report_against_baseline(report, packaged_baseline)
+        assert len(failures) == 1
+        assert "metric=rank_difference" in failures[0]
+
+        # ...and a genuine boolean measurement must still satisfy its own gate,
+        # whichever scalar type carried it.
+        report = _report_copy(packaged_baseline)
+        _set_metric_value(
+            report,
+            "pupil_mask_and_throughput",
+            "mask_round_trip_identical",
+            numpy.bool_(True),
+        )
+        assert evaluate_report_against_baseline(report, packaged_baseline) == ()
+
+        # A NumPy float is a real measurement and stays acceptable.
+        report = _report_copy(packaged_baseline)
+        observed = next(
+            metric["value"]
+            for comparison in report["comparisons"]
+            if comparison["comparison_kind"] == "strehl_ratio"
+            for metric in comparison["metrics"]
+            if metric["name"] == "native_strehl"
+        )
+        _set_metric_value(
+            report, "strehl_ratio", "native_strehl", numpy.float64(observed)
+        )
+        assert evaluate_report_against_baseline(report, packaged_baseline) == ()
+
+    def test_an_object_cannot_assert_its_way_past_an_equality_gate(
+        self, packaged_baseline
+    ):
+        # A value of no recognised scalar kind never compares equal, so a
+        # permissive __eq__ cannot answer a gate on the value's behalf.
+        class Always:
+            def __eq__(self, other):  # noqa: D105
+                return True
+
+        report = _report_copy(packaged_baseline)
+        _set_metric_value(
+            report, "interaction_matrix_identity", "rank_difference", Always()
+        )
+        assert len(evaluate_report_against_baseline(report, packaged_baseline)) == 1
+
     def test_a_boolean_observation_never_satisfies_a_numeric_gate(
         self, packaged_baseline
     ):

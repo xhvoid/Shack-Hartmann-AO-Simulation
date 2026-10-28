@@ -299,13 +299,13 @@
     "matrix": [
       {
         "constraints": "constraints/py310.txt",
-        "constraints_sha256": "3c50e487ed90fbf9e60060fe32d30d7e53842a7416a9036034862b15a66c0feb",
+        "constraints_sha256": "f250f5cb6c3f548a4109bba42a056a5f49d67d4ddeeb2eae4801c36a5dfd0460",
         "constraints_working_tree_state": "untracked",
         "python": "3.10"
       },
       {
         "constraints": "constraints/py314.txt",
-        "constraints_sha256": "490dc1cf1f32d027a8916f9ec26b1a2b16b2fa439e6d81b9f107bd1d90ccdb79",
+        "constraints_sha256": "4be7f83af7f7bec854e1d7e21fd288ca176b8dc4c4a9b12e201ecc9ce82fb23b",
         "constraints_working_tree_state": "untracked",
         "python": "3.14"
       }
