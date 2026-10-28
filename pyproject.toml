@@ -82,6 +82,7 @@ editable_wheel = "build_support.resource_alias.EditableWheelWithResourceAlias"
     "samples/*.json",
     "reference_metrics/*.csv",
     "reference_metrics/*.json",
+    "reference_metrics/cross_backend/*.json",
     "literature_profiles/*.json",
     "synthetic_presets/*.json",
     "schemas/*.json",

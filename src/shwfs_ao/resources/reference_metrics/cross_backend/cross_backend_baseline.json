@@ -1,0 +1,787 @@
+{
+  "acceptance": {
+    "accepted_at_utc": "2026-07-17T13:16:42.343788+00:00",
+    "reason": "Initial AO-REF-018 cross-backend baseline for the small deterministic comparison profile",
+    "review_reference": "AO-REF-018"
+  },
+  "artifact_schema_name": "shwfs_ao.cross_backend_baseline",
+  "artifact_schema_version": 1,
+  "comparison_config": {
+    "atmosphere_realizations": 4,
+    "config_hash": "1e77e856c1f0e4d28f74c57bfbcc58b5c8f0468ba5f7490be39b6d10976bec83",
+    "coupling_width_pitch": 0.35,
+    "frame_rate_hz": 500.0,
+    "hcipy_psf_pixels_per_resolution_element": 5.0,
+    "hcipy_psf_radius_resolution_elements": 12.0,
+    "lenslets_across": 3,
+    "loop_gain": 0.5,
+    "loop_r0_m": 0.45,
+    "loop_steps": 4,
+    "min_fill_fraction": 0.3,
+    "n_actuators_across": 3,
+    "outer_scale_m": 20.0,
+    "photons_per_subap_frame": 20000.0,
+    "psf_pad_factor": 4,
+    "pupil_pixels": 48,
+    "r0_m": 0.15,
+    "root_seed": 118,
+    "runtime_repeats": 3,
+    "science_wavelength_m": 7e-07,
+    "spot_sampling_px": 4.0,
+    "static_aberration_rms_m": 6e-08,
+    "stroke_limit_nm": 20000.0,
+    "structure_function_lags_px": [
+      2,
+      4
+    ],
+    "telescope_diameter_m": 1.0,
+    "tilt_amplitude_px": 0.8,
+    "wfs_wavelength_m": 7e-07,
+    "wind_m_per_s": [
+      5.0,
+      0.0
+    ]
+  },
+  "comparisons": [
+    {
+      "attribution": "Both backends consume the identical repository pupil mask through the conversion layer; capture fractions differ only through each backend's detector-window convention (full padded FFT canvas versus pupil-sampled focal blocks).",
+      "comparison_kind": "pupil_mask_and_throughput",
+      "metrics": [
+        {
+          "level": "exact",
+          "name": "mask_round_trip_identical",
+          "pass_criterion": {
+            "expected": true,
+            "type": "equals"
+          },
+          "rationale": "The conversion layer must preserve the pupil mask exactly.",
+          "units": "boolean",
+          "value": true
+        },
+        {
+          "level": "exact",
+          "name": "illuminated_sample_count",
+          "pass_criterion": {
+            "expected": 1716,
+            "type": "equals"
+          },
+          "rationale": "Both backends see the same illuminated sample inventory.",
+          "units": "samples",
+          "value": 1716
+        },
+        {
+          "level": "tight_numerical",
+          "name": "native_mean_window_capture",
+          "pass_criterion": {
+            "expected": 1.0,
+            "tolerance": 1e-09,
+            "type": "abs_tolerance"
+          },
+          "rationale": "The native full-canvas window captures each normalized lenslet spot completely.",
+          "units": "fraction",
+          "value": 1.0
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "hcipy_mean_window_capture",
+          "pass_criterion": {
+            "high": 1.0,
+            "low": 0.9,
+            "type": "range"
+          },
+          "rationale": "Finite pupil-sampled focal windows lose a few percent of each spot to diffraction wings; well below 10 % for the configured four-pixel spot sampling.",
+          "units": "fraction",
+          "value": 0.9567850700927824
+        }
+      ]
+    },
+    {
+      "attribution": "Native named modes and HCIPy Noll modes are the same polynomials; only normalization conventions differ and both are renormalized to unit sampled pupil RMS before comparison.",
+      "comparison_kind": "zernike_modes",
+      "metrics": [
+        {
+          "level": "tight_numerical",
+          "name": "tip_x_alignment_defect",
+          "pass_criterion": {
+            "expected": 0.0,
+            "tolerance": 1e-09,
+            "type": "abs_tolerance"
+          },
+          "rationale": "Identical polynomials sampled on one grid and normalized to unit sampled pupil RMS must correlate to unity.",
+          "units": "1 - |correlation|",
+          "value": 0.0
+        },
+        {
+          "level": "exact",
+          "name": "tip_x_relative_sign",
+          "pass_criterion": {
+            "expected": 1,
+            "type": "equals"
+          },
+          "rationale": "The repository Noll-name mapping fixes the relative sign convention between the two mode constructions.",
+          "units": "sign",
+          "value": 1
+        },
+        {
+          "level": "tight_numerical",
+          "name": "tip_y_alignment_defect",
+          "pass_criterion": {
+            "expected": 0.0,
+            "tolerance": 1e-09,
+            "type": "abs_tolerance"
+          },
+          "rationale": "Identical polynomials sampled on one grid and normalized to unit sampled pupil RMS must correlate to unity.",
+          "units": "1 - |correlation|",
+          "value": 0.0
+        },
+        {
+          "level": "exact",
+          "name": "tip_y_relative_sign",
+          "pass_criterion": {
+            "expected": 1,
+            "type": "equals"
+          },
+          "rationale": "The repository Noll-name mapping fixes the relative sign convention between the two mode constructions.",
+          "units": "sign",
+          "value": 1
+        },
+        {
+          "level": "tight_numerical",
+          "name": "defocus_alignment_defect",
+          "pass_criterion": {
+            "expected": 0.0,
+            "tolerance": 1e-09,
+            "type": "abs_tolerance"
+          },
+          "rationale": "Identical polynomials sampled on one grid and normalized to unit sampled pupil RMS must correlate to unity.",
+          "units": "1 - |correlation|",
+          "value": 2.220446049250313e-16
+        },
+        {
+          "level": "exact",
+          "name": "defocus_relative_sign",
+          "pass_criterion": {
+            "expected": 1,
+            "type": "equals"
+          },
+          "rationale": "The repository Noll-name mapping fixes the relative sign convention between the two mode constructions.",
+          "units": "sign",
+          "value": 1
+        },
+        {
+          "level": "tight_numerical",
+          "name": "astig_45_alignment_defect",
+          "pass_criterion": {
+            "expected": 0.0,
+            "tolerance": 1e-09,
+            "type": "abs_tolerance"
+          },
+          "rationale": "Identical polynomials sampled on one grid and normalized to unit sampled pupil RMS must correlate to unity.",
+          "units": "1 - |correlation|",
+          "value": 0.0
+        },
+        {
+          "level": "exact",
+          "name": "astig_45_relative_sign",
+          "pass_criterion": {
+            "expected": 1,
+            "type": "equals"
+          },
+          "rationale": "The repository Noll-name mapping fixes the relative sign convention between the two mode constructions.",
+          "units": "sign",
+          "value": 1
+        },
+        {
+          "level": "tight_numerical",
+          "name": "astig_0_alignment_defect",
+          "pass_criterion": {
+            "expected": 0.0,
+            "tolerance": 1e-09,
+            "type": "abs_tolerance"
+          },
+          "rationale": "Identical polynomials sampled on one grid and normalized to unit sampled pupil RMS must correlate to unity.",
+          "units": "1 - |correlation|",
+          "value": 0.0
+        },
+        {
+          "level": "exact",
+          "name": "astig_0_relative_sign",
+          "pass_criterion": {
+            "expected": 1,
+            "type": "equals"
+          },
+          "rationale": "The repository Noll-name mapping fixes the relative sign convention between the two mode constructions.",
+          "units": "sign",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "attribution": "Screens are generated by independent spectral implementations; equal seeds do not imply equal realizations, so only statistics are compared. Finite outer scale and pupil-scale sampling pull both structure-function ratios below the pure Kolmogorov value 3.175.",
+      "comparison_kind": "atmosphere_statistics",
+      "metrics": [
+        {
+          "level": "physical_tolerance",
+          "name": "rms_ratio_hcipy_over_native",
+          "pass_criterion": {
+            "high": 1.8,
+            "low": 0.55,
+            "type": "range"
+          },
+          "rationale": "Same r0, outer scale, and pupil: mean RMS must agree within finite-sample von Karman scatter for 4 realizations.",
+          "units": "ratio",
+          "value": 0.6806884166331736
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "native_structure_function_lag_ratio",
+          "pass_criterion": {
+            "high": 4.2,
+            "low": 1.6,
+            "type": "range"
+          },
+          "rationale": "Small-lag structure-function growth must sit near the Kolmogorov 5/3 scaling, reduced by the finite outer scale.",
+          "units": "ratio",
+          "value": 2.7597035194259494
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "hcipy_structure_function_lag_ratio",
+          "pass_criterion": {
+            "high": 4.2,
+            "low": 1.6,
+            "type": "range"
+          },
+          "rationale": "Same physical expectation as the native screen generator.",
+          "units": "ratio",
+          "value": 2.9661323087324907
+        }
+      ],
+      "statistical_definition": "4 independent realizations per backend at t=0; estimator: masked pupil RMS and the ratio of mean-square column differences at lags 4px/2px; uncertainty handled by wide range criteria sized to more than three times the observed realization scatter."
+    },
+    {
+      "attribution": "One shared tilt fixture drives both detector-level sensors through the identical repository detector and centroid chain; gain differences come from each backend's window truncation and the HCIPy full-field lenslet crosstalk.",
+      "comparison_kind": "wfs_tip_tilt_response",
+      "metrics": [
+        {
+          "level": "tight_numerical",
+          "name": "native_x_response_sign",
+          "pass_criterion": {
+            "expected": 1,
+            "type": "equals"
+          },
+          "rationale": "Positive x-tilt must move native centroids toward positive detector columns.",
+          "units": "sign",
+          "value": 1
+        },
+        {
+          "level": "tight_numerical",
+          "name": "hcipy_x_response_sign",
+          "pass_criterion": {
+            "expected": 1,
+            "type": "equals"
+          },
+          "rationale": "Positive x-tilt must move HCIPy centroids toward positive detector columns.",
+          "units": "sign",
+          "value": 1
+        },
+        {
+          "level": "tight_numerical",
+          "name": "native_cross_axis_fraction",
+          "pass_criterion": {
+            "expected": 0.0,
+            "tolerance": 0.05,
+            "type": "abs_tolerance"
+          },
+          "rationale": "A pure x-tilt produces no mean y response beyond discretization noise.",
+          "units": "fraction of applied tilt",
+          "value": 1.4494578377050666e-15
+        },
+        {
+          "level": "tight_numerical",
+          "name": "hcipy_cross_axis_fraction",
+          "pass_criterion": {
+            "expected": 0.0,
+            "tolerance": 0.05,
+            "type": "abs_tolerance"
+          },
+          "rationale": "Same cross-axis expectation for the HCIPy optics.",
+          "units": "fraction of applied tilt",
+          "value": 1.233581138472396e-16
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "native_tilt_gain",
+          "pass_criterion": {
+            "high": 1.1,
+            "low": 0.75,
+            "type": "range"
+          },
+          "rationale": "Thresholded centre-of-gravity truncation keeps the native gain near but below the ideal unity response.",
+          "units": "measured over applied angular displacement",
+          "value": 0.9589088703619697
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "hcipy_tilt_gain",
+          "pass_criterion": {
+            "high": 1.05,
+            "low": 0.7,
+            "type": "range"
+          },
+          "rationale": "The smaller HCIPy focal windows truncate slightly more of each spot wing than the native canvas.",
+          "units": "measured over applied angular displacement",
+          "value": 0.9080854427184399
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "tilt_gain_ratio_hcipy_over_native",
+          "pass_criterion": {
+            "high": 1.1,
+            "low": 0.8,
+            "type": "range"
+          },
+          "rationale": "Window truncation and lenslet crosstalk explain the remaining gain difference between the two optical chains.",
+          "units": "ratio",
+          "value": 0.9469986885986935
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "y_gain_ratio_hcipy_over_native",
+          "pass_criterion": {
+            "high": 1.1,
+            "low": 0.8,
+            "type": "range"
+          },
+          "rationale": "The y axis must behave like the x axis on both backends.",
+          "units": "ratio",
+          "value": 0.9469986885986941
+        }
+      ]
+    },
+    {
+      "attribution": "Both backends are compared on one matched angular window; the native path propagates each lenslet alone while HCIPy propagates the full field, so neighbouring-lenslet wings and focal-grid sampling explain the residual differences.",
+      "comparison_kind": "lenslet_spot_morphology",
+      "metrics": [
+        {
+          "level": "physical_tolerance",
+          "name": "native_ee50_over_diffraction",
+          "pass_criterion": {
+            "high": 1.0,
+            "low": 0.2,
+            "type": "range"
+          },
+          "rationale": "The half-energy radius of a diffraction-limited lenslet spot sits well inside one lambda/d.",
+          "units": "ratio of lambda/d",
+          "value": 0.4413044529864783
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "hcipy_ee50_over_diffraction",
+          "pass_criterion": {
+            "high": 1.0,
+            "low": 0.2,
+            "type": "range"
+          },
+          "rationale": "Same diffraction expectation for the HCIPy lenslet spots.",
+          "units": "ratio of lambda/d",
+          "value": 0.39528470752105344
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "ee50_ratio_hcipy_over_native",
+          "pass_criterion": {
+            "high": 1.25,
+            "low": 0.8,
+            "type": "range"
+          },
+          "rationale": "Focal-plane sampling differs between the backends, so the half-energy width agrees only to the resampling level.",
+          "units": "ratio",
+          "value": 0.8957188282284682
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "centroid_gain_ratio_hcipy_over_native",
+          "pass_criterion": {
+            "high": 1.1,
+            "low": 0.75,
+            "type": "range"
+          },
+          "rationale": "Full-field crosstalk pulls the HCIPy window centroid slightly toward its reference compared with the isolated native lenslet propagation.",
+          "units": "ratio",
+          "value": 0.9442976970367405
+        }
+      ]
+    },
+    {
+      "attribution": "Both mirrors use the same repository actuator layout and the same analytic Gaussian with in-pupil peak normalization; outside the pupil the HCIPy surface keeps its analytic tail while the native construction stores zeros.",
+      "comparison_kind": "dm_single_actuator_influence",
+      "metrics": [
+        {
+          "level": "exact",
+          "name": "actuator_ids_identical",
+          "pass_criterion": {
+            "expected": true,
+            "type": "equals"
+          },
+          "rationale": "Actuator identity and ordering are repository-owned and backend independent.",
+          "units": "boolean",
+          "value": true
+        },
+        {
+          "level": "tight_numerical",
+          "name": "max_in_pupil_influence_abs_diff",
+          "pass_criterion": {
+            "expected": 0.0,
+            "tolerance": 1e-09,
+            "type": "abs_tolerance"
+          },
+          "rationale": "Matched Gaussian construction must agree to numerical precision inside the pupil.",
+          "units": "unit-peak influence",
+          "value": 3.6637359812630166e-15
+        }
+      ]
+    },
+    {
+      "attribution": "One shared static aberration fixture is least-squares fitted in each backend's influence space; matched in-pupil influence functions make the residuals numerically identical.",
+      "comparison_kind": "dm_static_fitting",
+      "metrics": [
+        {
+          "level": "physical_tolerance",
+          "name": "native_fitting_residual_fraction",
+          "pass_criterion": {
+            "high": 0.95,
+            "low": 0.1,
+            "type": "range"
+          },
+          "rationale": "A coarse actuator grid corrects only part of the low-order fixture; the fraction must stay physical (clearly below one, clearly above numerical zero).",
+          "units": "residual rms / target rms",
+          "value": 0.3025226785521671
+        },
+        {
+          "level": "tight_numerical",
+          "name": "fitting_residual_relative_difference",
+          "pass_criterion": {
+            "expected": 0.0,
+            "tolerance": 1e-06,
+            "type": "abs_tolerance"
+          },
+          "rationale": "Identical in-pupil influence bases must produce the same least-squares residual to solver precision.",
+          "units": "relative difference",
+          "value": 3.2811316487549422e-15
+        }
+      ]
+    },
+    {
+      "attribution": "Both matrices are calibrated by the shared repository calibrator with the same probe basis and amplitudes; layout identity is exact while matrix entries differ at the optical gain level examined by the singular-spectrum comparison.",
+      "comparison_kind": "interaction_matrix_identity",
+      "metrics": [
+        {
+          "level": "exact",
+          "name": "matrix_shapes_identical",
+          "pass_criterion": {
+            "expected": true,
+            "type": "equals"
+          },
+          "rationale": "Row and coordinate layouts are repository-owned.",
+          "units": "boolean",
+          "value": true
+        },
+        {
+          "level": "exact",
+          "name": "row_ids_identical",
+          "pass_criterion": {
+            "expected": true,
+            "type": "equals"
+          },
+          "rationale": "Measurement row identity must not depend on the backend.",
+          "units": "boolean",
+          "value": true
+        },
+        {
+          "level": "exact",
+          "name": "coordinate_ids_identical",
+          "pass_criterion": {
+            "expected": true,
+            "type": "equals"
+          },
+          "rationale": "Actuator coordinate identity must not depend on the backend.",
+          "units": "boolean",
+          "value": true
+        },
+        {
+          "level": "exact",
+          "name": "rank_difference",
+          "pass_criterion": {
+            "expected": 0,
+            "type": "equals"
+          },
+          "rationale": "Both calibrations must resolve the same controllable subspace on the matched geometry.",
+          "units": "rank",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "attribution": "Sigma over sigma_0 removes each backend's absolute centroid gain; the remaining shape difference reflects window truncation and lenslet crosstalk in the optical responses.",
+      "comparison_kind": "normalized_singular_spectrum",
+      "metrics": [
+        {
+          "level": "exact",
+          "name": "spectrum_length_difference",
+          "pass_criterion": {
+            "expected": 0,
+            "type": "equals"
+          },
+          "rationale": "Both spectra cover the same controllable subspace.",
+          "units": "count",
+          "value": 0
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "max_normalized_sigma_abs_diff",
+          "pass_criterion": {
+            "expected": 0.0,
+            "tolerance": 0.1,
+            "type": "abs_tolerance"
+          },
+          "rationale": "Normalized spectra agree to the optical-gain-shape level; a 0.10 envelope is several times the observed difference on the pinned environments.",
+          "units": "normalized sigma",
+          "value": 0.04522552672313718
+        }
+      ]
+    },
+    {
+      "attribution": "Both backends return unit-total discrete flux by contract; their angular windows differ, which the Strehl comparison accounts for by using per-backend ideal references.",
+      "comparison_kind": "psf_normalization",
+      "metrics": [
+        {
+          "level": "tight_numerical",
+          "name": "native_total_flux_error",
+          "pass_criterion": {
+            "expected": 0.0,
+            "tolerance": 1e-09,
+            "type": "abs_tolerance"
+          },
+          "rationale": "The canonical PsfResult requires exact unit total flux.",
+          "units": "flux",
+          "value": 0.0
+        },
+        {
+          "level": "tight_numerical",
+          "name": "hcipy_total_flux_error",
+          "pass_criterion": {
+            "expected": 0.0,
+            "tolerance": 1e-09,
+            "type": "abs_tolerance"
+          },
+          "rationale": "Same normalization contract for the HCIPy backend.",
+          "units": "flux",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "attribution": "Each backend evaluates Strehl against its own ideal reference on its own focal grid; grid sampling and window truncation explain the small residual difference.",
+      "comparison_kind": "strehl_ratio",
+      "metrics": [
+        {
+          "level": "physical_tolerance",
+          "name": "native_strehl",
+          "pass_criterion": {
+            "expected": 0.7482295095711096,
+            "tolerance": 0.03,
+            "type": "abs_tolerance"
+          },
+          "rationale": "A smooth low-order aberration of known RMS must follow the Marechal approximation closely.",
+          "units": "Strehl",
+          "value": 0.7470662743826875
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "hcipy_strehl",
+          "pass_criterion": {
+            "expected": 0.7482295095711096,
+            "tolerance": 0.03,
+            "type": "abs_tolerance"
+          },
+          "rationale": "Same Marechal expectation for the HCIPy backend.",
+          "units": "Strehl",
+          "value": 0.7471292764402587
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "strehl_abs_difference",
+          "pass_criterion": {
+            "expected": 0.0,
+            "tolerance": 0.005,
+            "type": "abs_tolerance"
+          },
+          "rationale": "Independent focal grids agree far better than the 0.005 envelope; the tolerance covers cross-platform FFT noise.",
+          "units": "Strehl",
+          "value": 6.300205757125976e-05
+        }
+      ]
+    },
+    {
+      "attribution": "Both loops replay the same native atmosphere realization with identical controller settings; only the DM and WFS optics backends differ, so residual-trend differences reflect the measured optical-gain differences.",
+      "comparison_kind": "closed_loop_residual",
+      "metrics": [
+        {
+          "level": "exact",
+          "name": "native_backend_name",
+          "pass_criterion": {
+            "expected": "native",
+            "type": "equals"
+          },
+          "rationale": "The reference loop must actually run the native DM.",
+          "units": "identifier",
+          "value": "native"
+        },
+        {
+          "level": "exact",
+          "name": "hcipy_backend_name",
+          "pass_criterion": {
+            "expected": "hcipy",
+            "type": "equals"
+          },
+          "rationale": "The comparison loop must actually run the HCIPy DM.",
+          "units": "identifier",
+          "value": "hcipy"
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "native_correction_effect",
+          "pass_criterion": {
+            "high": 0.95,
+            "low": 0.0,
+            "type": "range"
+          },
+          "rationale": "Closing the loop must reduce the wavefront error clearly below the replayed uncorrected atmosphere over the short deterministic run.",
+          "units": "mean corrected over uncorrected rms",
+          "value": 0.7245634939100536
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "hcipy_correction_effect",
+          "pass_criterion": {
+            "high": 0.95,
+            "low": 0.0,
+            "type": "range"
+          },
+          "rationale": "Same correction expectation for the all-HCIPy loop.",
+          "units": "mean corrected over uncorrected rms",
+          "value": 0.7189659225449374
+        },
+        {
+          "level": "physical_tolerance",
+          "name": "mean_residual_ratio_hcipy_over_native",
+          "pass_criterion": {
+            "high": 1.6,
+            "low": 0.6,
+            "type": "range"
+          },
+          "rationale": "Optical-gain and window differences shift the residual level over a four-step run without changing the closed-loop behaviour; the band is several times the observed difference.",
+          "units": "ratio",
+          "value": 0.9922745605979825
+        }
+      ]
+    },
+    {
+      "attribution": "Wall-clock averages over a fixed small workload on the executing platform; no benchmark envelope has been approved, so these values are recorded but never asserted.",
+      "comparison_kind": "runtime_and_memory",
+      "metrics": [
+        {
+          "level": "informational",
+          "name": "native_wfs_propagation_s",
+          "pass_criterion": {
+            "type": "informational"
+          },
+          "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
+          "units": "seconds",
+          "value": 0.0054487363280107575
+        },
+        {
+          "level": "informational",
+          "name": "hcipy_wfs_propagation_s",
+          "pass_criterion": {
+            "type": "informational"
+          },
+          "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
+          "units": "seconds",
+          "value": 0.002306305648138126
+        },
+        {
+          "level": "informational",
+          "name": "native_psf_propagation_s",
+          "pass_criterion": {
+            "type": "informational"
+          },
+          "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
+          "units": "seconds",
+          "value": 0.0010842776391655207
+        },
+        {
+          "level": "informational",
+          "name": "hcipy_psf_propagation_s",
+          "pass_criterion": {
+            "type": "informational"
+          },
+          "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
+          "units": "seconds",
+          "value": 0.0009188610129058361
+        },
+        {
+          "level": "informational",
+          "name": "comparison_peak_traced_memory_mb",
+          "pass_criterion": {
+            "type": "informational"
+          },
+          "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
+          "units": "mebibytes",
+          "value": 2.5270986557006836
+        }
+      ]
+    }
+  ],
+  "component_hashes": {
+    "dm_actuator_ids": "32cfa7d9c482e48e4869805684cbd3e95ab0f16a21a615090e27179ca6f10d9c",
+    "hcipy_dm": "5921d9639c4df2880ffd9c5065942ae0cccf90c5afb3ec19ec3cb2eaf4ad6d14",
+    "hcipy_science": "9fdcfedcf1fe9b5a742f44dc6ddbb2f006a3ffd97407ae1da53d323e99bd2b28",
+    "hcipy_wfs_optics": "ed17103c04db3713325cb358e96fe0e00d3dcc906c65d16bf0378d0e7c282a17",
+    "native_dm": "4348a7438f6ff2cada22a89971f577f4237f19687534332d05df15c89c966858",
+    "native_science": "92273fa4c46245af6a57c802918f8eb377343e17365f6663839dadd3ca980670",
+    "native_wfs_optics": "9e379faf7351b155abf339ec35e0a473a3f795814171d666e5160101b18cacd7",
+    "pupil_geometry": "f03bb73fe2bf2784a44f7997530dc1caf5b6cd5ccdaa2f3cae360e166d1734d5",
+    "shack_hartmann_geometry": "159bf2e291e57596ddf74efda1d2f91da71b50a0388984eed093d74fbc3bdad7",
+    "wfs_row_ids": "3060e7e051451027947d7807b25b4afd354a21c533a26888b9a6f8413968da93"
+  },
+  "conventions": {
+    "command_unit": "m_opd_equivalent",
+    "detector_column_sign_convention": "positive_x_tilt_moves_spots_toward_positive_columns",
+    "measurement_unit": "pixel",
+    "residual_sign_convention": "residual_opd_m = atmosphere_opd_m - dm_correction_opd_m"
+  },
+  "environment": {
+    "dependency_constraint_file": "constraints/hcipy-py311.txt",
+    "dependency_constraint_sha256": "ac7fff17d8fa36a0339b701e91d52074bd83ca22d09c2e89f588ee8da4143252",
+    "hcipy_version": "0.7.0",
+    "numpy_version": "2.5.0",
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "python_version": "3.14.3",
+    "shwfs_ao_version": "0.1.0"
+  },
+  "fixture_hashes": {
+    "command_fixture_opd_m": "997061fe2fb838576bfd26c6150aa8217efa20045f586ab97b8a821302ff2785",
+    "static_opd_m": "54276f51397c266d8868ed774f0f3fd010006a3939eb96aa3144129cb782fcc6",
+    "tilt_x_opd_m": "8e785db43cbb6442ece5b9dc4e48f395094d38edada49816d73da660a321ff70",
+    "tilt_y_opd_m": "f51ab30873db4967575d1f61d4e636ae802aeb56889ca0fbb622dd85b41f78d6",
+    "time_grid_s": "9649e32d9bd5314bd204699c8da6f1722260e81ba0dd2582a095149d70a5171b"
+  },
+  "generator": {
+    "generator_name": "scripts/generate_cross_backend_candidate.py",
+    "generator_version": "1",
+    "source_commit": "4a97daabe950f0d2523a0701bc17c1f3d7448633"
+  },
+  "root_seed": 118
+}

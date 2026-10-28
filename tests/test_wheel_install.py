@@ -701,6 +701,10 @@ def _assert_wheel_layout(
         "shwfs_ao/science/bandpass.py",
         "shwfs_ao/science/metrics.py",
         "shwfs_ao/science/propagation.py",
+        "shwfs_ao/validation/__init__.py",
+        "shwfs_ao/validation/cross_backend.py",
+        "shwfs_ao/validation/physical.py",
+        "shwfs_ao/validation/regression.py",
         "shwfs_ao/wfs/__init__.py",
         "shwfs_ao/wfs/shack_hartmann/__init__.py",
         "shwfs_ao/wfs/shack_hartmann/calibration.py",
@@ -1612,5 +1616,5 @@ def test_pep660_editable_install_generates_resource_alias_only_in_environment(
         capture_output=True,
         text=True,
     )
-    assert result.stdout.strip() == "editable-resource-alias-ok:34"
+    assert result.stdout.strip() == "editable-resource-alias-ok:35"
     assert not source_alias.exists()

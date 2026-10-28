@@ -1,0 +1,728 @@
+"""AO-REF-018 contracts for the cross-backend validation package.
+
+These tests are deliberately unmarked: they run in the native CI selection
+and need no optional dependency.  They pin the backend-neutral physical
+estimators, the report/baseline document contract, the integrity of the
+packaged baseline, the evaluation semantics, and the completeness of every
+failure message (observed value, expected value or range, tolerance with
+units, and the compared hashes).  The ``hcipy`` marker stays reserved for
+tests that execute the suite itself.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+
+import numpy as np
+import pytest
+
+from shwfs_ao.backends.hcipy import (
+    OptionalDependencyError,
+    hcipy_installed,
+)
+from shwfs_ao.validation.cross_backend import (
+    CrossBackendConfig,
+    CrossBackendError,
+    run_cross_backend_report,
+)
+from shwfs_ao.validation.physical import (
+    PhysicalEstimatorError,
+    centroid_xy_px,
+    encircled_energy_radius_rad,
+    mean_square_column_difference,
+    normalized_singular_spectrum,
+)
+from shwfs_ao.validation.regression import (
+    CROSS_BACKEND_BASELINE_SCHEMA_NAME,
+    CROSS_BACKEND_BASELINE_SCHEMA_VERSION,
+    CROSS_BACKEND_REPORT_SCHEMA_NAME,
+    BaselineContractError,
+    baseline_from_report,
+    evaluate_report_against_baseline,
+    load_cross_backend_baseline,
+    validate_cross_backend_baseline,
+    validate_cross_backend_report,
+)
+
+
+HCIPY_INSTALLED = hcipy_installed()
+
+TICKET_COMPARISON_KINDS = (
+    "pupil_mask_and_throughput",
+    "zernike_modes",
+    "atmosphere_statistics",
+    "wfs_tip_tilt_response",
+    "lenslet_spot_morphology",
+    "dm_single_actuator_influence",
+    "dm_static_fitting",
+    "interaction_matrix_identity",
+    "normalized_singular_spectrum",
+    "psf_normalization",
+    "strehl_ratio",
+    "closed_loop_residual",
+    "runtime_and_memory",
+)
+
+SHARED_FIXTURE_HASH_KEYS = {
+    "static_opd_m",
+    "tilt_x_opd_m",
+    "tilt_y_opd_m",
+    "command_fixture_opd_m",
+    "time_grid_s",
+}
+
+COMPONENT_HASH_KEYS = {
+    "pupil_geometry",
+    "shack_hartmann_geometry",
+    "native_wfs_optics",
+    "hcipy_wfs_optics",
+    "native_dm",
+    "hcipy_dm",
+    "native_science",
+    "hcipy_science",
+    "wfs_row_ids",
+    "dm_actuator_ids",
+}
+
+
+def _hash64(seed: str) -> str:
+    return hashlib.sha256(seed.encode("utf-8")).hexdigest()
+
+
+def _minimal_report() -> dict:
+    return {
+        "artifact_schema_name": CROSS_BACKEND_REPORT_SCHEMA_NAME,
+        "artifact_schema_version": CROSS_BACKEND_BASELINE_SCHEMA_VERSION,
+        "comparison_config": {"config_hash": _hash64("config")},
+        "root_seed": 7,
+        "conventions": {
+            "command_unit": "m_opd_equivalent",
+            "residual_sign_convention": (
+                "residual_opd_m = atmosphere_opd_m - dm_correction_opd_m"
+            ),
+            "measurement_unit": "pixel",
+        },
+        "component_hashes": {"pupil_geometry": _hash64("pupil")},
+        "fixture_hashes": {"static_opd_m": _hash64("fixture")},
+        "environment": {
+            "python_version": "3.14.0",
+            "numpy_version": "2.5.0",
+            "shwfs_ao_version": "0.1.0",
+            "hcipy_version": "0.7.0",
+            "platform": "contract-test",
+            "dependency_constraint_file": "unrecorded",
+            "dependency_constraint_sha256": "unrecorded",
+        },
+        "comparisons": [
+            {
+                "comparison_kind": "unit_probe",
+                "attribution": "Synthetic comparison for contract tests.",
+                "metrics": [
+                    {
+                        "name": "probe_value",
+                        "level": "physical_tolerance",
+                        "units": "ratio",
+                        "value": 1.0,
+                        "pass_criterion": {
+                            "type": "range",
+                            "low": 0.5,
+                            "high": 1.5,
+                        },
+                        "rationale": "Contract-test probe metric.",
+                    },
+                ],
+            },
+        ],
+    }
+
+
+def _minimal_baseline() -> dict:
+    return baseline_from_report(
+        _minimal_report(),
+        generator={
+            "generator_name": "contract-test-generator",
+            "generator_version": "1",
+            "source_commit": _hash64("commit")[:40],
+        },
+        acceptance={
+            "reason": "Contract-test acceptance.",
+            "review_reference": "AO-REF-018",
+            "accepted_at_utc": "2026-07-17T00:00:00+00:00",
+        },
+    )
+
+
+@pytest.fixture(scope="module")
+def packaged_baseline() -> dict:
+    return json.loads(json.dumps(dict(load_cross_backend_baseline())))
+
+
+def _report_copy(baseline: dict) -> dict:
+    return json.loads(json.dumps(baseline))
+
+
+def _set_metric_value(document: dict, kind: str, name: str, value) -> None:
+    for comparison in document["comparisons"]:
+        if comparison["comparison_kind"] != kind:
+            continue
+        for metric in comparison["metrics"]:
+            if metric["name"] == name:
+                metric["value"] = value
+                return
+    raise AssertionError(f"metric {kind}/{name} not found")
+
+
+def _remove_metric(document: dict, kind: str, name: str) -> None:
+    for comparison in document["comparisons"]:
+        if comparison["comparison_kind"] == kind:
+            metrics = [
+                metric
+                for metric in comparison["metrics"]
+                if metric["name"] != name
+            ]
+            assert len(metrics) == len(comparison["metrics"]) - 1
+            comparison["metrics"] = metrics
+            return
+    raise AssertionError(f"comparison {kind} not found")
+
+
+class TestPhysicalEstimators:
+    def test_centroid_of_a_point_mass_is_its_column_row_position(self):
+        spot = np.zeros((7, 9))
+        spot[2, 5] = 3.0
+        assert centroid_xy_px(spot) == (5.0, 2.0)
+
+    def test_centroid_weights_flux_between_two_points(self):
+        spot = np.zeros((5, 9))
+        spot[2, 5] = 1.0
+        spot[2, 7] = 3.0
+        x_px, y_px = centroid_xy_px(spot)
+        assert x_px == pytest.approx(6.5)
+        assert y_px == pytest.approx(2.0)
+
+    def test_centroid_rejects_flat_negative_and_non_2d_input(self):
+        with pytest.raises(PhysicalEstimatorError, match="positive total flux"):
+            centroid_xy_px(np.zeros((4, 4)))
+        with pytest.raises(PhysicalEstimatorError, match="non-negative"):
+            centroid_xy_px(np.array([[1.0, -1.0], [1.0, 1.0]]))
+        with pytest.raises(PhysicalEstimatorError, match="2-D"):
+            centroid_xy_px(np.ones(5))
+        with pytest.raises(PhysicalEstimatorError, match="finite"):
+            centroid_xy_px(np.array([[1.0, np.nan], [1.0, 1.0]]))
+
+    def test_encircled_energy_radius_of_a_point_mass_is_zero(self):
+        spot = np.zeros((9, 9))
+        spot[4, 4] = 2.0
+        assert encircled_energy_radius_rad(spot, (1.0e-6, 1.0e-6)) == 0.0
+
+    def test_encircled_energy_radius_grows_with_spot_width_and_scale(self):
+        rows, columns = np.mgrid[0:33, 0:33]
+        radius_sq = (rows - 16.0) ** 2 + (columns - 16.0) ** 2
+
+        def gaussian(sigma_px: float) -> np.ndarray:
+            return np.exp(-radius_sq / (2.0 * sigma_px**2))
+
+        narrow = encircled_energy_radius_rad(gaussian(2.0), (1.0e-6, 1.0e-6))
+        wide = encircled_energy_radius_rad(gaussian(4.0), (1.0e-6, 1.0e-6))
+        rescaled = encircled_energy_radius_rad(gaussian(2.0), (2.0e-6, 2.0e-6))
+        assert wide > narrow > 0.0
+        assert rescaled == pytest.approx(2.0 * narrow)
+
+    def test_encircled_energy_radius_rejects_bad_fraction_and_scale(self):
+        spot = np.ones((4, 4))
+        for fraction in (0.0, 1.0, True):
+            with pytest.raises(PhysicalEstimatorError, match="fraction"):
+                encircled_energy_radius_rad(
+                    spot,
+                    (1.0e-6, 1.0e-6),
+                    fraction=fraction,
+                )
+        with pytest.raises(PhysicalEstimatorError, match="pixel_scale"):
+            encircled_energy_radius_rad(spot, (0.0, 1.0e-6))
+
+    def test_mean_square_column_difference_matches_a_linear_ramp(self):
+        values = 0.5 * np.tile(np.arange(10.0), (4, 1))
+        assert mean_square_column_difference(values, 3) == pytest.approx(2.25)
+
+    def test_mean_square_column_difference_ignores_nan_samples(self):
+        values = 0.5 * np.tile(np.arange(10.0), (4, 1))
+        values[:, 4] = np.nan
+        assert mean_square_column_difference(values, 3) == pytest.approx(2.25)
+
+    def test_mean_square_column_difference_rejects_bad_lags(self):
+        values = np.zeros((3, 6))
+        for lag in (0, 6, True):
+            with pytest.raises(PhysicalEstimatorError, match="lag_px"):
+                mean_square_column_difference(values, lag)
+        with pytest.raises(PhysicalEstimatorError, match="2-D"):
+            mean_square_column_difference(np.zeros(6), 2)
+        with pytest.raises(PhysicalEstimatorError, match="finite sample pair"):
+            mean_square_column_difference(np.full((3, 6), np.nan), 2)
+
+    def test_normalized_singular_spectrum_divides_by_the_leading_value(self):
+        spectrum = normalized_singular_spectrum(np.diag([3.0, 2.0, 1.0]))
+        assert spectrum == pytest.approx([1.0, 2.0 / 3.0, 1.0 / 3.0])
+        assert np.all(np.diff(spectrum) <= 0.0)
+
+    def test_normalized_singular_spectrum_rejects_degenerate_input(self):
+        with pytest.raises(PhysicalEstimatorError, match="positive largest"):
+            normalized_singular_spectrum(np.zeros((3, 3)))
+        with pytest.raises(PhysicalEstimatorError, match="finite"):
+            normalized_singular_spectrum(np.array([[1.0, np.inf]]))
+        with pytest.raises(PhysicalEstimatorError, match="non-empty"):
+            normalized_singular_spectrum(np.zeros((0, 3)))
+
+
+class TestDocumentContract:
+    def test_minimal_report_and_baseline_round_trip(self):
+        report = _minimal_report()
+        assert validate_cross_backend_report(report) is report
+        baseline = _minimal_baseline()
+        assert (
+            baseline["artifact_schema_name"] == CROSS_BACKEND_BASELINE_SCHEMA_NAME
+        )
+        validate_cross_backend_baseline(baseline)
+
+    def test_baseline_from_report_never_mutates_its_input(self):
+        report = _minimal_report()
+        snapshot = json.loads(json.dumps(report))
+        _minimal_baseline()
+        assert report == snapshot
+
+    @pytest.mark.parametrize(
+        "field",
+        (
+            "artifact_schema_name",
+            "comparison_config",
+            "conventions",
+            "component_hashes",
+            "fixture_hashes",
+            "environment",
+            "comparisons",
+        ),
+    )
+    def test_report_requires_every_top_level_field(self, field):
+        report = _minimal_report()
+        del report[field]
+        with pytest.raises(BaselineContractError, match="missing required"):
+            validate_cross_backend_report(report)
+
+    def test_report_rejects_unknown_schema_identity(self):
+        report = _minimal_report()
+        report["artifact_schema_name"] = "shwfs_ao.other_artifact"
+        with pytest.raises(BaselineContractError, match="artifact_schema_name"):
+            validate_cross_backend_report(report)
+        report = _minimal_report()
+        report["artifact_schema_version"] = 999
+        with pytest.raises(
+            BaselineContractError,
+            match="artifact_schema_version",
+        ):
+            validate_cross_backend_report(report)
+
+    def test_report_rejects_a_config_without_hash_and_short_hashes(self):
+        report = _minimal_report()
+        report["comparison_config"] = {"root_seed": 7}
+        with pytest.raises(BaselineContractError, match="config_hash"):
+            validate_cross_backend_report(report)
+        report = _minimal_report()
+        report["fixture_hashes"]["static_opd_m"] = "abc123"
+        with pytest.raises(BaselineContractError, match="64-character"):
+            validate_cross_backend_report(report)
+
+    def test_report_rejects_duplicate_comparisons_and_metric_names(self):
+        report = _minimal_report()
+        report["comparisons"].append(
+            json.loads(json.dumps(report["comparisons"][0]))
+        )
+        with pytest.raises(BaselineContractError, match="duplicate comparison"):
+            validate_cross_backend_report(report)
+        report = _minimal_report()
+        report["comparisons"][0]["metrics"].append(
+            json.loads(json.dumps(report["comparisons"][0]["metrics"][0]))
+        )
+        with pytest.raises(BaselineContractError, match="duplicate metric"):
+            validate_cross_backend_report(report)
+
+    def test_report_rejects_unknown_levels_and_incomplete_criteria(self):
+        report = _minimal_report()
+        report["comparisons"][0]["metrics"][0]["level"] = "loose"
+        with pytest.raises(BaselineContractError, match="unknown level"):
+            validate_cross_backend_report(report)
+        for broken in (
+            {"type": "abs_tolerance", "expected": 0.0},
+            {"type": "range", "low": 0.0},
+            {"type": "equals"},
+            {"type": "close_enough"},
+        ):
+            report = _minimal_report()
+            report["comparisons"][0]["metrics"][0]["pass_criterion"] = broken
+            with pytest.raises(BaselineContractError):
+                validate_cross_backend_report(report)
+
+    def test_report_ties_the_informational_level_to_its_criterion(self):
+        report = _minimal_report()
+        report["comparisons"][0]["metrics"][0]["pass_criterion"] = {
+            "type": "informational",
+        }
+        with pytest.raises(BaselineContractError, match="informational"):
+            validate_cross_backend_report(report)
+        report = _minimal_report()
+        report["comparisons"][0]["metrics"][0]["level"] = "informational"
+        with pytest.raises(BaselineContractError, match="informational"):
+            validate_cross_backend_report(report)
+
+    def test_baseline_rejects_missing_generator_or_acceptance(self):
+        baseline = _minimal_baseline()
+        del baseline["generator"]
+        with pytest.raises(BaselineContractError, match="generator"):
+            validate_cross_backend_baseline(baseline)
+        baseline = _minimal_baseline()
+        del baseline["acceptance"]
+        with pytest.raises(BaselineContractError, match="acceptance"):
+            validate_cross_backend_baseline(baseline)
+
+    @pytest.mark.parametrize(
+        "block, field",
+        (
+            ("generator", "generator_name"),
+            ("generator", "generator_version"),
+            ("generator", "source_commit"),
+            ("acceptance", "reason"),
+            ("acceptance", "review_reference"),
+            ("acceptance", "accepted_at_utc"),
+        ),
+    )
+    def test_baseline_rejects_empty_provenance_fields(self, block, field):
+        baseline = _minimal_baseline()
+        baseline[block][field] = "  "
+        with pytest.raises(BaselineContractError, match="non-empty"):
+            validate_cross_backend_baseline(baseline)
+
+    def test_baseline_rejects_a_metric_without_scientific_rationale(self):
+        baseline = _minimal_baseline()
+        baseline["comparisons"][0]["metrics"][0]["rationale"] = "   "
+        with pytest.raises(BaselineContractError, match="rationale"):
+            validate_cross_backend_baseline(baseline)
+
+    def test_baseline_rejects_the_plain_report_schema_name(self):
+        baseline = _minimal_baseline()
+        baseline["artifact_schema_name"] = CROSS_BACKEND_REPORT_SCHEMA_NAME
+        with pytest.raises(BaselineContractError, match="baseline"):
+            validate_cross_backend_baseline(baseline)
+
+
+class TestPackagedBaseline:
+    def test_packaged_baseline_validates_and_covers_the_ticket_comparisons(
+        self,
+        packaged_baseline,
+    ):
+        kinds = tuple(
+            comparison["comparison_kind"]
+            for comparison in packaged_baseline["comparisons"]
+        )
+        assert kinds == TICKET_COMPARISON_KINDS
+
+    def test_packaged_baseline_matches_the_default_configuration(
+        self,
+        packaged_baseline,
+    ):
+        config = CrossBackendConfig()
+        assert (
+            packaged_baseline["comparison_config"]["config_hash"]
+            == config.config_hash
+        )
+        assert packaged_baseline["root_seed"] == config.root_seed
+
+    def test_packaged_baseline_records_shared_inputs_and_identities(
+        self,
+        packaged_baseline,
+    ):
+        assert set(packaged_baseline["fixture_hashes"]) == (
+            SHARED_FIXTURE_HASH_KEYS
+        )
+        assert set(packaged_baseline["component_hashes"]) == (
+            COMPONENT_HASH_KEYS
+        )
+        conventions = packaged_baseline["conventions"]
+        assert conventions["command_unit"] == "m_opd_equivalent"
+        assert "residual_opd_m" in conventions["residual_sign_convention"]
+        assert conventions["measurement_unit"] == "pixel"
+
+    def test_packaged_baseline_records_environment_and_provenance(
+        self,
+        packaged_baseline,
+    ):
+        environment = packaged_baseline["environment"]
+        for field in (
+            "python_version",
+            "numpy_version",
+            "shwfs_ao_version",
+            "hcipy_version",
+            "dependency_constraint_file",
+            "dependency_constraint_sha256",
+        ):
+            assert environment[field].strip()
+        generator = packaged_baseline["generator"]
+        assert generator["generator_name"] == (
+            "scripts/generate_cross_backend_candidate.py"
+        )
+        assert packaged_baseline["acceptance"]["review_reference"].strip()
+
+    def test_packaged_statistical_comparison_documents_its_estimator(
+        self,
+        packaged_baseline,
+    ):
+        atmosphere = next(
+            comparison
+            for comparison in packaged_baseline["comparisons"]
+            if comparison["comparison_kind"] == "atmosphere_statistics"
+        )
+        definition = atmosphere["statistical_definition"]
+        assert "realizations" in definition
+        assert "estimator" in definition
+        assert "uncertainty" in definition
+
+    def test_packaged_baseline_evaluates_cleanly_against_itself(
+        self,
+        packaged_baseline,
+    ):
+        assert (
+            evaluate_report_against_baseline(
+                packaged_baseline,
+                packaged_baseline,
+            )
+            == ()
+        )
+
+
+class TestEvaluationSemantics:
+    def test_a_range_violation_reports_value_range_units_and_hashes(
+        self,
+        packaged_baseline,
+    ):
+        report = _report_copy(packaged_baseline)
+        _set_metric_value(
+            report,
+            "atmosphere_statistics",
+            "rms_ratio_hcipy_over_native",
+            5.0,
+        )
+        (failure,) = evaluate_report_against_baseline(
+            report,
+            packaged_baseline,
+        )
+        assert "comparison=atmosphere_statistics" in failure
+        assert "metric=rms_ratio_hcipy_over_native" in failure
+        assert "observed=5.0" in failure
+        assert "expected-range=[0.55, 1.8] ratio" in failure
+        assert "level=physical_tolerance" in failure
+        assert "config_hash=" in failure
+        assert "fixtures[" in failure
+
+    def test_an_abs_tolerance_violation_reports_the_tolerance_with_units(
+        self,
+        packaged_baseline,
+    ):
+        report = _report_copy(packaged_baseline)
+        _set_metric_value(
+            report,
+            "psf_normalization",
+            "native_total_flux_error",
+            0.5,
+        )
+        (failure,) = evaluate_report_against_baseline(
+            report,
+            packaged_baseline,
+        )
+        assert "observed=0.5" in failure
+        assert "expected=0.0" in failure
+        assert "tolerance=±1e-09 flux" in failure
+
+    def test_an_exact_violation_reports_exact_tolerance(
+        self,
+        packaged_baseline,
+    ):
+        report = _report_copy(packaged_baseline)
+        _set_metric_value(
+            report,
+            "interaction_matrix_identity",
+            "rank_difference",
+            1,
+        )
+        (failure,) = evaluate_report_against_baseline(
+            report,
+            packaged_baseline,
+        )
+        assert "observed=1" in failure
+        assert "expected=0" in failure
+        assert "tolerance=exact" in failure
+
+    def test_a_non_finite_observation_fails_instead_of_passing(
+        self,
+        packaged_baseline,
+    ):
+        report = _report_copy(packaged_baseline)
+        _set_metric_value(
+            report,
+            "strehl_ratio",
+            "strehl_abs_difference",
+            float("nan"),
+        )
+        (failure,) = evaluate_report_against_baseline(
+            report,
+            packaged_baseline,
+        )
+        assert "metric=strehl_abs_difference" in failure
+        assert "observed=nan" in failure
+
+    def test_a_missing_gating_metric_is_reported(self, packaged_baseline):
+        report = _report_copy(packaged_baseline)
+        _remove_metric(
+            report,
+            "strehl_ratio",
+            "strehl_abs_difference",
+        )
+        (failure,) = evaluate_report_against_baseline(
+            report,
+            packaged_baseline,
+        )
+        assert "missing from the fresh report" in failure
+
+    def test_informational_metrics_never_gate(self, packaged_baseline):
+        report = _report_copy(packaged_baseline)
+        _set_metric_value(
+            report,
+            "runtime_and_memory",
+            "native_wfs_propagation_s",
+            1.0e9,
+        )
+        assert (
+            evaluate_report_against_baseline(report, packaged_baseline) == ()
+        )
+
+    def test_a_config_hash_mismatch_short_circuits_metric_checks(
+        self,
+        packaged_baseline,
+    ):
+        report = _report_copy(packaged_baseline)
+        report["comparison_config"]["config_hash"] = _hash64("other-config")
+        _set_metric_value(
+            report,
+            "interaction_matrix_identity",
+            "rank_difference",
+            1,
+        )
+        failures = evaluate_report_against_baseline(
+            report,
+            packaged_baseline,
+        )
+        assert len(failures) == 1
+        assert "comparison_config.config_hash mismatch" in failures[0]
+        assert report["comparison_config"]["config_hash"] in failures[0]
+        assert (
+            packaged_baseline["comparison_config"]["config_hash"]
+            in failures[0]
+        )
+
+    def test_a_fixture_hash_mismatch_short_circuits_metric_checks(
+        self,
+        packaged_baseline,
+    ):
+        report = _report_copy(packaged_baseline)
+        report["fixture_hashes"]["static_opd_m"] = _hash64("drifted-input")
+        _set_metric_value(
+            report,
+            "interaction_matrix_identity",
+            "rank_difference",
+            1,
+        )
+        failures = evaluate_report_against_baseline(
+            report,
+            packaged_baseline,
+        )
+        assert len(failures) == 1
+        assert "fixture_hashes['static_opd_m'] mismatch" in failures[0]
+        assert "shared inputs drifted" in failures[0]
+
+
+class TestSuiteEntryPoint:
+    def test_the_validation_package_never_imports_hcipy_eagerly(self):
+        program = (
+            "import sys\n"
+            "import shwfs_ao.validation\n"
+            "import shwfs_ao.validation.cross_backend\n"
+            "import shwfs_ao.validation.physical\n"
+            "import shwfs_ao.validation.regression\n"
+            "raise SystemExit(1 if 'hcipy' in sys.modules else 0)\n"
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", program],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+
+    def test_configuration_validation_precedes_the_dependency_requirement(
+        self,
+    ):
+        with pytest.raises(CrossBackendError, match="CrossBackendConfig"):
+            run_cross_backend_report(config=object())
+        with pytest.raises(CrossBackendError, match="integer multiple"):
+            CrossBackendConfig(pupil_pixels=50)
+        with pytest.raises(CrossBackendError, match="at least 2"):
+            CrossBackendConfig(atmosphere_realizations=1)
+        with pytest.raises(CrossBackendError, match="loop_steps"):
+            CrossBackendConfig(loop_steps=1)
+        with pytest.raises(CrossBackendError, match="runtime_repeats"):
+            CrossBackendConfig(runtime_repeats=0)
+
+    def test_the_comparison_config_hash_is_deterministic(self):
+        assert (
+            CrossBackendConfig().config_hash == CrossBackendConfig().config_hash
+        )
+        assert (
+            CrossBackendConfig(root_seed=119).config_hash
+            != CrossBackendConfig().config_hash
+        )
+
+    @pytest.mark.skipif(
+        HCIPY_INSTALLED,
+        reason="requires an environment without the optional HCIPy dependency",
+    )
+    def test_running_the_suite_without_hcipy_names_the_missing_dependency(
+        self,
+    ):
+        with pytest.raises(OptionalDependencyError) as excinfo:
+            run_cross_backend_report()
+        assert "pip install 'shack-hartmann-ao-simulation[hcipy]'" in str(
+            excinfo.value
+        )
+
+    def test_the_hcipy_suite_file_never_enters_the_native_selection(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-p",
+                "no:cacheprovider",
+                "--collect-only",
+                "-q",
+                "-m",
+                "not hcipy and not slow",
+                str(Path(__file__).with_name("test_native_vs_hcipy.py")),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        # Exit code 5 is pytest's "no tests collected": every test in the
+        # suite module must carry the hcipy marker and be deselected.
+        assert result.returncode == 5, result.stdout + result.stderr
+        assert "::" not in result.stdout
