@@ -1,14 +1,6 @@
 __pycache__/
-*.pyc
+*.py[cod]
 *.egg-info/
-.pytest_cache/
-.coverage
-.coverage.*
-coverage.xml
-htmlcov/
-.mypy_cache/
-.ruff_cache/
-.ipynb_checkpoints/
 .DS_Store
 .venv/
 venv/
@@ -16,13 +8,6 @@ venv/
 build/
 dist/
 *.whl
-
-data/external/*
-data/cache/*
-!data/external/.gitkeep
-!data/cache/.gitkeep
 outputs/
 results/
-
-# Output directory used by the README demonstration.
-/readme-smoke-output/
+detector_level_demo_output/
