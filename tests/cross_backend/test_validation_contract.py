@@ -897,18 +897,23 @@ class TestEvaluationSemantics:
         assert "metric=strehl_abs_difference" in failure
         assert "observed=nan" in failure
 
-    def test_a_missing_gating_metric_is_reported(self, packaged_baseline):
+    def test_a_report_missing_a_required_metric_is_rejected(
+        self,
+        packaged_baseline,
+    ):
+        # A dropped gate is now a contract violation caught up front, not a
+        # soft evaluation failure: evaluation validates the report first.
         report = _report_copy(packaged_baseline)
         _remove_metric(
             report,
             "strehl_ratio",
             "strehl_abs_difference",
         )
-        (failure,) = evaluate_report_against_baseline(
-            report,
-            packaged_baseline,
-        )
-        assert "missing from the fresh report" in failure
+        with pytest.raises(
+            BaselineContractError,
+            match="exactly its required metrics",
+        ):
+            evaluate_report_against_baseline(report, packaged_baseline)
 
     def test_informational_metrics_never_gate(self, packaged_baseline):
         report = _report_copy(packaged_baseline)

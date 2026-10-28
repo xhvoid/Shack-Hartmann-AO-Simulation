@@ -224,30 +224,51 @@ class TestEnvironmentVerification:
         with pytest.raises(SystemExit, match="does not satisfy"):
             script._verified_constraint_identity()
 
-    def test_a_matching_profile_is_recorded_with_its_content_hash(
+    def test_a_complete_lock_is_recorded_with_its_content_hash(
         self,
         tmp_path,
         monkeypatch,
     ):
         import hashlib
-        from importlib import metadata
 
         monkeypatch.setattr(script, "ROOT", tmp_path)
-        try:
-            hcipy_pin = metadata.version("hcipy")
-        except metadata.PackageNotFoundError:
-            # Not installed in this lane: the pin is then not checkable
-            # against an installed distribution and is skipped by design.
-            hcipy_pin = "9.9.9"
+        # A profile is only recorded when it is a complete lock of the running
+        # environment: every installed distribution pinned at its version.
+        # ``hcipy`` must be pinned even in a lane that does not install it.
+        pins = dict(script._installed_distributions())
+        pins.setdefault("hcipy", "9.9.9")
         profile = tmp_path / script._constraint_profile_name()
         profile.parent.mkdir(parents=True)
         profile.write_text(
-            f"numpy=={metadata.version('numpy')}\nhcipy=={hcipy_pin}\n",
+            "".join(f"{name}=={version}\n" for name, version in sorted(pins.items())),
             encoding="utf-8",
         )
         recorded_name, recorded_sha = script._verified_constraint_identity()
         assert recorded_name == script._constraint_profile_name()
         assert recorded_sha == hashlib.sha256(profile.read_bytes()).hexdigest()
+
+    def test_generation_refuses_an_installed_but_unpinned_distribution(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        # A profile that omits an installed distribution is not a lock; the
+        # strict verifier must reject it rather than skip the gap.
+        monkeypatch.setattr(script, "ROOT", tmp_path)
+        pins = dict(script._installed_distributions())
+        pins.setdefault("hcipy", "9.9.9")
+        dropped = next(
+            name for name in sorted(pins) if name not in ("numpy", "hcipy")
+        )
+        del pins[dropped]
+        profile = tmp_path / script._constraint_profile_name()
+        profile.parent.mkdir(parents=True)
+        profile.write_text(
+            "".join(f"{name}=={version}\n" for name, version in sorted(pins.items())),
+            encoding="utf-8",
+        )
+        with pytest.raises(SystemExit, match="is installed but"):
+            script._verified_constraint_identity()
 
     def test_source_tree_cleanliness_is_reported_as_a_boolean(self):
         assert isinstance(script._source_tree_clean(), bool)
