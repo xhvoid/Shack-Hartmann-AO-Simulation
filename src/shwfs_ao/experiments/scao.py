@@ -72,6 +72,7 @@ __all__ = (
     "ScaoConstructionError",
     "ScaoExecutionOptions",
     "LayeredAtmosphereOptions",
+    "FrozenFlowScreenOptions",
     "ExposureOverride",
     "ScaoBackendComponentFactory",
     "ScaoSystem",
@@ -203,19 +204,79 @@ class LayeredAtmosphereOptions:
         }
 
 
+@dataclass(frozen=True)
+class FrozenFlowScreenOptions:
+    """Identity-bearing generated-screen size of the native v2 frozen-flow atmosphere.
+
+    ``screen_grid_size`` replaces the factory's default screen of
+    ``SCREEN_OVERSIZE_FACTOR`` times the pupil array for
+    ``atmosphere_model == "native_frozen_flow_v2"``.  A larger screen gives a
+    longer travel budget, ``(screen_grid_size - pupil_pixels) / 2`` pixels,
+    and a different realization from the same seed: the atmosphere component
+    hash carries the size, and the option is recorded on the
+    :class:`ScaoSystem` and in its build attestation exactly like
+    :class:`LayeredAtmosphereOptions`.  ``None`` is the default build, and an
+    explicit size equal to the default is recorded as ``None``.
+    """
+
+    screen_grid_size: int | None = None
+
+    def __post_init__(self) -> None:
+        value = self.screen_grid_size
+        if value is None:
+            return
+        if (
+            isinstance(value, (bool, np.bool_))
+            or not isinstance(value, Integral)
+            or int(value) < 2
+        ):
+            raise ScaoConstructionError("screen_grid_size must be an integer >= 2 or None.")
+        object.__setattr__(self, "screen_grid_size", int(value))
+
+    @property
+    def is_default(self) -> bool:
+        return self.screen_grid_size is None
+
+    def factory_keywords(self) -> dict[str, Any]:
+        """The non-default field, as the native factory's ``build_atmosphere`` keyword."""
+
+        if self.screen_grid_size is None:
+            return {}
+        return {"screen_grid_size": self.screen_grid_size}
+
+    def to_record(self) -> dict[str, Any]:
+        return {"screen_grid_size": self.screen_grid_size}
+
+
+AtmosphereOptions = LayeredAtmosphereOptions | FrozenFlowScreenOptions
+
+
 def _normalized_atmosphere_options(
     config: SystemConfig, options: object
-) -> LayeredAtmosphereOptions | None:
-    """Validate pairing options against the configuration; all-default is ``None``."""
+) -> AtmosphereOptions | None:
+    """Validate atmosphere options against the configuration; all-default is ``None``."""
 
     if options is None:
         return None
-    if not isinstance(options, LayeredAtmosphereOptions):
+    if not isinstance(options, (LayeredAtmosphereOptions, FrozenFlowScreenOptions)):
         raise ScaoConstructionError(
-            "atmosphere_options must be a LayeredAtmosphereOptions or None."
+            "atmosphere_options must be a LayeredAtmosphereOptions, a "
+            "FrozenFlowScreenOptions or None."
         )
     if options.is_default:
         return None
+    if isinstance(options, FrozenFlowScreenOptions):
+        if config.atmosphere_model != "native_frozen_flow_v2":
+            raise ScaoConstructionError(
+                "FrozenFlowScreenOptions apply to the native_frozen_flow_v2 atmosphere "
+                f"only; the configuration selects {config.atmosphere_model!r}."
+            )
+        # Imported here: the experiment layer stays backend-neutral at import time.
+        from ..backends.native.factory import SCREEN_OVERSIZE_FACTOR
+
+        if options.screen_grid_size == SCREEN_OVERSIZE_FACTOR * config.pupil_pixels:
+            return None
+        return options
     if config.atmosphere_model != "native_layered":
         raise ScaoConstructionError(
             "atmosphere_options (fixed-physics pairing) apply to the native_layered "
@@ -362,7 +423,7 @@ class _BuildAttestation:
     # The identity-bearing atmosphere options the build was given (T2, G1):
     # an attestation describes a build of ``source_config`` *with* them, so a
     # system presenting other options is verified by a rebuild instead.
-    atmosphere_options: LayeredAtmosphereOptions | None = None
+    atmosphere_options: AtmosphereOptions | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -394,7 +455,7 @@ class ScaoSystem:
     # The fixed-physics pairing options the atmosphere was built with (T2,
     # G1); None for every default build.  Part of what the system is: it
     # names the realization the atmosphere component hash carries.
-    atmosphere_options: LayeredAtmosphereOptions | None = None
+    atmosphere_options: AtmosphereOptions | None = None
     # Set by :func:`build_scao_system` for the system it just built.  ``None``
     # means "not built here", which costs a rebuild at verification time and
     # never buys acceptance.  It is evidence about how this system came to be,
@@ -443,10 +504,11 @@ class ScaoSystem:
                 "recovery_policy must be a ClosedLoopRecoveryPolicy or None."
             )
         if self.atmosphere_options is not None and not isinstance(
-            self.atmosphere_options, LayeredAtmosphereOptions
+            self.atmosphere_options, (LayeredAtmosphereOptions, FrozenFlowScreenOptions)
         ):
             raise ScaoConstructionError(
-                "atmosphere_options must be a LayeredAtmosphereOptions or None."
+                "atmosphere_options must be a LayeredAtmosphereOptions, a "
+                "FrozenFlowScreenOptions or None."
             )
         expected = _expected_component_hashes(
             random_streams=self.random_streams,
@@ -614,7 +676,7 @@ def build_scao_system(
     *,
     interaction_matrix: InteractionMatrix | SparseInteractionMatrix | None = None,
     execution: ScaoExecutionOptions | None = None,
-    atmosphere_options: LayeredAtmosphereOptions | None = None,
+    atmosphere_options: AtmosphereOptions | None = None,
 ) -> ScaoSystem:
     """Build one complete system from a reviewed, unit-explicit configuration.
 
@@ -633,7 +695,9 @@ def build_scao_system(
     identity-bearing fixed-physics pairing options of the native layered
     atmosphere: refused for any other atmosphere model, forwarded to the
     factory only when set, recorded on the returned system and in its
-    attestation.  Nothing else about the build changes.
+    attestation.  Nothing else about the build changes.  A
+    :class:`FrozenFlowScreenOptions` takes the same path for the
+    ``native_frozen_flow_v2`` atmosphere: it sets the generated screen size.
     """
 
     if not isinstance(config, SystemConfig):
@@ -710,8 +774,8 @@ def build_scao_system(
         if pairing is None:
             raise
         raise ScaoConstructionError(
-            f"the {config.backend!r} backend factory does not accept the fixed-physics "
-            f"pairing options {sorted(pairing.factory_keywords())}: {exc}"
+            f"the {config.backend!r} backend factory does not accept the atmosphere "
+            f"options {sorted(pairing.factory_keywords())}: {exc}"
         ) from exc
     dm = factory.build_dm(
         geometry=geometry,
@@ -860,7 +924,7 @@ def run_closed_loop(
     realization_index: int = 0,
     observers: Sequence[FrameObserver] = (),
     execution: ScaoExecutionOptions | None = None,
-    atmosphere_options: LayeredAtmosphereOptions | None = None,
+    atmosphere_options: AtmosphereOptions | None = None,
     exposure: ExposureOverride | None = None,
 ):
     """Execute either detector-level or geometric profiles through one runner.

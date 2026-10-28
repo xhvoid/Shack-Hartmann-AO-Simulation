@@ -140,13 +140,17 @@ class NativeScaoComponentFactory:
         band_draw_reference_screen_size: int | None = None,
         band_limit_screen_size: int | None = None,
         screen_period_rule: str | None = None,
+        screen_grid_size: int | None = None,
     ) -> AtmosphereModel:
         """Build the atmosphere named by ``model``.
 
-        The three trailing keywords are the fixed-physics pairing options of
-        the native layered atmosphere (T2, G1).  They are identity-bearing,
-        accepted only for ``native_layered`` and passed only when set, so
-        every other model and every default build is unchanged.
+        ``band_draw_reference_screen_size``, ``band_limit_screen_size`` and
+        ``screen_period_rule`` are the fixed-physics pairing options of the
+        native layered atmosphere (T2, G1).  ``screen_grid_size`` replaces the
+        default generated screen of the ``native_frozen_flow_v2`` model
+        (``SCREEN_OVERSIZE_FACTOR`` times the pupil array).  All are
+        identity-bearing, accepted only for their own model and passed only
+        when set, so every other model and every default build is unchanged.
         """
 
         pairing = {
@@ -162,6 +166,10 @@ class NativeScaoComponentFactory:
             raise NativeScaoFactoryError(
                 "the fixed-physics pairing options "
                 f"{sorted(pairing)} apply to the 'native_layered' atmosphere only."
+            )
+        if screen_grid_size is not None and model != "native_frozen_flow_v2":
+            raise NativeScaoFactoryError(
+                "screen_grid_size applies to the 'native_frozen_flow_v2' atmosphere only."
             )
         builders: dict[str, Callable[[], AtmosphereModel]] = {
             "static": lambda: StaticOpdAtmosphere(
@@ -206,11 +214,15 @@ class NativeScaoComponentFactory:
             # quadrature plus subharmonics approximates continuum covariance;
             # finite-band/depth errors still require convergence checks. The
             # oversize primarily supplies travel room, not an RMS correction.
+            # An explicit `screen_grid_size` replaces the default oversize for
+            # a longer run; it changes the realization and the component hash.
             "native_frozen_flow_v2": lambda: FrozenFlowAtmosphere(
                 FrozenFlowAtmosphereConfig(
                     grid_size=geometry.pupil_shape[0],
                     screen_grid_size=(
                         SCREEN_OVERSIZE_FACTOR * geometry.pupil_shape[0]
+                        if screen_grid_size is None
+                        else screen_grid_size
                     ),
                     delta_m=geometry.pupil_geometry.pixel_spacing_xy_m[0],
                     pupil_diameter_m=geometry.telescope_diameter_m,

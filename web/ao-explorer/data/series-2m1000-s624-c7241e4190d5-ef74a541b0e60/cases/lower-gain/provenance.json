@@ -1,0 +1,280 @@
+{
+ "schema": "ao-explorer.provenance.v2",
+ "case_id": "lower-gain",
+ "series_id": "series-2m1000-s624-c7241e4190d5",
+ "plan_sha256": "8a3646aef255ae971cf88d085a6fc915e4b1162b5bcf9570d68aafd58af5e74e",
+ "attempt": "attempt-01",
+ "production_identity": {
+  "sha256": "c7241e4190d54b8896db391351e17d5973ab05e2c4063b453906521f3423c53e",
+  "material": {
+   "producer_modules": {
+    "long_series.py": "53a97fa4584400dc8b75d44a691b3078b1796d79910acd60bc53f10a6c26f55d",
+    "protocol.py": "d13021ab0c4662c94f06f2cf0b81a115a82b118695f0cf58d7a54ce2aa4199f7",
+    "identity.py": "20d172aa5b13c4e3703114b228367491c8a8046aacc7d707aa958de4378b53ed",
+    "admission.py": "cdffe1561c30789f9732ee766853660cf749f83f35cc13fc3e8d8eb1fa8eb53c",
+    "observer.py": "a21842e29027cff234e6e722830e65f8d954f36644f9f038cdc107ee3a6cf1ca",
+    "producer.py": "da70744370b59af33c24e4030ca0f584c5a9ea0ed2d19669e67550b29725ef61",
+    "run_job.py": "8ef4cc61664283aa313d30f718534c66788e5eb42e006ec3568826e5532740d8"
+   },
+   "core_package_sha256": "d95f830601acfea74ce4a3b4e24769fc786fa7a8365e0fb4bec62fad875fe53d",
+   "core_source_files": {
+    "src/shwfs_ao/experiments/scao.py": "60b7436bff102b492985471e8c478485f3d996fdc70431319b2510c48de145f0",
+    "src/shwfs_ao/backends/native/factory.py": "a16716a3c5e7f661764fa2d4d1cbea07e92613a826df0bfa9eb0f12abe68e420",
+    "src/shwfs_ao/backends/native/atmosphere.py": "7d6c57af32be1a1957288ace7ef00bd3f555d4584baa66d2d065bd1d23cc69a3",
+    "src/shwfs_ao/control/loop.py": "b4e645c22e677fbdce2a9562efb4f1e4d41a02ccba97711d6011fccd1820d27f",
+    "src/shwfs_ao/science/long_exposure.py": "b6e81ee9dd1e2f017bcea870503f1923986b5fda79e0b73e8aebb4e7535167c0"
+   },
+   "lock_sha256": "09d0dc5d6910b4bb2a43e9d5b6d0ed7ba88fe10eada1372d4e79588341d522fc",
+   "environment": {
+    "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "implementation": "CPython",
+    "numpy": "2.5.0",
+    "scipy": "1.18.0",
+    "machine": "arm64",
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O"
+   }
+  },
+  "lock_verified": true,
+  "lock_violations": []
+ },
+ "runtime_source": {
+  "package": "shwfs_ao",
+  "package_directory_relative": "src/shwfs_ao",
+  "imported_from_task_checkout": true,
+  "package_sha256": "d95f830601acfea74ce4a3b4e24769fc786fa7a8365e0fb4bec62fad875fe53d",
+  "version": "0.1.0",
+  "git": {
+   "git_head": "d9e82004693812aeda307999cb2d54ddf85213c1",
+   "path": "src",
+   "tracked_changes_sha256": "af43c13962b2d4f286176480d662920639fd940b1b4fdbef5cb46a9b8e6e6d2e",
+   "tracked_changes_empty": false,
+   "untracked_files": [],
+   "untracked_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+ },
+ "environment": {
+  "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+  "implementation": "CPython",
+  "numpy": "2.5.0",
+  "scipy": "1.18.0",
+  "machine": "arm64",
+  "platform": "macOS-26.5-arm64-arm-64bit-Mach-O"
+ },
+ "host": {
+  "system": "Darwin",
+  "release": "25.5.0",
+  "machine": "arm64",
+  "cpu": "Apple M1 Pro",
+  "logical_cpus": "8",
+  "physical_memory_bytes": "17179869184"
+ },
+ "screen": {
+  "option": {
+   "screen_grid_size": 624
+  },
+  "atmosphere_component_hash": "428e6454a80f819618a2f563ed0c57b8cb9b75b75e7147ef232f5049b52526ca",
+  "generated_screen_px": 624,
+  "travel_budget_px": 286.0,
+  "supported_travel_duration_s": 1.1215686274509795,
+  "atmosphere_metadata": {
+   "schema_name": "shwfs_ao.native_atmosphere",
+   "schema_version": 1,
+   "backend_name": "native",
+   "model_kind": "fourier_frozen_flow",
+   "config_hash": "428e6454a80f819618a2f563ed0c57b8cb9b75b75e7147ef232f5049b52526ca",
+   "root_seed": 1,
+   "realization_index": 0,
+   "realization_seed": null,
+   "random_stream_id": "shwfs_ao.random.sha256-json-pcg64-v1:4b86fc8b66fed351f137f5e17da9735319da578a16cbd4c7f4fd0b4e410e6c80",
+   "realization_invariant": false,
+   "opd_unit": "m",
+   "outside_pupil_fill": "nan",
+   "grid_shape": [
+    52,
+    52
+   ],
+   "pupil_mask_hash": "deb0f02b8e2f78b04d29df44c8c6934764e83abd78fc388116aedc155d2addd3",
+   "grid_delta_m": 0.039215686274509776,
+   "pupil_diameter_m": 2.0,
+   "r0_m": 0.1263371938263465,
+   "r0_reference_wavelength_m": 5e-07,
+   "outer_scale_m": 25.0,
+   "phase_reference_wavelength_m": 5e-07,
+   "wind_m_per_s": [
+    10.0,
+    0.0
+   ],
+   "target_rms_rad": 7.0068231914721935,
+   "normalize_rms": false,
+   "spectrum_model": "subharmonic_von_karman_v2",
+   "translation_model": "fourier_subpixel_v2",
+   "screen_grid_size": 624,
+   "travel_budget_px": 286.0,
+   "absolutely_normalized": true,
+   "raw_spectrum_absolutely_normalized": true,
+   "realization_rms_rescaled": false,
+   "spectral_quadrature_scheme": "midpoint_frequency_quadrature_v1",
+   "spectral_quadrature_subsamples": 4,
+   "subharmonic_depth": 3,
+   "frozen_flow_discretization": "exact_nonperiodic_spectral_subpixel"
+  }
+ },
+ "run": {
+  "config_hash": "d3731e830e6abdb675c2c315024903d1e1d91e3130a7afe4cdefcee7f0b66943",
+  "history_config_hash": "fb6b62b44edbbc4eedbc766439d0f3a07f66e5bb6ee680d49e96552fc136343b",
+  "component_hashes": {
+   "atmosphere": "428e6454a80f819618a2f563ed0c57b8cb9b75b75e7147ef232f5049b52526ca",
+   "command_projector": "ddd19cbb907278d73e673c2b306b3f0c8427a894176823597838fa8e91f49e23",
+   "controller": "77385e41be5c9876ad7de7dccc31a2402804a4b41e53468a3d698dbc2d85f73a",
+   "dm": "5372a153a872fbd64d58930d1facbae66f5eee7e6e769f49629346cda757114c",
+   "interaction_matrix": "85f2c79faf5ea3f31290627ee3bc9154e5bdc2f4e106ec4e3d253a212beeadfa",
+   "pupil_geometry": "8c185e996529ddee0bd3c1c1898f8f6efcc041c406a8ffc2ed89683ab2d257a9",
+   "random_streams": "b6064c98e33a1c27cbf931ce32dc6ba2c410aac4246c61a96ea88ed4226d9379",
+   "reconstructor": "5b96d2c258551b3033a53ade9107e7f8322ac61105a0d139eb6fb29b4fe110c0",
+   "science_propagator": "a013e8551405b93a469b56b6eb2d3cd15321913593a60858c13f4086e4f5d57d",
+   "wfs": "076db1e21176acd7b00f08807fe253147d05ac23a125842aaaff73495d236d2b"
+  },
+  "science_propagator_config_hash": "a013e8551405b93a469b56b6eb2d3cd15321913593a60858c13f4086e4f5d57d",
+  "history_digest": "5280281dfc8be32f844e0e46cfbcda4d0e005dd6e2d66476fd5d271dc4b78a0b",
+  "admission_sha256": "32805bf6adb6737e3b87eb21d4ddf4bd897bcbd7627ea6afc90beabbd3c55b2b",
+  "horizon_runtime_check": {
+   "atmosphere_travelled_px": 254.74500000000018,
+   "admitted_max_travel_px": 254.74500000000018,
+   "equal": true,
+   "exceeded_travel_budget": false,
+   "travel_budget_px": 286.0
+  },
+  "build_s": 0.7374139167368412,
+  "loop_s": 253.42132124956697,
+  "export_s": 0.577111542224884,
+  "child_wall_s": 255.4070242503658,
+  "child_peak_rss_bytes": 296386560
+ },
+ "raw_evidence": {
+  "location": "outputs/ao_explorer_1s/series-2m1000-s624-c7241e4190d5/cases/lower-gain/attempt-01/ (not in the web bundle)",
+  "files": {
+   "frames/atmosphere_opd_m.npy": {
+    "bytes": 21632128,
+    "sha256": "01dca7e0c170fc28cf86cfeac55a8db67704c8eff698248900c6a8a9fc465e89"
+   },
+   "frames/frame_index.npy": {
+    "bytes": 8128,
+    "sha256": "6e4b27e656d5e4eb5f601d9dec147a60cbf00b78ea8b1d4d999fdb776daafb76"
+   },
+   "frames/held_correction_opd_m.npy": {
+    "bytes": 21632128,
+    "sha256": "0790fdd37a78c01a46ccd8200f99581edf16d8ad4605072d1f458be4afc2b0a4"
+   },
+   "frames/pre_update_residual_opd_m.npy": {
+    "bytes": 21632128,
+    "sha256": "4e1887674c108e2df8f54e5b005ff9fb467a0c839f46b0d6c29204bce6e8e2f1"
+   },
+   "frames/psf_corrected.npy": {
+    "bytes": 194688128,
+    "sha256": "6e2c55c7a7c6324d411447d4be334207af3c2bf561f0cbda398ef840ceb1e2c7"
+   },
+   "frames/psf_uncorrected.npy": {
+    "bytes": 194688128,
+    "sha256": "abf51ee3d191378bc73cb46ae2ca39a4eab2730557e78bf1d13340f369f88b82"
+   },
+   "frames/time_s.npy": {
+    "bytes": 8128,
+    "sha256": "0a7463877457285787c97db8e23fd07706ac22777d1f65b28bb17ae91f2ae773"
+   },
+   "history.npz": {
+    "bytes": 334894,
+    "sha256": "ac5e82ce4da2a06351ac2bafe214ccaf03600fbbb8b6249fd82977a66c7715d0"
+   },
+   "mean_psfs.npz": {
+    "bytes": 987430,
+    "sha256": "e98a631f76519fe668fa336002d87c24014b668e7daf931f76fa2d31cd5c3266"
+   }
+  },
+  "case_record_sha256": "101a7a02fbdbc45aebc8366f6e5f0d81509ebbe1af5d70b56dba48bdf7e8b6c7"
+ },
+ "derived_export": {
+  "export_code_identity": {
+   "sha256": "6e1ad796b7ce0c0ef695b2117ca87f644754dd65b95f2ac01392ebb11ffe2c8f",
+   "files": {
+    "long_export.py": "c6c53ce6d434f6d79f4dfdcdbc651b4e2b769887e40c91ca8d1f890b9bc62bb9",
+    "long_series.py": "53a97fa4584400dc8b75d44a691b3078b1796d79910acd60bc53f10a6c26f55d",
+    "render.py": "5f43ac87fb6ffd7ab5f3f69fd443214a72f7530f5802bd384719cec737a64a31",
+    "binary_scene.py": "b96eeb7f61f5aefa5d92ec4cdf7b0aace9fd581087b99f61846e8617b2f3bb49",
+    "galaxy_scene.py": "e258132db59af23aeed9ed78a7d8bce59dc1c0d998a3eb662df53f20f603b224",
+    "galaxy_export.py": "799d5ed31d376cbb85517d8385f3f501cee4264762308aee74966dbe57acaa08",
+    "galaxy_template.py": "eb669a85fb22d5781e9521472616c354e0003cc8ae64ff73685db72240e62ea5",
+    "identity.py": "20d172aa5b13c4e3703114b228367491c8a8046aacc7d707aa958de4378b53ed",
+    "producer.py": "da70744370b59af33c24e4030ca0f584c5a9ea0ed2d19669e67550b29725ef61",
+    "protocol.py": "d13021ab0c4662c94f06f2cf0b81a115a82b118695f0cf58d7a54ce2aa4199f7"
+   },
+   "git": {
+    "git_head": "d9e82004693812aeda307999cb2d54ddf85213c1",
+    "path": "scripts/ao_explorer",
+    "tracked_changes_sha256": "5ffd0db1845ed635f002da3b45c79397d65ba97446611c85aecefc8e2eae958a",
+    "tracked_changes_empty": false,
+    "untracked_files": [
+     "scripts/ao_explorer/galaxy_export.py",
+     "scripts/ao_explorer/galaxy_scene.py",
+     "scripts/ao_explorer/galaxy_template.py",
+     "scripts/ao_explorer/long_export.py",
+     "scripts/ao_explorer/long_series.py"
+    ],
+    "untracked_sha256": "a2a408725391ec153570c8f0be6aa14d760aecbca511f3750e8f12f33decb48d"
+   }
+  },
+  "display_revision": "ao-explorer.display.v2",
+  "dataset_id": "series-2m1000-s624-c7241e4190d5-ef74a541b0e60",
+  "galaxy_derived_id": "ngc1705-f814w-2m1000-s624-c7241e4190d5-gda93ed5af026"
+ },
+ "atmosphere_pairing": {
+  "status": "paired",
+  "matching_frames": 1000,
+  "frames": 1000,
+  "note": "all 1000 atmosphere samples are byte-identical to the baseline's (streamed SHA-256 per frame)"
+ },
+ "atmosphere_repetition": {
+  "unique_frame_digests": 1000,
+  "frames": 1000,
+  "repeated": false
+ },
+ "checks": {
+  "atmosphere_rms_matches_history": true,
+  "residual_rms_matches_history": true,
+  "times_match_history": true,
+  "times_are_k_over_1000": true,
+  "frame_indices_complete": true,
+  "usable_matches_history": true,
+  "saturation_matches_history": true,
+  "per_frame_independent_reductions_max": {
+   "atmosphere_rms_abs_error_m": 2.117582368135751e-22,
+   "residual_rms_abs_error_m": 1.0587911840678754e-22,
+   "uncorrected_strehl_abs_error": 6.661338147750939e-16,
+   "corrected_strehl_abs_error": 3.885780586188048e-16,
+   "held_correction_identity_max_abs_m": 0.0
+  },
+  "per_frame_reductions_within_tolerance": true,
+  "streaming_max_abs_difference": {
+   "uncorrected": 0.0,
+   "corrected": 0.0
+  },
+  "streaming_within_tolerance": true,
+  "instantaneous_unit_flux": true,
+  "mean_unit_flux": {
+   "uncorrected": 1.0,
+   "corrected": 1.0
+  },
+  "analysis_frames": [
+   200,
+   1000
+  ],
+  "analysis_count": 800,
+  "archive_mean_vs_own_mean_max_abs": {
+   "uncorrected": 0.0,
+   "corrected": 0.0
+  },
+  "archive_mean_vs_accumulator_max_abs": {
+   "uncorrected": 0.0,
+   "corrected": 0.0
+  }
+ }
+}

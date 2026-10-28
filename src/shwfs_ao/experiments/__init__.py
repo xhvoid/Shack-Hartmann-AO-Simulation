@@ -34,6 +34,7 @@ from .public_data_conditioned import (
 )
 from .scao import (
     ExposureOverride,
+    FrozenFlowScreenOptions,
     LayeredAtmosphereOptions,
     ScaoBackendComponentFactory,
     ScaoConstructionError,
@@ -77,6 +78,7 @@ __all__ = (
     "ScaoConstructionError",
     "ScaoExecutionOptions",
     "LayeredAtmosphereOptions",
+    "FrozenFlowScreenOptions",
     "ExposureOverride",
     "ScaoBackendComponentFactory",
     "ScaoSystem",

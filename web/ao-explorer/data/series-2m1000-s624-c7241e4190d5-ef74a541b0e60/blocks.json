@@ -1,0 +1,3164 @@
+{
+ "schema": "ao-explorer.blocks.v1",
+ "series_id": "series-2m1000-s624-c7241e4190d5",
+ "definition": {
+  "block_frames": 100,
+  "blocks": [
+   [
+    0,
+    100
+   ],
+   [
+    100,
+    200
+   ],
+   [
+    200,
+    300
+   ],
+   [
+    300,
+    400
+   ],
+   [
+    400,
+    500
+   ],
+   [
+    500,
+    600
+   ],
+   [
+    600,
+    700
+   ],
+   [
+    700,
+    800
+   ],
+   [
+    800,
+    900
+   ],
+   [
+    900,
+    1000
+   ]
+  ],
+  "metrics": [
+   "pre-update residual pupil RMS (nm OPD)",
+   "instantaneous peak Strehl, corrected and uncorrected",
+   "actuator saturation fraction"
+  ],
+  "saturation_definition": "per frame, the fraction of DM actuators whose requested command magnitude exceeds the 1 um OPD stroke limit and is clipped (dm.model: mean(|requested| > stroke_limit_opd_m))",
+  "statistics": "per non-overlapping 100-frame (100 ms) block: mean, standard deviation, min, max; saturation also the share of frames with any clipped actuator",
+  "declared": "descriptive only; no stationarity test and no window tuning"
+ },
+ "notice": "Descriptive statistics of one realization of each case.  The 200-frame startup exclusion is a predeclared analysis window, not evidence of convergence; block-to-block drift and fluctuations are reported as observed. One second does not establish stationarity or a converged long exposure.",
+ "cases": {
+  "baseline": {
+   "blocks": [
+    {
+     "frames": [
+      0,
+      100
+     ],
+     "time_ms": [
+      0,
+      100
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 570.9334165066709,
+      "std": 45.50599853330835,
+      "min": 538.8298848925929,
+      "max": 792.0477490723914
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5768481923982227,
+      "std": 0.08410989143130418,
+      "min": 0.2678941371221884,
+      "max": 0.6858377179254447
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4449053183212559,
+      "std": 0.07896568118722765,
+      "min": 0.2678941371221884,
+      "max": 0.5449754394657397
+     },
+     "saturation_fraction": {
+      "mean": 0.11538461538461536,
+      "std": 0.04679048100229399,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 94
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      100,
+      200
+     ],
+     "time_ms": [
+      100,
+      200
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 481.949654280102,
+      "std": 65.19424907702215,
+      "min": 355.1278889134695,
+      "max": 564.9472059789366
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.4907496438343313,
+      "std": 0.04272711931607512,
+      "min": 0.4440186978673911,
+      "max": 0.5904664695619913
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2782947838737983,
+      "std": 0.04880756468209681,
+      "min": 0.20923507228556293,
+      "max": 0.37915695633262175
+     },
+     "saturation_fraction": {
+      "mean": 0.029230769230769234,
+      "std": 0.03733741876772799,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 38
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      200,
+      300
+     ],
+     "time_ms": [
+      200,
+      300
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 337.0155545046716,
+      "std": 18.649975144828804,
+      "min": 286.54167767375293,
+      "max": 368.1007520243967
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.49646826222317003,
+      "std": 0.0763679656774876,
+      "min": 0.37986720589272066,
+      "max": 0.6355071395589323
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4099548910859058,
+      "std": 0.08476546192469397,
+      "min": 0.2528810202868472,
+      "max": 0.5334155157610524
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      300,
+      400
+     ],
+     "time_ms": [
+      300,
+      400
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 255.66747262239093,
+      "std": 30.580770476556363,
+      "min": 205.27044375468287,
+      "max": 308.4336874030981
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6650090259804365,
+      "std": 0.03296103875088671,
+      "min": 0.5889374652606023,
+      "max": 0.7223914986959641
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4598313966280013,
+      "std": 0.05255399966436299,
+      "min": 0.359330883973911,
+      "max": 0.5365121068274802
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      400,
+      500
+     ],
+     "time_ms": [
+      400,
+      500
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 226.1095759185537,
+      "std": 32.58386527643737,
+      "min": 175.0588425171757,
+      "max": 280.2356170294154
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6401268496332367,
+      "std": 0.024425373748524073,
+      "min": 0.6047810666475161,
+      "max": 0.6875205633666056
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.371163393399833,
+      "std": 0.01636514073202293,
+      "min": 0.3459130817150542,
+      "max": 0.39729102109652603
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      500,
+      600
+     ],
+     "time_ms": [
+      500,
+      600
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 242.33726080499548,
+      "std": 14.719622024781097,
+      "min": 214.58825176168136,
+      "max": 268.2481428153318
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6136451825706453,
+      "std": 0.029499973870145822,
+      "min": 0.5582990619564274,
+      "max": 0.6580259246591519
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.23192261369520661,
+      "std": 0.06155941680259592,
+      "min": 0.1708266464330825,
+      "max": 0.3722064180401825
+     },
+     "saturation_fraction": {
+      "mean": 0.0753846153846154,
+      "std": 0.04612819800173831,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 81
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      600,
+      700
+     ],
+     "time_ms": [
+      600,
+      700
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 222.66104128396648,
+      "std": 27.367359116507533,
+      "min": 174.04897292033425,
+      "max": 258.5939057283913
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.565937215474331,
+      "std": 0.054375040783385745,
+      "min": 0.4854494425795189,
+      "max": 0.6560141804050494
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2321629536379902,
+      "std": 0.017189250942688444,
+      "min": 0.1978305433888964,
+      "max": 0.268445978260851
+     },
+     "saturation_fraction": {
+      "mean": 0.03384615384615385,
+      "std": 0.05890519913562047,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 27
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      700,
+      800
+     ],
+     "time_ms": [
+      700,
+      800
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 202.6016941003063,
+      "std": 15.164406173928569,
+      "min": 177.0641501314529,
+      "max": 224.6226368762178
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5598492309967719,
+      "std": 0.046841781199697154,
+      "min": 0.48930415023094564,
+      "max": 0.6434446559766782
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.40810271272589105,
+      "std": 0.06321844678283313,
+      "min": 0.2718723465368175,
+      "max": 0.47157662257760385
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      800,
+      900
+     ],
+     "time_ms": [
+      800,
+      900
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 279.5704901967461,
+      "std": 48.47952232926068,
+      "min": 187.4984303670643,
+      "max": 347.8262017148836
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5561793677372125,
+      "std": 0.05466793230752607,
+      "min": 0.4883895101320491,
+      "max": 0.6754460215037431
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.3752305148359,
+      "std": 0.038025801376694895,
+      "min": 0.31060654245391506,
+      "max": 0.4418584532595881
+     },
+     "saturation_fraction": {
+      "mean": 0.010769230769230769,
+      "std": 0.02669131011214996,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 14
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      900,
+      1000
+     ],
+     "time_ms": [
+      900,
+      1000
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 363.69819544170673,
+      "std": 20.094391260707216,
+      "min": 327.70801253591645,
+      "max": 394.8848915704836
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5099082628992442,
+      "std": 0.10970364672301157,
+      "min": 0.37706062837421594,
+      "max": 0.6784283930820083
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2703799201786715,
+      "std": 0.05644408932659779,
+      "min": 0.14554048273584566,
+      "max": 0.3350073341330056
+     },
+     "saturation_fraction": {
+      "mean": 0.040769230769230766,
+      "std": 0.03990373030567058,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 52
+     },
+     "unusable_reconstructions": 0
+    }
+   ],
+   "analysis_blocks": {
+    "count": 8,
+    "residual_rms_nm_block_means_range": [
+     202.6016941003063,
+     363.69819544170673
+    ],
+    "residual_rms_nm_block_means_std": 53.53445433793288,
+    "peak_strehl_corrected_block_means_range": [
+     0.49646826222317003,
+     0.6650090259804365
+    ],
+    "first_minus_last_residual_rms_nm": -26.682640937035103,
+    "frames_with_any_clipped": 174
+   }
+  },
+  "weaker-turbulence": {
+   "blocks": [
+    {
+     "frames": [
+      0,
+      100
+     ],
+     "time_ms": [
+      0,
+      100
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 462.67497940248745,
+      "std": 40.65259270090122,
+      "min": 436.5366364944173,
+      "max": 657.6472673953659
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6639434766219761,
+      "std": 0.07126246714186808,
+      "min": 0.39308166855549126,
+      "max": 0.755353330296491
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.5560757384115584,
+      "std": 0.07012924348276461,
+      "min": 0.39308166855549126,
+      "max": 0.6429091995097381
+     },
+     "saturation_fraction": {
+      "mean": 0.08846153846153842,
+      "std": 0.05029498781008471,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 85
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      100,
+      200
+     ],
+     "time_ms": [
+      100,
+      200
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 398.1815933100555,
+      "std": 51.700504948680134,
+      "min": 294.5657098295663,
+      "max": 463.4337504564696
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6102329926552967,
+      "std": 0.040245624152432845,
+      "min": 0.5486130660542881,
+      "max": 0.6949007169190673
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.39436136643442227,
+      "std": 0.04788735492630854,
+      "min": 0.33957381659099917,
+      "max": 0.4860629332119494
+     },
+     "saturation_fraction": {
+      "mean": 0.011538461538461539,
+      "std": 0.027467032417472486,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 15
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      200,
+      300
+     ],
+     "time_ms": [
+      200,
+      300
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 279.6497081347549,
+      "std": 15.231012969704397,
+      "min": 237.0288921225492,
+      "max": 307.65852532474173
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6130748525614389,
+      "std": 0.0683955082825117,
+      "min": 0.5006129705327064,
+      "max": 0.7369696329360007
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.5216318535614345,
+      "std": 0.07484249672552654,
+      "min": 0.38633022223262126,
+      "max": 0.625130827700815
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      300,
+      400
+     ],
+     "time_ms": [
+      300,
+      400
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 212.16274493172713,
+      "std": 25.75804624803285,
+      "min": 169.63123860577292,
+      "max": 255.3924228529516
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.7436374123981925,
+      "std": 0.020451838832156115,
+      "min": 0.678599967523681,
+      "max": 0.77509067452686
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.559232686621165,
+      "std": 0.041614920010143656,
+      "min": 0.4747071659127019,
+      "max": 0.6261863428084923
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      400,
+      500
+     ],
+     "time_ms": [
+      400,
+      500
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 188.36832802459935,
+      "std": 27.002679622141496,
+      "min": 145.86763287810797,
+      "max": 232.06054819292106
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.7258516478279406,
+      "std": 0.020416035657543206,
+      "min": 0.6882181478328985,
+      "max": 0.7554873188640872
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.5059572517768559,
+      "std": 0.024890527407149733,
+      "min": 0.4704540644684012,
+      "max": 0.5446492715334852
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      500,
+      600
+     ],
+     "time_ms": [
+      500,
+      600
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 201.09726773626798,
+      "std": 11.949367953960753,
+      "min": 178.88885752649617,
+      "max": 223.1821028332784
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6980907084599376,
+      "std": 0.01716802979550674,
+      "min": 0.6615598089200503,
+      "max": 0.7365928642167566
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.35931035056689736,
+      "std": 0.0698692962109706,
+      "min": 0.2819307446937464,
+      "max": 0.5222808193925721
+     },
+     "saturation_fraction": {
+      "mean": 0.05307692307692306,
+      "std": 0.0355764033226067,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 69
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      600,
+      700
+     ],
+     "time_ms": [
+      600,
+      700
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 184.39772038024836,
+      "std": 22.744219214537825,
+      "min": 143.69743097536966,
+      "max": 215.7882265298819
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6561337500200388,
+      "std": 0.04691329712663252,
+      "min": 0.595342994739876,
+      "max": 0.7418447882195719
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.35758877960320057,
+      "std": 0.014239289876159708,
+      "min": 0.3346883409428109,
+      "max": 0.397340961553619
+     },
+     "saturation_fraction": {
+      "mean": 0.004615384615384616,
+      "std": 0.01826821859544295,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 6
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      700,
+      800
+     ],
+     "time_ms": [
+      700,
+      800
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 168.3646764613354,
+      "std": 12.699498386865256,
+      "min": 146.74795122619372,
+      "max": 187.5609834332191
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6660299810506969,
+      "std": 0.03983798392115907,
+      "min": 0.6035443286591268,
+      "max": 0.7364498836843727
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.536332959402934,
+      "std": 0.06302887087325172,
+      "min": 0.3999860419676537,
+      "max": 0.5970107863242481
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      800,
+      900
+     ],
+     "time_ms": [
+      800,
+      900
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 231.91889090214983,
+      "std": 41.03287612549349,
+      "min": 155.59808341603525,
+      "max": 289.66566140607694
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.646144738527937,
+      "std": 0.039456655898049114,
+      "min": 0.5877863128930841,
+      "max": 0.7268993376805507
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4974201047504769,
+      "std": 0.03318526807451139,
+      "min": 0.430060872413546,
+      "max": 0.5683822457358552
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      900,
+      1000
+     ],
+     "time_ms": [
+      900,
+      1000
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 301.92185197908924,
+      "std": 16.65424276819523,
+      "min": 272.4043949710115,
+      "max": 327.30273124738693
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6048629655097515,
+      "std": 0.08303311826873412,
+      "min": 0.5059215776571765,
+      "max": 0.7314612902670444
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.38647599599987714,
+      "std": 0.05796208699531542,
+      "min": 0.2458578449583356,
+      "max": 0.462842221085631
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    }
+   ],
+   "analysis_blocks": {
+    "count": 8,
+    "residual_rms_nm_block_means_range": [
+     168.3646764613354,
+     301.92185197908924
+    ],
+    "residual_rms_nm_block_means_std": 44.37989523425358,
+    "peak_strehl_corrected_block_means_range": [
+     0.6048629655097515,
+     0.7436374123981925
+    ],
+    "first_minus_last_residual_rms_nm": -22.272143844334323,
+    "frames_with_any_clipped": 75
+   }
+  },
+  "stronger-turbulence": {
+   "blocks": [
+    {
+     "frames": [
+      0,
+      100
+     ],
+     "time_ms": [
+      0,
+      100
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 705.5410596507018,
+      "std": 50.542982127601384,
+      "min": 663.8726231313614,
+      "max": 953.915066499465
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.47336528468471384,
+      "std": 0.08651383013769649,
+      "min": 0.15081224770999727,
+      "max": 0.5792182967845342
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.3423894490502044,
+      "std": 0.089106515085899,
+      "min": 0.15081224770999727,
+      "max": 0.44444092399233925
+     },
+     "saturation_fraction": {
+      "mean": 0.14923076923076922,
+      "std": 0.05840077814185326,
+      "min": 0.0,
+      "max": 0.23076923076923078,
+      "frames_with_any_clipped": 95
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      100,
+      200
+     ],
+     "time_ms": [
+      100,
+      200
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 583.2599995291927,
+      "std": 82.58255773036052,
+      "min": 431.5928758583821,
+      "max": 694.0703422694746
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.3769025388881941,
+      "std": 0.043340124703266196,
+      "min": 0.31726900638691063,
+      "max": 0.47311833337039494
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.23819874374313524,
+      "std": 0.0211425843134671,
+      "min": 0.19707276885418112,
+      "max": 0.2907215985686657
+     },
+     "saturation_fraction": {
+      "mean": 0.06615384615384613,
+      "std": 0.028823067684915684,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 85
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      200,
+      300
+     ],
+     "time_ms": [
+      200,
+      300
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 405.01810533733754,
+      "std": 23.45075789272615,
+      "min": 347.61705987361785,
+      "max": 442.14847153292783
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.38087462643141295,
+      "std": 0.07784462866172259,
+      "min": 0.2601289948583956,
+      "max": 0.5350725375642152
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.29823365485827286,
+      "std": 0.050854277581893016,
+      "min": 0.23390937981127222,
+      "max": 0.39246851133251337
+     },
+     "saturation_fraction": {
+      "mean": 0.016923076923076923,
+      "std": 0.031865100272627664,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 22
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      300,
+      400
+     ],
+     "time_ms": [
+      300,
+      400
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 307.748427434767,
+      "std": 37.06736791682976,
+      "min": 247.04860724456077,
+      "max": 368.259674804298
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5567341563092377,
+      "std": 0.04395724616061065,
+      "min": 0.4635009430029946,
+      "max": 0.6425140533855189
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.3227142494291413,
+      "std": 0.048497434550231845,
+      "min": 0.2346484693293898,
+      "max": 0.39804179158181974
+     },
+     "saturation_fraction": {
+      "mean": 0.027692307692307697,
+      "std": 0.044215716502153585,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 31
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      400,
+      500
+     ],
+     "time_ms": [
+      400,
+      500
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 275.4460813200396,
+      "std": 42.24203622084793,
+      "min": 209.82937900818945,
+      "max": 346.67012526702507
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.524565117861929,
+      "std": 0.030893812334810748,
+      "min": 0.4526654190475887,
+      "max": 0.578115489864326
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2409785140423406,
+      "std": 0.015991149403338303,
+      "min": 0.2196439627405748,
+      "max": 0.2683679688755232
+     },
+     "saturation_fraction": {
+      "mean": 0.04615384615384615,
+      "std": 0.05329387100211931,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 48
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      500,
+      600
+     ],
+     "time_ms": [
+      500,
+      600
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 300.356384484781,
+      "std": 20.341006676390048,
+      "min": 263.95133621430347,
+      "max": 333.8611706549896
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.48102227374232936,
+      "std": 0.03712857021740218,
+      "min": 0.3937485307167907,
+      "max": 0.5303822424456964
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.17498958177176951,
+      "std": 0.026103707813539608,
+      "min": 0.14109380429552093,
+      "max": 0.2533971498342791
+     },
+     "saturation_fraction": {
+      "mean": 0.1446153846153846,
+      "std": 0.05681903173113658,
+      "min": 0.07692307692307693,
+      "max": 0.23076923076923078,
+      "frames_with_any_clipped": 100
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      600,
+      700
+     ],
+     "time_ms": [
+      600,
+      700
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 272.1800651027464,
+      "std": 34.37737108932032,
+      "min": 214.46532917950154,
+      "max": 330.4334991031248
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.4446275638795463,
+      "std": 0.045325731406425464,
+      "min": 0.37822964877567766,
+      "max": 0.5202224590005279
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.17584110665540972,
+      "std": 0.01610432446108792,
+      "min": 0.14673987097454785,
+      "max": 0.20345976279117192
+     },
+     "saturation_fraction": {
+      "mean": 0.08461538461538459,
+      "std": 0.0455083060238432,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 87
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      700,
+      800
+     ],
+     "time_ms": [
+      700,
+      800
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 244.143691556342,
+      "std": 18.08734907264034,
+      "min": 213.68187370272935,
+      "max": 270.2352134474126
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.4456953926545008,
+      "std": 0.05157814432777967,
+      "min": 0.3583237251278414,
+      "max": 0.5309992260018399
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2807311369308197,
+      "std": 0.05482510711138763,
+      "min": 0.1819858749620522,
+      "max": 0.3429819044336095
+     },
+     "saturation_fraction": {
+      "mean": 0.0015384615384615385,
+      "std": 0.010769230769230767,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 2
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      800,
+      900
+     ],
+     "time_ms": [
+      800,
+      900
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 336.4864492430925,
+      "std": 57.92857171456193,
+      "min": 228.79148297584865,
+      "max": 421.08298738339687
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.4421627761825138,
+      "std": 0.0540548496186069,
+      "min": 0.36357184593430497,
+      "max": 0.5282656743623336
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2514508963019903,
+      "std": 0.04645313958907651,
+      "min": 0.18362494865816262,
+      "max": 0.32682037574111455
+     },
+     "saturation_fraction": {
+      "mean": 0.02538461538461539,
+      "std": 0.03617020906310384,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 33
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      900,
+      1000
+     ],
+     "time_ms": [
+      900,
+      1000
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 442.0004723599288,
+      "std": 24.098991093003804,
+      "min": 405.657221074833,
+      "max": 478.1374546602243
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.369349216599608,
+      "std": 0.10955720578884322,
+      "min": 0.19768556061433487,
+      "max": 0.5326007778873689
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.16271867780839472,
+      "std": 0.027413803439054567,
+      "min": 0.10259257261643044,
+      "max": 0.19566636031600382
+     },
+     "saturation_fraction": {
+      "mean": 0.09384615384615383,
+      "std": 0.05053559294048259,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 87
+     },
+     "unusable_reconstructions": 0
+    }
+   ],
+   "analysis_blocks": {
+    "count": 8,
+    "residual_rms_nm_block_means_range": [
+     244.143691556342,
+     442.0004723599288
+    ],
+    "residual_rms_nm_block_means_std": 64.10696176464829,
+    "peak_strehl_corrected_block_means_range": [
+     0.369349216599608,
+     0.5567341563092377
+    ],
+    "first_minus_last_residual_rms_nm": -36.982367022591234,
+    "frames_with_any_clipped": 410
+   }
+  },
+  "lower-gain": {
+   "blocks": [
+    {
+     "frames": [
+      0,
+      100
+     ],
+     "time_ms": [
+      0,
+      100
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 595.3974293927168,
+      "std": 47.04612782390805,
+      "min": 570.0205087186517,
+      "max": 792.0477490723914
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5799197916307487,
+      "std": 0.09838550122501785,
+      "min": 0.2678941371221884,
+      "max": 0.7023036421663206
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4449053183212559,
+      "std": 0.07896568118722765,
+      "min": 0.2678941371221884,
+      "max": 0.5449754394657397
+     },
+     "saturation_fraction": {
+      "mean": 0.09923076923076922,
+      "std": 0.053620405901056774,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 86
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      100,
+      200
+     ],
+     "time_ms": [
+      100,
+      200
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 490.24389278758844,
+      "std": 65.9707502862833,
+      "min": 365.3290234148315,
+      "max": 577.8378279830123
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.4831929425738981,
+      "std": 0.033354776708164516,
+      "min": 0.44398662486345397,
+      "max": 0.5613843963707649
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2782947838737983,
+      "std": 0.04880756468209681,
+      "min": 0.20923507228556293,
+      "max": 0.37915695633262175
+     },
+     "saturation_fraction": {
+      "mean": 0.013846153846153847,
+      "std": 0.029552881095843926,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 18
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      200,
+      300
+     ],
+     "time_ms": [
+      200,
+      300
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 338.7273359505128,
+      "std": 16.844453920283243,
+      "min": 298.2136604436298,
+      "max": 363.6998268370061
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.4963446566432761,
+      "std": 0.0731901657535712,
+      "min": 0.4019426646199798,
+      "max": 0.627831630403339
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4099548910859058,
+      "std": 0.08476546192469397,
+      "min": 0.2528810202868472,
+      "max": 0.5334155157610524
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      300,
+      400
+     ],
+     "time_ms": [
+      300,
+      400
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 261.18943139053897,
+      "std": 24.799996294792813,
+      "min": 222.51099464461072,
+      "max": 299.3843395708828
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.649155848840342,
+      "std": 0.02930495349351637,
+      "min": 0.5824040670498227,
+      "max": 0.695745870115645
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4598313966280013,
+      "std": 0.05255399966436299,
+      "min": 0.359330883973911,
+      "max": 0.5365121068274802
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      400,
+      500
+     ],
+     "time_ms": [
+      400,
+      500
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 239.29055534050764,
+      "std": 32.08981131380589,
+      "min": 192.20104210956558,
+      "max": 292.6937259429771
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6266057435197652,
+      "std": 0.019086277859878056,
+      "min": 0.587699907656316,
+      "max": 0.6647622320353487
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.371163393399833,
+      "std": 0.01636514073202293,
+      "min": 0.3459130817150542,
+      "max": 0.39729102109652603
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      500,
+      600
+     ],
+     "time_ms": [
+      500,
+      600
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 253.86465583109552,
+      "std": 13.880204063024214,
+      "min": 229.72034199905337,
+      "max": 279.2190401659558
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6028242428968675,
+      "std": 0.03632836058334524,
+      "min": 0.5321456943230807,
+      "max": 0.6499060887723485
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.23192261369520661,
+      "std": 0.06155941680259592,
+      "min": 0.1708266464330825,
+      "max": 0.3722064180401825
+     },
+     "saturation_fraction": {
+      "mean": 0.059230769230769253,
+      "std": 0.040492529810005715,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 72
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      600,
+      700
+     ],
+     "time_ms": [
+      600,
+      700
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 232.9183764793678,
+      "std": 29.893305211732514,
+      "min": 183.51580402945416,
+      "max": 269.498778592923
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.554876157809092,
+      "std": 0.05027171008789776,
+      "min": 0.4832274621004837,
+      "max": 0.6430609100391039
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2321629536379902,
+      "std": 0.017189250942688444,
+      "min": 0.1978305433888964,
+      "max": 0.268445978260851
+     },
+     "saturation_fraction": {
+      "mean": 0.02,
+      "std": 0.05058240683930337,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 14
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      700,
+      800
+     ],
+     "time_ms": [
+      700,
+      800
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 203.73442518864525,
+      "std": 13.59039067994756,
+      "min": 180.5952569297696,
+      "max": 221.12968154652762
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.557308881555608,
+      "std": 0.040622037204615276,
+      "min": 0.5030286263975303,
+      "max": 0.6300443187692722
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.40810271272589105,
+      "std": 0.06321844678283313,
+      "min": 0.2718723465368175,
+      "max": 0.47157662257760385
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      800,
+      900
+     ],
+     "time_ms": [
+      800,
+      900
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 283.33909655734874,
+      "std": 54.17999268386414,
+      "min": 188.64566469893845,
+      "max": 362.6087146163451
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5576820512898064,
+      "std": 0.05265277416103161,
+      "min": 0.4985198944834091,
+      "max": 0.68060324989326
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.3752305148359,
+      "std": 0.038025801376694895,
+      "min": 0.31060654245391506,
+      "max": 0.4418584532595881
+     },
+     "saturation_fraction": {
+      "mean": 0.0015384615384615385,
+      "std": 0.010769230769230769,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 2
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      900,
+      1000
+     ],
+     "time_ms": [
+      900,
+      1000
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 383.79026338061215,
+      "std": 21.4228938195533,
+      "min": 340.6674470978941,
+      "max": 415.02703347391633
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5003585559808007,
+      "std": 0.11668499323215678,
+      "min": 0.34656340719644896,
+      "max": 0.6848165188943685
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2703799201786715,
+      "std": 0.05644408932659779,
+      "min": 0.14554048273584566,
+      "max": 0.3350073341330056
+     },
+     "saturation_fraction": {
+      "mean": 0.011538461538461539,
+      "std": 0.027467032417472486,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 15
+     },
+     "unusable_reconstructions": 0
+    }
+   ],
+   "analysis_blocks": {
+    "count": 8,
+    "residual_rms_nm_block_means_range": [
+     203.73442518864525,
+     383.79026338061215
+    ],
+    "residual_rms_nm_block_means_std": 55.59568602703716,
+    "peak_strehl_corrected_block_means_range": [
+     0.4963446566432761,
+     0.649155848840342
+    ],
+    "first_minus_last_residual_rms_nm": -45.062927430099364,
+    "frames_with_any_clipped": 103
+   }
+  },
+  "higher-gain": {
+   "blocks": [
+    {
+     "frames": [
+      0,
+      100
+     ],
+     "time_ms": [
+      0,
+      100
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 562.136429002242,
+      "std": 46.131813196085226,
+      "min": 494.4963819810239,
+      "max": 792.0477490723914
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5737570677409068,
+      "std": 0.07527999203344041,
+      "min": 0.2678941371221884,
+      "max": 0.6794063365438584
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4449053183212559,
+      "std": 0.07896568118722765,
+      "min": 0.2678941371221884,
+      "max": 0.5449754394657397
+     },
+     "saturation_fraction": {
+      "mean": 0.12153846153846151,
+      "std": 0.043758346625624285,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 96
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      100,
+      200
+     ],
+     "time_ms": [
+      100,
+      200
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 479.95748682911244,
+      "std": 64.54512905664814,
+      "min": 361.49937300312394,
+      "max": 565.8782567165383
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.4895363503947516,
+      "std": 0.04613696857013734,
+      "min": 0.4255706965712173,
+      "max": 0.5860432906103351
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2782947838737983,
+      "std": 0.04880756468209681,
+      "min": 0.20923507228556293,
+      "max": 0.37915695633262175
+     },
+     "saturation_fraction": {
+      "mean": 0.03538461538461539,
+      "std": 0.0383382639826988,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 46
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      200,
+      300
+     ],
+     "time_ms": [
+      200,
+      300
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 336.53164658914494,
+      "std": 19.907930473285976,
+      "min": 278.2606345166816,
+      "max": 367.6171765967388
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.49565781940706316,
+      "std": 0.0750046962171674,
+      "min": 0.3764838162341728,
+      "max": 0.6443251900316183
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4099548910859058,
+      "std": 0.08476546192469397,
+      "min": 0.2528810202868472,
+      "max": 0.5334155157610524
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      300,
+      400
+     ],
+     "time_ms": [
+      300,
+      400
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 254.13884279391078,
+      "std": 33.32708014509383,
+      "min": 199.10788840709898,
+      "max": 313.61284773392384
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6668090945910072,
+      "std": 0.03506284121968939,
+      "min": 0.5854371210533564,
+      "max": 0.7208674412519567
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4598313966280013,
+      "std": 0.05255399966436299,
+      "min": 0.359330883973911,
+      "max": 0.5365121068274802
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      400,
+      500
+     ],
+     "time_ms": [
+      400,
+      500
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 222.63597717814486,
+      "std": 33.586957332701445,
+      "min": 168.97721881836316,
+      "max": 278.6319557872625
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6410682438608225,
+      "std": 0.025274557744876358,
+      "min": 0.6046312477626011,
+      "max": 0.6844203205961785
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.371163393399833,
+      "std": 0.01636514073202293,
+      "min": 0.3459130817150542,
+      "max": 0.39729102109652603
+     },
+     "saturation_fraction": {
+      "mean": 0.0038461538461538464,
+      "std": 0.016764995936694897,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 5
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      500,
+      600
+     ],
+     "time_ms": [
+      500,
+      600
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 239.80877830367677,
+      "std": 15.367193222566812,
+      "min": 211.1519848709414,
+      "max": 268.6862950723404
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6138528852670966,
+      "std": 0.02776194908484341,
+      "min": 0.5597486803413249,
+      "max": 0.660599911403694
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.23192261369520661,
+      "std": 0.06155941680259592,
+      "min": 0.1708266464330825,
+      "max": 0.3722064180401825
+     },
+     "saturation_fraction": {
+      "mean": 0.09230769230769229,
+      "std": 0.03768445758127967,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 96
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      600,
+      700
+     ],
+     "time_ms": [
+      600,
+      700
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 219.3658215677546,
+      "std": 25.64269507848487,
+      "min": 172.23167756326654,
+      "max": 257.75135039452425
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5658643989716606,
+      "std": 0.054215897587695995,
+      "min": 0.4863395939630412,
+      "max": 0.6598342564932408
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2321629536379902,
+      "std": 0.017189250942688444,
+      "min": 0.1978305433888964,
+      "max": 0.268445978260851
+     },
+     "saturation_fraction": {
+      "mean": 0.04,
+      "std": 0.06005914244905579,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 34
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      700,
+      800
+     ],
+     "time_ms": [
+      700,
+      800
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 202.70054309785485,
+      "std": 15.827956368267994,
+      "min": 176.44578181752576,
+      "max": 229.54251367976516
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5588551081893942,
+      "std": 0.05022673911965133,
+      "min": 0.47167904277827255,
+      "max": 0.6457144298219804
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.40810271272589105,
+      "std": 0.06321844678283313,
+      "min": 0.2718723465368175,
+      "max": 0.47157662257760385
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      800,
+      900
+     ],
+     "time_ms": [
+      800,
+      900
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 278.6101694257301,
+      "std": 46.78562914185152,
+      "min": 190.4817048275414,
+      "max": 347.50632837008305
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5542307284154709,
+      "std": 0.056340759211337965,
+      "min": 0.4809492643909997,
+      "max": 0.6715709332875612
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.3752305148359,
+      "std": 0.038025801376694895,
+      "min": 0.31060654245391506,
+      "max": 0.4418584532595881
+     },
+     "saturation_fraction": {
+      "mean": 0.012307692307692306,
+      "std": 0.028200465815112857,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 16
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      900,
+      1000
+     ],
+     "time_ms": [
+      900,
+      1000
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 357.5488347888938,
+      "std": 20.498581091253435,
+      "min": 325.94791359586196,
+      "max": 389.002690382765
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5074294432694315,
+      "std": 0.10654960237198159,
+      "min": 0.3755434791094323,
+      "max": 0.6698806117341456
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2703799201786715,
+      "std": 0.05644408932659779,
+      "min": 0.14554048273584566,
+      "max": 0.3350073341330056
+     },
+     "saturation_fraction": {
+      "mean": 0.053076923076923105,
+      "std": 0.04703643306526292,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 61
+     },
+     "unusable_reconstructions": 0
+    }
+   ],
+   "analysis_blocks": {
+    "count": 8,
+    "residual_rms_nm_block_means_range": [
+     202.70054309785485,
+     357.5488347888938
+    ],
+    "residual_rms_nm_block_means_std": 52.87828035048045,
+    "peak_strehl_corrected_block_means_range": [
+     0.49565781940706316,
+     0.6668090945910072
+    ],
+    "first_minus_last_residual_rms_nm": -21.017188199748887,
+    "frames_with_any_clipped": 212
+   }
+  },
+  "brighter-guide": {
+   "blocks": [
+    {
+     "frames": [
+      0,
+      100
+     ],
+     "time_ms": [
+      0,
+      100
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 570.5685794966312,
+      "std": 45.21463126679427,
+      "min": 539.8027187877765,
+      "max": 792.0477490723914
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.576710925719961,
+      "std": 0.08351442207819733,
+      "min": 0.2678941371221884,
+      "max": 0.6861084904522238
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4449053183212559,
+      "std": 0.07896568118722765,
+      "min": 0.2678941371221884,
+      "max": 0.5449754394657397
+     },
+     "saturation_fraction": {
+      "mean": 0.1146153846153846,
+      "std": 0.046784157537030684,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 94
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      100,
+      200
+     ],
+     "time_ms": [
+      100,
+      200
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 482.61713362343676,
+      "std": 64.37925504094672,
+      "min": 360.345427061292,
+      "max": 567.0600169593706
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.4900093443237602,
+      "std": 0.04304285764175521,
+      "min": 0.43893914953579644,
+      "max": 0.5837650228986242
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2782947838737983,
+      "std": 0.04880756468209681,
+      "min": 0.20923507228556293,
+      "max": 0.37915695633262175
+     },
+     "saturation_fraction": {
+      "mean": 0.03153846153846154,
+      "std": 0.03783333116110135,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 41
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      200,
+      300
+     ],
+     "time_ms": [
+      200,
+      300
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 337.33092480658865,
+      "std": 18.590971520639762,
+      "min": 282.91599246373346,
+      "max": 368.8524248085547
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.4967467437913197,
+      "std": 0.07548087911106714,
+      "min": 0.3821020518492815,
+      "max": 0.637434857340237
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4099548910859058,
+      "std": 0.08476546192469397,
+      "min": 0.2528810202868472,
+      "max": 0.5334155157610524
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      300,
+      400
+     ],
+     "time_ms": [
+      300,
+      400
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 255.2623070985164,
+      "std": 30.830921946955534,
+      "min": 205.36971815343944,
+      "max": 306.9439476590424
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6647218647669608,
+      "std": 0.03330677762031004,
+      "min": 0.5877848094507423,
+      "max": 0.7210703317757293
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4598313966280013,
+      "std": 0.05255399966436299,
+      "min": 0.359330883973911,
+      "max": 0.5365121068274802
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      400,
+      500
+     ],
+     "time_ms": [
+      400,
+      500
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 226.24490433852944,
+      "std": 33.08163299164384,
+      "min": 174.49773468178617,
+      "max": 279.9787633423744
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6401061011058751,
+      "std": 0.02409623468321744,
+      "min": 0.6052561213957668,
+      "max": 0.686453053369179
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.371163393399833,
+      "std": 0.01636514073202293,
+      "min": 0.3459130817150542,
+      "max": 0.39729102109652603
+     },
+     "saturation_fraction": {
+      "mean": 0.0007692307692307692,
+      "std": 0.007653749516204769,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 1
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      500,
+      600
+     ],
+     "time_ms": [
+      500,
+      600
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 242.59254362059662,
+      "std": 15.22095252472878,
+      "min": 213.69902243275376,
+      "max": 268.5221012734284
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.613703387499193,
+      "std": 0.02982335786582442,
+      "min": 0.5524627804865769,
+      "max": 0.6618060708548792
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.23192261369520661,
+      "std": 0.06155941680259592,
+      "min": 0.1708266464330825,
+      "max": 0.3722064180401825
+     },
+     "saturation_fraction": {
+      "mean": 0.07461538461538464,
+      "std": 0.046733539012566265,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 80
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      600,
+      700
+     ],
+     "time_ms": [
+      600,
+      700
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 222.30491167346477,
+      "std": 27.394336766771918,
+      "min": 174.25036002283971,
+      "max": 259.27164338392964
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5665029099412474,
+      "std": 0.053546698261088634,
+      "min": 0.4890063747204687,
+      "max": 0.6564317302187506
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2321629536379902,
+      "std": 0.017189250942688444,
+      "min": 0.1978305433888964,
+      "max": 0.268445978260851
+     },
+     "saturation_fraction": {
+      "mean": 0.03461538461538462,
+      "std": 0.05896042198752267,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 28
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      700,
+      800
+     ],
+     "time_ms": [
+      700,
+      800
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 202.54714417038494,
+      "std": 15.05999385986698,
+      "min": 178.3681987386509,
+      "max": 225.51865547147543
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5590142485873452,
+      "std": 0.04693405732102719,
+      "min": 0.485734557002849,
+      "max": 0.637952475274882
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.40810271272589105,
+      "std": 0.06321844678283313,
+      "min": 0.2718723465368175,
+      "max": 0.47157662257760385
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      800,
+      900
+     ],
+     "time_ms": [
+      800,
+      900
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 278.9780521993764,
+      "std": 48.9980509495002,
+      "min": 187.87707634770854,
+      "max": 349.25644868742756
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5561315254826668,
+      "std": 0.055927234580910326,
+      "min": 0.4849916051665315,
+      "max": 0.6753611194810711
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.3752305148359,
+      "std": 0.038025801376694895,
+      "min": 0.31060654245391506,
+      "max": 0.4418584532595881
+     },
+     "saturation_fraction": {
+      "mean": 0.010769230769230769,
+      "std": 0.02669131011214996,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 14
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      900,
+      1000
+     ],
+     "time_ms": [
+      900,
+      1000
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 363.6339898791424,
+      "std": 20.0058187160732,
+      "min": 325.6288184684916,
+      "max": 393.1959584964019
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5102696367703622,
+      "std": 0.10923823112357302,
+      "min": 0.3773751787104348,
+      "max": 0.6767415633071411
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2703799201786715,
+      "std": 0.05644408932659779,
+      "min": 0.14554048273584566,
+      "max": 0.3350073341330056
+     },
+     "saturation_fraction": {
+      "mean": 0.038461538461538464,
+      "std": 0.04142434467026542,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 48
+     },
+     "unusable_reconstructions": 0
+    }
+   ],
+   "analysis_blocks": {
+    "count": 8,
+    "residual_rms_nm_block_means_range": [
+     202.54714417038494,
+     363.6339898791424
+    ],
+    "residual_rms_nm_block_means_std": 53.581744704718524,
+    "peak_strehl_corrected_block_means_range": [
+     0.4967467437913197,
+     0.6647218647669608
+    ],
+    "first_minus_last_residual_rms_nm": -26.30306507255375,
+    "frames_with_any_clipped": 171
+   }
+  },
+  "fainter-guide": {
+   "blocks": [
+    {
+     "frames": [
+      0,
+      100
+     ],
+     "time_ms": [
+      0,
+      100
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 559.6431720216098,
+      "std": 49.29135696183101,
+      "min": 503.5406459284111,
+      "max": 792.0477490723914
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5494926412500791,
+      "std": 0.09528379923146732,
+      "min": 0.2678941371221884,
+      "max": 0.6805257984857049
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4449053183212559,
+      "std": 0.07896568118722765,
+      "min": 0.2678941371221884,
+      "max": 0.5449754394657397
+     },
+     "saturation_fraction": {
+      "mean": 0.12769230769230766,
+      "std": 0.04891727106333738,
+      "min": 0.0,
+      "max": 0.23076923076923078,
+      "frames_with_any_clipped": 94
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      100,
+      200
+     ],
+     "time_ms": [
+      100,
+      200
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 471.9836823864814,
+      "std": 63.21064470340358,
+      "min": 356.0275354543412,
+      "max": 558.3904790191615
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.48868282139112845,
+      "std": 0.04042402376086728,
+      "min": 0.41931008438906126,
+      "max": 0.5829399245126654
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2782947838737983,
+      "std": 0.04880756468209681,
+      "min": 0.20923507228556293,
+      "max": 0.37915695633262175
+     },
+     "saturation_fraction": {
+      "mean": 0.0476923076923077,
+      "std": 0.049590035265496,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 53
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      200,
+      300
+     ],
+     "time_ms": [
+      200,
+      300
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 326.8458592961231,
+      "std": 20.314023870688647,
+      "min": 286.44276430501634,
+      "max": 378.2238159617171
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5004833606916792,
+      "std": 0.07279734920438372,
+      "min": 0.3642662331068371,
+      "max": 0.6324085057761075
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4099548910859058,
+      "std": 0.08476546192469397,
+      "min": 0.2528810202868472,
+      "max": 0.5334155157610524
+     },
+     "saturation_fraction": {
+      "mean": 0.015384615384615385,
+      "std": 0.04351426345763369,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 12
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      300,
+      400
+     ],
+     "time_ms": [
+      300,
+      400
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 255.32709719073478,
+      "std": 30.73607509434301,
+      "min": 204.68563668080796,
+      "max": 307.901831287845
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6639442920607718,
+      "std": 0.032558249712599824,
+      "min": 0.5858585521363895,
+      "max": 0.715030743386098
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4598313966280013,
+      "std": 0.05255399966436299,
+      "min": 0.359330883973911,
+      "max": 0.5365121068274802
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      400,
+      500
+     ],
+     "time_ms": [
+      400,
+      500
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 226.27196539421118,
+      "std": 32.61167707744843,
+      "min": 173.46210987986115,
+      "max": 279.46389088438843
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.639981020675271,
+      "std": 0.024430773637953013,
+      "min": 0.6069462768818186,
+      "max": 0.6878433849257645
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.371163393399833,
+      "std": 0.01636514073202293,
+      "min": 0.3459130817150542,
+      "max": 0.39729102109652603
+     },
+     "saturation_fraction": {
+      "mean": 0.007692307692307692,
+      "std": 0.03171619712013585,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 6
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      500,
+      600
+     ],
+     "time_ms": [
+      500,
+      600
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 243.86268202350996,
+      "std": 14.713837310519502,
+      "min": 220.83744166291055,
+      "max": 274.40545503816867
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6050174855061171,
+      "std": 0.027467474372873925,
+      "min": 0.5486774176396445,
+      "max": 0.662714385883186
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.23192261369520661,
+      "std": 0.06155941680259592,
+      "min": 0.1708266464330825,
+      "max": 0.3722064180401825
+     },
+     "saturation_fraction": {
+      "mean": 0.07615384615384617,
+      "std": 0.04282204818374394,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 84
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      600,
+      700
+     ],
+     "time_ms": [
+      600,
+      700
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 225.01018547976713,
+      "std": 30.437603986183564,
+      "min": 177.40224347230495,
+      "max": 269.31211151765103
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5653752957111814,
+      "std": 0.051814100648431755,
+      "min": 0.4948087409536627,
+      "max": 0.6530326615459842
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2321629536379902,
+      "std": 0.017189250942688444,
+      "min": 0.1978305433888964,
+      "max": 0.268445978260851
+     },
+     "saturation_fraction": {
+      "mean": 0.04230769230769231,
+      "std": 0.05794815066661294,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 39
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      700,
+      800
+     ],
+     "time_ms": [
+      700,
+      800
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 202.97380321167543,
+      "std": 15.323210526088632,
+      "min": 178.3072597863062,
+      "max": 231.77940626507998
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.558181844069005,
+      "std": 0.04680126120297469,
+      "min": 0.47870916112653605,
+      "max": 0.6374006071812771
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.40810271272589105,
+      "std": 0.06321844678283313,
+      "min": 0.2718723465368175,
+      "max": 0.47157662257760385
+     },
+     "saturation_fraction": {
+      "mean": 0.0015384615384615385,
+      "std": 0.010769230769230767,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 2
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      800,
+      900
+     ],
+     "time_ms": [
+      800,
+      900
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 279.34731342427574,
+      "std": 47.62526019683989,
+      "min": 186.85357146143775,
+      "max": 352.5790181088268
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5479446785674962,
+      "std": 0.05354508612757909,
+      "min": 0.45694146681303854,
+      "max": 0.6837119986935842
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.3752305148359,
+      "std": 0.038025801376694895,
+      "min": 0.31060654245391506,
+      "max": 0.4418584532595881
+     },
+     "saturation_fraction": {
+      "mean": 0.011538461538461537,
+      "std": 0.027467032417472503,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 15
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      900,
+      1000
+     ],
+     "time_ms": [
+      900,
+      1000
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 362.97002267600044,
+      "std": 18.05243022532011,
+      "min": 311.2602586267776,
+      "max": 391.4495655359904
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5097683268099529,
+      "std": 0.10997065366635356,
+      "min": 0.3631243331709617,
+      "max": 0.6845494590137156
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2703799201786715,
+      "std": 0.05644408932659779,
+      "min": 0.14554048273584566,
+      "max": 0.3350073341330056
+     },
+     "saturation_fraction": {
+      "mean": 0.03692307692307693,
+      "std": 0.03843075691322091,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 48
+     },
+     "unusable_reconstructions": 0
+    }
+   ],
+   "analysis_blocks": {
+    "count": 8,
+    "residual_rms_nm_block_means_range": [
+     202.97380321167543,
+     362.97002267600044
+    ],
+    "residual_rms_nm_block_means_std": 51.37445440330609,
+    "peak_strehl_corrected_block_means_range": [
+     0.5004833606916792,
+     0.6639442920607718
+    ],
+    "first_minus_last_residual_rms_nm": -36.12416337987736,
+    "frames_with_any_clipped": 206
+   }
+  },
+  "longer-delay": {
+   "blocks": [
+    {
+     "frames": [
+      0,
+      100
+     ],
+     "time_ms": [
+      0,
+      100
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 573.3653081167253,
+      "std": 58.792555845765115,
+      "min": 490.91669613905964,
+      "max": 799.487864493445
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5698968667087402,
+      "std": 0.09022050444980187,
+      "min": 0.2678941371221884,
+      "max": 0.6821051051359516
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4449053183212559,
+      "std": 0.07896568118722765,
+      "min": 0.2678941371221884,
+      "max": 0.5449754394657397
+     },
+     "saturation_fraction": {
+      "mean": 0.11615384615384614,
+      "std": 0.049248794776951134,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 92
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      100,
+      200
+     ],
+     "time_ms": [
+      100,
+      200
+     ],
+     "in_analysis_window": false,
+     "residual_rms_nm": {
+      "mean": 482.6624562280361,
+      "std": 66.02178677035965,
+      "min": 357.8043543785157,
+      "max": 575.4241950485149
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.4878384231577768,
+      "std": 0.046800437182831306,
+      "min": 0.43599540751720584,
+      "max": 0.5835256318303236
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2782947838737983,
+      "std": 0.04880756468209681,
+      "min": 0.20923507228556293,
+      "max": 0.37915695633262175
+     },
+     "saturation_fraction": {
+      "mean": 0.03538461538461539,
+      "std": 0.0383382639826988,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 46
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      200,
+      300
+     ],
+     "time_ms": [
+      200,
+      300
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 338.80455392575635,
+      "std": 18.618497968216005,
+      "min": 286.5268260901253,
+      "max": 371.8458409398738
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.49280791001263924,
+      "std": 0.07910833327190434,
+      "min": 0.3622209066702118,
+      "max": 0.6250150941328471
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4099548910859058,
+      "std": 0.08476546192469397,
+      "min": 0.2528810202868472,
+      "max": 0.5334155157610524
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      300,
+      400
+     ],
+     "time_ms": [
+      300,
+      400
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 256.105488545038,
+      "std": 32.42937222917715,
+      "min": 199.41752878769773,
+      "max": 313.8290280395838
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6604177629454935,
+      "std": 0.032778728839011145,
+      "min": 0.5809941560636828,
+      "max": 0.7127230341804172
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.4598313966280013,
+      "std": 0.05255399966436299,
+      "min": 0.359330883973911,
+      "max": 0.5365121068274802
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      400,
+      500
+     ],
+     "time_ms": [
+      400,
+      500
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 227.92158094682316,
+      "std": 34.32774066760505,
+      "min": 174.67913819659466,
+      "max": 289.0425610563125
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6366394198628619,
+      "std": 0.02678769600981842,
+      "min": 0.600658458713112,
+      "max": 0.685461618564491
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.371163393399833,
+      "std": 0.01636514073202293,
+      "min": 0.3459130817150542,
+      "max": 0.39729102109652603
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      500,
+      600
+     ],
+     "time_ms": [
+      500,
+      600
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 242.8444656321079,
+      "std": 15.936626146362853,
+      "min": 212.33359253089813,
+      "max": 270.4853427401672
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.6089839584662798,
+      "std": 0.030514074594460285,
+      "min": 0.536720795231058,
+      "max": 0.6618356790907515
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.23192261369520661,
+      "std": 0.06155941680259592,
+      "min": 0.1708266464330825,
+      "max": 0.3722064180401825
+     },
+     "saturation_fraction": {
+      "mean": 0.0776923076923077,
+      "std": 0.046784157537030684,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 82
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      600,
+      700
+     ],
+     "time_ms": [
+      600,
+      700
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 223.55579040436106,
+      "std": 28.09131379183206,
+      "min": 174.80306435966847,
+      "max": 264.61737744664407
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5633107884425141,
+      "std": 0.05674291421359971,
+      "min": 0.48661411359761525,
+      "max": 0.6607762421499332
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2321629536379902,
+      "std": 0.017189250942688444,
+      "min": 0.1978305433888964,
+      "max": 0.268445978260851
+     },
+     "saturation_fraction": {
+      "mean": 0.0376923076923077,
+      "std": 0.06007391896359827,
+      "min": 0.0,
+      "max": 0.15384615384615385,
+      "frames_with_any_clipped": 31
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      700,
+      800
+     ],
+     "time_ms": [
+      700,
+      800
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 203.93073692362807,
+      "std": 15.009333376504662,
+      "min": 178.41306062084465,
+      "max": 226.80403049543082
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5560562820214455,
+      "std": 0.04689284259562018,
+      "min": 0.47695054721948404,
+      "max": 0.6386255278868814
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.40810271272589105,
+      "std": 0.06321844678283313,
+      "min": 0.2718723465368175,
+      "max": 0.47157662257760385
+     },
+     "saturation_fraction": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "frames_with_any_clipped": 0
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      800,
+      900
+     ],
+     "time_ms": [
+      800,
+      900
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 280.68905440248255,
+      "std": 48.698882256880324,
+      "min": 189.7552506146837,
+      "max": 351.59705530392506
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5533517706694524,
+      "std": 0.054578878711752765,
+      "min": 0.4771399754145154,
+      "max": 0.6696078751018064
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.3752305148359,
+      "std": 0.038025801376694895,
+      "min": 0.31060654245391506,
+      "max": 0.4418584532595881
+     },
+     "saturation_fraction": {
+      "mean": 0.010769230769230769,
+      "std": 0.02669131011214996,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 14
+     },
+     "unusable_reconstructions": 0
+    },
+    {
+     "frames": [
+      900,
+      1000
+     ],
+     "time_ms": [
+      900,
+      1000
+     ],
+     "in_analysis_window": true,
+     "residual_rms_nm": {
+      "mean": 365.0679900007655,
+      "std": 20.459120637829194,
+      "min": 327.8900971933145,
+      "max": 395.5849694873288
+     },
+     "peak_strehl_corrected": {
+      "mean": 0.5056248167275809,
+      "std": 0.10993318636816839,
+      "min": 0.36512928843842984,
+      "max": 0.6728827911008318
+     },
+     "peak_strehl_uncorrected": {
+      "mean": 0.2703799201786715,
+      "std": 0.05644408932659779,
+      "min": 0.14554048273584566,
+      "max": 0.3350073341330056
+     },
+     "saturation_fraction": {
+      "mean": 0.04153846153846153,
+      "std": 0.0383382639826988,
+      "min": 0.0,
+      "max": 0.07692307692307693,
+      "frames_with_any_clipped": 54
+     },
+     "unusable_reconstructions": 0
+    }
+   ],
+   "analysis_blocks": {
+    "count": 8,
+    "residual_rms_nm_block_means_range": [
+     203.93073692362807,
+     365.0679900007655
+    ],
+    "residual_rms_nm_block_means_std": 53.68191459169416,
+    "peak_strehl_corrected_block_means_range": [
+     0.49280791001263924,
+     0.6604177629454935
+    ],
+    "first_minus_last_residual_rms_nm": -26.263436075009167,
+    "frames_with_any_clipped": 181
+   }
+  }
+ }
+}

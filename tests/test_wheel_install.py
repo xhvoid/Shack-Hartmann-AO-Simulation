@@ -535,6 +535,7 @@ SCAO_EXPORTS = (
     "ScaoConstructionError",
     "ScaoExecutionOptions",
     "LayeredAtmosphereOptions",
+    "FrozenFlowScreenOptions",
     "ExposureOverride",
     "ScaoBackendComponentFactory",
     "ScaoSystem",

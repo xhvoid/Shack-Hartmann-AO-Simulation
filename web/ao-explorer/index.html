@@ -7,7 +7,7 @@
 <meta name="description" content="Precomputed native 2 m Shack-Hartmann SCAO experiment and the main results of the AO simulation project, with their evidence and limits.">
 <link rel="icon" href="data:,">
 <!-- Code and style come from the content-addressed build directory; see scripts/ao_explorer/site_build.py. -->
-<link rel="stylesheet" href="code-08dc9a4b5688bf41/styles.css">
+<link rel="stylesheet" href="code-3b85a599186cdf30/styles.css">
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script type="module" src="code-08dc9a4b5688bf41/app.js" onerror="aoCodeUnavailable()"></script>
+<script type="module" src="code-3b85a599186cdf30/app.js" onerror="aoCodeUnavailable()"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -40,7 +40,7 @@ function aoCodeUnavailable() {
 <main id="main">
 <section id="explore" class="wrap section" aria-labelledby="explore-title">
   <h1 id="explore-title">2 m Interactive AO Experiment</h1>
-  <p class="lede">A precomputed native 2 m Shack-Hartmann SCAO loop with a synthetic on-axis guide source: one seed, 180 frames at 1 kHz, burn-in 40. Your browser replays recorded frames and selects recorded cases; it does not simulate, interpolate or draw noise.</p>
+  <p class="lede" id="explore-lede">A precomputed native 2 m Shack-Hartmann SCAO loop with a synthetic on-axis guide source: one seed, 1000 frames at 1 kHz (1.000 s of simulated time). Your browser replays recorded frames, slowed down, and selects recorded cases; it does not simulate, interpolate or draw noise.</p>
 
   <div id="status" class="status" role="status" aria-live="polite">Loading the dataset manifest…</div>
   <div id="error" class="error" role="alert" hidden></div>
@@ -58,7 +58,7 @@ function aoCodeUnavailable() {
       <fieldset class="segmented" id="psf-mode">
         <legend>PSF view</legend>
         <label><input type="radio" name="psf-mode" value="instantaneous" checked> Instantaneous</label>
-        <label><input type="radio" name="psf-mode" value="average"> Post-burn-in average</label>
+        <label><input type="radio" name="psf-mode" value="average"> Analysis-window average</label>
       </fieldset>
     </div>
     <div class="maps">
@@ -102,25 +102,23 @@ function aoCodeUnavailable() {
       <button type="button" id="btn-prev" title="Previous recorded frame">◀ Step</button>
       <button type="button" id="btn-play" aria-pressed="false">Play</button>
       <button type="button" id="btn-next" title="Next recorded frame">Step ▶</button>
-      <label class="seek">Seek <input type="range" id="seek" min="0" max="39" value="9" step="1"></label>
-      <label class="speed">Display rate
-        <select id="speed">
-          <option value="2">2 movie frames/s</option>
-          <option value="5" selected>5 movie frames/s</option>
-          <option value="10">10 movie frames/s</option>
-          <option value="20">20 movie frames/s</option>
-        </select>
-      </label>
+      <label class="seek">Seek <input type="range" id="seek" min="0" max="125" value="25" step="1"></label>
+      <label class="speed">One pass in <select id="duration"><option value="20">20 s</option></select></label>
     </div>
     <p class="frame-readout" id="frame-readout" aria-live="polite"></p>
-    <p class="hint" id="speed-note">Display rate is presentation speed only. Physical time advances 1 ms per simulated frame; the movie shows 40 of the 180 recorded frames.</p>
+    <p class="hint" id="speed-note">Playback time is presentation only: one pass replays the recorded 1.000 s of simulated time, slowed down, at the recorded frame timestamps.</p>
   </section>
 
   <section class="panel" aria-labelledby="curves-title">
     <h2 id="curves-title">Metrics over the whole trajectory</h2>
-    <p class="hint">All 180 frames, including burn-in (shaded). Summaries use frames 40–179 only (140 equal-weight samples). The cursor marks the displayed frame.</p>
+    <p class="hint" id="curves-hint">All recorded frames, including the startup exclusion (shaded). Summaries use the analysis window only. The cursor marks the displayed frame.</p>
     <div class="charts">
-      <figure class="chart"><canvas id="chart-rms" width="640" height="220" role="img" aria-label="RMS against frame"></canvas><figcaption>Pupil RMS (piston removed): atmosphere and pre-update residual, nm</figcaption></figure>
+      <figure class="chart"><canvas id="chart-rms" width="640" height="240" role="img" aria-label="RMS against frame-start time"></canvas><figcaption>Pupil RMS on one common nm OPD scale: atmosphere and total pre-update residual (piston removed, tilt retained; solid), and the same residual after tip/tilt removal (piston and fitted tilt removed; dashed). The cursor marks the displayed frame.</figcaption></figure>
+      <div class="rms-panel">
+        <div id="rms-readout" class="rms-readout" role="group" aria-label="RMS values of the displayed frame or of the analysis window"></div>
+        <p class="hint" id="rms-mode-note"></p>
+        <p class="hint" id="rms-explanation">The total residual includes tilt. Fitting a plane (piston and tip/tilt) over the illuminated pupil to the same pre-update residual map that forms the AO-corrected PSF, and removing it, separates the fitted wavefront tilt from the remaining higher-order error. The tilt is removed only in this calculation: the PSFs and galaxy images keep their original image motion and morphology. A fitted wavefront tilt is not the same as a measured image-centroid motion. The atmosphere RMS keeps its tilt while this residual does not, so their ratio alone is not a like-for-like measure of correction efficiency, and a smaller detilted RMS is not evidence of convergence or of a correction applied to the images.</p>
+      </div>
       <figure class="chart"><canvas id="chart-strehl" width="640" height="220" role="img" aria-label="Strehl against frame"></canvas><figcaption>Instantaneous peak Strehl at 1.65 µm: uncorrected and AO-corrected</figcaption></figure>
       <figure class="chart"><canvas id="chart-valid" width="640" height="160" role="img" aria-label="Measurement validity against frame"></canvas><figcaption>Valid measurement fraction of frame k, and the DM saturation fraction of the command issued at the end of frame k (that command is held from frame k + 1); ticks below mark frames whose reconstruction was unusable</figcaption></figure>
     </div>
@@ -134,15 +132,19 @@ function aoCodeUnavailable() {
   </section>
 
   <section class="panel" aria-labelledby="summary-title">
-    <h2 id="summary-title">Post-burn-in summary and comparison with the baseline</h2>
+    <h2 id="summary-title">Analysis-window summary and comparison with the baseline</h2>
     <p class="table-title" id="summary-table-title"></p>
     <div id="summary-table" class="table-scroll" role="region" tabindex="0" aria-labelledby="summary-table-title"></div>
     <p class="hint" id="pairing-note"></p>
+    <h3>100 ms block summaries</h3>
+    <p class="table-title" id="blocks-title"></p>
+    <div id="blocks-table" class="table-scroll" role="region" tabindex="0" aria-labelledby="blocks-title"></div>
+    <p class="hint" id="blocks-note"></p>
   </section>
 
   <section class="panel" aria-labelledby="binary-title">
     <h2 id="binary-title">Synthetic binary observation</h2>
-    <p class="hint" id="binary-label">Synthetic binary observation — post-burn-in average; relative flux per numerical cell; no additional science-camera noise.</p>
+    <p class="hint" id="binary-label">Synthetic binary observation — analysis-window average; relative flux per numerical cell; no additional science-camera noise.</p>
     <div class="binary">
       <figure class="map obs"><div class="zoomwrap"><img id="scene-img" alt="Input binary scene reference" width="312" height="312"></div><figcaption><strong>Input scene (shared)</strong><span id="scene-caption"></span></figcaption></figure>
       <figure class="map obs"><div class="zoomwrap"><img id="obs-unc" alt="Binary through the uncorrected average PSF" width="312" height="312"></div><figcaption><strong>Through the uncorrected average</strong><span id="obs-unc-caption"></span></figcaption></figure>
@@ -150,6 +152,48 @@ function aoCodeUnavailable() {
     </div>
     <label class="zoom-toggle"><input type="checkbox" id="zoom"> Show the full native window (±4.3″, 156 cells); the default view is the central ±1.8″ (64 cells), the same window as the PSF panels. Display scaling only; the images are not resampled or renormalized.</label>
     <p class="hint" id="binary-note"></p>
+  </section>
+
+  <section class="panel" id="galaxy-panel" aria-labelledby="galaxy-title">
+    <div class="viewer-head">
+      <h2 id="galaxy-title">NGC 1705 through the simulated PSFs</h2>
+      <fieldset class="segmented" id="galaxy-mode">
+        <legend>Galaxy view</legend>
+        <label><input type="radio" name="galaxy-mode" value="sampled" checked> Sampled instantaneous</label>
+        <label><input type="radio" name="galaxy-mode" value="mean"> Analysis-window mean</label>
+      </fieldset>
+    </div>
+    <p class="hint" id="galaxy-label">The observed HST/F814W central region of NGC 1705 seen through the selected case's recorded PSFs.</p>
+    <div id="galaxy-status" class="status" role="status" aria-live="polite">The galaxy observation loads when this panel is in view.</div>
+    <div id="galaxy-error" class="error" role="alert" hidden></div>
+    <div class="galaxy-maps">
+      <figure class="map"><canvas id="galaxy-source" width="256" height="256" role="img" aria-label="Input: NGC 1705 central region, observed HST F814W template"></canvas><figcaption><strong>Input: NGC 1705 central region — observed HST/F814W template</strong><span id="galaxy-source-caption"></span></figcaption></figure>
+      <figure class="map"><canvas id="galaxy-uncorrected" width="256" height="256" role="img" aria-label="Observed template with the uncorrected simulated PSF"></canvas><figcaption><strong id="galaxy-unc-title">Observed template + uncorrected simulated PSF</strong><span id="galaxy-unc-sub"></span></figcaption></figure>
+      <figure class="map"><canvas id="galaxy-corrected" width="256" height="256" role="img" aria-label="Observed template with the AO-corrected simulated PSF"></canvas><figcaption><strong id="galaxy-ao-title">Observed template + AO-corrected simulated PSF</strong><span id="galaxy-ao-sub"></span></figcaption></figure>
+      <div class="colorbar-block">
+        <canvas id="cbar-galaxy" width="24" height="200" aria-hidden="true"></canvas>
+        <div class="cbar-labels" id="cbar-galaxy-labels"></div>
+        <p class="cbar-note" id="cbar-galaxy-note"></p>
+      </div>
+    </div>
+    <p class="mode-note" id="galaxy-mode-note" hidden></p>
+
+    <div class="transport" role="group" aria-label="Galaxy playback">
+      <button type="button" id="galaxy-restart" title="Restart at frame 0">Restart</button>
+      <button type="button" id="galaxy-prev" title="Previous displayed sample">◀ Step</button>
+      <button type="button" id="galaxy-play" aria-pressed="false">Play</button>
+      <button type="button" id="galaxy-next" title="Next displayed sample">Step ▶</button>
+      <label class="seek">Sample <input type="range" id="galaxy-seek" min="0" max="125" value="25" step="1"></label>
+      <label class="speed">One pass in <select id="galaxy-duration"><option value="20">20 s</option></select></label>
+      <label class="loop"><input type="checkbox" id="galaxy-loop"> Loop the same recording (both panels)</label>
+    </div>
+    <p class="frame-readout" id="galaxy-readout" aria-live="polite"></p>
+    <p class="hint" id="galaxy-playback-note">Playback time is presentation only; it maps onto the recorded sample timestamps and adds no samples. These controls and the main viewer's share one timeline.</p>
+    <details>
+      <summary>Template source, preparation, flux accounting and limits</summary>
+      <div id="galaxy-notes" class="prose"></div>
+      <pre id="galaxy-meta" class="pre"></pre>
+    </details>
   </section>
 
   <section class="panel" aria-labelledby="details-title">
@@ -185,8 +229,9 @@ function aoCodeUnavailable() {
     <h2>Observable definitions</h2>
     <ul>
       <li><strong>Residual RMS</strong>: pupil RMS of the pre-update residual (what the WFS measured) after removing the pupil mean, in nm OPD. Mean per-frame RMS and the root of the mean square are reported separately.</li>
+      <li><strong>Residual RMS after tip/tilt removal</strong>: for each frame, a plane a + b x + c y is fitted by equal-weight least squares over the illuminated pupil samples to the same pre-update residual map, in the pupil's own coordinates; the diagnostic is the RMS of the residual minus that plane, in nm OPD (float64, pupil exterior excluded). It is computed from the saved maps after the run and changes no image. The atmosphere RMS and the total residual RMS keep their tilt.</li>
       <li><strong>Peak Strehl</strong>: peak angular surface brightness of an image over that of the zero-OPD image of the same propagator and grid. The mean of instantaneous Strehl and the Strehl of the averaged image are different quantities and are labelled as such.</li>
-      <li><strong>Averaged image</strong>: the equal-weight mean of 140 sampled instantaneous intensities (frames 40–179). The averaged OPD is never propagated; tilt is kept and nothing is recentred.</li>
+      <li><strong>Averaged image</strong>: the equal-weight mean of every sampled instantaneous intensity in the analysis window (in this dataset frames 200–999, 800 frames; the startup exclusion is a declared choice, not a convergence result). The averaged OPD is never propagated; tilt is kept and nothing is recentred.</li>
       <li><strong>Validity</strong>: measured fractions of valid measurement rows and sub-apertures, and whether the reconstructor returned an estimate. No lock classifier is claimed.</li>
     </ul>
 
