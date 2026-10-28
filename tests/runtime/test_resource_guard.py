@@ -32,9 +32,45 @@ from shwfs_ao.runtime.resource_guard import (
     preflight,
     process_group_rss_bytes,
     require_preflight,
+    resource_guard_enabled,
     run_supervised,
     thread_limit_environment,
 )
+
+
+@pytest.fixture(autouse=True)
+def _exercise_opt_in_policy(monkeypatch):
+    monkeypatch.setenv("AO_RESOURCE_GUARD", "1")
+
+
+def test_default_memory_policy_is_advisory(monkeypatch):
+    monkeypatch.delenv("AO_RESOURCE_GUARD", raising=False)
+    assert not resource_guard_enabled()
+    decision = preflight(_estimate(4096, largest_mib=128), snapshot=_snapshot(level="critical"))
+    assert decision.accepted and not decision.enforcement_enabled
+    assert any("critical" in reason for reason in decision.reasons)
+    assert any("scratch" in reason for reason in decision.reasons)
+    assert decision.to_record()["enforcement_enabled"] is False
+
+
+def test_disabled_memory_policy_neither_probes_nor_stops_child(monkeypatch, tmp_path):
+    monkeypatch.delenv("AO_RESOURCE_GUARD", raising=False)
+
+    def forbidden_probe(*args):
+        raise AssertionError("disabled memory policy must not probe")
+
+    result = run_supervised(
+        [sys.executable, "-c", "print('completed')"],
+        budget_bytes=1,
+        timeout_s=10,
+        log_path=tmp_path / "advisory.log",
+        rss_probe=forbidden_probe,
+        pressure_probe=forbidden_probe,
+    )
+    assert result.status == "COMPLETED"
+    assert not result.enforcement_enabled
+    assert result.rss_samples == 0 and result.pressure_levels_seen == ()
+    assert result.to_record()["enforcement_enabled"] is False
 
 
 def _snapshot(

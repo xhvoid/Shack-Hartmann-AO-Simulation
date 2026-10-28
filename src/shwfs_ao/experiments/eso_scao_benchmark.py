@@ -24,7 +24,8 @@ after a human has reviewed the dry-run estimate; :func:`estimate_tier` and
 ``--dry-run`` compute that estimate from the profile alone and never build
 the system.  The command line runs the numerical work in a supervised child
 process (``shwfs_ao.runtime.resource_guard``) with native-library thread
-limits, an aggregate-RSS budget, a wall-clock limit and memory-pressure stop.
+limits, a wall-clock limit and optional memory/pressure enforcement
+(``AO_RESOURCE_GUARD=1``; disabled by default).
 """
 
 from __future__ import annotations
@@ -834,7 +835,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     budget = record["preflight"]["budget_bytes"]
     if arguments.memory_limit_mib is not None:
         budget = min(budget, int(arguments.memory_limit_mib * MIB))
-    accepted = record["preflight"]["accepted"] and record["estimate"]["required_bytes"] <= budget
+    accepted = record["preflight"]["accepted"]
+    if record["preflight"].get("enforcement_enabled", True):
+        accepted = accepted and record["estimate"]["required_bytes"] <= budget
     if arguments.authorized_budget_mib is not None and not arguments.dry_run:
         budget = int(arguments.authorized_budget_mib * MIB)
         if arguments.memory_limit_mib is not None:

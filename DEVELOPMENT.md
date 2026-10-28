@@ -72,22 +72,16 @@ fresh clone; record them as skipped, never passed. Keep full Git history for
 historical source-digest tests (`git fetch --unshallow` if needed). The existing
 CI also checks Python 3.10/3.14, wheels, notebooks and static types.
 
-On the local desktop, scientific checks run serially with two native threads
-and the resource guard. A conservative estimate for this focused suite is
-256 MiB before its 2x margin, with individual scratch buffers below 16 MiB:
+Memory/pressure enforcement is **disabled by default**, including future local
+and cloud checkouts. Normal checks can run directly as above. Timeouts,
+process cleanup and two native threads remain available independently. Records
+state whether memory enforcement was enabled; an unenforced estimate is not a
+measured or enforced memory cap. Set `AO_RESOURCE_GUARD=1` only when deliberately
+opting back in. See [RESOURCE_POLICY.md](RESOURCE_POLICY.md).
 
-```bash
-python -m shwfs_ao.runtime.resource_guard --label explorer-tests \
-  --estimate-mib 256 --largest-buffer-mib 16 --timeout-s 300 \
-  --log /tmp/ao-explorer-tests.log --record /tmp/ao-explorer-tests.json \
-  -- python -m pytest -q -rs tests/ao_explorer
-```
-
-Recheck host admission before each job. Warning or critical pressure stops
-new work. Earlier repair-specific overrides do not apply. Production data,
-calibration, ensembles and large-aperture runs need their own authorization.
-See the execution policy in
-[the scaling plan](docs/refactor/eso_scao_development_plan.md#23-mandatory-desktop-safe-execution-policy).
+No new production data, calibration, ensemble or large-aperture study is
+implied by this setting. Scientific scope and cumulative evidence limits remain
+separate from the optional memory guard.
 
 ## Checks requiring retained local evidence
 
@@ -100,13 +94,12 @@ python scripts/ao_explorer/validate.py --web-dir web/ao-explorer \
   --series-dir /path/to/retained/series-2m180-b3e1c66
 ```
 
-Run that validator through the same guard (use a 256 MiB pre-margin estimate
-and a 120 s timeout). The derive-refusal tests currently discover evidence at
+The derive-refusal tests currently discover evidence at
 `outputs/ao_explorer_v1/series-2m180-b3e1c66`; a fresh clone skips those eight
 checks. Use a separate local verification checkout with an explicitly supplied
 copy or read-only link at that path. Do not commit raw evidence or silently
 rerun successful science. Rendering/derive/export work must use the exporter
-CLI guard and cumulative ledger: 1200 s numerical/processing wall time and
+CLI and cumulative ledger: 1200 s numerical/processing wall time and
 512 MiB raw evidence. The retained series already records 153.409918 s and
 177,694,247 B before publication; preserve that history and add new consumption.
 
