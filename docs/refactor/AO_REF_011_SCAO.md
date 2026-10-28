@@ -53,7 +53,12 @@ component hash is unchanged between the two.
 
 The *record* schema version is a separate axis from the profile version: v2
 records require `wfs.photon_allocation`, v1 records predate it and must omit
-it, and both parse (`SUPPORTED_PROFILE_SCHEMA_VERSIONS`).  A configuration
+it, v3 records further require `wfs.clip_negative_pixels`, which v1 and v2
+records omit, and all three parse (`SUPPORTED_PROFILE_SCHEMA_VERSIONS`).  Every
+packaged profile is a v1 or v2 record, so each keeps the identity it was
+published with; a v2 record's nested `wfs` hash is reproduced from the
+thirteen-field shape it was published under, just as a v1 record's is from
+twelve.  A configuration
 serializes under the schema it belongs to — its `record_schema_version`, which
 for a parsed record is the schema that record declared — so one configuration
 still has exactly one hashing basis; that basis is simply its own schema's and
@@ -68,8 +73,10 @@ written under the new one.
 
 The two axes are independent but not every pairing is coherent, so a
 configuration may only claim a schema that can express it: schema v1 accepts
-only a v1 profile carrying the reviewed `throughput_scaled` allocation.
-Promoting such a record to v2 would move its published hash and demoting a v2
+only a v1 profile carrying the reviewed `throughput_scaled` allocation, and
+schemas v1 and v2 accept only a sensor that clips negative pixels.  A
+configuration that keeps them must be recorded under schema v3, for example
+through `replace(config, record_schema_version=3)`.  Promoting such a record to v2 would move its published hash and demoting a v2
 one would silently drop stated physics, so an incoherent pairing is refused
 rather than reconciled.
 

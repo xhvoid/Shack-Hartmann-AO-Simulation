@@ -1457,6 +1457,7 @@ _RESPONSE_INPUT_PERTURBATIONS = {
         "photon_allocation",
         ("throughput_scaled", "unit_sum"),
     ),
+    "wfs.clip_negative_pixels": _toggled_wfs("clip_negative_pixels", (True, False)),
     "wfs_wavelength_m": lambda config: replace(config, wfs_wavelength_m=1.4e-6),
     "random.root_seed": lambda config: replace(
         config,
@@ -1563,6 +1564,35 @@ def test_an_unchanged_response_identity_means_an_unchanged_response(
     )
     legacy = base_config.detector.prnu_mode == "per_frame_legacy"
     assert (read_noise.wfs.response_hash == base.wfs.response_hash) is not legacy
+
+
+def test_the_negative_pixel_policy_reaches_the_sensor_without_moving_its_response() -> None:
+    """Keeping negative pixels changes noisy centroids, not the calibration.
+
+    The noiseless frames a matrix is calibrated on are never negative, so a
+    matrix calibrated with clipping stays valid for a sensor that keeps
+    negative pixels, while the sensor's identity records the choice.
+    """
+
+    tiny = _tiny_system_config("detector_level")
+    assert tiny.record_schema_version == 3 and tiny.wfs.clip_negative_pixels
+    kept_config = replace(tiny, wfs=replace(tiny.wfs, clip_negative_pixels=False))
+    clipped = scao.build_scao_system(tiny)
+    kept = scao.build_scao_system(kept_config)
+
+    assert clipped.wfs.calibration.clip_negative_pixels is True
+    assert kept.wfs.calibration.clip_negative_pixels is False
+    assert kept.wfs.config_hash != clipped.wfs.config_hash
+    assert kept.wfs.response_hash == clipped.wfs.response_hash
+    np.testing.assert_array_equal(
+        kept.interaction_matrix.matrix,
+        clipped.interaction_matrix.matrix,
+    )
+    supplied = scao.build_scao_system(
+        _with_calibration_source(kept_config, "supplied"),
+        interaction_matrix=clipped.interaction_matrix,
+    )
+    assert supplied.interaction_matrix is clipped.interaction_matrix
 
 
 class _ResponseUndeclaredSensor:

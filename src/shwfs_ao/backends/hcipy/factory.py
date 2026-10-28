@@ -141,6 +141,7 @@ class HcipyScaoComponentFactory:
         photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
             "throughput_scaled"
         ),
+        clip_negative_pixels: bool = True,
     ) -> WavefrontSensor:
         if model != "detector_level":
             raise HcipyScaoFactoryError(
@@ -173,6 +174,7 @@ class HcipyScaoComponentFactory:
             centroid_config=centroid_config,
             validity_config=validity_config,
             photon_allocation=photon_allocation,
+            clip_negative_pixels=clip_negative_pixels,
         )
 
     def build_dm(

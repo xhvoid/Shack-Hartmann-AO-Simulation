@@ -155,9 +155,12 @@ def test_v1_profiles_stay_loadable_beside_their_v2_successors() -> None:
         assert "photon_allocation" not in record["config"]["wfs"]
         assert system_config_from_mapping(record) == v1
 
+        # Likewise a v2 profile keeps its own schema, which predates
+        # clip_negative_pixels, rather than the current one.
         current = system_config_to_mapping(v2)
-        assert current["schema_version"] == PROFILE_SCHEMA_VERSION
+        assert current["schema_version"] == 2
         assert current["config"]["wfs"]["photon_allocation"] == "throughput_scaled"
+        assert "clip_negative_pixels" not in current["config"]["wfs"]
         assert system_config_from_mapping(current) == v2
 
 
@@ -207,8 +210,26 @@ def test_each_record_schema_version_has_an_exact_field_set() -> None:
     with pytest.raises(SystemConfigError, match="missing=\\['photon_allocation'\\]"):
         system_config_from_mapping(v2_record)
 
+    # Schema v3 adds clip_negative_pixels on the same terms: a v2 record may
+    # not carry it, and a v3 record may not omit it.
+    v2_record = copy.deepcopy(system_config_to_mapping(load_system_profile("fast_2m_detector", 2)))
+    v2_record["config"]["wfs"]["clip_negative_pixels"] = True
+    with pytest.raises(SystemConfigError, match="unknown=\\['clip_negative_pixels'\\]"):
+        system_config_from_mapping(v2_record)
+    v3_record = copy.deepcopy(v2_record)
+    v3_record["schema_version"] = 3
+    assert system_config_from_mapping(v3_record).record_schema_version == 3
+    del v3_record["config"]["wfs"]["clip_negative_pixels"]
+    with pytest.raises(SystemConfigError, match="missing=\\['clip_negative_pixels'\\]"):
+        system_config_from_mapping(v3_record)
+    assert (
+        WfsConfig.__dataclass_fields__["clip_negative_pixels"].default
+        is configs._PRE_V3_CLIP_NEGATIVE_PIXELS
+        is load_system_profile("fast_2m_detector", 2).wfs.clip_negative_pixels
+    )
+
     # An unsupported record schema version is refused with the supported set.
-    v1_record["schema_version"] = 3
+    v1_record["schema_version"] = 4
     with pytest.raises(SystemConfigError, match="unsupported profile schema_version"):
         system_config_from_mapping(v1_record)
 
@@ -231,11 +252,24 @@ def test_a_configuration_cannot_claim_a_schema_that_cannot_express_it() -> None:
     # keeps the v1 profile's identity from being reused for it.
     v2 = load_system_profile("fast_2m_detector", 2)
     modified = replace(v2, wfs=replace(v2.wfs, photon_allocation="unit_sum"))
-    assert modified.record_schema_version == PROFILE_SCHEMA_VERSION
+    assert modified.record_schema_version == 2
     assert modified.config_hash != v2.config_hash
 
+    # Keeping negative pixels is likewise inexpressible before schema v3, so
+    # the configuration has to move to the current schema to state it.
+    with pytest.raises(SystemConfigError, match="cannot express"):
+        replace(v2, wfs=replace(v2.wfs, clip_negative_pixels=False))
+    with pytest.raises(SystemConfigError, match="cannot express"):
+        replace(v1, wfs=replace(v1.wfs, clip_negative_pixels=False))
+    kept = replace(
+        v2,
+        wfs=replace(v2.wfs, clip_negative_pixels=False),
+        record_schema_version=PROFILE_SCHEMA_VERSION,
+    )
+    assert kept.config_hash != v2.config_hash
+
     with pytest.raises(SystemConfigError, match="unsupported profile schema_version"):
-        replace(v1, record_schema_version=3)
+        replace(v1, record_schema_version=4)
     # ``True`` is not a schema version, however conveniently it compares to 1.
     with pytest.raises(SystemConfigError, match="record_schema_version must be an integer"):
         replace(v1, record_schema_version=True)
@@ -272,10 +306,7 @@ def test_a_schema_v1_record_cannot_claim_a_later_profile_identity() -> None:
     upgraded["profile_version"] = 1
     upgraded["provenance"]["source_id"] = "shwfs_ao.system_profile.fast_2m_detector.v1"
     parsed = system_config_from_mapping(upgraded)
-    assert (parsed.record_schema_version, parsed.profile.profile_version) == (
-        PROFILE_SCHEMA_VERSION,
-        1,
-    )
+    assert (parsed.record_schema_version, parsed.profile.profile_version) == (2, 1)
 
 
 def test_every_packaged_profile_identity_is_pinned() -> None:
@@ -410,9 +441,12 @@ def test_a_bare_wfs_config_hashes_under_the_current_record_schema() -> None:
 
     # Identical physics, so the bare-object identity is identical: only the
     # record schema each one belongs to distinguishes their nested hashes.
+    # Both records predate the current schema's clip_negative_pixels field, so
+    # each keeps its own published digest instead of the bare one.
     assert v1.wfs == v2.wfs
     assert v1.wfs.config_hash == v2.wfs.config_hash
-    assert v2.wfs.config_hash == v2.component_config_hashes["wfs"]
+    assert v2.wfs.config_hash != v2.component_config_hashes["wfs"]
+    assert v2.component_config_hashes["wfs"] == v2.wfs.config_hash_for_record_schema(2)
     assert v1.wfs.config_hash != v1.component_config_hashes["wfs"]
     assert v1.wfs.config_hash == v1.wfs.config_hash_for_record_schema(
         PROFILE_SCHEMA_VERSION
@@ -426,9 +460,17 @@ def test_a_bare_wfs_config_hashes_under_the_current_record_schema() -> None:
     with pytest.raises(SystemConfigError, match="cannot express"):
         unit_sum.config_hash_for_record_schema(1)
 
+    # Keeping negative pixels changes the bare identity and has no field in
+    # either earlier schema, so it is refused there too.
+    kept = replace(v2.wfs, clip_negative_pixels=False)
+    assert kept.config_hash != v2.wfs.config_hash
+    for older in (1, 2):
+        with pytest.raises(SystemConfigError, match="cannot express"):
+            kept.config_hash_for_record_schema(older)
+
     # An unknown schema is not silently treated as the newest one.
     with pytest.raises(SystemConfigError, match="unsupported profile schema_version"):
-        v2.wfs.config_hash_for_record_schema(3)
+        v2.wfs.config_hash_for_record_schema(4)
     with pytest.raises(SystemConfigError, match="record_schema_version must be an integer"):
         v2.wfs.config_hash_for_record_schema(True)  # type: ignore[arg-type]
 
@@ -439,13 +481,39 @@ def test_profile_round_trip_is_exact_and_deterministic() -> None:
     record = system_config_to_mapping(first)
 
     assert record["schema_name"] == PROFILE_SCHEMA_NAME
-    assert record["schema_version"] == PROFILE_SCHEMA_VERSION
+    assert record["schema_version"] == first.record_schema_version == 2
     assert system_config_from_mapping(record) == first == second
     assert first.config_hash == second.config_hash
     assert dict(first.component_config_hashes) == dict(second.component_config_hashes)
 
     with pytest.raises(FrozenInstanceError):
         first.pupil_pixels = 64  # type: ignore[misc]
+
+
+def test_wfs_negative_pixel_clipping_is_a_schema_v3_field() -> None:
+    """Schema v3 records state whether negative pixels are clipped.
+
+    A configuration built in code belongs to the current schema, so it
+    serializes the field, round-trips it, and hashes a change of it, while
+    every published record keeps the identity it was published with.
+    """
+
+    assert PROFILE_SCHEMA_VERSION == 3
+    v2 = load_system_profile("fast_2m_detector", 2)
+    current = replace(v2, record_schema_version=PROFILE_SCHEMA_VERSION)
+    record = system_config_to_mapping(current)
+    assert record["schema_version"] == 3
+    assert record["config"]["wfs"]["clip_negative_pixels"] is True
+    assert system_config_from_mapping(record) == current
+
+    kept = replace(current, wfs=replace(current.wfs, clip_negative_pixels=False))
+    kept_record = system_config_to_mapping(kept)
+    assert kept_record["config"]["wfs"]["clip_negative_pixels"] is False
+    assert system_config_from_mapping(kept_record) == kept
+    assert kept.config_hash != current.config_hash
+    assert kept.component_config_hashes["wfs"] != current.component_config_hashes["wfs"]
+    with pytest.raises(SystemConfigError, match="clip_negative_pixels must be a boolean"):
+        replace(current.wfs, clip_negative_pixels=0)
 
 
 def test_wfs_photon_allocation_is_required_serialized_and_hashed() -> None:
