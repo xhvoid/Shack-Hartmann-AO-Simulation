@@ -522,6 +522,44 @@ class TestValidation:
         with pytest.raises(HcipyShackHartmannError, match="integer multiple"):
             _optics(geometry)
 
+    @pytest.mark.parametrize(
+        ("pupil_pixels", "lenslets_across"),
+        [(9, 3), (15, 3), (65, 5)],
+    )
+    def test_odd_integer_block_sampling_builds_with_full_rim_blocks(
+        self,
+        pupil_pixels,
+        lenslets_across,
+    ):
+        geometry = _geometry(
+            pupil_pixels=pupil_pixels,
+            lenslets_across=lenslets_across,
+        )
+        result = _optics(geometry).spot_intensities(
+            np.zeros(geometry.pupil_shape)
+        )
+
+        assert result.subaperture_ids == geometry.subaperture_ids
+        block = pupil_pixels // lenslets_across
+        middle = lenslets_across // 2
+        # The final-row/column lenslets own the +D/2 rim samples on the axes.
+        for row, column in (
+            (middle, lenslets_across - 1),
+            (lenslets_across - 1, middle),
+        ):
+            mask = geometry.subaperture_masks[
+                geometry.subaperture_ids.index(subaperture_id(row, column))
+            ]
+            expected = np.zeros(geometry.pupil_shape, dtype=bool)
+            expected[
+                row * block:(row + 1) * block,
+                column * block:(column + 1) * block,
+            ] = True
+            np.testing.assert_array_equal(mask, expected & geometry.pupil_mask)
+        for spot in result.unit_sum_spots:
+            assert np.all(np.isfinite(spot))
+            assert np.sum(spot) == pytest.approx(1.0)
+
     def test_residual_opd_is_validated(self):
         geometry = _geometry()
         optics = _optics(geometry)

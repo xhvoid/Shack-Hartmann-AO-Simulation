@@ -58,7 +58,7 @@ from ..wfs.shack_hartmann.geometry import (
     DEFAULT_WFS_WAVELENGTH_M,
     ShackHartmannGeometry as _ShackHartmannGeometry,
     ShwfsGeometryConfig,
-    build_shack_hartmann_geometry as _build_shack_hartmann_geometry,
+    _legacy_build_shack_hartmann_geometry,
 )
 from ..wfs.shack_hartmann.measurement import (
     DetectorShackHartmannSensor as _DetectorShackHartmannSensor,
@@ -220,7 +220,7 @@ def make_pupil_grid_and_mask(config: ShwfsGeometryConfig) -> tuple[np.ndarray, n
     """
 
     try:
-        canonical = _build_shack_hartmann_geometry(config)
+        canonical = _legacy_build_shack_hartmann_geometry(config)
     except ValueError as exc:
         raise SyntheticInstrumentError(str(exc)) from exc
     dx_m = float(canonical.x_m[0, 1] - canonical.x_m[0, 0])
@@ -261,7 +261,7 @@ def build_detector_shwfs_calibration(
     detector = detector or DetectorConfig()
     streams = _NamedRandomStreams(_LEGACY_CANONICAL_ROOT_SEED)
     try:
-        canonical_geometry = _build_shack_hartmann_geometry(geometry)
+        canonical_geometry = _legacy_build_shack_hartmann_geometry(geometry)
         optics = _NativeShackHartmannOptics(
             canonical_geometry,
             geometry.wfs_wavelength_m,

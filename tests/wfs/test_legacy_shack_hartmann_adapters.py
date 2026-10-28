@@ -11,7 +11,10 @@ import pytest
 
 from shwfs_ao.backends.native import shwfs as native_shwfs
 from shwfs_ao.legacy import reconstruction, shwfs_detector, synthetic_instrument_data
-from shwfs_ao.wfs.shack_hartmann.geometry import ShwfsGeometryConfig
+from shwfs_ao.wfs.shack_hartmann.geometry import (
+    ShwfsGeometryConfig,
+    build_shack_hartmann_geometry,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -96,7 +99,7 @@ def test_legacy_modules_no_longer_own_shwfs_physics_kernels() -> None:
         for node in ast.walk(reconstruction_functions["subaperture_masks"])
     )
     assert any(
-        isinstance(node, ast.Name) and node.id == "_partition_pupil_geometry"
+        isinstance(node, ast.Name) and node.id == "_legacy_partition_pupil_geometry"
         for node in ast.walk(
             reconstruction_functions["_legacy_shack_hartmann_geometry"]
         )
@@ -181,6 +184,38 @@ def test_reconstruction_adapters_preserve_column_outer_geometry_and_slopes() -> 
     assert len(masks) == len(centers)
     np.testing.assert_allclose(slopes[:, 0], 2.0, atol=1.0e-12, rtol=0.0)
     np.testing.assert_allclose(slopes[:, 1], -3.0, atol=1.0e-12, rtol=0.0)
+
+
+def test_legacy_adapters_keep_half_open_cells_that_canonical_geometry_closes() -> None:
+    config = ShwfsGeometryConfig(
+        telescope_diameter_m=1.0,
+        n_pupil_pixels=9,
+        n_lenslets=1,
+        min_fill_fraction=0.0,
+        pad_factor=3,
+        detector_window_px=12,
+    )
+    canonical = build_shack_hartmann_geometry(config)
+    x_m = np.asarray(canonical.x_m)
+    y_m = np.asarray(canonical.y_m)
+    pupil_mask = np.asarray(canonical.pupil_mask)
+    # The frozen legacy cell is x < x_max and y < y_max, which drops the two
+    # +D/2 rim samples of an odd grid.
+    legacy_cell = pupil_mask & (x_m < 0.5) & (y_m < 0.5)
+    assert np.count_nonzero(pupil_mask & ~legacy_cell) == 2
+
+    _, legacy_masks = reconstruction.subaperture_masks(
+        x_m,
+        y_m,
+        pupil_mask,
+        n_lenslets=config.n_lenslets,
+        min_fill=config.min_fill_fraction,
+    )
+    calibration = synthetic_instrument_data.build_detector_shwfs_calibration(config)
+    for masks in (legacy_masks, calibration.subaperture_masks):
+        assert len(masks) == 1
+        np.testing.assert_array_equal(masks[0], legacy_cell)
+    np.testing.assert_array_equal(canonical.subaperture_masks[0], pupil_mask)
 
 
 def test_legacy_seed_adapters_reject_negative_seeds() -> None:
