@@ -4,6 +4,10 @@ External review ER-F01 (the R4 noise estimand), ER-F02 (R1/R2 evidence downloads
 and ER-F03 (wavelength and residual-timing contexts).  The checks read the
 committed bundle and the saved evidence it carries; where the repository's
 notebooks or history are present they are compared directly as well.
+
+The results are read where the entry's dataset manifest references them:
+inside that dataset (v1) or in place in its declared previous dataset (v2),
+bound to the reference's size and SHA-256 (R22-01).
 """
 
 from __future__ import annotations
@@ -11,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import posixpath
 import statistics
 import subprocess
 
@@ -20,13 +25,67 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 
 
+class ResearchResultsReferenceError(Exception):
+    """The entry's dataset manifest does not bind a readable Research Results file."""
+
+
+def _bound_bytes(path: Path, digest, label: str, size=None) -> bytes:
+    if not path.is_file():
+        raise ResearchResultsReferenceError(f"{label} {path} is missing")
+    data = path.read_bytes()
+    if (size is not None and len(data) != size) or hashlib.sha256(data).hexdigest() != digest:
+        raise ResearchResultsReferenceError(f"{label} {path} does not match its recorded size/SHA-256")
+    return data
+
+
+def _research_results(entry_path: Path) -> tuple[Path, bytes]:
+    """The research directory and the results bytes that the entry's dataset manifest references.
+
+    The reference names ``research/<file>`` of the entry's own dataset or, climbing
+    once, of the previous dataset that manifest declares; the owning dataset's
+    manifest must list the file with the reference's size and SHA-256, and the
+    file must match them.  Nothing else is searched.
+    """
+
+    data_root = entry_path.parent
+    entry = json.loads(entry_path.read_bytes())
+    dataset_id = entry["dataset_id"]
+    if entry.get("manifest") != f"{dataset_id}/manifest.json":
+        raise ResearchResultsReferenceError(f"the entry's manifest {entry.get('manifest')!r} is not {dataset_id}/manifest.json")
+    manifest = json.loads(_bound_bytes(data_root / entry["manifest"], entry.get("manifest_sha256"), "the entry's manifest", entry.get("manifest_bytes")))
+    ref = manifest.get("results")
+    href = ref.get("href") if isinstance(ref, dict) else None
+    if (not isinstance(href, str) or not href or href.startswith("/") or "\\" in href or "://" in href
+            or not isinstance(ref.get("bytes"), int) or not isinstance(ref.get("sha256"), str)):
+        raise ResearchResultsReferenceError(f"{dataset_id}: malformed Research Results reference {ref!r}")
+    owner, _, inner = posixpath.normpath(posixpath.join(dataset_id, href)).partition("/")
+    if owner == dataset_id:
+        owner_manifest = manifest
+    else:
+        previous = manifest.get("previous_dataset") if isinstance(manifest.get("previous_dataset"), dict) else {}
+        if owner != previous.get("dataset_id") or (data_root / owner).resolve().parent != data_root.resolve():
+            raise ResearchResultsReferenceError(f"{dataset_id}: Research Results reference {href!r} leaves the dataset and its declared previous dataset")
+        owner_manifest = json.loads(_bound_bytes(data_root / owner / "manifest.json", previous.get("manifest_sha256"), f"previous dataset {owner}: manifest"))
+        if owner_manifest.get("dataset_id") != owner:
+            raise ResearchResultsReferenceError(f"previous dataset {owner}: its manifest names {owner_manifest.get('dataset_id')!r}")
+    if posixpath.dirname(inner) != "research":
+        raise ResearchResultsReferenceError(f"{dataset_id}: Research Results reference {href!r} does not name a file of {owner}/research")
+    listed = [item for item in owner_manifest.get("members", []) if isinstance(item, dict) and item.get("path") == inner]
+    if not any(item.get("bytes") == ref["bytes"] and item.get("sha256") == ref["sha256"] for item in listed):
+        raise ResearchResultsReferenceError(f"{owner}: {inner} is not listed by its manifest with the reference's size and SHA-256")
+    research = data_root / owner / "research"
+    path = research / posixpath.basename(inner)
+    if path.exists() and not path.resolve().is_relative_to((data_root / owner).resolve()):
+        raise ResearchResultsReferenceError(f"{owner}: {inner} resolves outside its dataset ({path.resolve()})")
+    return research, _bound_bytes(path, ref["sha256"], "Research Results", ref["bytes"])
+
+
 def _results(web_dir: Path):
     entry_path = web_dir / "data" / "current.json"
     if not entry_path.is_file():
         pytest.skip("no explorer web bundle in this tree")
-    base = entry_path.parent / json.loads(entry_path.read_text())["dataset_id"]
-    research = base / "research"
-    results = json.loads((research / "results.json").read_text())
+    research, data = _research_results(entry_path)
+    results = json.loads(data)
     return research, results, {group["id"]: group for group in results["groups"]}
 
 
@@ -300,3 +359,185 @@ def test_r5_s2_records_name_the_unretained_driver(web_dir):
         record = _download(research, r5, f"docs/refactor/detector_level_evidence/det09_s2_42m_seed{seed}.json")
         assert record["argv"][0] == "outputs/large_experiments/2026-10-18/s2/run_one_seed.py"
     assert any(source["path"] == "docs/refactor/CLEANUP_REFACTOR_STATUS.md" for source in r5["context_sources"])
+
+
+# ---------------------------------------------------------------------------
+# R22-01: the loader follows the dataset manifest's Research Results reference.
+# Tiny synthetic bundles; the expected directories and contents are written out
+# by the tests, never derived from the loader.
+
+OLDER_RESULTS = {"groups": [{"id": "R1", "downloads": [{"kind": "byte_identical_copy", "source": {"path": "docs/a.json"}, "asset": {"href": "evidence/a.json"}}]}]}
+DECOY_RESULTS = {"groups": [{"id": "DECOY", "downloads": []}]}
+
+
+def _json_bytes(value) -> bytes:
+    return (json.dumps(value, indent=1) + "\n").encode()
+
+
+def _put(path: Path, data: bytes) -> dict:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    return {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+
+
+def _edit(path: Path, change) -> None:
+    value = json.loads(path.read_bytes())
+    change(value)
+    path.write_bytes(_json_bytes(value))
+
+
+def _bind(web: Path) -> None:
+    """Re-record the previous dataset's manifest digest and the entry's manifest binding after an edit."""
+
+    data = web / "data"
+    entry = json.loads((data / "current.json").read_bytes())
+    manifest = json.loads((data / entry["manifest"]).read_bytes())
+    previous = manifest.get("previous_dataset")
+    if isinstance(previous, dict) and (data / str(previous.get("dataset_id")) / "manifest.json").is_file():
+        previous["manifest_sha256"] = hashlib.sha256((data / previous["dataset_id"] / "manifest.json").read_bytes()).hexdigest()
+    record = _put(data / entry["manifest"], _json_bytes(manifest))
+    entry.update(manifest_bytes=record["bytes"], manifest_sha256=record["sha256"])
+    (data / "current.json").write_bytes(_json_bytes(entry))
+
+
+def _bundle(tmp_path: Path, entry_dataset: str = "active") -> Path:
+    """``data/older``: a v1 dataset holding ``research/results.json`` and its evidence.
+
+    ``data/active``: a v2 dataset that references those results in place and has a decoy
+    ``research`` directory of its own, which no reference names.
+    """
+
+    web = tmp_path / "web"
+    data = web / "data"
+    members = [{"path": path, **_put(data / "older" / path, payload), "media_type": "application/json"}
+               for path, payload in (("research/results.json", _json_bytes(OLDER_RESULTS)), ("research/evidence/a.json", _json_bytes({"owner": "older"})))]
+    binding = {"bytes": members[0]["bytes"], "sha256": members[0]["sha256"], "media_type": "application/json"}
+    _put(data / "older" / "manifest.json", _json_bytes({"schema": "ao-explorer.manifest.v1", "dataset_id": "older", "results": {"href": "research/results.json", **binding}, "members": members}))
+    _put(data / "active" / "research" / "results.json", _json_bytes(DECOY_RESULTS))
+    _put(data / "active" / "research" / "evidence" / "a.json", _json_bytes({"owner": "active"}))
+    _put(data / "active" / "manifest.json", _json_bytes({
+        "schema": "ao-explorer.manifest.v2", "dataset_id": "active", "results": {"href": "../older/research/results.json", **binding},
+        "previous_dataset": {"dataset_id": "older", "manifest_sha256": None, "relation": "preserved unchanged"}, "members": [],
+    }))
+    _put(data / "current.json", _json_bytes({"dataset_id": entry_dataset, "manifest": f"{entry_dataset}/manifest.json"}))
+    _bind(web)
+    return web
+
+
+@pytest.mark.parametrize(("entry_dataset", "href"), [("older", "research/results.json"), ("active", "../older/research/results.json")])
+def test_results_follow_the_manifest_reference_to_their_own_research_directory(tmp_path, entry_dataset, href):
+    web = _bundle(tmp_path, entry_dataset)
+    assert json.loads((web / "data" / entry_dataset / "manifest.json").read_bytes())["results"]["href"] == href
+    research, results, groups = _results(web)
+    assert research == tmp_path / "web" / "data" / "older" / "research"
+    assert results == OLDER_RESULTS
+    # Downloads resolve in the research directory that owns the results, not in the active dataset's decoy.
+    assert _download(research, groups["R1"], "docs/a.json") == {"owner": "older"}
+
+
+def test_committed_entry_reads_the_preserved_research_results_in_place(web_dir):
+    research, results, groups = _results(web_dir)
+    assert research == web_dir / "data" / "series-2m180-b3e1c66-e0d60cbaccc6b" / "research"
+    data = (research / "results.json").read_bytes()
+    assert len(data) == 234897 and hashlib.sha256(data).hexdigest() == "71d0f81f7ebe92b6186d053e549a09fa837d2fd3fc969ddbbb0ca84eb7428484"
+    assert list(groups) == [f"R{i}" for i in range(1, 9)]
+
+
+def test_a_missing_declared_results_file_fails_without_a_fallback(tmp_path):
+    web = _bundle(tmp_path)
+    (web / "data" / "older" / "research" / "results.json").unlink()
+    assert (web / "data" / "active" / "research" / "results.json").is_file()
+    with pytest.raises(ResearchResultsReferenceError, match="Research Results .* is missing"):
+        _results(web)
+
+
+@pytest.mark.parametrize("damage", ["flipped byte", "truncated", "appended"])
+def test_a_corrupted_results_file_fails_its_size_and_digest(tmp_path, damage):
+    web = _bundle(tmp_path)
+    path = web / "data" / "older" / "research" / "results.json"
+    data = path.read_bytes()
+    path.write_bytes({"flipped byte": data[:10] + bytes([data[10] ^ 1]) + data[11:], "truncated": data[:-1], "appended": data + b" "}[damage])
+    with pytest.raises(ResearchResultsReferenceError, match="Research Results .* does not match its recorded size/SHA-256"):
+        _results(web)
+
+
+@pytest.mark.parametrize(("manifest", "change"), [
+    ("active", lambda m: m["results"].update(bytes=m["results"]["bytes"] + 1)),
+    ("active", lambda m: m["results"].update(sha256="0" * 64)),
+    ("older", lambda m: m["members"][0].update(sha256="0" * 64)),
+], ids=["reference size", "reference digest", "owner's member record"])
+def test_a_reference_that_disagrees_with_the_owning_manifest_fails(tmp_path, manifest, change):
+    web = _bundle(tmp_path)
+    _edit(web / "data" / manifest / "manifest.json", change)
+    _bind(web)
+    with pytest.raises(ResearchResultsReferenceError, match="is not listed by its manifest with the reference's size and SHA-256"):
+        _results(web)
+
+
+@pytest.mark.parametrize(("href", "message"), [
+    (None, "malformed"),
+    ("", "malformed"),
+    ("/data/older/research/results.json", "malformed"),
+    ("https://example.org/data/older/research/results.json", "malformed"),
+    ("..\\older\\research\\results.json", "malformed"),
+    ("../../outside/research/results.json", "leaves the dataset and its declared previous dataset"),
+    ("../older/../../outside/research/results.json", "leaves the dataset and its declared previous dataset"),
+    ("../other/research/results.json", "leaves the dataset and its declared previous dataset"),
+    ("../older/evidence/results.json", "does not name a file of older/research"),
+])
+def test_a_malformed_or_escaping_reference_fails(tmp_path, href, message):
+    web = _bundle(tmp_path)
+    # Readable, correctly sized copies wait at the escaping targets (an undeclared sibling even lists its copy):
+    # the refusal must not depend on their absence.
+    payload = (web / "data" / "older" / "research" / "results.json").read_bytes()
+    record = _put(web / "outside" / "research" / "results.json", payload)
+    _put(web / "data" / "older" / "evidence" / "results.json", payload)
+    _put(web / "data" / "other" / "research" / "results.json", payload)
+    _put(web / "data" / "other" / "manifest.json", _json_bytes({"dataset_id": "other", "members": [{"path": "research/results.json", **record}]}))
+    _edit(web / "data" / "active" / "manifest.json", lambda m: m["results"].update(href=href))
+    _bind(web)
+    with pytest.raises(ResearchResultsReferenceError, match=message):
+        _results(web)
+
+
+@pytest.mark.parametrize("results", [
+    "../older/research/results.json",
+    {"href": "../older/research/results.json"},
+    {"href": "../older/research/results.json", "bytes": "1", "sha256": "0" * 64},
+], ids=["bare string", "no size or digest", "size not an integer"])
+def test_a_reference_without_its_binding_is_malformed(tmp_path, results):
+    web = _bundle(tmp_path)
+    _edit(web / "data" / "active" / "manifest.json", lambda m: m.update(results=results))
+    _bind(web)
+    with pytest.raises(ResearchResultsReferenceError, match="malformed Research Results reference"):
+        _results(web)
+
+
+def test_the_previous_dataset_must_be_declared_and_bound(tmp_path):
+    web = _bundle(tmp_path)
+    _edit(web / "data" / "active" / "manifest.json", lambda m: m.pop("previous_dataset"))
+    _bind(web)
+    with pytest.raises(ResearchResultsReferenceError, match="leaves the dataset and its declared previous dataset"):
+        _results(web)
+    web = _bundle(tmp_path / "changed")
+    _edit(web / "data" / "older" / "manifest.json", lambda m: m.update(title="changed after it was recorded"))
+    with pytest.raises(ResearchResultsReferenceError, match="previous dataset older: manifest .* does not match its recorded size/SHA-256"):
+        _results(web)
+    web = _bundle(tmp_path / "renamed")
+    _edit(web / "data" / "older" / "manifest.json", lambda m: m.update(dataset_id="other"))
+    _bind(web)
+    with pytest.raises(ResearchResultsReferenceError, match="its manifest names 'other'"):
+        _results(web)
+
+
+def test_a_results_file_linked_out_of_the_data_tree_is_refused(tmp_path):
+    web = _bundle(tmp_path)
+    path = web / "data" / "older" / "research" / "results.json"
+    _put(tmp_path / "outside.json", path.read_bytes())
+    path.unlink()
+    try:
+        path.symlink_to(tmp_path / "outside.json")
+    except OSError:
+        pytest.skip("symbolic links are unavailable here")
+    with pytest.raises(ResearchResultsReferenceError, match="resolves outside its dataset"):
+        _results(web)
