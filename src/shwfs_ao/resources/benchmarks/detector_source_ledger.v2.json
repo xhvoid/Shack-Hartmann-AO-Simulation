@@ -68,7 +68,7 @@
       "limitations": [
         "the implemented models use none of the paper's closed-form expressions, Gaussian or diffraction-limited: detector.noise_model and detector.validity contract the exact per-pixel Jacobian of the plain centre of gravity over the declared finite window, which applies to any expected spot inside the model's support domain (assumption ledger row B14) and carries the window dependence through each pixel's lever arm",
         "that a thresholded or minimum-subtracted centre of gravity lies outside the first-order noise model is the repository's own support rule (detector.noise_model reports it unsupported); the paper instead evaluates the thresholded centre of gravity's noise approximately with equations 11-12, N_s^2 being the average number of pixels above threshold, and notes that the threshold must be subtracted to keep a unit response (section 4.1); the repository does not adopt that approximation",
-        "the sections, equations and appendices above were read in the publisher's PDF on 2026-10-20, consistent with the GPT pre-refactor audit's reading of a coauthor-uploaded copy (2026-10-17); this entry restates no formula of the paper, and the implementation uses none"
+        "the sections, equations and appendices above were read in the publisher's PDF on 2026-10-20, consistent with the pre-refactor audit's reading of a coauthor-uploaded copy (2026-10-17); this entry restates no formula of the paper, and the implementation uses none"
       ]
     },
     {
@@ -225,10 +225,10 @@
         "limitations"
       ],
       "change": "withdraws 'their analytic forms assume Gaussian spots' and the attribution of 'thresholding is not first-order linear' to the paper; distinguishes the paper's Gaussian-spot forms, its diffraction-limited finite-field photon-noise result, its response non-linearity and its approximate noise of the thresholded centre of gravity from the repository's own first-order-model rule; states what the implementation uses instead",
-      "reason": "roadmap G11 (GPT pre-refactor audit F-08; finding AR-008): the version-1 limitation was overbroad and no full-text check of it was recorded",
+      "reason": "roadmap G11 (pre-refactor audit F-08; finding AR-008): the version-1 limitation was overbroad and no full-text check of it was recorded",
       "evidence": [
         "publisher PDF https://academic.oup.com/mnras/article-pdf/371/1/323/3029534/mnras0371-0323.pdf, read 2026-10-20: sections 2-4 with equations 1-24, Appendix A (A1-A6) and Appendix B (B1-B10)",
-        "GPT pre-refactor audit finding F-08 (reading of a coauthor-uploaded copy, 2026-10-17)",
+        "pre-refactor audit finding F-08 (reading of a coauthor-uploaded copy, 2026-10-17)",
         "candidate specification https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/pull/2 at commit 364f581731125f152711da8863782178255bc69e (docs/research/g11_source_ledger/)"
       ],
       "not_changed": "D4's title, url, content_date and role; every other source; both reference cases"

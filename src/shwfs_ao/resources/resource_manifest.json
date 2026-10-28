@@ -20,7 +20,7 @@
     },
     {
       "logical_name": "benchmarks/detector_level.assumptions.v2.json",
-      "sha256": "20cf6dd30c02655aa498f722c4c160b439863997a71a8146f9297f2a8524e107"
+      "sha256": "bab611dfbb16b00e6e4735a3b8473ca6ed3dcf8cf434b02b9ba8fd9504573e48"
     },
     {
       "logical_name": "benchmarks/detector_source_ledger.v1.json",
@@ -28,7 +28,7 @@
     },
     {
       "logical_name": "benchmarks/detector_source_ledger.v2.json",
-      "sha256": "fa56a8d4e5c05486c2ce1777c6c7507fa45510bf488ebc99b504a63e2eb10960"
+      "sha256": "1534a64983c208dcc046856991e6fac5bdca9fcdc8e19e877371920b366827da"
     },
     {
       "logical_name": "benchmarks/eso_drm_42m_scao_derived.assumptions.v1.json",

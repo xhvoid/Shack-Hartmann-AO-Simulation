@@ -429,7 +429,7 @@ REVISIONS = [
             "v1 described detector_covariance_v1 (2026-10-15), which formed the conditional mean from the ideal "
             "background, checked only the upper ADC limit without offsets and applied the quantization rule with the "
             "scalar read noise; it was replaced on 2026-10-16 (573f875, review R2 and R4), and the 2026-10-18 "
-            "correction (GPT audit F-01) made the quantization gate per pixel without changing the identifier"
+            "correction (pre-refactor audit F-01) made the quantization gate per pixel without changing the identifier"
         ),
         "evidence": [
             "docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md",

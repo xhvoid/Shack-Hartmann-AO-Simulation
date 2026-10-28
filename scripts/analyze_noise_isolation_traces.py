@@ -765,7 +765,7 @@ def bootstrap_slope(seed_means: dict[str, dict[int, float]], abscissa_by_label: 
             continue
         slopes.append(ols_slope(x, np.log(means))["slope"])
     point = ols_slope(x, np.log(matrix.mean(axis=1)))["slope"]
-    return {"convention": "whole-seed resampling of an unweighted fit to seed means (GPT F-06); descriptive, not additional realizations", "resamples": len(slopes), "requested": int(resamples), "point_slope": point, "bootstrap_sd": float(np.std(slopes, ddof=1)) if len(slopes) > 1 else None, "labels": usable}
+    return {"convention": "whole-seed resampling of an unweighted fit to seed means (pre-refactor audit F-06); descriptive, not additional realizations", "resamples": len(slopes), "requested": int(resamples), "point_slope": point, "bootstrap_sd": float(np.std(slopes, ddof=1)) if len(slopes) > 1 else None, "labels": usable}
 
 
 def population(runs: list[dict[str, Any]], *, confidence: float, gate_quiet_labels: list[str] | None, bootstrap: int, bootstrap_seed: int) -> dict[str, Any]:

@@ -133,3 +133,27 @@ provenance with redistributed caches or derived products.
 Artifact embedding and upgrade rules are documented in
 [Artifact schemas](artifact_schemas.md); deterministic seed provenance is in
 [Reproducibility](reproducibility.md).
+
+## Editorial resource update (2026-10-28)
+
+The two version-2 detector ledgers received wording-only edits to review
+attribution. Scientific sources, finding IDs, dates, equations, model values
+and the version-1 ledgers are unchanged. The profile generator uses the same
+updated wording, and the resource manifest binds the new file bytes.
+
+Original files remain available in the [preceding source snapshot](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/tree/51406fdbf4c590cb79b34f8ac419d5600c661738).
+The old hashes below identify those originals; they do not attest the edited
+copies. Future package and script identities can change when their source
+bytes change, even when numerical behavior is unchanged. Existing experiment
+records retain their original producer identities and are not relabelled.
+
+| Resource (under `src/shwfs_ao/resources/`) | Original SHA-256 | Editorial revision SHA-256 |
+| --- | --- | --- |
+| `benchmarks/detector_source_ledger.v2.json` | `fa56a8d4e5c05486c2ce1777c6c7507fa45510bf488ebc99b504a63e2eb10960` | `1534a64983c208dcc046856991e6fac5bdca9fcdc8e19e877371920b366827da` |
+| `benchmarks/detector_level.assumptions.v2.json` | `20cf6dd30c02655aa498f722c4c160b439863997a71a8146f9297f2a8524e107` | `bab611dfbb16b00e6e4735a3b8473ca6ed3dcf8cf434b02b9ba8fd9504573e48` |
+
+Retained execution records and content-addressed Explorer evidence keep their
+original bytes, including historical environment paths and branch metadata.
+They are source evidence, not templates for new publication text. The public
+packagers reject private dot-directory paths without depending on a particular
+workspace name.
