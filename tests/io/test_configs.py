@@ -57,6 +57,7 @@ EXPECTED_PROFILES = (
     ("high_order_10m_hcipy", 1),
     ("high_order_10m_hcipy", 2),
     ("high_order_10m_hcipy", 3),
+    ("eso_turbulence_2m_detector", 1),
 )
 CURRENT_2M_PROFILES = (
     ("fast_2m_detector", 2),
@@ -229,7 +230,7 @@ def test_each_record_schema_version_has_an_exact_field_set() -> None:
     )
 
     # An unsupported record schema version is refused with the supported set.
-    v1_record["schema_version"] = 4
+    v1_record["schema_version"] = 5
     with pytest.raises(SystemConfigError, match="unsupported profile schema_version"):
         system_config_from_mapping(v1_record)
 
@@ -269,7 +270,7 @@ def test_a_configuration_cannot_claim_a_schema_that_cannot_express_it() -> None:
     assert kept.config_hash != v2.config_hash
 
     with pytest.raises(SystemConfigError, match="unsupported profile schema_version"):
-        replace(v1, record_schema_version=4)
+        replace(v1, record_schema_version=5)
     # ``True`` is not a schema version, however conveniently it compares to 1.
     with pytest.raises(SystemConfigError, match="record_schema_version must be an integer"):
         replace(v1, record_schema_version=True)
@@ -348,6 +349,7 @@ def test_every_packaged_profile_identity_is_pinned() -> None:
         ("high_order_10m_hcipy", 3): "bc73f30b8d37a1dcc5603f8d2007d9e69daf02e54ced8898eef53afb7153e65c",
         ("fast_2m_detector", 4): "8c2c96a97b464fee1cd26d3eecd665f31d0df4b4a036198c6a03d8cd4b898f46",
         ("portfolio_2m_detector", 4): "52463b37fdba955c84faa639278a569234b4692f0bf3a5cc3e54a4c9693f8e13",
+        ("eso_turbulence_2m_detector", 1): "f6858605a03e5b946f00ba501c72b657a07893d7c3f410e8455d3cbfedb19157",
     }
     observed = {
         key: load_system_profile(*key).config_hash for key in available_system_profiles()
@@ -393,6 +395,10 @@ def test_every_packaged_nested_wfs_identity_is_pinned() -> None:
         # identities move.
         ("fast_2m_detector", 4): "beec50d4ead5615c7ff5d19c71b26ffbe07540eafdcb991e0422fdf1010f34b6",
         ("portfolio_2m_detector", 4): "cbe410044085adb9dc0d8b2c5535a36c54ce6e01f9b7b352d4ddf94ea49274e9",
+        # The ESO-turbulence profile keeps portfolio_2m_detector@4's WFS, but
+        # as a schema-v4 record it hashes the current WfsConfig shape (with
+        # clip_negative_pixels) rather than the schema-v2 stand-in.
+        ("eso_turbulence_2m_detector", 1): "0df31b2c43b7cfa8915f81e75fb8448bd5e9bbd316747f841de8c45c40f66979",
     }
     observed = {
         key: load_system_profile(*key).component_config_hashes["wfs"]
@@ -470,7 +476,7 @@ def test_a_bare_wfs_config_hashes_under_the_current_record_schema() -> None:
 
     # An unknown schema is not silently treated as the newest one.
     with pytest.raises(SystemConfigError, match="unsupported profile schema_version"):
-        v2.wfs.config_hash_for_record_schema(4)
+        v2.wfs.config_hash_for_record_schema(5)
     with pytest.raises(SystemConfigError, match="record_schema_version must be an integer"):
         v2.wfs.config_hash_for_record_schema(True)  # type: ignore[arg-type]
 
@@ -498,9 +504,9 @@ def test_wfs_negative_pixel_clipping_is_a_schema_v3_field() -> None:
     every published record keeps the identity it was published with.
     """
 
-    assert PROFILE_SCHEMA_VERSION == 3
+    assert PROFILE_SCHEMA_VERSION >= 3
     v2 = load_system_profile("fast_2m_detector", 2)
-    current = replace(v2, record_schema_version=PROFILE_SCHEMA_VERSION)
+    current = replace(v2, record_schema_version=3)
     record = system_config_to_mapping(current)
     assert record["schema_version"] == 3
     assert record["config"]["wfs"]["clip_negative_pixels"] is True
@@ -779,3 +785,99 @@ def test_static_model_has_no_implicit_file_or_generated_profile_lookup() -> None
         "normalize_rms",
     }
     assert not any("path" in key or "resource" in key for key in atmosphere)
+
+
+def test_schema_v4_states_atmosphere_layers_and_older_schemas_cannot() -> None:
+    """``atmosphere.layers`` is a schema-v4 field with the usual exactness.
+
+    A v4 record must state the list (empty for one layer); a v1-v3 record may
+    not carry it; and only ``native_layered`` accepts a non-empty list.
+    """
+
+    v2 = load_system_profile("portfolio_2m_detector", 4)
+    eso = load_system_profile("eso_turbulence_2m_detector", 1)
+    assert (v2.record_schema_version, eso.record_schema_version) == (2, 4)
+
+    v4_record = copy.deepcopy(system_config_to_mapping(eso))
+    assert len(v4_record["config"]["atmosphere"]["layers"]) == 10
+    del v4_record["config"]["atmosphere"]["layers"]
+    with pytest.raises(SystemConfigError, match="missing=\\['layers'\\]"):
+        system_config_from_mapping(v4_record)
+
+    v2_record = copy.deepcopy(system_config_to_mapping(v2))
+    v2_record["config"]["atmosphere"]["layers"] = []
+    with pytest.raises(SystemConfigError, match="unknown=\\['layers'\\]"):
+        system_config_from_mapping(v2_record)
+
+    # A single-layer configuration moved to schema v4 states an empty list.
+    single_v4 = replace(v2, record_schema_version=4)
+    assert system_config_to_mapping(single_v4)["config"]["atmosphere"]["layers"] == []
+    assert system_config_from_mapping(system_config_to_mapping(single_v4)) == single_v4
+
+    with pytest.raises(SystemConfigError, match="cannot express atmosphere.layers"):
+        replace(eso, record_schema_version=3)
+    with pytest.raises(SystemConfigError, match="requires atmosphere.layers"):
+        replace(eso, atmosphere_model="native_frozen_flow_v2")
+    with pytest.raises(SystemConfigError, match="requires atmosphere.layers"):
+        replace(single_v4, atmosphere_model="native_layered")
+
+
+def test_a_layered_atmosphere_block_is_strictly_validated() -> None:
+    atmosphere = load_system_profile("eso_turbulence_2m_detector", 1).atmosphere
+    layers = atmosphere.layers
+
+    with pytest.raises(SystemConfigError, match="must sum to 1"):
+        replace(atmosphere, layers=layers[:-1])
+    with pytest.raises(SystemConfigError, match="wind_m_per_s must be \\[0, 0\\]"):
+        replace(atmosphere, wind_m_per_s=(10.0, 0.0))
+    with pytest.raises(SystemConfigError, match="absolutely normalized"):
+        replace(atmosphere, normalize_rms=True)
+    with pytest.raises(SystemConfigError, match="absolutely normalized"):
+        replace(atmosphere, target_rms_opd_m=1.0e-7)
+    with pytest.raises(SystemConfigError, match="cn2_fraction must be positive"):
+        replace(layers[0], cn2_fraction=0.0)
+    with pytest.raises(SystemConfigError, match="altitude_m must be non-negative"):
+        replace(layers[0], altitude_m=-1.0)
+    with pytest.raises(SystemConfigError, match="AtmosphereLayerConfig"):
+        replace(atmosphere, layers=({"cn2_fraction": 1.0},))
+
+
+def test_single_layer_atmosphere_identities_do_not_depend_on_the_layers_field() -> None:
+    """Adding ``layers`` moved no published atmosphere or observing identity.
+
+    A single-layer block hashes as its pre-v4 shape under every record schema,
+    so the same physics recorded under schema v4 keeps the nested atmosphere
+    hash and the observing-conditions hash of its published original.
+    """
+
+    published = load_system_profile("portfolio_2m_detector", 4)
+    restated = replace(published, record_schema_version=4)
+
+    assert restated.config_hash != published.config_hash
+    assert restated.observing_conditions_hash == published.observing_conditions_hash
+    assert (
+        restated.component_config_hashes["atmosphere"]
+        == published.component_config_hashes["atmosphere"]
+        == published.atmosphere.config_hash
+    )
+    eso = load_system_profile("eso_turbulence_2m_detector", 1)
+    assert eso.atmosphere.config_hash != published.atmosphere.config_hash
+    assert eso.observing_conditions_hash != published.observing_conditions_hash
+
+
+def test_the_eso_profile_changes_only_the_atmosphere_of_portfolio_v4() -> None:
+    portfolio = load_system_profile("portfolio_2m_detector", 4)
+    eso = load_system_profile("eso_turbulence_2m_detector", 1)
+
+    assert eso.profile.provenance.source_id == (
+        "shwfs_ao.system_profile.eso_turbulence_2m_detector.v1"
+    )
+    assert eso.atmosphere.r0_m == 0.13
+    assert eso.atmosphere.outer_scale_m == 25.0
+    assert replace(
+        eso,
+        atmosphere_model=portfolio.atmosphere_model,
+        atmosphere=portfolio.atmosphere,
+        profile=portfolio.profile,
+        record_schema_version=portfolio.record_schema_version,
+    ) == portfolio

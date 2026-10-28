@@ -54,9 +54,11 @@ component hash is unchanged between the two.
 The *record* schema version is a separate axis from the profile version: v2
 records require `wfs.photon_allocation`, v1 records predate it and must omit
 it, v3 records further require `wfs.clip_negative_pixels`, which v1 and v2
-records omit, and all three parse (`SUPPORTED_PROFILE_SCHEMA_VERSIONS`).  Every
-packaged profile is a v1 or v2 record, so each keeps the identity it was
-published with; a v2 record's nested `wfs` hash is reproduced from the
+records omit, v4 records further require `atmosphere.layers` (an empty list for
+a single-layer atmosphere), which v1-v3 records omit, and all four parse
+(`SUPPORTED_PROFILE_SCHEMA_VERSIONS`).  Every packaged profile except
+`eso_turbulence_2m_detector@1` is a v1 or v2 record, so each keeps the identity
+it was published with; a v2 record's nested `wfs` hash is reproduced from the
 thirteen-field shape it was published under, just as a v1 record's is from
 twelve.  A configuration
 serializes under the schema it belongs to — its `record_schema_version`, which
@@ -159,6 +161,36 @@ centroid uncertainty stay far inside their limits (at least 8.5 against 3, at
 most 0.071 px against 0.5 px), and the settled residual RMS matches `@3`'s
 within 3 % on every shared realization.  Start new portfolio-scale work from
 `@4`.
+
+## Schema 4 and `eso_turbulence_2m_detector@1`
+
+Schema 4 adds `atmosphere.layers`, the per-layer altitude, Cn² fraction and
+wind of a multi-layer atmosphere, selected by
+`atmosphere_model = "native_layered"`.  Only that model accepts layers and it
+requires them; their fractions must sum to one, the block-level
+`wind_m_per_s` must be zero, and the atmosphere is absolutely normalized
+(`normalize_rms = false`, `target_rms_opd_m = null`).  A v1-v3 configuration
+carrying layers is refused rather than having them dropped.
+
+The new field moved no published identity.  `SystemConfig.config_hash` hashes
+each record under its own schema, which drops `layers` before v4.  A
+single-layer `AtmosphereConfig` hashes as the frozen six-field
+`_AtmosphereConfigSchemaV3` stand-in under every record schema, so the nested
+`atmosphere` hash and `observing_conditions_hash` of every packaged profile are
+unchanged.  The same single-layer physics restated under schema 4 shares those
+two identities with its published original.
+
+`eso_turbulence_2m_detector@1` is `portfolio_2m_detector@4` with its single
+10 m/s layer replaced by ESO's ten-layer E-ELT Design Reference Mission
+atmosphere: r0 = 0.13 m at 500 nm, L0 = 25 m, the published Cn² fractions
+(renormalized from their printed sum of 1.001), and winds of 8.0–33.7 m/s
+toward +x.  Every other block is identical; its nested `wfs` hash differs from
+`@4`'s only because a v4 record hashes the current `WfsConfig` shape.  It
+reconstructs every frame with every lenslet valid.  Over 8 realizations
+(frames 50–149), the mean RMS goes from 444 nm open loop to 325 nm closed
+loop, against 462 to 294 nm for `portfolio_2m_detector@4`.  The turbulence
+model, its validation and the demo are described in
+[the ESO turbulence notes](../eso_elt_turbulence_model.md).
 
 ## Fail-closed construction
 

@@ -5,6 +5,7 @@ from .configs import (
     PROFILE_SCHEMA_VERSION,
     SUPPORTED_PROFILE_SCHEMA_VERSIONS,
     AtmosphereConfig,
+    AtmosphereLayerConfig,
     CalibrationConfig,
     CommandProjectorConfig,
     ControllerConfig,
@@ -38,12 +39,23 @@ from .public_data import (
     load_target_photometry,
 )
 
+from .turbulence_profiles import (
+    ESO_ELT_PROFILE_NAME,
+    TurbulenceLayer,
+    TurbulenceProfile,
+    TurbulenceProfileError,
+    available_turbulence_profiles,
+    eso_elt_turbulence_profile,
+    load_turbulence_profile,
+)
+
 __all__ = (
     "PROFILE_SCHEMA_NAME",
     "PROFILE_SCHEMA_VERSION",
     "SUPPORTED_PROFILE_SCHEMA_VERSIONS",
     "SystemConfigError",
     "ProfileProvenance",
+    "AtmosphereLayerConfig",
     "AtmosphereConfig",
     "DetectorSystemConfig",
     "WfsConfig",
@@ -71,4 +83,11 @@ __all__ = (
     "load_literature_atmosphere_profile",
     "load_svo_filter_curve",
     "load_target_photometry",
+    "ESO_ELT_PROFILE_NAME",
+    "TurbulenceLayer",
+    "TurbulenceProfile",
+    "TurbulenceProfileError",
+    "available_turbulence_profiles",
+    "eso_elt_turbulence_profile",
+    "load_turbulence_profile",
 )

@@ -23,6 +23,7 @@ deprecation window.
 | SVO Filter Profile Service (2MASS J/H/Ks) | `src/shwfs_ao/resources/public/svo_2mass_j_direct.csv`, `svo_2mass_h_direct.csv`, `svo_2mass_ks_direct.csv` | [SVO Filter Profile Service](https://svo2.cab.inta-csic.es/theory/fps/index.php?mode=search) publishes the service's requested acknowledgement; the curves also identify the 2MASS source profile. | Small processed query responses are included for offline, reproducible tests. The repository makes no independent license grant for the SVO or underlying 2MASS data. Explicit permission for further redistribution of these cached responses has not been independently verified; retain provenance and check the current source terms before redistributing. |
 | IRSA 2MASS All-Sky Point Source Catalog | `src/shwfs_ao/resources/public/target_photometry_2mass_psc_demo_ngs_bright.csv` | [2MASS data-use acknowledgement guidance](https://irsa.ipac.caltech.edu/data/2MASS/docs/releases/second/doc/sec1_8b.html) and the [IRSA 2MASS mission page](https://irsa.ipac.caltech.edu/Missions/2mass.html). | A small cone-query subset is included for offline photometric anchoring. The repository makes no independent license grant for 2MASS catalog data. Preserve the query provenance and follow the current 2MASS acknowledgement and redistribution guidance. |
 | MAST Pan-STARRS DR2 | `src/shwfs_ao/resources/public/target_photometry_panstarrs_dr2_demo_ngs_bright.csv` | [MAST data-use policy](https://archive.stsci.edu/publishing/data-use), [mission acknowledgements](https://archive.stsci.edu/publishing/mission-acknowledgements), and [data attributions](https://archive.stsci.edu/publishing/data-attributions). | A small API-query subset is included for offline photometric anchoring. Reuse should retain MAST/Pan-STARRS provenance and apply the current acknowledgement text published by MAST. The repository does not extend or reinterpret MAST's terms. |
+| ESO E-ELT Design Reference Mission technical data, [AO performance and PSFs](https://www.eso.org/sci/facilities/eelt/science/drm/tech_data/ao/) | `src/shwfs_ao/resources/literature_profiles/eso_elt_drm_ten_layer.json` | [ESO copyright notice and terms](https://www.eso.org/public/copyright/) and [ESO publication acknowledgement guidance](https://www.eso.org/cms/publication-acknowledgment.html); cite Le Louarn et al. (2004, Proc. SPIE 5490, 705) for the OCTOPUS simulations. | Eleven published model parameters (r0, outer scale and the ten-layer Cn²/wind table) are transcribed with the page URL, access date and references, marked `literature_derived`. No ESO file or image is redistributed. Wind directions and the renormalization of the printed fractions are repository choices, stated in the record. |
 | ESO Paranal Ambient Site Monitor (ASM) API | `src/shwfs_ao/resources/public/eso_asm_paranal_20240729_0300_0800_snapshot.json`, `eso_asm_paranal_20240729_0300_0800_timeseries.csv`, and the retained `0900_1000` historical pair | [ESO copyright notice and terms](https://www.eso.org/public/copyright/) and [ESO publication acknowledgement guidance](https://www.eso.org/cms/publication-acknowledgment.html). | Small derived API responses are included to make the demonstrator reproducible offline. The repository makes no independent license grant for ESO data. Explicit permission for further redistribution of the cached ASM values has not been independently verified; retain source URLs/access times and confirm current ESO terms before redistributing. |
 
 ## Acknowledgements for publications and derived products
@@ -41,11 +42,12 @@ of freezing potentially outdated acknowledgement text here.
 Files under `src/shwfs_ao/resources/samples/`,
 `src/shwfs_ao/resources/synthetic_presets/`, and
 `src/shwfs_ao/resources/reference_metrics/` are repository fixtures or
-generated regression references. The profile under
+generated regression references. The Paranal three-layer profile under
 `src/shwfs_ao/resources/literature_profiles/` is explicitly marked
 `synthetic_literature_inspired`; it is not a redistributed observatory data
 product. Its scientific influences and assumptions remain documented in its
-embedded provenance and the parameter-source inventory.
+embedded provenance and the parameter-source inventory. The ESO E-ELT
+ten-layer profile beside it is `literature_derived` and listed above.
 
 ## Unresolved items
 

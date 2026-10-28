@@ -420,6 +420,7 @@ CONFIG_EXPORTS = (
     "SUPPORTED_PROFILE_SCHEMA_VERSIONS",
     "SystemConfigError",
     "ProfileProvenance",
+    "AtmosphereLayerConfig",
     "AtmosphereConfig",
     "DetectorSystemConfig",
     "WfsConfig",
@@ -450,7 +451,16 @@ PUBLIC_DATA_EXPORTS = (
     "load_svo_filter_curve",
     "load_target_photometry",
 )
-IO_EXPORTS = (*CONFIG_EXPORTS, *PUBLIC_DATA_EXPORTS)
+TURBULENCE_PROFILE_EXPORTS = (
+    "ESO_ELT_PROFILE_NAME",
+    "TurbulenceLayer",
+    "TurbulenceProfile",
+    "TurbulenceProfileError",
+    "available_turbulence_profiles",
+    "eso_elt_turbulence_profile",
+    "load_turbulence_profile",
+)
+IO_EXPORTS = (*CONFIG_EXPORTS, *PUBLIC_DATA_EXPORTS, *TURBULENCE_PROFILE_EXPORTS)
 NATIVE_FACTORY_EXPORTS = (
     "NativeScaoFactoryError",
     "NativeScaoComponentFactory",
@@ -541,6 +551,7 @@ AO_REF_011_SYSTEM_PROFILES = (
     ("high_order_10m_hcipy", 1),
     ("high_order_10m_hcipy", 2),
     ("high_order_10m_hcipy", 3),
+    ("eso_turbulence_2m_detector", 1),
 )
 CONTRACT_MANIFEST = (
     ROOT
@@ -683,6 +694,7 @@ def _assert_wheel_layout(
         "shwfs_ao/backends/native/atmosphere.py",
         "shwfs_ao/backends/native/dm.py",
         "shwfs_ao/backends/native/factory.py",
+        "shwfs_ao/backends/native/layered_atmosphere.py",
         "shwfs_ao/backends/native/modes.py",
         "shwfs_ao/backends/native/propagation.py",
         "shwfs_ao/backends/native/shwfs.py",
@@ -729,6 +741,7 @@ def _assert_wheel_layout(
         "shwfs_ao/io/configs.py",
         "shwfs_ao/io/public_data.py",
         "shwfs_ao/io/resources.py",
+        "shwfs_ao/io/turbulence_profiles.py",
         "shwfs_ao/legacy/__init__.py",
         "shwfs_ao/legacy/_control_adapters.py",
         "shwfs_ao/legacy/_interaction_adapters.py",
@@ -1508,6 +1521,7 @@ def test_direct_wheel_and_sdist_wheel_have_identical_installed_contract(tmp_path
         "src/shwfs_ao/backends/native/atmosphere.py",
         "src/shwfs_ao/backends/native/dm.py",
         "src/shwfs_ao/backends/native/factory.py",
+        "src/shwfs_ao/backends/native/layered_atmosphere.py",
         "src/shwfs_ao/backends/native/modes.py",
         "src/shwfs_ao/backends/native/propagation.py",
         "src/shwfs_ao/backends/native/shwfs.py",
@@ -1554,6 +1568,7 @@ def test_direct_wheel_and_sdist_wheel_have_identical_installed_contract(tmp_path
         "src/shwfs_ao/io/configs.py",
         "src/shwfs_ao/io/public_data.py",
         "src/shwfs_ao/io/resources.py",
+        "src/shwfs_ao/io/turbulence_profiles.py",
         "src/shwfs_ao/legacy/__init__.py",
         "src/shwfs_ao/legacy/_control_adapters.py",
         "src/shwfs_ao/legacy/_interaction_adapters.py",
@@ -1756,5 +1771,5 @@ def test_pep660_editable_install_generates_resource_alias_only_in_environment(
         capture_output=True,
         text=True,
     )
-    assert result.stdout.strip() == "editable-resource-alias-ok:55"
+    assert result.stdout.strip() == "editable-resource-alias-ok:57"
     assert not source_alias.exists()

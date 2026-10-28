@@ -99,10 +99,38 @@ V2 identities also record the quadrature and translation algorithm versions.
 `raw_spectrum_absolutely_normalized` and `realization_rms_rescaled` distinguish
 the spectrum calibration from subsequent amplitude rescaling.
 
+### Native atmosphere: `native_layered` (multi-layer)
+
+`native_layered` sums several independent von Kármán layers, each with its
+own Cn² fraction `fᵢ` (Fried parameter `r0 fᵢ^(-3/5)`) and its own wind, on
+axis. Profile schema 4 carries the layers in `atmosphere.layers`; the
+block-level `wind_m_per_s` must then be zero, and the model is absolutely
+normalized (`normalize_rms=false`, `target_rms_opd_m=null`). The packaged
+`eso_turbulence_2m_detector@1` profile uses ESO's ten-layer E-ELT DRM
+atmosphere.
+
+The spectrum is split so that every layer translates exactly with no travel
+budget. A periodic FFT band on a screen twice the pupil array moves by
+Fourier phase ramp, and all layers share one inverse FFT per frame. The inner
+9×9 cells (4×4 quadrature nodes each) and three subharmonic levels are
+evaluated analytically at the translated coordinates. The discrete model's
+expected piston- and tip/tilt-removed pupil variances are within 1% of the
+von Kármán integral at 2 m and 10 m. The periodic band repeats after one
+screen period of travel (`periodic_band_repeated`). See
+[the ESO turbulence notes](eso_elt_turbulence_model.md) and
+`tests/backends/native/test_layered_atmosphere.py`.
+
+Factories receive the layers through an optional `layers` keyword of
+`build_atmosphere`, passed only for a layered profile, so a factory written
+before it keeps building every single-layer profile. The HCIPy factory
+refuses layered profiles rather than flattening them to one layer.
+
 ### Known backend scope
 
 - Native frozen flow preserves the historical nearest-integer periodic shift.
-  `native_frozen_flow_v2` and the HCIPy atmosphere both move sub-pixel.
+  `native_frozen_flow_v2`, `native_layered` and the HCIPy atmosphere move
+  sub-pixel. `native_layered` records layer altitude but, like the HCIPy
+  adapter, propagates on axis only.
   HCIPy atmosphere supports finite/infinite layers, both translating rigidly
   on square and rectangular pupils. The
   adapter sums pupil-plane phase/OPD; layer altitude is metadata and there is

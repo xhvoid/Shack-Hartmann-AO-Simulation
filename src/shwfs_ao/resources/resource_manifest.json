@@ -19,6 +19,10 @@
       "sha256": "a52381f3ef1c50ff160dca91141211db5f5903087daaeeddaa1ef29c222cf6f7"
     },
     {
+      "logical_name": "literature_profiles/eso_elt_drm_ten_layer.json",
+      "sha256": "c5aa89e2bb81a117477c589d3b76caee61a9d14991f80f6c8c1c4dc6115a7c05"
+    },
+    {
       "logical_name": "literature_profiles/paranal_three_layer_literature_inspired.json",
       "sha256": "19af2a4b1eddfa86f942f34817332658ced114b952e9478f0dc98b4bbeecd233"
     },
@@ -153,6 +157,10 @@
     {
       "logical_name": "synthetic_presets/dm_2m_fast_gaussian.json",
       "sha256": "4753566272ea121449f2e3d12d00bdd0a4e5cfce22df42a6302603384ac3e57c"
+    },
+    {
+      "logical_name": "synthetic_presets/eso_turbulence_2m_detector.v1.json",
+      "sha256": "1fbd74552da3d9e72c247a3955c60935e4fb2bbb682cdc3858b7adaf68f77369"
     },
     {
       "logical_name": "synthetic_presets/fast_2m_detector.v1.json",
