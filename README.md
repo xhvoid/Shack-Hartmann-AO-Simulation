@@ -41,6 +41,7 @@ needed to assess sustained performance. [Executed notebook](notebooks/tutorials/
 [reconstruction and control](#reconstruction-and-control) →
 [PSFs and error budgets](#psfs-and-error-budgets) →
 [ESO E-ELT turbulence](#eso-e-elt-turbulence-model) →
+[HCIPy lenslet-axis correction](#hcipy-lenslet-axis-correction) →
 [validation evidence](#validation-evidence).
 For execution, see [Run the project](#run-the-project).
 
@@ -356,20 +357,28 @@ ledger (ESO DRM pages R1/R2; two further studies kept as separate reference
 cases) or to an explicit assumption in a packaged assumption ledger, which
 the tests check against every profile.
 
-At the full spatial scale nothing is dense. The DM is a sparse local operator
-(5873 laid-out actuators). The 5112 retained lenslets are stored as cells and
+The high-order path avoids dense actuator-by-pupil and lenslet-by-pupil
+stacks. The DM is a sparse local operator (5873 laid-out actuators).
+The 5112 retained lenslets are stored as cells and
 transformed in bounded FFT batches. Calibration groups actuators that share no
 lenslet, so the 5328 eligible actuators (geometric exclusions are recorded by
 ID and reason) are calibrated with 11 sensor measurements, exactly equal to
 per-actuator central differences. Reconstruction is damped LSMR on the sparse
 response. A passive frame observer accumulates long-exposure science images
-as averages of instantaneous intensities, never of OPD. On the development
-desktop the full 84×84 / 85×85 / 1008-pixel system builds and runs 20
+as averages of instantaneous intensities, never of OPD. Previously recorded
+version-2 runs on the development desktop show the full
+84×84 / 85×85 / 1008-pixel system building and running 20
 closed-loop frames at 1.5 GB peak memory in about 110 s, with every solve
 converged and zero DM saturation. A 2000-frame (4 s) run that reuses the
 verified calibration takes about an hour. It holds a 173 nm residual and
 gives a long-exposure Strehl ratio of 0.78 at 2.2 µm in this noiseless,
 single-realization model.
+
+The 20-frame run demonstrates spatial-scale capability. The smoke-tier solver
+convergence check passed, but pupil sampling missed the declared **2%**
+Strehl/EE50 criterion. Medium/full sampling convergence and validation on an
+8 GiB host remain pending. The 4 s reference run also repeats the fastest
+layers' periodic atmospheric bands, reducing statistical independence.
 
 <!-- readme-smoke: native -->
 ```bash
@@ -378,7 +387,10 @@ python examples/run_eso_scao_benchmark.py --tier full --dry-run
 ```
 
 The first command runs the 5 m software-smoke tier in a supervised,
-thread-limited child process. The second prints the full tier's configuration
+thread-limited child process. The supervisor keeps all running process-group
+members under memory, pressure and wall-clock limits, stops the group if a
+monitoring probe raises, and treats zombie members as exited.
+The second prints the full tier's configuration
 and peak-memory estimate without building it. Larger tiers need
 `--enable-large-run`, and the desktop memory policy may also require an
 explicitly authorized budget. Sources, assumptions, tiers, the high-order
@@ -386,6 +398,31 @@ path and the long-exposure definitions are in the
 [benchmark notes](docs/eso_scao_benchmark.md). The commands run, their
 results, and the gates still pending are in the
 [execution record](docs/refactor/ESO_SCAO_DEVELOPMENT_STATUS.md).
+
+## HCIPy lenslet-axis correction
+
+HCIPy detector-level sensing supports the schema-v6 opt-in
+`wfs.lenslet_axis="pixel_block_center"`, which centres each lenslet's optical
+axis in its detector block. The historical `geometry_cell_center` convention
+remains the default, preserving published profiles and their hashes. The
+correction removes a spot-width-dependent centroid bias that can leave a
+closed loop holding static defocus; see the
+[design and validation notes](docs/refactor/AO_REF_016A_HCIPY_LENSLET_AXIS.md).
+
+In a **192-pixel, 24×24-lenslet, 5 m analogue** at pad 2 and gain 0.30, two
+realizations gave a paired Z4 change (block minus cell) of **+51.9 ± 3.9 nm**
+(standard error). The block-centred mean Z4 was consistent with zero in both. The
+[recorded comparison](docs/refactor/eso_scao_evidence/hcipy_lenslet_axis_closed_loop_192px.md)
+is evidence at that reduced scale. The paired confirmation at the published
+scale remains pending, and `high_order_10m_hcipy@4` remains an unpublished
+draft.
+
+Both published `high_order_10m_geometric@3` and `high_order_10m_hcipy@3` use
+gain 0.65 with two frames of latency, above the leak-free integrator limit of
+0.618. The [profile stability tests](tests/control/test_profile_stability.py)
+retain these configurations as strict expected failures. A stable comparison
+requires revised controller settings; the HCIPy sensor also needs a window
+that retains broadened spots.
 
 ## Validation evidence
 
@@ -416,6 +453,17 @@ an **HCIPy lane on 3.11**, notebook smoke runs, lint and static types. Named
 random streams separate physical disturbances, calibration probes and detector
 noise. Resource hashes, configuration metadata and artifact manifests make
 inputs traceable; accepted baselines have a controlled update workflow.
+
+Recent review fixes isolate exported sparse matrices, share immutable array
+buffers through independent views, and prevent nearby science wavelengths
+from overwriting each other's files. On **2026-10-15**, all **24
+[resource-guard tests](tests/runtime/test_resource_guard.py)** at `60a94f1`
+passed on macOS, including worker supervision, probe-failure cleanup, zombie
+handling and a forced exit/reaping race. The focused run retained two-thread
+limits and memory-pressure protection, with a sampled aggregate peak RSS of
+**46 MiB**. The Linux subreaper path and execution of the latest fixes under
+Python 3.10 still need CI verification. Medium/full-scale simulations were
+not rerun after these review fixes.
 
 <details>
 <summary><strong>Interpreting the packaged regression baselines</strong></summary>
@@ -541,7 +589,9 @@ first-order. Thresholding, saturation and pixel defects have additional
 limitations described in the [detector notes](docs/backends.md).
 Schemas 1 and 2 retain their published configuration hashes and clipping
 behaviour; schema 3 records the explicit clipping choice, and schema 4 adds
-the layered atmosphere block. Record schema versions are separate from
+the layered atmosphere block. Schema 5 adds the scalable high-order
+configuration; schema 6 records the HCIPy lenslet-axis convention. Record
+schema versions are separate from
 profile versions such as `fast_2m_detector@4`.
 
 ### Optional backend check
