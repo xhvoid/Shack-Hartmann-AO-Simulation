@@ -22,7 +22,7 @@ from typing import Any, Callable, Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from shwfs_ao.legacy.ao_integration import IntegrationConfig, run_fast_integration
+from shwfs_ao.experiments.integration import IntegrationConfig, run_fast_integration
 from shwfs_ao.io.artifacts import (
     ArtifactConfig,
     ArtifactError,
