@@ -10,8 +10,11 @@ The kernel environment (``MPLBACKEND=Agg``) is passed explicitly through
 ``NotebookClient.execute`` into ``KernelManager.start_kernel`` — ``nbclient``
 has no ``env`` trait, so a constructor argument would be silently dropped.
 The runner imports only the installed package, so it validates that a
-notebook runs from a built, non-editable wheel without source-tree imports,
-network access, or hidden local files.
+notebook runs from a built, non-editable wheel without source-tree imports
+or hidden local files.  Offline execution is actively enforced, not merely
+assumed: an injected first cell denies outbound IPv4/IPv6 connections inside
+the kernel (blocking, for example, ``pandas.read_csv(url)``) while leaving
+loopback — Jupyter's own ZMQ transport — and local Unix sockets working.
 
 Usage::
 
@@ -49,6 +52,55 @@ DEFAULT_NOTEBOOK_BUDGET_S = 600
 PARAMETERS_TAG = "parameters"
 FAST_SMOKE_OVERRIDE_SOURCE = "FAST_SMOKE = True"
 
+# Injected as the first executed cell so it is active for every real cell.
+# Temporary-directory isolation and import scans do not stop a cell from
+# reaching the network (for example ``pandas.read_csv(url)``); this denies
+# outbound IPv4/IPv6 connections inside the kernel while leaving loopback —
+# the transport Jupyter's own ZMQ channels already use — and local Unix
+# sockets untouched, so a canonical notebook must run from packaged data.
+NETWORK_GUARD_SOURCE = '''\
+import ipaddress as _ipaddress
+import socket as _socket
+
+
+def _install_offline_guard():
+    real_connect = _socket.socket.connect
+    real_connect_ex = _socket.socket.connect_ex
+    ip_families = (_socket.AF_INET, _socket.AF_INET6)
+
+    def _denied(sock, address):
+        if sock.family not in ip_families:
+            return False
+        host = address[0] if isinstance(address, (tuple, list)) else address
+        if host == "localhost":
+            return False
+        try:
+            return not _ipaddress.ip_address(host).is_loopback
+        except ValueError:
+            return True
+
+    def connect(self, address):
+        if _denied(self, address):
+            raise OSError(
+                "notebook smoke denies outbound network: " + repr(address)
+            )
+        return real_connect(self, address)
+
+    def connect_ex(self, address):
+        if _denied(self, address):
+            raise OSError(
+                "notebook smoke denies outbound network: " + repr(address)
+            )
+        return real_connect_ex(self, address)
+
+    _socket.socket.connect = connect
+    _socket.socket.connect_ex = connect_ex
+
+
+_install_offline_guard()
+del _install_offline_guard
+'''
+
 
 def _canonical_paths_for_class(execution_class: str) -> list[Path]:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
@@ -65,6 +117,16 @@ def _kernel_environment() -> dict[str, str]:
     environment = dict(os.environ)
     environment["MPLBACKEND"] = "Agg"
     return environment
+
+
+def _inject_network_guard(notebook) -> None:
+    """Insert the outbound-network guard as the notebook's first cell."""
+
+    import nbformat
+
+    guard = nbformat.v4.new_code_cell(NETWORK_GUARD_SOURCE)
+    guard.metadata["tags"] = ["injected-network-guard"]
+    notebook.cells.insert(0, guard)
 
 
 def _inject_fast_smoke_override(notebook) -> None:
@@ -108,6 +170,8 @@ def _execute_in_process(
         notebook = nbformat.read(scratch, as_version=4)
         if fast_smoke:
             _inject_fast_smoke_override(notebook)
+        # Injected last so it is cell 0 and active before any real cell runs.
+        _inject_network_guard(notebook)
         client = NotebookClient(
             notebook,
             timeout=cell_timeout_s,

@@ -325,9 +325,10 @@ jobs:
         run: python -m ipykernel install --user --name python3
 
       - name: Execute the fast tutorial notebooks from the bundle
-        # MPLBACKEND=Agg, a fresh temporary working directory, and per-cell plus
-        # whole-notebook timeouts are enforced inside the smoke runner; running
-        # from the bundle proves the notebooks need no source checkout.
+        # MPLBACKEND=Agg, a fresh temporary working directory, per-cell plus
+        # whole-notebook timeouts, and outbound-network denial (loopback kept
+        # for the kernel) are enforced inside the smoke runner; running from
+        # the bundle proves the notebooks need no source checkout or network.
         run: |
           cd "$RUNNER_TEMP/wheel-smoke"
           PYTHONPATH= python scripts/run_notebook_smoke.py --class fast
