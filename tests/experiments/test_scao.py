@@ -204,6 +204,41 @@ def test_serialized_config_and_constructed_component_hashes_are_deterministic() 
     )
 
 
+def test_component_hashes_are_bound_to_the_live_components() -> None:
+    config = _tiny_system_config()
+    system = scao.build_scao_system(config)
+
+    class _ForeignAtmosphere:
+        backend_name = "native"
+        config_hash = "f" * 64
+
+    # Swapping a component while retaining the recorded hashes must not
+    # construct: the identity record would describe an atmosphere that is
+    # not the one the system holds.
+    with pytest.raises(
+        scao.ScaoConstructionError,
+        match="recomputed from the live components",
+    ):
+        replace(system, atmosphere=_ForeignAtmosphere())
+
+    # Tampering with the recorded identity itself is rejected the same way.
+    forged = dict(system.component_hashes)
+    forged["atmosphere"] = "f" * 64
+    with pytest.raises(scao.ScaoConstructionError, match="atmosphere"):
+        replace(system, component_hashes=forged)
+
+    # Dropping a required identity entry is a construction error, not a
+    # silently narrower record.
+    partial = dict(system.component_hashes)
+    del partial["controller"]
+    with pytest.raises(scao.ScaoConstructionError, match="controller"):
+        replace(system, component_hashes=partial)
+
+    # An honest replace that keeps the same components reconstructs cleanly.
+    rebuilt = replace(system, component_hashes=dict(system.component_hashes))
+    assert dict(rebuilt.component_hashes) == dict(system.component_hashes)
+
+
 def test_calibration_sources_are_explicit_and_never_fall_back(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

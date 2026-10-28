@@ -117,6 +117,32 @@ class ScaoSystem:
             normalized[key] = value
         if not isinstance(self.config_hash, str) or not self.config_hash:
             raise ScaoConstructionError("config_hash must be a non-empty string.")
+        # The recorded identity must be the identity of the components this
+        # system actually holds.  Recomputing here makes the frozen dataclass
+        # self-validating: dataclasses.replace() with a swapped component and
+        # retained hashes cannot construct, so results can never be labeled
+        # with a component identity that did not run.
+        expected = _expected_component_hashes(
+            random_streams=self.random_streams,
+            atmosphere=self.atmosphere,
+            wfs=self.wfs,
+            dm=self.dm,
+            interaction_matrix=self.interaction_matrix,
+            reconstructor=self.reconstructor,
+            command_projector=self.command_projector,
+            controller=self.controller,
+            science_propagator=self.science_propagator,
+        )
+        if normalized != expected:
+            drifted = sorted(
+                key
+                for key in set(normalized) | set(expected)
+                if normalized.get(key) != expected.get(key)
+            )
+            raise ScaoConstructionError(
+                "component_hashes must equal the hashes recomputed from the "
+                f"live components; mismatched keys: {drifted}."
+            )
         object.__setattr__(
             self,
             "component_hashes",
@@ -287,25 +313,17 @@ def build_scao_system(
             f"constructed SCAO component identities are inconsistent: {exc}"
         ) from exc
 
-    component_hashes = {
-        "random_streams": component_config_hash(
-            "scao.random_streams",
-            {
-                "root_seed": streams.root_seed,
-                "derivation_scheme_id": streams.derivation_scheme_id,
-                "registered_domains": streams.registered_domains,
-            },
-        ),
-        "pupil_geometry": geometry.geometry_hash,
-        "atmosphere": atmosphere.config_hash,
-        "wfs": wfs.config_hash,
-        "dm": dm.config_hash,
-        "interaction_matrix": matrix.matrix_hash,
-        "reconstructor": _component_hash(reconstructor, "reconstructor"),
-        "command_projector": command_projector.config_hash,
-        "controller": controller.config_hash,
-        "science_propagator": science_propagator.config_hash,
-    }
+    component_hashes = _expected_component_hashes(
+        random_streams=streams,
+        atmosphere=atmosphere,
+        wfs=wfs,
+        dm=dm,
+        interaction_matrix=matrix,
+        reconstructor=reconstructor,
+        command_projector=command_projector,
+        controller=controller,
+        science_propagator=science_propagator,
+    )
     return ScaoSystem(
         random_streams=streams,
         atmosphere=atmosphere,
@@ -699,3 +717,44 @@ def _component_hash(component: object, label: str) -> str:
             f"{label} must expose a non-empty config_hash."
         )
     return value
+
+
+def _expected_component_hashes(
+    *,
+    random_streams: RandomStreams,
+    atmosphere: AtmosphereModel,
+    wfs: WavefrontSensor,
+    dm: DeformableMirrorModel,
+    interaction_matrix: InteractionMatrix,
+    reconstructor: Reconstructor,
+    command_projector: CommandProjector,
+    controller: Controller,
+    science_propagator: SciencePropagator,
+) -> dict[str, str]:
+    """Derive the component identity record from the live components.
+
+    ``pupil_geometry`` is anchored to the interaction matrix's geometry hash;
+    :func:`build_scao_system` asserts that hash equals the constructed
+    geometry before any system exists, so the anchor is the geometry identity
+    every component was calibrated against.
+    """
+
+    return {
+        "random_streams": component_config_hash(
+            "scao.random_streams",
+            {
+                "root_seed": random_streams.root_seed,
+                "derivation_scheme_id": random_streams.derivation_scheme_id,
+                "registered_domains": random_streams.registered_domains,
+            },
+        ),
+        "pupil_geometry": interaction_matrix.geometry_hash,
+        "atmosphere": _component_hash(atmosphere, "atmosphere"),
+        "wfs": _component_hash(wfs, "wfs"),
+        "dm": _component_hash(dm, "dm"),
+        "interaction_matrix": interaction_matrix.matrix_hash,
+        "reconstructor": _component_hash(reconstructor, "reconstructor"),
+        "command_projector": _component_hash(command_projector, "command_projector"),
+        "controller": _component_hash(controller, "controller"),
+        "science_propagator": _component_hash(science_propagator, "science_propagator"),
+    }
