@@ -8,9 +8,10 @@ export function initNgsReplay(entry, entryUrl) {
   if(!root)return;
   const $=name=>document.getElementById(`ngsr-${name}`);
   const roles=['atmosphere','residual-v1','residual-v2','psf-u','psf-v1','psf-v2'];
-  let data,manifest,base,loading,index=0,requested=-1,ticket=0,playing=false,timer=null,busy=false,failed=false;
+  let data,manifest,base,orion,orionManifest,orionBase,orionReference,referenceMode=0,loading,index=0,requested=-1,ticket=0,playing=false,timer=null,busy=false,failed=false;
   let duration=matchMedia('(prefers-reduced-motion: reduce)').matches?60:40;
-  const cache=new Map();
+  const cache=new Map(),orionCache=new Map();
+  const orionFile=name=>{require(orionManifest.files[name],`Orion member missing: ${name}`);return {href:name,...orionManifest.files[name]};};
   const file=name=>{require(manifest.files[name],`Replay member missing: ${name}`);return {href:name,...manifest.files[name]};};
   function pause(){playing=false;clearTimeout(timer);$('play').textContent='Play';$('play').setAttribute('aria-pressed','false');}
   function fail(error){
@@ -33,6 +34,42 @@ export function initNgsReplay(entry, entryUrl) {
       });cache.set(k,item);
     }
     const item=cache.get(k);cache.delete(k);cache.set(k,item);return item.promise;
+  }
+  function orionAtlas(k){
+    if(!orionCache.has(k)){
+      const item={};
+      item.promise=fetchVerifiedImage(orionFile(`frames/${String(k).padStart(4,'0')}.png`),orionBase).then(({bitmap})=>{
+        require(bitmap.width===3*orion.tile&&bitmap.height===orion.tile,'Unexpected Orion atlas dimensions');item.bitmap=bitmap;return bitmap;
+      });orionCache.set(k,item);
+    }
+    return orionCache.get(k).promise;
+  }
+  function reference(){
+    if(!orionReference)return;
+    const c=$('orion-reference');c.getContext('2d').drawImage(orionReference,referenceMode*orion.tile,0,orion.tile,orion.tile,0,0,c.width,c.height);
+    $('orion-reference-caption').textContent=referenceMode?'Observed JWST + ideal 2.2 m pupil PSF':'Observed JWST · resampled, original JWST PSF retained';
+    $('orion-observed').setAttribute('aria-pressed',String(referenceMode===0));$('orion-ideal').setAttribute('aria-pressed',String(referenceMode===1));
+  }
+  async function loadOrion(){
+    const e=entry.orionReplay;require(e?.schema==='ao-explorer.orion-replay-entry.v1','Missing Orion scene');
+    const r=await fetchVerifiedJson({href:e.manifest,bytes:e.manifest_bytes,sha256:e.manifest_sha256,media_type:'application/json'},entryUrl);
+    orionManifest=r.value;orionBase=r.url;require(orionManifest.schema==='ao-explorer.orion-replay-manifest.v1'&&orionManifest.id===e.id,'Orion identity mismatch');
+    orion=(await fetchVerifiedJson(orionFile('data.json'),orionBase)).value;
+    require(orion.schema==='ao-explorer.orion-replay-data.v1'&&orion.tile===256&&orion.parent_replay_id===entry.ngsReplay.id,'Orion parent mismatch');
+    require(orion.parent_replay_data_sha256===manifest.files['data.json'].sha256&&JSON.stringify(orion.indices)===JSON.stringify(data.indices),'Orion timestamps or source differ');
+    require(orion.wavelength_m===data.wavelength_m&&orion.loss_frame===data.loss_frame&&orion.loss_time_s===data.loss_time_s,'Orion physics/timing mismatch');
+    const [rimg,ctx]=await Promise.all([fetchVerifiedImage(orionFile('reference.png'),orionBase),fetchVerifiedImage(orionFile('context.png'),orionBase)]);
+    require(rimg.bitmap.width===512&&rimg.bitmap.height===256,'Invalid Orion reference');orionReference=rimg.bitmap;reference();
+    $('orion-context').getContext('2d').drawImage(ctx.bitmap,0,0,600,600);ctx.bitmap.close();
+    const lut=orion.stretch.lut_rgb;require(lut.length===256&&lut.every(v=>v.length===3&&v.every(n=>Number.isInteger(n)&&n>=0&&n<=255)),'Invalid Orion scale');
+    const c=$('orion-scale'),context=c.getContext('2d');lut.forEach((rgb,x)=>{context.fillStyle=`rgb(${rgb.join(',')})`;context.fillRect(x,0,1,c.height);});
+    $('orion-scale-text').textContent=`${orion.stretch.low_mjy_sr.toFixed(1)}–${orion.stretch.high_mjy_sr.toFixed(1)} MJy/sr · fixed asinh / single-band false colour`;
+    $('orion-field').textContent=`Each panel: ${orion.field_arcsec.toFixed(3)}″ × ${orion.field_arcsec.toFixed(3)}″, ${(orion.pixel_arcsec*1000).toFixed(2)} mas cells. Same angular scale, brightness mapping and recorded time. Source axes retained; pupil alignment assumed.`;
+    $('orion-quality').textContent=`The displayed source contains no replaced pixels. In the wider convolution context, ${orion.source.context_bad_pixels}/${orion.source.context_pixels} invalid pixels use nearest-valid values. Changing only those fills to zero or twice their value changes the rendered channels by at most ${orion.checks.outer_fill_max_rgb_code_change}/255, across all displayed frames; this is a sensitivity check, not a bound on unknown saturated flux.`;
+    for(const [label,name] of [['Download 40 s animation (WebP)','orion-comparison.webp'],['Animation timing','movie-timing.json'],['Orion methods','README.md'],['Source and checks','provenance.json'],['Original local FITS','source-display.fits'],['Linear scene + missing-data component','scene.npz'],['Offline image exporter','exporter.py']]){
+      const a=document.createElement('a');a.href=new URL(name,orionBase);a.textContent=label;
+      a.addEventListener('click',async e=>{e.preventDefault();try{const {buffer}=await fetchVerified(orionFile(name),orionBase);const u=URL.createObjectURL(new Blob([buffer],{type:orionFile(name).media_type}));const link=document.createElement('a');link.href=u;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(u),30000);}catch(error){a.textContent=`${label} unavailable: ${error.message}`;}});$('orion-downloads').append(a);
+    }
   }
   function chart(){
     if(!data)return;
@@ -65,7 +102,9 @@ export function initNgsReplay(entry, entryUrl) {
     }
     const until=index+1<data.indices.length?m.time_s[data.indices[index+1]]:2;
     $('timing').textContent=`One pass: ${duration} s (${duration/2}× slower). This snapshot is held to ${until.toFixed(6)} s of recorded time. No interpolation; loading or background tabs may extend playback.`;
-    $('status').textContent='Synchronized saved-wavefront replay · images and all 1500 curve samples verified';
+    $('status').textContent='Synchronized wavefront, PSF and Orion replay · all 1500 curve samples verified';
+    $('orion-u-caption').textContent=`No correction · point-source Strehl ${m.uncorrected_strehl[k].toFixed(4)}`;
+    for(const id of ['v1','v2'])$(`orion-${id}-caption`).textContent=`${id==='v1'?'Original v1':'Repaired v2'} · point-source Strehl ${m[id].strehl[k].toFixed(4)}`;
     $('previous').disabled=index===0;$('next').disabled=index===data.indices.length-1;
   }
   async function show(next){
@@ -74,11 +113,14 @@ export function initNgsReplay(entry, entryUrl) {
     const token=++ticket,k=data.indices[next];requested=k;busy=true;
     $('seek').value=index;$('status').textContent=`Loading and checking frame ${k}… displayed frame remains ${data.indices[index]}.`;
     try{
-      const bitmap=await atlas(k);
+      const [bitmap,scene]=await Promise.all([atlas(k),orionAtlas(k)]);
       if(token!==ticket)return false;
       // One atlas prevents mixed-frame before/after images, even on fast seeks.
       roles.forEach((role,n)=>{const c=$(role);c.getContext('2d').drawImage(bitmap,n*data.tile,0,data.tile,data.tile,0,0,c.width,c.height);c.dataset.frame=String(k);});
-      index=next;labels();chart();trim();return true;
+      ['u','v1','v2'].forEach((role,n)=>{const c=$(`orion-${role}`);c.getContext('2d').drawImage(scene,n*orion.tile,0,orion.tile,orion.tile,0,0,c.width,c.height);c.dataset.frame=String(k);});
+      index=next;labels();chart();trim();
+      for(const [key,item] of orionCache){if(orionCache.size<=12)break;if(item.bitmap&&key!==k){item.bitmap.close();orionCache.delete(key);}}
+      return true;
     }catch(error){if(token===ticket)fail(error);return false;}
     finally{if(token===ticket)busy=false;}
   }
@@ -136,6 +178,7 @@ export function initNgsReplay(entry, entryUrl) {
         require(m[key].usable.length===1500&&m[key].usable.every(v=>typeof v==='boolean'),`Invalid ${key} validity`);
       }
       for(const field of ['uncorrected_strehl','atmosphere_rms_nm'])require(m[field].length===1500&&m[field].every(Number.isFinite),`Incomplete ${field}`);
+      await loadOrion();
       index=data.indices.indexOf(150);require(index>=0,'Missing analysis-window start');
       $('seek').max=data.indices.length-1;$('duration').value=String(duration);bars();
       root.querySelectorAll('button,input,select').forEach(e=>e.disabled=false);
@@ -144,6 +187,8 @@ export function initNgsReplay(entry, entryUrl) {
       await show(index);redrawWhenResized($('strehl'),chart);
     })();return loading;
   }
+  $('orion-observed').addEventListener('click',()=>{referenceMode=0;reference();});
+  $('orion-ideal').addEventListener('click',()=>{referenceMode=1;reference();});
   $('play').addEventListener('click',()=>{toggle().catch(fail);});
   $('previous').addEventListener('click',()=>seek(index-1));$('next').addEventListener('click',()=>seek(index+1));
   $('restart').addEventListener('click',()=>seek(0));$('seek').addEventListener('input',e=>seek(Number(e.target.value)));
@@ -152,8 +197,8 @@ export function initNgsReplay(entry, entryUrl) {
   document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
   const open=()=>load().catch(fail);
   if('IntersectionObserver' in window){const o=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){o.disconnect();open();}},{rootMargin:'200px'});o.observe(root);}else open();
-  window.addEventListener('hashchange',()=>{if(location.hash==='#ngs22-replay')open();});
-  if(location.hash==='#ngs22-replay')open();
+  window.addEventListener('hashchange',()=>{if(['#ngs22-replay','#ngs22-orion'].includes(location.hash))open();});
+  if(['#ngs22-replay','#ngs22-orion'].includes(location.hash))open();
 }
 
 // Native telemetry has its own frame selector: it includes every recorded frame,

@@ -7,7 +7,7 @@
 <meta name="description" content="Recorded 2 m, 2.2 m natural-guide-star and exploratory 42 m adaptive-optics experiments, with a documented loss-of-lock diagnosis, repair and explicit assumptions.">
 <link rel="icon" href="data:,">
 <!-- Code and style come from the content-addressed build directory; see scripts/ao_explorer/site_build.py. -->
-<link rel="stylesheet" href="code-6233215ee80710cc/styles.css">
+<link rel="stylesheet" href="code-9428ea1c76c5b0d9/styles.css">
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script type="module" src="code-6233215ee80710cc/app.js" onerror="aoCodeUnavailable()"></script>
+<script type="module" src="code-9428ea1c76c5b0d9/app.js" onerror="aoCodeUnavailable()"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -409,11 +409,11 @@ function aoCodeUnavailable() {
     </dl>
     <p><strong>Supports:</strong> stronger regularization prevents the recorded reconstruction failure on this identical input.</p>
     <p><strong>Not established:</strong> measured Robo-AO-2 performance, recovery during this v2 trajectory, or long-term robustness. A separate tip-tilt mirror is omitted; the original assumptions remain in force.</p>
-    <p class="hint"><a href="#ngs22-assumptions">All 131 original field annotations →</a> · <a href="#ngs22-control">Inspect the control diagnosis →</a></p>
+    <p class="hint"><a href="#ngs22-assumptions">All 131 original field annotations →</a> · <a href="#ngs22-control">Inspect the control diagnosis →</a> · <a href="#ngs22-orion">Orion image experiment →</a></p>
   </section>
   <section id="ngs22-replay" class="panel ngsr-panel" aria-labelledby="ngsr-title">
     <h2 id="ngsr-title">Replay the same atmosphere, before and after repair.</h2>
-    <p>Shared input on the left; original v1 in the middle; repaired v2 on the right. Wavefronts, PSFs, readouts and the black chart cursor advance together. The red dashed line marks <strong>frame 736 · 0.981333 s</strong>, the first rejected v1 reconstruction.</p>
+    <p>Shared input on the left; original v1 in the middle; repaired v2 on the right. Wavefronts, PSFs, the <a href="#ngs22-orion">Orion image experiment</a>, readouts and the black chart cursor advance together. The red dashed line marks <strong>frame 736 · 0.981333 s</strong>, the first rejected v1 reconstruction.</p>
     <p id="ngsr-status" class="status" role="status">Saved replay loads when this panel is visible.</p>
     <p id="ngsr-error" class="error" role="alert" hidden></p>
     <div class="ngsr-grid">
@@ -430,6 +430,31 @@ function aoCodeUnavailable() {
     </div>
     <div class="ngsr-scale"><canvas id="ngsr-psf-scale" width="256" height="12" aria-label="Common logarithmic PSF brightness scale"></canvas><span>10⁻⁶ · 10⁻³ · 1 of ideal peak (log scale)</span></div>
     <p id="ngsr-field" class="hint"></p>
+    <div id="ngs22-orion" class="orion-section">
+      <h3>Orion through the same recorded PSFs.</h3>
+      <p>A dark silhouette, nearby star and glowing gas in a real JWST F162M image. The sky stays fixed; only the existing 2.2 m PSF changes. <strong>Use the shared controls below:</strong> wavefronts, PSFs, Orion and the Strehl cursor move together.</p>
+      <div class="comparison-controls" role="group" aria-label="Orion reference image">
+        <button id="ngsr-orion-observed" aria-pressed="true" disabled>Reference: observed JWST</button>
+        <button id="ngsr-orion-ideal" aria-pressed="false" disabled>Reference: add ideal 2.2 m PSF</button>
+      </div>
+      <div class="orion-grid">
+        <figure><h4>Fixed reference</h4><canvas id="ngsr-orion-reference" width="256" height="256" role="img" aria-label="Fixed observed Orion reference"></canvas><figcaption id="ngsr-orion-reference-caption"></figcaption></figure>
+        <figure><h4>No correction</h4><canvas id="ngsr-orion-u" width="256" height="256" role="img" aria-label="Orion through the saved zero-DM PSF"></canvas><figcaption id="ngsr-orion-u-caption"></figcaption></figure>
+        <figure><h4 class="ngsr-v1">Original · v1</h4><canvas id="ngsr-orion-v1" width="256" height="256" role="img" aria-label="Orion through original v1 residual PSF"></canvas><figcaption id="ngsr-orion-v1-caption"></figcaption></figure>
+        <figure><h4 class="ngsr-v2">Repaired · v2</h4><canvas id="ngsr-orion-v2" width="256" height="256" role="img" aria-label="Orion through repaired v2 residual PSF"></canvas><figcaption id="ngsr-orion-v2-caption"></figcaption></figure>
+      </div>
+      <div class="ngsr-scale"><canvas id="ngsr-orion-scale" width="256" height="12" aria-label="Fixed Orion surface brightness scale"></canvas><span id="ngsr-orion-scale-text"></span></div>
+      <p id="ngsr-orion-field" class="hint"></p>
+      <p class="hint">The source is a <strong>single-band false-colour intensity image</strong>, not the multiband publicity photograph. This is additional blurring of an observed JWST image: its own PSF, diffraction spikes and noise remain. Strehl below describes the simulation's point-source PSF, not a measurement of Orion.</p>
+      <details><summary>Download animation · locate the field · source and assumptions</summary>
+        <figure class="orion-context"><canvas id="ngsr-orion-context" width="600" height="600" role="img" aria-label="Wider F162M context with a white box locating the replay"></canvas><figcaption>Wider F162M context; the white square locates the replay. Context uses a separate overview stretch.</figcaption></figure>
+        <p>NASA/ESA/CSA JWST NIRCam, GTO 1256 (PI Mark J. McCaughrean), calibrated MAST product <code>jw01256-o001_t001_nircam_f150w2-f162m_i2d.fits</code>. <a href="https://www.esa.int/Science_Exploration/Space_Science/Webb/Webb_s_wide-angle_view_of_the_Orion_Nebula_is_released_in_ESASky">Original Orion survey</a> · <a href="https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:JWST/product/jw01256-o001_t001_nircam_f150w2-f162m_i2d.fits">Full calibrated FITS (26.5 GB)</a>.</p>
+        <p>F162M's approximately 1.626 µm pivot is close to the unchanged 1.65 µm simulation wavelength. Linear calibrated surface brightness is averaged by pixel-area overlap at the true angular scale, then convolved with each full, unit-flux PSF. A wider source context supplies the entire kernel reach. No AO simulation, extra noise, deconvolution, recentering or per-frame contrast adjustment is involved.</p>
+        <p id="ngsr-orion-quality"></p>
+        <p>A spatially constant on-axis PSF is assumed across this compact field. Source-axis alignment to the simulated pupil is arbitrary. No independent per-exposure saturation audit or absolute photometric prediction is claimed. The optional ideal reference adds this model's zero-aberration 2.2 m PSF to the same JWST observation. All original instrument assumptions remain in force.</p>
+        <div id="ngsr-orion-downloads" class="downloads"></div>
+      </details>
+    </div>
     <div class="transport" role="group" aria-label="Synchronized 2.2 m playback">
       <button id="ngsr-restart" disabled>Restart</button><button id="ngsr-previous" disabled aria-label="Previous 2.2 m snapshot">◀ Step</button><button id="ngsr-play" disabled aria-pressed="false">Play</button><button id="ngsr-next" disabled aria-label="Next 2.2 m snapshot">Step ▶</button>
       <label>Seek <input id="ngsr-seek" type="range" min="0" max="1" value="0" step="1" disabled></label>

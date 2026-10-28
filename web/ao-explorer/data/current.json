@@ -4,7 +4,7 @@
  "manifest": "series-2m1000-s624-c7241e4190d5-ef74a541b0e60/manifest.json",
  "manifest_bytes": 42464,
  "manifest_sha256": "a151da4b84b21029c03a9f373c586a8203781807e52cb0f9bedddef4ae1719ee",
- "code_build": "6233215ee80710cc",
+ "code_build": "9428ea1c76c5b0d9",
  "galaxy": {
   "schema": "ao-explorer.galaxy-entry.v3",
   "derived_id": "ngc1705-f814w-2m1000-s624-c7241e4190d5-gda93ed5af026-m4adb5a4af111",
@@ -60,5 +60,12 @@
   "manifest": "../derived/ngs-control-f47d3472be91885b/manifest.json",
   "manifest_bytes": 955,
   "manifest_sha256": "415a08555edcd5d3309a5c7ed15d75f2a3c3f24a42e01b31e40f0f796fdb074f"
+ },
+ "orionReplay": {
+  "schema": "ao-explorer.orion-replay-entry.v1",
+  "id": "orion-ngs-f2a2508c8d8e1ace",
+  "manifest": "../derived/orion-ngs-f2a2508c8d8e1ace/manifest.json",
+  "manifest_bytes": 29421,
+  "manifest_sha256": "dedfd72bbb2fad467b87d118dc938fcef7507edbcce9b63065fe8c1dd68fb994"
  }
 }
