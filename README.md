@@ -28,3 +28,20 @@ It does not run simulations or the Python test suite.
 The recorded datasets include size and SHA-256 references. Preserve each
 complete dataset and its references when updating the site. Source links
 in the research panels point to the commits that produced those records.
+
+## Generate a run
+
+The generation panel connects to the optional computation service proposed
+in [PR #8](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/pull/8).
+It contacts the address you enter only after you press **Connect**. No public
+service is configured.
+
+For a local preview, check out the service branch separately, install it,
+then run this from that checkout:
+
+```bash
+python scripts/ao_dynamic/service.py --port 8765 --web-dir /path/to/website-checkout/site
+```
+
+Open `http://127.0.0.1:8765/?backend=/#generate`. The recorded experiments
+and their data do not need the service.

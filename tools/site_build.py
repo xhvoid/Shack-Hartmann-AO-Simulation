@@ -31,7 +31,7 @@ import sys
 from typing import Any, Dict, List, Optional
 
 
-CODE_FILES = ("app.js", "charts.js", "galaxy.js", "integrity.js", "playback.js", "ngs-replay.js", "replay42.js", "c1-noise.js",
+CODE_FILES = ("app.js", "charts.js", "generate-contract.js", "generate.js", "galaxy.js", "integrity.js", "playback.js", "ngs-replay.js", "replay42.js", "c1-noise.js",
               "dm-stroke.js", "aperture.js", "results.js", "styles.css")
 BUILD_DIGITS = 16
 _DIR = re.compile(rf"^code-([0-9a-f]{{{BUILD_DIGITS}}})$")

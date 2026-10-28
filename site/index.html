@@ -6,8 +6,8 @@
 <title>AO Simulation Explorer</title>
 <meta name="description" content="A personal adaptive-optics project with interactive simulation replays, a 2.2 m loss-of-lock case study, and notes on methods and assumptions.">
 <link rel="icon" href="data:,">
-<!-- Code and style come from the content-addressed build directory; see scripts/ao_explorer/site_build.py. -->
-<link rel="stylesheet" href="code-1b622f6ae210c920/styles.css">
+<!-- Code and style come from the content-addressed build directory; see tools/site_build.py. -->
+<link rel="stylesheet" href="code-afc0a8269a3f5363/styles.css">
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script type="module" src="code-1b622f6ae210c920/app.js" onerror="aoCodeUnavailable()"></script>
+<script type="module" src="code-afc0a8269a3f5363/app.js" onerror="aoCodeUnavailable()"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -30,6 +30,7 @@ function aoCodeUnavailable() {
     <nav aria-label="Sections">
       <ul class="nav">
         <li><a href="#explore">Explore 2 m</a></li>
+        <li><a href="#generate">Generate a run</a></li>
         <li><a href="#project">Behind the simulation</a></li>
         <li><a href="#replay42">Explore 42 m</a></li>
         <li><a href="#ngs22">2.2 m NGS study</a></li>
@@ -223,6 +224,148 @@ function aoCodeUnavailable() {
     <details><summary>Provenance of this case</summary><pre id="provenance" class="pre"></pre></details>
     <details><summary>Scene and observation metadata</summary><pre id="observation-meta" class="pre"></pre></details>
   </section>
+</section>
+
+<section id="generate" class="wrap section" aria-labelledby="generate-title">
+  <h1 id="generate-title">Generate an experiment</h1>
+  <p class="lede">Run a new seeded 2 m Shack-Hartmann simulation through a computation service, then replay the result. The default run has 180 frames at 1 kHz, with frames 40–179 used for averages. It uses the original short-run atmosphere setup; the recorded one-second experiment above uses a larger screen.</p>
+
+  <section class="panel" aria-labelledby="gen-service-title">
+    <h2 id="gen-service-title">Computation service</h2>
+    <p id="gen-conn-state" class="status" role="status" aria-live="polite">Not connected. This page has no computation service configured, so new runs cannot be generated here; the precomputed experiment and the research results remain fully available.</p>
+    <form id="gen-connect-form" class="gen-connect">
+      <label for="gen-url">Service address</label>
+      <input id="gen-url" name="gen-url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="http://127.0.0.1:8765">
+      <button type="submit" id="gen-connect">Connect</button>
+      <button type="button" id="gen-disconnect" hidden>Disconnect</button>
+    </form>
+    <p class="hint">Connecting sends requests only to the address in the field, and only after you press Connect; an address given as <code>?backend=</code> in this page's address just fills in the field. A connected service computes the runs this section shows; check that you trust it. See the <a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/feature/dynamic-phase/docs/research/ao_dynamic_v1/DEPLOYMENT.md">service setup guide</a> to run it locally.</p>
+    <div id="gen-error" class="error" role="alert" hidden></div>
+  </section>
+
+  <div id="gen-app" hidden>
+    <section class="panel" aria-labelledby="gen-params-title">
+      <h2 id="gen-params-title">Parameters (pending, not yet computed)</h2>
+      <p class="hint">Editing these fields never starts a computation. A run starts only from the buttons below; the displayed run keeps its own fixed configuration.</p>
+      <form id="gen-form" class="gen-form" novalidate></form>
+      <p id="gen-hints" class="hint" aria-live="polite"></p>
+      <p id="gen-pending" class="gen-pending" aria-live="polite"></p>
+      <div class="gen-actions" role="group" aria-label="Start a computation">
+        <button type="button" id="gen-run">Run with these parameters</button>
+        <button type="button" id="gen-new">New random realization</button>
+        <button type="button" id="gen-reproduce" disabled>Reproduce the displayed run</button>
+        <button type="button" id="gen-compare" disabled>Compare using the same turbulence</button>
+        <button type="button" id="gen-check">Check admission only</button>
+      </div>
+      <p id="gen-compare-note" class="hint" hidden></p>
+    </section>
+
+    <section class="panel" aria-labelledby="gen-job-title">
+      <h2 id="gen-job-title">Computation</h2>
+      <p id="gen-job-state" class="gen-job-state" role="status" aria-live="polite">No computation requested.</p>
+      <div class="gen-progress"><progress id="gen-progress" max="1" value="0" aria-labelledby="gen-job-title"></progress><span id="gen-progress-text"></span></div>
+      <button type="button" id="gen-cancel" disabled>Cancel computation</button>
+      <p class="hint">Computation progress counts frames computed by the service; physical time is simulated time inside the run (1 ms per frame); playback below only replays a completed run. Cancel stops the numerical job on the service; Pause only stops the replay.</p>
+      <details><summary>Runs available on this service</summary>
+        <label class="selector">Load a completed run <select id="gen-runs"><option value="">—</option></select></label>
+        <button type="button" id="gen-runs-refresh">Refresh list</button>
+      </details>
+    </section>
+
+    <section class="panel" aria-labelledby="gen-view-title">
+      <div class="viewer-head">
+        <h2 id="gen-view-title">Displayed run</h2>
+        <fieldset class="segmented" id="gen-quantity">
+          <legend>Wavefront maps</legend>
+          <label><input type="radio" name="gen-quantity" value="opd" checked> OPD (nm)</label>
+          <label><input type="radio" name="gen-quantity" value="phase-science"> Phase at 1.65 µm</label>
+          <label><input type="radio" name="gen-quantity" value="phase-wfs"> Phase at 0.70 µm</label>
+        </fieldset>
+      </div>
+      <p id="gen-run-id" class="gen-run-id">No generated run is displayed yet.</p>
+      <ul id="gen-warnings" class="gen-warnings"></ul>
+      <div class="maps">
+        <figure class="map"><canvas id="gen-map-atmosphere" width="208" height="208" role="img" aria-label="Atmospheric OPD or phase"></canvas>
+          <figcaption><strong>Atmosphere</strong><span id="gen-unit-atmosphere">OPD, nm</span><span class="map-frame" id="gen-note-atmosphere"></span></figcaption></figure>
+        <figure class="map"><canvas id="gen-map-correction" width="208" height="208" role="img" aria-label="Held DM correction"></canvas>
+          <figcaption><strong>Held DM correction</strong><span id="gen-unit-correction">atmosphere minus residual, OPD-equivalent nm</span><span class="map-frame" id="gen-note-correction"></span></figcaption></figure>
+        <figure class="map"><canvas id="gen-map-residual" width="208" height="208" role="img" aria-label="Pre-update residual"></canvas>
+          <figcaption><strong>Residual seen by the WFS</strong><span id="gen-unit-residual">pre-update residual, nm</span><span class="map-frame" id="gen-note-residual"></span></figcaption></figure>
+        <div class="colorbar-block"><canvas id="gen-cbar-opd" width="24" height="200" aria-hidden="true"></canvas><div class="cbar-labels" id="gen-cbar-opd-labels"></div><p class="cbar-note" id="gen-cbar-opd-note"></p></div>
+      </div>
+      <div class="psfs">
+        <figure class="map psf"><canvas id="gen-psf-uncorrected" width="256" height="256" role="img" aria-label="Uncorrected instantaneous PSF"></canvas>
+          <figcaption><strong>Uncorrected instantaneous PSF</strong><span id="gen-psf-unc-sub">same atmosphere, zero DM</span></figcaption></figure>
+        <figure class="map psf"><canvas id="gen-psf-corrected" width="256" height="256" role="img" aria-label="AO-corrected instantaneous PSF"></canvas>
+          <figcaption><strong>AO-corrected instantaneous PSF</strong><span id="gen-psf-ao-sub">pre-update residual</span></figcaption></figure>
+        <div class="colorbar-block"><canvas id="gen-cbar-psf" width="24" height="200" aria-hidden="true"></canvas><div class="cbar-labels" id="gen-cbar-psf-labels"></div><p class="cbar-note" id="gen-cbar-psf-note"></p></div>
+      </div>
+      <div class="viewer-head">
+        <h3 id="gen-obs-title">Synthetic binary observation</h3>
+        <fieldset class="segmented" id="gen-obs-mode">
+          <legend>Observation</legend>
+          <label><input type="radio" name="gen-obs-mode" value="instantaneous" checked> Instantaneous</label>
+          <label><input type="radio" name="gen-obs-mode" value="running"> Running average</label>
+          <label><input type="radio" name="gen-obs-mode" value="final"> Completed window</label>
+        </fieldset>
+      </div>
+      <div class="binary">
+        <figure class="map obs"><canvas id="gen-scene" width="256" height="256" role="img" aria-label="Input binary scene (shared)"></canvas>
+          <figcaption><strong>Input scene (shared)</strong><span id="gen-scene-caption"></span></figcaption></figure>
+        <figure class="map obs"><canvas id="gen-obs-uncorrected" width="256" height="256" role="img" aria-label="Uncorrected synthetic observation"></canvas>
+          <figcaption><strong id="gen-obs-unc-title">Uncorrected observation</strong><span id="gen-obs-unc-caption"></span></figcaption></figure>
+        <figure class="map obs"><canvas id="gen-obs-corrected" width="256" height="256" role="img" aria-label="AO-corrected synthetic observation"></canvas>
+          <figcaption><strong id="gen-obs-ao-title">AO-corrected observation</strong><span id="gen-obs-ao-caption"></span></figcaption></figure>
+      </div>
+      <p class="hint" id="gen-obs-note"></p>
+
+      <div class="transport" role="group" aria-label="Replay of the displayed run">
+        <button type="button" id="gen-restart">Restart</button>
+        <button type="button" id="gen-prev">◀ Step</button>
+        <button type="button" id="gen-play" aria-pressed="false">Play</button>
+        <button type="button" id="gen-next">Step ▶</button>
+        <label class="seek">Seek <input type="range" id="gen-seek" min="0" max="0" value="0" step="1"></label>
+        <label class="speed">Replay rate
+          <select id="gen-speed">
+            <option value="2">2 frames/s</option>
+            <option value="5">5 frames/s</option>
+            <option value="10" selected>10 frames/s</option>
+            <option value="20">20 frames/s</option>
+          </select>
+        </label>
+        <label class="speed"><input type="checkbox" id="gen-loop"> Loop replay</label>
+      </div>
+      <p class="frame-readout" id="gen-readout" aria-live="polite"></p>
+      <p class="hint" id="gen-replay-note"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="gen-curves-title">
+      <h2 id="gen-curves-title">Histories of the displayed run</h2>
+      <p class="hint" id="gen-curves-hint"></p>
+      <div class="charts">
+        <figure class="chart"><canvas id="gen-chart-rms" width="640" height="220" role="img" aria-label="RMS against physical time"></canvas><figcaption>Pupil RMS (piston removed): atmosphere and pre-update residual, nm OPD</figcaption></figure>
+        <figure class="chart"><canvas id="gen-chart-strehl" width="640" height="220" role="img" aria-label="Strehl against physical time"></canvas><figcaption>Peak Strehl at 1.65 µm: instantaneous values and the Strehl of the running averaged intensity</figcaption></figure>
+        <figure class="chart"><canvas id="gen-chart-valid" width="640" height="160" role="img" aria-label="Measurement validity against physical time"></canvas><figcaption>Valid measurement fraction of frame k and DM saturation of the command issued at frame k (held from k + 1); ticks below mark frames whose reconstruction was unusable</figcaption></figure>
+      </div>
+      <p class="current-frame" id="gen-current" aria-live="polite"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="gen-summary-title">
+      <h2 id="gen-summary-title">Completed analysis window and comparison</h2>
+      <p class="table-title" id="gen-summary-table-title"></p>
+      <div id="gen-summary-table" class="table-scroll" role="region" tabindex="0" aria-labelledby="gen-summary-table-title"></div>
+      <p class="hint" id="gen-pairing"></p>
+      <button type="button" id="gen-set-reference" disabled>Use the displayed run as the comparison reference</button>
+      <button type="button" id="gen-clear-reference" disabled>Clear comparison</button>
+    </section>
+
+    <section class="panel" aria-labelledby="gen-details-title">
+      <h2 id="gen-details-title">Downloads, identities and checks</h2>
+      <div id="gen-downloads" class="downloads"></div>
+      <details><summary>How generated frames and images are defined</summary><div id="gen-model-notes" class="prose"></div></details>
+      <details><summary>Identities, admission and numerical checks of the displayed run</summary><pre id="gen-provenance" class="pre"></pre></details>
+    </section>
+  </div>
 </section>
 
 <section id="project" class="wrap section" aria-labelledby="project-title">
@@ -632,7 +775,7 @@ function aoCodeUnavailable() {
     <ul id="methods-identity"></ul>
 
     <h2>Local preview</h2>
-    <p>The site is static and needs an HTTP server; opening <code>index.html</code> from the file system is not supported. From the repository root run <code>python3 -m http.server 8000 --directory web</code> and open <code>http://localhost:8000/ao-explorer/</code>. All assets are bundled; the page makes no external requests. Source links in the appendix open the corresponding GitHub files at their recorded commits.</p>
+    <p>The site is static and needs an HTTP server; opening <code>index.html</code> from the file system is not supported. From the repository root run <code>python3 -m http.server 8000 --directory site</code> and open <code>http://localhost:8000/</code>. Recorded assets are bundled. The optional generation section contacts a service only after you press Connect. Source links in the appendix open the corresponding GitHub files at their recorded commits.</p>
     <p>The page's code lives in a directory named after its content (<code>code-&lt;build&gt;/</code>) and the dataset entry records that build, so a browser cannot combine a cached older script with newer data: a page whose code does not match the entry says so and asks for a reload.</p>
   </div>
   </details>
