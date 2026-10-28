@@ -13,7 +13,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 import math
 from types import MappingProxyType
-from typing import Any, Literal, cast
+from typing import Any, Literal, TypeGuard, cast
 
 import numpy as np
 
@@ -818,6 +818,27 @@ def _immutable_array_copy(value: object, *, dtype: Any) -> np.ndarray:
     contiguous = np.ascontiguousarray(np.array(value, dtype=dtype, copy=True))
     immutable = np.frombuffer(contiguous.tobytes(order="C"), dtype=contiguous.dtype)
     return immutable.reshape(contiguous.shape)
+
+
+def is_immutable_buffer_array(value: object, *, dtype: Any) -> TypeGuard[np.ndarray]:
+    """Whether ``value`` already is an immutable ``bytes``-backed array.
+
+    That is a plain C-contiguous ``ndarray`` of exactly ``dtype`` whose memory
+    is a ``bytes`` object, which is what the repository's immutable-copy
+    helpers return.  Such an array can never be made writeable, so handing it
+    out again is as safe as copying it onto a new ``bytes`` buffer, and it
+    avoids a second full copy of large arrays such as dense DM influence
+    stacks.
+    """
+
+    if type(value) is not np.ndarray or value.dtype != np.dtype(dtype):
+        return False
+    if value.flags.writeable or not value.flags.c_contiguous:
+        return False
+    base: object = value
+    while isinstance(base, np.ndarray):
+        base = base.base
+    return isinstance(base, bytes)
 
 
 def _length_float_array(value: object, length: int, *, label: str) -> np.ndarray:
