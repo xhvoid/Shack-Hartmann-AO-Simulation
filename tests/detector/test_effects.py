@@ -14,6 +14,7 @@ from shwfs_ao.detector.config import DetectorConfig
 from shwfs_ao.core.hashing import component_config_hash
 from shwfs_ao.detector.effects import (
     DetectorEffectsError,
+    _noiseless_frame_scales_with_source,
     _noiseless_response_identity,
     apply_detector_effects,
     apply_legacy_detector_effects,
@@ -823,3 +824,62 @@ def test_noiseless_response_identity_is_the_frame_up_to_a_positive_scale():
     )
     np.testing.assert_array_equal(background_frame, photonless_frame)
     assert background_identity == photonless_identity
+
+
+def test_legacy_prnu_identity_binds_the_seeds_its_noiseless_frames_reuse():
+    """Per-frame legacy PRNU is a fresh draw per seed, even without noise."""
+
+    intensity = np.full((4, 5), 0.05)
+    config = DetectorConfig(
+        photons_per_subap_frame=1.0e4,
+        prnu_rms=0.05,
+        prnu_mode="per_frame_legacy",
+    )
+    streams, realization = _detector_state(config, intensity.shape)
+
+    def noiseless(seed: int) -> np.ndarray:
+        return apply_detector_effects(
+            intensity,
+            config,
+            realization,
+            random_streams=streams,
+            include_noise=False,
+            legacy_seed=seed,
+        ).image_e
+
+    np.testing.assert_array_equal(noiseless(5), noiseless(5))
+    assert not np.array_equal(noiseless(5), noiseless(6))
+
+    def identity(seeds: tuple[int | None, ...]) -> str:
+        return component_config_hash(
+            "test_noiseless_response_identity",
+            _noiseless_response_identity(config, realization, legacy_prnu_seeds=seeds),
+        )
+
+    assert identity((5, 7)) == identity((5, 7))
+    assert identity((5, 7)) != identity((6, 7))
+    with pytest.raises(DetectorEffectsError, match="legacy_prnu_seeds"):
+        _noiseless_response_identity(config, realization)
+
+
+def test_only_a_pedestal_or_full_well_makes_the_source_scale_matter():
+    scaled = DetectorConfig(
+        photons_per_subap_frame=1.0e4,
+        prnu_rms=0.05,
+        prnu_mode="persistent",
+        bad_pixel_fraction=0.1,
+    )
+    assert _noiseless_frame_scales_with_source(scaled)
+    assert not _noiseless_frame_scales_with_source(
+        replace(scaled, background_e_per_pixel_frame=1.0)
+    )
+    assert not _noiseless_frame_scales_with_source(
+        replace(scaled, dark_e_per_s=1.0e3)
+    )
+    assert not _noiseless_frame_scales_with_source(replace(scaled, full_well_e=1.0e5))
+    # Without a photon budget only persistent mode adds the pedestal.
+    photonless = DetectorConfig(background_e_per_pixel_frame=5.0, prnu_mode="per_frame_legacy")
+    assert _noiseless_frame_scales_with_source(photonless)
+    assert not _noiseless_frame_scales_with_source(
+        replace(photonless, prnu_mode="persistent")
+    )
