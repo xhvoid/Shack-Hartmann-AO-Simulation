@@ -55,16 +55,24 @@ continues a gated series.  A resume that finds every planned run already
 recorded says so and leaves the record unchanged.  On
 resume every saved run must carry the protocol identity this invocation would
 give it (configuration hash with seed and frame count, burn-in, execution
-options, the code identity -- git HEAD plus a digest of uncommitted source
-changes -- and the producing environment: Python, NumPy, SciPy and machine);
-a mismatch stops the command, and a record without identities cannot be
-resumed.  Every retained run, including the runs of other arms, must share
-the record's series protocol (version, frames, burn-in, execution options,
-code and environment), so arms of ``e3-recovery`` and ``e3-excursion`` append
-to one record with ``--resume`` only under the same protocol.  Each run's
-protocol names the environment that produced it (series protocol version 3,
-2026-10-18, GPT pre-refactor audit F-03); version-2 records do not, so they
-cannot be continued, and nothing is attributed to them after the fact.  A
+options, the code identity and the producing environment: Python, NumPy,
+SciPy and machine); a mismatch stops the command, and a record without
+identities cannot be resumed.  The code identity is the code the process
+runs: a digest of the ``shwfs_ao`` package it imports (bytecode and hidden
+files left out) and of this script, with the Git HEAD and a digest of the
+uncommitted changes of the package's source directory when the repository
+that holds the package tracks it; otherwise those two are null and the code
+identity is unknown.  Every retained run, including the runs of other arms,
+must share the record's series protocol (version, frames, burn-in, execution
+options, code and environment), so arms of ``e3-recovery`` and
+``e3-excursion`` append to one record with ``--resume`` only under the same
+protocol.  Each run's protocol names the environment that produced it (series
+protocol version 3, 2026-10-18, GPT pre-refactor audit F-03); version-2
+records do not, so they cannot be continued, and nothing is attributed to
+them after the fact.  Series protocol version 4 (2026-10-20, OBS-07) takes
+the code identity from the imported package: a version-3 code identity named
+this script's repository, which need not hold the package a run imported, so
+version-3 records cannot be continued either and are never relabelled.  A
 resume that would add runs also stops when the code identity is unknown.  A
 saved record must also agree with itself (GPT independent review AR-016,
 2026-10-20): every run's stored protocol hash is recomputed from its stored
@@ -94,8 +102,10 @@ import numpy as np
 REPOSITORY = Path(__file__).resolve().parents[1]
 EVIDENCE_DIR = REPOSITORY / "docs/refactor/detector_level_evidence"
 # Protocol identity version of gated-series runs (review R6).  Version 3
-# (2026-10-18) adds the producing environment to the shared protocol.
-SERIES_PROTOCOL_VERSION = 3
+# (2026-10-18) adds the producing environment to the shared protocol; version
+# 4 (2026-10-20, OBS-07) takes the code identity from the imported package
+# instead of this script's repository.
+SERIES_PROTOCOL_VERSION = 4
 # Global options, set by main(): fresh output name, overwrite, resume,
 # enablement note and output directory (None selects EVIDENCE_DIR).
 OPTIONS = argparse.Namespace(output=None, overwrite=False, resume=False, enabled_by_user=None, output_dir=None)
@@ -172,27 +182,67 @@ def _write(name: str, record: dict[str, Any], *, resumed: bool = False) -> Path:
     return path
 
 
-def code_identity() -> dict[str, Any]:
-    """Git HEAD and a digest of uncommitted changes under ``src`` and ``scripts``."""
+def _package_sha256(package: Path) -> str:
+    """SHA-256 over the files of a package: each relative name and content digest.
+
+    Bytecode and hidden files or folders are left out, as in the S3 driver:
+    Finder metadata (``.DS_Store``, ``._*``) and the like can appear without
+    any code change and must not change the identity.
+    """
+
+    digest = hashlib.sha256()
+    for path in sorted(package.rglob("*")):
+        relative = path.relative_to(package)
+        hidden = any(part.startswith(".") for part in relative.parts)
+        if path.is_file() and not hidden and "__pycache__" not in relative.parts and path.suffix != ".pyc":
+            digest.update(relative.as_posix().encode("utf-8") + b"\0")
+            digest.update(hashlib.sha256(path.read_bytes()).digest())
+    return digest.hexdigest()
+
+
+def code_identity(package: Path | None = None) -> dict[str, Any]:
+    """The code a run executes: the imported package, this script, and Git where it tracks the package.
+
+    ``package`` defaults to the directory of the ``shwfs_ao`` this process
+    imports, which need not lie in this script's repository: without
+    PYTHONPATH a shared environment's editable install can supply another
+    checkout's package (OBS-07, review CR-02).  ``package_sha256`` digests
+    that package and ``script_sha256`` this script, so two processes that run
+    different code never share an identity.  Git HEAD and the digest of the
+    uncommitted changes under the package's source directory are recorded
+    only when the repository that holds the package tracks it; for a copy in
+    an ignored or foreign directory, or without Git, they are null, and the
+    code identity counts as unknown.  This is the S3 driver's code identity.
+    """
+
+    if package is None:
+        import shwfs_ao
+
+        package = Path(shwfs_ao.__file__).parent
+    package = package.resolve()
+    source = package.parent
+    # Names only: a record must not carry the local checkout path.
+    identity: dict[str, Any] = {
+        "package_directory": source.name,
+        "package_sha256": _package_sha256(package),
+        "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "git_head": None,
+        "source_changes_sha256": None,
+    }
+
+    def git(*arguments: str, cwd: Path) -> subprocess.CompletedProcess:
+        return subprocess.run(["git", *arguments], cwd=cwd, capture_output=True, check=True)
 
     try:
-        head = subprocess.run(
-            ["git", "rev-parse", "HEAD"], cwd=REPOSITORY, capture_output=True, text=True, check=True
-        ).stdout.strip()
-        diff = subprocess.run(
-            ["git", "diff", "HEAD", "--", "src", "scripts"], cwd=REPOSITORY, capture_output=True, check=True
-        ).stdout
-        untracked = subprocess.run(
-            ["git", "ls-files", "--others", "--exclude-standard", "--", "src", "scripts"],
-            cwd=REPOSITORY, capture_output=True, text=True, check=True,
-        ).stdout.split()
-    except (OSError, subprocess.CalledProcessError):
-        return {"git_head": None, "source_changes_sha256": None}
-    digest = hashlib.sha256(diff)
-    for name in sorted(untracked):
-        digest.update(name.encode("utf-8"))
-        digest.update((REPOSITORY / name).read_bytes())
-    return {"git_head": head, "source_changes_sha256": digest.hexdigest()}
+        top = Path(git("rev-parse", "--show-toplevel", cwd=package).stdout.decode().strip()).resolve()
+        git("ls-files", "--error-unmatch", "--", (package / "__init__.py").relative_to(top).as_posix(), cwd=top)
+        head = git("rev-parse", "HEAD", cwd=top).stdout.decode().strip()
+        diff = git("diff", "HEAD", "--", source.relative_to(top).as_posix(), cwd=top).stdout
+    except (OSError, ValueError, subprocess.CalledProcessError):
+        return identity
+    identity["git_head"] = head
+    identity["source_changes_sha256"] = hashlib.sha256(diff).hexdigest()
+    return identity
 
 
 def producer_environment() -> dict[str, str]:
@@ -622,10 +672,15 @@ def _gated_series(
         shared = _shared_protocol(n_steps, burn_in, execution, code, environment)
         mismatched = []
         unattributed = []
+        superseded = []
         for entry in previous["runs"]:
             key = (entry.get("label"), entry.get("root_seed"))
             if "environment" not in entry["protocol"]:
                 unattributed.append(key)
+                continue
+            version = entry["protocol"].get("series_protocol_version")
+            if _canonical(version) != _canonical(SERIES_PROTOCOL_VERSION):
+                superseded.append((key, version))
                 continue
             saved = {name: entry["protocol"].get(name) for name in shared}
             if _canonical(saved) != _canonical(shared):
@@ -637,6 +692,19 @@ def _gated_series(
                 f"{path}: saved runs {unattributed} do not name the environment that "
                 "produced them (series protocol version < 3), so a resume cannot show "
                 "they share this one.  Pass --output NAME for a fresh record."
+            )
+        if superseded:
+            # Series protocol 4 (OBS-07): a version-3 run's code identity names
+            # the runner's repository, not the package the run imported, so
+            # it cannot be compared with this one.  It is not relabelled.
+            versions = sorted({_canonical(version) for _, version in superseded})
+            raise EvidenceRecordExists(
+                f"{path}: saved runs {[key for key, _ in superseded]} were made under series "
+                f"protocol version {', '.join(versions)}, and this runner continues version "
+                f"{SERIES_PROTOCOL_VERSION} only: a version-3 code identity names the runner's "
+                "repository, not the package the run imported, so a resume cannot show the saved "
+                "runs share this invocation's code.  The record is neither continued nor "
+                "relabelled; pass --output NAME for a fresh record."
             )
         if mismatched:
             raise EvidenceRecordExists(
@@ -660,9 +728,9 @@ def _gated_series(
         )
     if resumed and pending and code.get("git_head") is None:
         raise EvidenceRecordExists(
-            f"{path}: the code identity of this invocation is unknown (no git HEAD), so "
-            "runs added now could not be shown to use the code of the saved runs.  Pass "
-            "--output NAME for a fresh record."
+            f"{path}: the code identity of this invocation is unknown (no Git repository "
+            "tracks the imported package), so runs added now could not be shown to use the "
+            "code of the saved runs.  Pass --output NAME for a fresh record."
         )
     if resumed and pending:
         record["resumed_enabled_by_user"] = [*resumed_notes, note]
