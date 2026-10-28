@@ -181,6 +181,8 @@ def centroid_quality(
     cropped_spot_norm: np.ndarray,
     full_spot_norm: np.ndarray,
     detector: DetectorConfig,
+    *,
+    source_spot_norm: np.ndarray | None = None,
 ) -> CentroidQuality:
     """Calculate expected-photon-budget diagnostics for one lenslet spot.
 
@@ -189,10 +191,25 @@ def centroid_quality(
     detector with ``photons_per_subap_frame=None`` denotes an ideal reference
     path: flux and SNR are not applicable (NaN), while the uncertainty proxy is
     zero.  Window clipping remains diagnostic in both modes.
+
+    Window clipping always compares ``cropped_spot_norm`` with
+    ``full_spot_norm``, so it measures optical capture.  The expected source
+    image defaults to ``cropped_spot_norm``; ``source_spot_norm`` supplies it
+    separately when the photon budget is allocated independently of that
+    capture, as a unit-sum allocation does.
     """
 
     cropped = _validated_spot(cropped_spot_norm, label="cropped_spot_norm")
     full = _validated_spot(full_spot_norm, label="full_spot_norm")
+    if source_spot_norm is None:
+        source = cropped
+    else:
+        source = _validated_spot(source_spot_norm, label="source_spot_norm")
+        if source.shape != cropped.shape:
+            raise ValueError(
+                "source_spot_norm must share the cropped_spot_norm window "
+                f"shape {cropped.shape}; got {source.shape}."
+            )
 
     n_pixels = int(cropped.size)
     full_sum = float(np.sum(full, dtype=np.float64))
@@ -255,7 +272,7 @@ def centroid_quality(
         nonnegative=True,
     )
     with np.errstate(over="ignore", invalid="ignore"):
-        signal_per_pixel_e = photons * quantum_efficiency * cropped
+        signal_per_pixel_e = photons * quantum_efficiency * source
     if not np.all(np.isfinite(signal_per_pixel_e)):
         raise ValueError("expected source-electron image must be finite.")
 
