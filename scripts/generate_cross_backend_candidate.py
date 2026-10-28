@@ -36,7 +36,7 @@ GENERATOR_NAME = "scripts/generate_cross_backend_candidate.py"
 # without looking for concealed index entries, that its commit and patch hash
 # were sampled non-atomically, or that only the top-level package was checked
 # against this checkout.  Version 3 is the first that closes all three.
-GENERATOR_VERSION = "4"
+GENERATOR_VERSION = "5"
 CANDIDATE_FILE = "cross_backend_candidate.json"
 DIFF_JSON = "cross_backend_diff.json"
 DIFF_MARKDOWN = "cross_backend_diff.md"
@@ -94,8 +94,7 @@ def main() -> None:
     # both run in an interpreter whose bytecode cache and import state this
     # script controls.  Placed after argument validation so a mistyped command
     # is still answered immediately, by the process the maintainer started.
-    if not os.environ.get(_CONTROLLED_INTERPRETER):
-        _reexec_in_a_controlled_interpreter()
+    _require_a_controlled_interpreter()
     if args.generate_candidate:
         if args.reason is not None or args.review_reference is not None:
             parser.error("Acceptance metadata is not valid during candidate generation.")
@@ -120,6 +119,90 @@ def main() -> None:
 
 
 _CONTROLLED_INTERPRETER = "SHWFS_AO_CROSS_BACKEND_CONTROLLED_INTERPRETER"
+
+
+def _uncontrolled_interpreter_reasons() -> list[str]:
+    """Why this interpreter is not one this script would have started.
+
+    The conditions are read from the interpreter itself rather than from the
+    marker environment variable, because the marker is set by whoever launches
+    the process and therefore proves nothing: exporting it was enough to run
+    generation with bytecode writing enabled, no controlled cache, and every
+    ``__pycache__`` in the checkout live — the exact state the re-exec exists to
+    prevent, entered by claiming it had already been prevented.
+
+    Each condition is a property of how this process was started, so none of
+    them can be established from inside it; they can only be checked.
+    """
+
+    reasons: list[str] = []
+    if not sys.dont_write_bytecode:
+        reasons.append(
+            "bytecode writing is enabled (the interpreter was started without -B)"
+        )
+    prefix = sys.pycache_prefix
+    if prefix is None:
+        reasons.append(
+            "there is no bytecode cache prefix, so the checkout's own "
+            "__pycache__ directories are consulted"
+        )
+    else:
+        resolved = Path(prefix).resolve()
+        if resolved == REPO_ROOT or REPO_ROOT in resolved.parents:
+            reasons.append(
+                f"the bytecode cache prefix {resolved} lies inside the "
+                "repository, so it is neither controlled nor covered by the "
+                "patch hash"
+            )
+        elif any(resolved.rglob("*.pyc")):
+            reasons.append(
+                f"the bytecode cache prefix {resolved} already holds compiled "
+                "modules, so it is not a fresh cache"
+            )
+    # site processing runs sitecustomize, usercustomize and every .pth file
+    # before this script's first line, and any of them may import repository
+    # code.  Modules loaded that early were resolved before provenance could be
+    # sampled and before their origin could be checked, so their presence means
+    # the boundary this function guards was already crossed.
+    preloaded = sorted(
+        name
+        for name in sys.modules
+        if name == "shwfs_ao" or name.startswith("shwfs_ao.")
+    )
+    if preloaded:
+        reasons.append(
+            "repository modules were imported before this script ran "
+            f"({', '.join(preloaded[:4])}{'…' if len(preloaded) > 4 else ''}); "
+            "startup hooks such as sitecustomize or a .pth file loaded code "
+            "whose origin and commit were never established"
+        )
+    return reasons
+
+
+def _require_a_controlled_interpreter() -> None:
+    """Re-exec unless this interpreter already satisfies the conditions.
+
+    The marker is retained only to stop an unbounded chain of re-executions,
+    and it is never taken as evidence: an interpreter carrying the marker while
+    failing the conditions is refused outright rather than trusted or
+    relaunched, because the one thing it cannot be is a child this script
+    started with those conditions set.
+    """
+
+    reasons = _uncontrolled_interpreter_reasons()
+    if not reasons:
+        return
+    if os.environ.get(_CONTROLLED_INTERPRETER):
+        joined = "\n  - ".join(reasons)
+        raise SystemExit(
+            f"{_CONTROLLED_INTERPRETER} is set, but this interpreter does not "
+            "meet the conditions it claims:\n  - "
+            f"{joined}\n"
+            "That variable is a loop guard, not a permission: it is set by the "
+            "re-execution this script performs, and setting it by hand only "
+            "asserts a state rather than establishing it. Unset it and re-run."
+        )
+    _reexec_in_a_controlled_interpreter()
 
 
 def _reexec_in_a_controlled_interpreter() -> None:

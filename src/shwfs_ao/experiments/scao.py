@@ -363,10 +363,16 @@ def register_scao_backend_factory(
         raise ScaoConstructionError(
             "factory.backend_name must exactly equal its registry key."
         )
-    if name in _FACTORIES and not replace:
-        raise ScaoConstructionError(
-            f"a SCAO backend factory is already registered for {name!r}."
-        )
+    # The occupancy test and the write are one decision and are taken together
+    # under the lock below.  Testing first and writing afterwards is a
+    # check-then-act race with a window wide enough to matter: two registrations
+    # of the same key can both observe it empty, and the one that lands second
+    # replaces a factory while believing it registered a new one — so no epoch
+    # moves, and the attestations describing what the superseded factory built
+    # stay valid for the rest of the session while the registry now builds
+    # something else.  The lazy built-in path is the ordinary way to reach that
+    # window, because it registers whatever it just loaded without ``replace``.
+    #
     # The registry is an input to what a configuration builds, so a replacement
     # here invalidates the attestations minted against what it superseded:
     # keeping them would let verification answer from a build that can no longer
@@ -400,6 +406,10 @@ def register_scao_backend_factory(
     # cost the attestations exist to avoid, for a backend the systems on hand do
     # not even use.
     with _REGISTRY_LOCK:
+        if name in _FACTORIES and not replace:
+            raise ScaoConstructionError(
+                f"a SCAO backend factory is already registered for {name!r}."
+            )
         _FACTORIES[name] = factory
         if replace:
             _FACTORY_EPOCHS[name] = _factory_epoch(name) + 1

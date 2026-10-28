@@ -94,6 +94,9 @@ _NAMESPACE_PROBE = (
 # Run by _kill_process_group when the group it must end is owned by root.  The
 # process group id arrives as an argument rather than being interpolated, so
 # nothing is re-parsed and the call is the same killpg the parent just tried.
+# argv[1] is the runner's process group; the rest are the individual
+# descendants that live outside it. Both are needed for the same reason the
+# unprivileged path needs both.
 _REISSUE_KILLPG = (
     "import os, signal, sys\n"
     "try:\n"
@@ -103,7 +106,62 @@ _REISSUE_KILLPG = (
     # privileged, so an unprivileged kill that already reaped every member
     # leaves nothing here to signal.
     "    pass\n"
+    "for stray in sys.argv[2:]:\n"
+    "    try:\n"
+    "        os.kill(int(stray), signal.SIGKILL)\n"
+    "    except (ProcessLookupError, ValueError):\n"
+    "        pass\n"
 )
+
+
+def _descendant_pids(root_pid: int) -> list[int]:
+    """Every live descendant of ``root_pid``, transitively.
+
+    Killing the runner's process group is not enough to end a notebook run.
+    jupyter_client launches the kernel with ``start_new_session=True``, so the
+    kernel is a session and group leader of its own: a signal to the runner's
+    group never reaches it, and a budget that killed only the runner left the
+    kernel executing the notebook it was supposed to stop.  The kernel is still
+    a *descendant*, though, which is what this walks.
+
+    Read from ``ps`` because it is the one process table available on both
+    platforms this script runs on without a third-party dependency.  Failure to
+    read it returns no descendants rather than raising: the caller has a group
+    kill to perform either way, and it reports its own outcome.
+    """
+
+    try:
+        listing = subprocess.run(
+            ["ps", "-Ao", "pid=,ppid="],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if listing.returncode != 0:
+        return []
+    children: dict[int, list[int]] = {}
+    for line in listing.stdout.splitlines():
+        fields = line.split()
+        if len(fields) != 2:
+            continue
+        try:
+            pid, parent = int(fields[0]), int(fields[1])
+        except ValueError:
+            continue
+        children.setdefault(parent, []).append(pid)
+    found: list[int] = []
+    seen = {root_pid}
+    queue = [root_pid]
+    while queue:
+        for child in children.get(queue.pop(), ()):
+            if child in seen:
+                continue
+            seen.add(child)
+            found.append(child)
+            queue.append(child)
+    return found
 
 # Injected as the first executed cell so it is active for every real cell.
 # The namespace around the process is what actually denies the network; this
@@ -576,6 +634,12 @@ def _kill_process_group(process: subprocess.Popen, escalation: list[str]) -> Non
     """
 
     if os.name == "posix":
+        # Enumerated before anything is signalled, and this order is the whole
+        # point: the kernel is a grandchild in a session of its own, so the
+        # moment the runner dies the kernel is reparented to init and nothing
+        # connects it to this run any more. The one instant it can be found is
+        # while its parent is still alive.
+        strays = _descendant_pids(process.pid)
         try:
             os.killpg(process.pid, signal.SIGKILL)
         except ProcessLookupError:
@@ -586,6 +650,18 @@ def _kill_process_group(process: subprocess.Popen, escalation: list[str]) -> Non
             # budget. Surface it rather than returning as though it worked.
             if not escalation:
                 raise
+        for stray in strays:
+            # A pid can in principle be recycled between the snapshot above and
+            # this signal. The window is the time taken by one killpg, and the
+            # alternative — leaving the kernel running — is the failure this
+            # exists to prevent, so the exposure is accepted rather than hidden.
+            try:
+                os.kill(stray, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            except PermissionError:
+                if not escalation:
+                    raise
         if escalation:
             # Unconditional, not a fallback for EPERM. kill(2) reports success
             # when the signal reached *at least one* member of the group, and
@@ -597,7 +673,14 @@ def _kill_process_group(process: subprocess.Popen, escalation: list[str]) -> Non
             # so it runs whenever the group was started privileged, whatever the
             # unprivileged attempt reported.
             subprocess.run(
-                [*escalation, sys.executable, "-c", _REISSUE_KILLPG, str(process.pid)],
+                [
+                    *escalation,
+                    sys.executable,
+                    "-c",
+                    _REISSUE_KILLPG,
+                    str(process.pid),
+                    *(str(stray) for stray in strays),
+                ],
                 check=False,
             )
     else:
