@@ -1595,6 +1595,66 @@ def test_the_negative_pixel_policy_reaches_the_sensor_without_moving_its_respons
     assert supplied.interaction_matrix is clipped.interaction_matrix
 
 
+def test_a_noise_calibrated_matrix_is_reused_only_with_its_noise_settings() -> None:
+    """Averaging noisy centroids bakes the noise settings into a matrix.
+
+    Rectified read noise pulls a clipped center of gravity by an amount set
+    by the signal-to-noise ratio, so a matrix calibrated with noise is wrong
+    for a sensor with other noise settings or clipping even though their
+    noiseless responses agree.  A different root seed only redraws the noise
+    and keeps the matrix valid.
+    """
+
+    tiny = _tiny_system_config("detector_level")
+    noisy_config = replace(
+        tiny,
+        detector=replace(tiny.detector, read_noise_e=3.0),
+        calibration=replace(tiny.calibration, include_noise=True, repeats=3),
+    )
+    base = scao.build_scao_system(noisy_config)
+    matrix = base.interaction_matrix
+    assert matrix.include_noise
+    assert matrix.sensor_noisy_response_hash == base.wfs.noisy_response_hash
+
+    for name, changed in (
+        (
+            "clipping",
+            replace(
+                noisy_config,
+                wfs=replace(noisy_config.wfs, clip_negative_pixels=False),
+            ),
+        ),
+        (
+            "read noise",
+            replace(
+                noisy_config,
+                detector=replace(noisy_config.detector, read_noise_e=1.0),
+            ),
+        ),
+    ):
+        fresh = scao.build_scao_system(changed)
+        assert fresh.wfs.response_hash == base.wfs.response_hash, name
+        assert fresh.wfs.noisy_response_hash != base.wfs.noisy_response_hash, name
+        with pytest.raises(
+            scao.ScaoConstructionError,
+            match="noise-calibrated interaction matrix must also match",
+        ):
+            scao.build_scao_system(
+                _with_calibration_source(changed, "supplied"),
+                interaction_matrix=matrix,
+            )
+
+    reseeded = replace(
+        noisy_config,
+        random=replace(noisy_config.random, root_seed=noisy_config.random.root_seed + 1),
+    )
+    supplied = scao.build_scao_system(
+        _with_calibration_source(reseeded, "supplied"),
+        interaction_matrix=matrix,
+    )
+    assert supplied.interaction_matrix is matrix
+
+
 class _ResponseUndeclaredSensor:
     """A WFS seen as a structural sensor that declares no response identity."""
 

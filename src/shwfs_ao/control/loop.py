@@ -570,6 +570,20 @@ def _preflight(
             "calibration sensor only in settings that leave its noiseless "
             "response unchanged, such as read noise."
         )
+    # A matrix averaged over noisy frames also depends on the noise settings
+    # and clipping, so it may only run with a WFS that shares them.
+    wfs_noisy_response_hash = getattr(wfs, "noisy_response_hash", None)
+    if (
+        interaction_matrix.include_noise
+        and interaction_matrix.sensor_noisy_response_hash is not None
+        and wfs_noisy_response_hash is not None
+        and wfs_noisy_response_hash != interaction_matrix.sensor_noisy_response_hash
+    ):
+        raise ControlLoopError(
+            "wfs.noisy_response_hash must equal interaction_matrix."
+            "sensor_noisy_response_hash for a noise-calibrated matrix; its "
+            "averaged response depends on the noise settings and clipping."
+        )
     if command_projector.input_coordinate_ids != interaction_matrix.coordinate_ids:
         raise ControlLoopError(
             "projector input IDs must exactly match interaction-matrix coordinates."

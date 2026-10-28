@@ -195,6 +195,12 @@ class NativeGeometricShackHartmannSensor:
         return self._response_hash
 
     @property
+    def noisy_response_hash(self) -> str:
+        """Equal to :attr:`response_hash`: this sensor draws no noise."""
+
+        return self._response_hash
+
+    @property
     def row_ids(self) -> tuple[str, ...]:
         return self._calibration.row_ids
 

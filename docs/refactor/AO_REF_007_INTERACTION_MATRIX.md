@@ -88,6 +88,16 @@ changes the identity. A sensor that declares none, and a record written before t
 existed, yields `sensor_response_hash=None` with the unchanged historical
 content hash.
 
+A calibration with `include_noise=True` also records the sensor's
+`noisy_response_hash` as `sensor_noisy_response_hash` and binds it into the
+content hash. Averaging noisy centroids bakes in what the noiseless identity
+leaves out: the absolute photon budget and QE, read noise, pedestal, full
+well, PRNU, the photon allocation, and negative-pixel clipping. Rectified read
+noise pulls a clipped center of gravity by an amount set by the
+signal-to-noise ratio. A noiseless calibration records none and a record may
+not claim one for it; random draws stay outside both identities, so a noisy
+calibration remains reusable under a different root seed.
+
 ## Randomness and noisy calibration
 
 An explicit named random-stream provider is required even for deterministic

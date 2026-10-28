@@ -942,9 +942,11 @@ def _validate_matrix_response(
     or pixel maps, or centroid estimator, so only the sensor response identity
     can expose a stale matrix.  Read noise lies outside that identity, and so
     does the photon budget wherever it leaves the noiseless response
-    unchanged (no pedestal and no full well).  A built matrix is calibrated
-    on this very sensor; a matrix without a recorded identity cannot be
-    verified and is rejected rather than trusted.
+    unchanged (no pedestal and no full well).  Both stay free only for a
+    noiseless calibration: a matrix averaged over noisy frames must also match
+    the WFS noisy response identity.  A built matrix is calibrated on this
+    very sensor; a matrix without a recorded identity cannot be verified and
+    is rejected rather than trusted.
     """
 
     source = config.calibration.source
@@ -971,6 +973,24 @@ def _validate_matrix_response(
             "its scale, centroid estimator and threshold) before the first "
             "frame."
         )
+    # A matrix averaged over noisy frames also carries the bias the noise
+    # settings put into each centroid, such as the pull of rectified read
+    # noise on a clipped center of gravity, so it must match those too.
+    if matrix.include_noise:
+        expected_noisy = getattr(wfs, "noisy_response_hash", None)
+        if expected_noisy is None or matrix.sensor_noisy_response_hash is None:
+            raise ScaoConstructionError(
+                f"calibration.source={source!r} with a noise-calibrated "
+                "interaction matrix requires both the matrix and the "
+                "constructed WFS to declare a noisy response identity."
+            )
+        if matrix.sensor_noisy_response_hash != expected_noisy:
+            raise ScaoConstructionError(
+                "a noise-calibrated interaction matrix must also match the "
+                "constructed WFS noise settings (photon budget, QE, read "
+                "noise, pedestal, full well, PRNU, photon allocation, "
+                "negative-pixel clipping) before the first frame."
+            )
 
 
 def _require_reconstructor_parameter(
