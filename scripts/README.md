@@ -46,12 +46,17 @@ bundle can only pass against the installed wheel.
 smoke contract (fresh temporary working directory, `MPLBACKEND=Agg`, per-cell
 and whole-notebook timeouts), selecting by manifest execution class. The kernel
 runs in a network namespace holding nothing but loopback, so no cell — nor any
-subprocess or C extension it reaches — can leave the machine; an injected first
-cell additionally turns an attempted access into a Python error naming the
-address. Namespaces are a Linux facility, so `--network-isolation` says what to
-do without them: the default `required` refuses to run rather than report an
-offline contract it did not enforce, `auto` runs with the in-kernel guard alone
-and warns, and `off` disables the namespace.
+subprocess or C extension it reaches — has a network interface through which to
+leave the machine; an injected first cell additionally turns an attempted access
+into a Python error naming the address. The namespace removes network
+interfaces and nothing else: the filesystem is shared with the host, so a host
+service listening on a Unix socket bound to a path — a Docker daemon socket, for
+instance, which can start a container on the host network — stays reachable
+with whatever file permissions allow, and is outside this contract. Namespaces
+are a Linux facility, so `--network-isolation` says what to do without them: the
+default `required` refuses to run rather than report an offline contract it did
+not enforce, `auto` runs with the in-kernel guard alone and warns, and `off`
+disables the namespace.
 
 `inspect_wheel_contents.py` compares a built wheel against a wheel rebuilt
 from the sdist in a clean directory and asserts the compatibility modules,

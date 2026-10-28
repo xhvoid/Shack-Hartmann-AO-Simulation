@@ -1039,24 +1039,46 @@ def test_the_real_probe_script_supplies_every_observation_the_runner_requires(
 
 
 @_needs_posix_sh
+@pytest.mark.parametrize("unreadable_as", ["mode-000", "missing"])
 def test_the_real_probe_refuses_a_namespace_that_cannot_read_caller_files(
-    tmp_path, monkeypatch, probe_stub_bin
+    tmp_path, monkeypatch, probe_stub_bin, unreadable_as
 ):
     """``test -r "$2"`` is the only clause that observes caller file access.
 
-    The canary is a path that does not exist rather than one with its read
-    bits cleared, because root may read any existing file and the answer must
-    not depend on who runs the suite.  Everything else the probe reports is the
-    accepted case above, so the canary is what this refusal turns on.
+    What it must observe is readability, not existence: a canary that is there
+    but cannot be read passes ``test -e`` and is exactly what the clause exists
+    to refuse.  So the case that discriminates is a canary present with its
+    read bits cleared, which only a suite without permission-overriding
+    credentials can pose — root reads any existing file — and a canary that
+    does not exist keeps the clause itself covered where that case is skipped.
+    Each is then made readable and probed again with nothing else changed, so
+    readability is what the verdict turns on.
     """
 
     prefix, state = _namespace_probe_stubs(
         tmp_path, monkeypatch, probe_stub_bin, status=_proc_self_status()
     )
+    canary = tmp_path / "caller-owned"
+    if unreadable_as == "mode-000":
+        canary.touch()
+        canary.chmod(0o000)
+        if os.access(canary, os.R_OK):
+            pytest.skip("these credentials read a mode-000 file regardless")
 
-    assert _run_the_real_probe(monkeypatch, prefix, tmp_path / "unreadable") is None
-    # The probe did run; a stub that never started it would refuse as well.
+    assert _run_the_real_probe(monkeypatch, prefix, canary) is None
+    # The probe did run, and stopped at the canary: a stub that never started
+    # it would refuse as well, and so would any later clause.
     assert len(_stub_calls(state, "sudo")) == 1
+    for later in ("ip", "cat", "nsenter"):
+        assert _stub_calls(state, later) == [], later
+
+    if unreadable_as == "mode-000":
+        canary.chmod(0o600)
+    else:
+        canary.touch(mode=0o600)
+
+    assert _run_the_real_probe(monkeypatch, prefix, canary) == prefix
+    assert _stub_calls(state, "ip") == ["-o link show"]
 
 
 @_needs_posix_sh
