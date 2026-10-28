@@ -26,7 +26,6 @@ from ..core import wavefront as _wavefront
 
 
 ARCSEC_PER_RAD = 206264.80624709636
-_TWO_PI = 2.0 * math.pi
 _DISCRETE_FLUX = "discrete_pixel_flux"
 _SURFACE_BRIGHTNESS = "angular_surface_brightness_per_sr"
 _MONOCHROMATIC = "monochromatic"
@@ -312,7 +311,7 @@ def marechal_strehl_from_opd(
 
     wavelength = _positive_scalar(wavelength_m, label="wavelength_m")
     _, opd_rms = _validated_opd_and_rms(opd_m, pupil)
-    phase_rms = _TWO_PI * opd_rms / wavelength
+    phase_rms = float(_wavefront.opd_to_phase(opd_rms, wavelength))
     return float(math.exp(-(phase_rms**2)))
 
 

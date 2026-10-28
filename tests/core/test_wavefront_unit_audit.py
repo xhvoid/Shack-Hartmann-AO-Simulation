@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import io
+from pathlib import Path
+import re
+import tokenize
+
 import numpy as np
 import pytest
 
@@ -318,23 +323,87 @@ def test_seeded_normalized_atmosphere_converts_to_target_opd_rms_m() -> None:
     )
 
 
+_CONSTANT_PI_NAME = re.compile(r"_*(?:[A-Z][A-Z0-9]*_)*PI\Z")
+
+
+def _logical_lines(
+    source_text: str,
+) -> "list[tuple[int, list[tokenize.TokenInfo]]]":
+    """Group a module's tokens into logical lines (statements).
+
+    A per-physical-line scan misses an inline conversion whose ``pi`` factor
+    and ``wavelength`` divisor are wrapped onto separate physical lines.
+    Tokenising and regrouping by ``NEWLINE`` restores the statement so the
+    two halves are examined together.
+    """
+
+    logical: list[tuple[int, list[tokenize.TokenInfo]]] = []
+    current: list[tokenize.TokenInfo] = []
+    start_line: int | None = None
+    reader = io.StringIO(source_text).readline
+    for token in tokenize.generate_tokens(reader):
+        if token.type == tokenize.NEWLINE:
+            if current:
+                logical.append((start_line or current[0].start[0], current))
+            current = []
+            start_line = None
+        elif token.type in (
+            tokenize.NL,
+            tokenize.INDENT,
+            tokenize.DEDENT,
+            tokenize.ENCODING,
+            tokenize.COMMENT,
+            tokenize.ENDMARKER,
+        ):
+            continue
+        else:
+            if start_line is None:
+                start_line = token.start[0]
+            current.append(token)
+    if current:
+        logical.append((start_line or current[0].start[0], current))
+    return logical
+
+
+def _references_pi(tokens: "list[tokenize.TokenInfo]") -> bool:
+    for index, token in enumerate(tokens):
+        # ``np.pi`` / ``numpy.pi`` / ``math.pi``
+        if (
+            token.type == tokenize.NAME
+            and token.string == "pi"
+            and index >= 2
+            and tokens[index - 1].string == "."
+            and tokens[index - 2].string in ("np", "numpy", "math")
+        ):
+            return True
+        # A precomputed pi multiple such as ``PI``, ``TWO_PI``, or ``_TWO_PI``.
+        if token.type == tokenize.NAME and _CONSTANT_PI_NAME.match(token.string):
+            return True
+    return False
+
+
+def _references_wavelength(tokens: "list[tokenize.TokenInfo]") -> bool:
+    return any(
+        token.type == tokenize.NAME and "wavelength" in token.string.lower()
+        for token in tokens
+    )
+
+
 def test_canonical_code_routes_phase_opd_conversion_through_core_wavefront():
     """core.wavefront is the sole non-legacy conversion authority (AO-REF-002).
 
-    Any canonical line combining pi with a wavelength is treated as an
-    inline phase/OPD conversion.  Frozen legacy adapters and the isolated
-    experimental PWFS branch keep their historical formulas and are the
-    only exclusions besides the authority module itself.
+    Any canonical statement combining pi with a wavelength is treated as an
+    inline phase/OPD conversion, whether pi is written as ``np.pi``, folded
+    into a ``TWO_PI``-style constant, or split across physical lines.  Frozen
+    legacy adapters and the isolated experimental PWFS branch keep their
+    historical formulas and are the only exclusions besides the authority
+    module itself.
     """
-
-    import re
-    from pathlib import Path
 
     source_root = Path(__file__).resolve().parents[2] / "src" / "shwfs_ao"
     if not source_root.is_dir():
         pytest.skip("source scan requires the repository checkout")
 
-    pi_pattern = re.compile(r"\b(np|numpy|math)\.pi\b")
     offenders: list[str] = []
     for path in sorted(source_root.rglob("*.py")):
         relative = path.relative_to(source_root).as_posix()
@@ -344,8 +413,8 @@ def test_canonical_code_routes_phase_opd_conversion_through_core_wavefront():
             or relative.startswith("experimental/")
         ):
             continue
-        lines = path.read_text(encoding="utf-8").splitlines()
-        for line_number, line in enumerate(lines, start=1):
-            if pi_pattern.search(line) and "wavelength" in line.lower():
-                offenders.append(f"{relative}:{line_number}: {line.strip()}")
+        source_text = path.read_text(encoding="utf-8")
+        for line_number, tokens in _logical_lines(source_text):
+            if _references_pi(tokens) and _references_wavelength(tokens):
+                offenders.append(f"{relative}:{line_number}")
     assert offenders == []
