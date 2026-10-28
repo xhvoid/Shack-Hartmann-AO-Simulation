@@ -7,7 +7,7 @@
 <meta name="description" content="Recorded 2 m and exploratory 42 m adaptive-optics experiments, the ten-layer atmosphere, and the numerical evidence behind the simulation.">
 <link rel="icon" href="data:,">
 <!-- Code and style come from the content-addressed build directory; see scripts/ao_explorer/site_build.py. -->
-<link rel="stylesheet" href="code-1731b30d248d4ae8/styles.css">
+<link rel="stylesheet" href="code-b495d8042c73ac5f/styles.css">
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script type="module" src="code-1731b30d248d4ae8/app.js" onerror="aoCodeUnavailable()"></script>
+<script type="module" src="code-b495d8042c73ac5f/app.js" onerror="aoCodeUnavailable()"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -276,6 +276,63 @@ function aoCodeUnavailable() {
     <p class="frame-readout" id="r42-photo-readout"></p>
     <div class="transport" role="group" aria-label="42 m binary playback"><button id="r42-photo-restart" disabled>Restart</button><button id="r42-photo-prev" disabled>◀ Step</button><button id="r42-photo-play" aria-pressed="false" disabled>Play</button><button id="r42-photo-next" disabled>Step ▶</button><label class="seek">Seek <input type="range" id="r42-photo-seek" min="0" max="125" value="25" step="1" disabled></label></div>
     <p class="hint">Both simulated images are generated from the observed template; the right-hand panel is not a restoration of the middle panel. <a href="#replay42-source">Scientific source and image preparation →</a></p>
+  </section>
+</section>
+
+<section id="aperture-comparison" class="wrap section" aria-labelledby="aperture-comparison-title">
+  <p class="section-kicker">Reading the two recordings</p>
+  <h1 id="aperture-comparison-title">Why does the 42 m atmosphere look steadier?</h1>
+  <p class="lede">The full-pupil RMS changes little while the wavefront keeps moving. A fixed 2 m patch from the 42 m recording reveals local changes comparable to the independent 2 m simulation.</p>
+  <section class="panel comparison-intro" aria-labelledby="comparison-observation-title">
+    <h2 id="comparison-observation-title">The observation: a steady statistic, a changing wavefront.</h2>
+    <p class="takeaway">The 2 m recording has much larger swings in <strong>whole-pupil input RMS</strong>. Across the full one-second records, the largest larger/smaller RMS ratios over 40 ms are <strong>1.51× for 2 m</strong> and <strong>1.009× for 42 m</strong>; over 100 ms they are <strong>2.15×</strong> and <strong>1.021×</strong>. These are the largest observed changes at each physical time separation, not typical changes or several-fold jumps in a few computed frames.</p>
+    <div class="comparison-columns"><div><h3>Both recordings last one second.</h3><p>The 2 m run has 1000 frames at 1 kHz; the 42 m run has 500 at 500 Hz. Both viewers show 126 saved snapshots. The physical duration is the same.</p><p>In frozen flow, a pattern moves <strong>v Δt / D</strong> aperture diameters. At the same 10 m/s, one second is five 2 m diameters but only 0.24 of a 42 m diameter. This describes motion across the picture, not the local atmospheric coherence time.</p></div><div><h3>The original displays use different scales.</h3><p>The 2 m maps use ±1.95 µm OPD; the 42 m maps use ±6.7 µm and 4 × 4 spatial averaging for display. Their apparent color changes are not directly comparable.</p><p>The 42 m wavefront is evolving: between 0.200 and 0.700 s, the full-pupil difference RMS is about 1851 nm even though each frame’s overall RMS is similar.</p></div></div>
+  </section>
+  <section class="panel" aria-labelledby="comparison-experiment-title">
+    <h2 id="comparison-experiment-title">The experiment: compare the same 2 m footprint.</h2>
+    <p>Take one fixed circular patch centered at <strong>(10, 0) m</strong> inside the unobstructed 42 m pupil. Compare it with the 2 m baseline at matching physical times, on the same 52 × 52 grid and one <strong>±2500 nm OPD</strong> color scale. Remove each local pupil mean, retain tilt, and leave amplitudes unchanged.</p>
+    <p class="hint">Postprocessing of existing full-precision recordings only. No new atmosphere, AO trajectory or temporal interpolation. The 42 m patch uses bilinear spatial sampling onto the 2 m grid.</p>
+    <div id="comparison-status" class="status" role="status">The comparison figures load when this section is in view.</div><div id="comparison-error" class="error" role="alert" hidden></div>
+    <div class="comparison-controls" role="group" aria-label="Wavefront comparison time separation">
+      <span>Time separation</span><button type="button" data-comparison-lag="8" aria-pressed="false" disabled>8 ms</button><button type="button" data-comparison-lag="100" aria-pressed="true" disabled>100 ms</button><button type="button" data-comparison-lag="500" aria-pressed="false" disabled>500 ms</button>
+    </div>
+    <figure class="comparison-figure"><a id="comparison-map-full" target="_blank" rel="noopener"><img id="comparison-map" width="1904" height="1292" alt="Two rows of wavefront maps: independent 2 m baseline above, fixed 2 m crop from 42 m below; earlier and later maps and their difference." hidden></a><figcaption id="comparison-map-caption">Each row shows t = 0.200 s, the later frame, and later minus earlier. All panels share one color scale; open the image for full resolution.</figcaption></figure>
+    <details id="comparison-location"><summary>Where is the patch in the 42 m pupil?</summary><figure class="comparison-figure comparison-location"><img id="comparison-location-image" width="960" height="880" alt="A 2 m diameter circle at x=10 m, y=0 m, away from the central obstruction and the outer pupil edge." hidden><figcaption>The location was chosen geometrically before inspecting the patch values and stays fixed throughout the recording.</figcaption></figure></details>
+    <details id="comparison-animation"><summary>Watch the synchronized wavefronts and 8 ms differences</summary><p class="hint">Top: independent 2 m baseline. Bottom: the 42 m patch. Left: the current wavefront. Right: its change over the next 8 ms. The same ±2500 nm scale covers every panel.</p><div class="comparison-controls"><button type="button" id="comparison-animation-toggle" disabled aria-pressed="false">Play comparison</button><span class="hint">20× slower · 99 saved samples · repeats the same record</span></div><figure class="comparison-figure comparison-movie"><img id="comparison-animation-image" width="820" height="745" alt="Synchronized 2 m wavefront comparison and next-frame differences at 8 ms spacing." hidden><figcaption id="comparison-animation-caption">Stopped. Playback uses t = 0.200–0.984 s; the final difference uses the recorded 0.992 s frame. Stopping returns to the first-frame preview.</figcaption></figure></details>
+  </section>
+  <section class="panel" aria-labelledby="comparison-results-title">
+    <h2 id="comparison-results-title">At the same scale, local fluctuations are comparable.</h2>
+    <p>Across 400 matching times from 0.200 to 0.998 s, the patch’s relative RMS fluctuation rises to <strong>29.3%</strong>, close to the independent 2 m baseline’s <strong>25.6%</strong>. The full 42 m pupil fluctuates by only <strong>1.4%</strong>. The crop does not show uniformly slower local evolution.</p>
+    <div class="comparison-table-scroll"><table class="comparison-table"><caption>Existing recordings · matching 2 ms samples · piston removed, tilt retained</caption><thead><tr><th scope="col">Quantity</th><th scope="col">2 m baseline</th><th scope="col">42 m: 2 m patch</th></tr></thead><tbody id="comparison-table-body"><tr><td colspan="3">Loading the recorded comparison statistics…</td></tr></tbody></table></div>
+    <p class="hint">Difference RMS is √⟨[W(t + Δt) − W(t)]²⟩ over the common pupil and every available time pair. There are 396, 350 and 150 pairs at 8, 100 and 500 ms. The figures above show one pair starting at 0.200 s, so their RMS values can differ from these whole-window statistics.</p>
+    <figure class="comparison-figure"><a id="comparison-temporal-full" target="_blank" rel="noopener"><img id="comparison-temporal" width="2380" height="799" alt="Time traces of pupil RMS, RMS of wavefront differences versus time separation, and spatial correlation versus time separation." hidden></a><figcaption>Local RMS fluctuates while the full-pupil statistic remains steadier. Curves summarize this short record; overlapping time pairs are correlated and do not provide confidence intervals.</figcaption></figure>
+  </section>
+  <section class="panel" aria-labelledby="comparison-explanation-title">
+    <h2 id="comparison-explanation-title">What this means for DM tracking and Strehl.</h2>
+    <p class="takeaway"><strong>A naive assumption:</strong> if the two loops have comparable response and maintain a similar, approximately constant residual-to-input RMS ratio, then smaller fluctuations in whole-pupil input RMS should produce smaller fluctuations in residual RMS. At comparable residual phase variance and with consistent science-image definitions, this can help Strehl remain near a steady value. In this conditional sense, a more uniform input error strength is easier to keep at a stable performance level.</p>
+    <p>This is a useful first interpretation, but the existing runs do not hold control efficiency fixed. Similar turbulence strength and physical sampling do not make the two complete control systems equivalent.</p>
+    <details><summary>Are the 2 m and 42 m control parameters similar?</summary><div class="prose">
+      <div class="comparison-table-scroll"><table class="comparison-table"><caption>Values from the saved baseline configurations</caption><thead><tr><th scope="col">Parameter</th><th scope="col">2 m</th><th scope="col">42 m</th></tr></thead><tbody>
+        <tr><th scope="row">r₀ at 500 nm / outer scale</th><td>0.1263 m / 25 m</td><td>0.1300 m / 25 m</td></tr>
+        <tr><th scope="row">Pupil sample spacing</th><td>0.0392 m</td><td>0.0417 m</td></tr>
+        <tr><th scope="row">Nominal lenslet pitch / grid</th><td>0.4 m / 5 × 5</td><td>0.5 m / 84 × 84</td></tr>
+        <tr><th scope="row">Controller family</th><td>Leaky integrator</td><td>Same family, zero leak</td></tr>
+        <tr><th scope="row">Loop rate / gain / leak per update</th><td>1000 Hz / 0.2 / 0.02</td><td>500 Hz / 0.3 / 0</td></tr>
+        <tr><th scope="row">Queued delay / first WFS-visible effect</th><td>2 frames = 2 ms / 3 ms</td><td>2 frames = 4 ms / 6 ms</td></tr>
+        <tr><th scope="row">DM grid / influence model</th><td>5 × 5 / Gaussian</td><td>85 × 85 / linear spline</td></tr>
+        <tr><th scope="row">DM OPD stroke limit</th><td>1 µm</td><td>100 µm</td></tr>
+        <tr><th scope="row">Reconstruction</th><td>TSVD</td><td>Sparse LSMR + Tikhonov</td></tr>
+        <tr><th scope="row">Detector / guide-source convention</th><td>Synthetic EMCCD / AB magnitude 7</td><td>Synthetic CCD / 10⁵ e⁻ per full subaperture per frame</td></tr>
+        <tr><th scope="row">Science wavelength shown</th><td>1.65 µm</td><td>2.2 µm</td></tr>
+      </tbody></table></div>
+      <p>Both use noisy detector-level sensing and a 700 nm WFS reference, but the detector, spectral sampling and source conventions differ. The 42 m layers also have different wind speeds from the single 10 m/s 2 m layer. Equal latency in frames does not mean equal latency in seconds; gain alone does not determine closed-loop bandwidth.</p>
+      <p>As a descriptive check over the same 400 times, the mean per-frame residual/input OPD RMS ratio is <strong>0.687 for 2 m</strong> and <strong>0.119 for 42 m</strong> (temporal standard deviations 0.118 and 0.0028). These ratios combine fitting, temporal, sensing, reconstruction and stroke effects; they are not an isolated controller-efficiency measurement. They do show that an equal suppression ratio is an assumption, not a measured property of these two runs. Exact values, configuration hashes and definitions are in the downloadable control comparison.</p>
+    </div></details>
+    <p>A larger aperture covers more spatial structure at once. Its aggregate wavefront RMS can remain steady even as individual regions change. The same-footprint experiment supports this interpretation of the two recordings; it does not show that local turbulence slows down as the telescope gets larger.</p>
+    <p>The DM must keep tracking changes at the subaperture and actuator scales. Its performance depends on those scales, wind, loop rate, delay, reconstruction and stroke. A longer whole-aperture crossing time alone does not make that tracking easier.</p>
+    <p class="takeaway">A stable Strehl can accompany a continuously changing wavefront if the closed loop maintains a stable residual phase variance. Near high Strehl, the Maréchal approximation S ≈ exp(−σ²<sub>φ,res</sub>) describes this connection for consistent wavelength, pupil and tilt/peak conventions. The site’s reported Strehl values come from propagated PSFs, not this approximation.</p>
+    <p>The crop experiment examines the <strong>input atmosphere</strong>; it does not isolate the cause of corrected Strehl stability. The two simulations also differ in layer winds, DM/control settings and science wavelength. One patch and one realization per model support a descriptive comparison, not model equivalence, statistical convergence or instrument validation.</p>
+    <details><summary>Sampling sensitivity, definitions and downloadable evidence</summary><div class="prose"><p>The shared support contains 2032 uniformly weighted points over a 2 m circle. The 2 m spacing is 2/51 m; the original 42 m spacing is 42/1007 m. Local piston is removed independently at each time; tilt remains. No wavefront registration or amplitude normalization is applied.</p><p>Bilinear sampling mildly filters the 42 m patch. Nearest-neighbor sampling changes its mean RMS from 381.5 to 384.1 nm and its 8 ms difference RMS from 136.6 to 142.7 nm (about 4.2%). It does not reverse the comparison. This sensitivity check is not an uncertainty bound.</p><p>The full 2 m archive hash, all 400 used 42 m frame hashes and the archived time arrays were checked. The public evidence retains input identities, methods, numerical arrays and a portable postprocessing script. These checks establish correspondence to the saved records, not physical validation.</p><p>For the frozen-flow model context, see <a href="https://ehpor.github.io/assets/pdf/Por-2018-HCIPy.pdf">Por et al. (2018), §4.1</a>. The experiment and figures here were calculated directly from the stored wavefronts.</p><div id="comparison-downloads" class="downloads"></div></div></details>
   </section>
 </section>
 
