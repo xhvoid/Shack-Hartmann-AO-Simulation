@@ -55,6 +55,10 @@
       "sha256": "ea8e41fa741066e7fd771340a5d940a83f0b508333a398e5178d6c36e062bc95"
     },
     {
+      "logical_name": "reference_metrics/cross_backend/cross_backend_baseline.json",
+      "sha256": "8a8693e51261d312cc76d8537027edca6d9a57a94cc78080edb8a960121533d7"
+    },
+    {
       "logical_name": "reference_metrics/fast_error_budget_regression_baseline.csv",
       "sha256": "2ab79f6af3e6724014651c17f27342a3c877681d5e50781956b1811e75592bd1"
     },
