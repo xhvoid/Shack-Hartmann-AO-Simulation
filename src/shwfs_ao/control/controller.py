@@ -7,6 +7,7 @@ from collections.abc import Mapping
 import math
 from numbers import Integral, Real
 from types import MappingProxyType
+from typing import Final
 
 import numpy as np
 
@@ -18,7 +19,7 @@ from .config import LoopConfig
 __all__ = ("ControllerError", "LeakyIntegratorController")
 
 
-_COMMAND_UNIT = "m_opd_equivalent"
+_COMMAND_UNIT: Final = "m_opd_equivalent"
 
 
 class ControllerError(ValueError):

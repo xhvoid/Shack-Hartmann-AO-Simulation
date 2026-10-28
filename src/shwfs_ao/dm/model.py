@@ -19,6 +19,7 @@ from types import MappingProxyType
 from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
+import numpy.typing as npt
 
 from ..core.hashing import component_config_hash, stable_hash
 from ..core.provenance import Provenance
@@ -639,7 +640,7 @@ def _build_actuator_metadata(
     return tuple(result)
 
 
-def _readonly_array(values: object, *, dtype: object) -> np.ndarray:
+def _readonly_array(values: npt.ArrayLike, *, dtype: npt.DTypeLike) -> np.ndarray:
     contiguous = np.ascontiguousarray(np.array(values, dtype=dtype, copy=True))
     immutable = np.frombuffer(contiguous.tobytes(order="C"), dtype=contiguous.dtype)
     return immutable.reshape(contiguous.shape)

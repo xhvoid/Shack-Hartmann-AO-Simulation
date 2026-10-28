@@ -12,14 +12,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
-from typing import Sequence
+from typing import Sequence, cast as _cast
 
 import numpy as np
 
 from ..backends.native.shwfs import (
     NativeShackHartmannOptics as _NativeShackHartmannOptics,
 )
-from ..core.provenance import ALLOWED_SOURCE_CLASSES, Provenance as _Provenance
+from ..core.provenance import (
+    ALLOWED_SOURCE_CLASSES,
+    Provenance as _Provenance,
+)
 from ..core.random import (
     NamedRandomStreams as _NamedRandomStreams,
     _legacy_sequential_child_seeds,
@@ -432,7 +435,7 @@ def _canonical_detector_frame(
         if resolved_realization is None:
             resolved_realization = _DetectorRealization.create(
                 detector,
-                tuple(int(value) for value in spot.shape),
+                _cast("tuple[int, int]", tuple(int(value) for value in spot.shape)),
                 random_streams=streams,
             )
         return _apply_detector_effects(
@@ -465,7 +468,7 @@ def _normalized_detector_seed(seed: int | None) -> int | None:
 
 def _named_random_streams(seed: int | None) -> _NamedRandomStreams:
     root_seed = (
-        int(np.random.SeedSequence().entropy)
+        int(_cast(int, np.random.SeedSequence().entropy))
         if seed is None
         else _normalized_detector_seed(seed)
     )
@@ -577,7 +580,7 @@ def measure_detector_shwfs(
     ))
     normalized_seed = _normalized_detector_seed(seed)
     runtime_key = (
-        int(np.random.SeedSequence().entropy)
+        int(_cast(int, np.random.SeedSequence().entropy))
         if normalized_seed is None
         else normalized_seed
     )
@@ -891,7 +894,10 @@ def sample_centroid_noise(
         try:
             persistent_realization = _DetectorRealization.create(
                 detector,
-                tuple(int(value) for value in np.shape(normalized_spot)),
+                _cast(
+                    "tuple[int, int]",
+                    tuple(int(value) for value in np.shape(normalized_spot)),
+                ),
                 random_streams=persistent_streams,
             )
         except _DetectorRealizationError as exc:
@@ -974,7 +980,12 @@ def _instrument_provenance(source_class: str, source_note: str) -> _Provenance:
     """Build canonical provenance while retaining legacy instrument errors."""
 
     try:
-        return _Provenance(source_class=source_class, source_note=str(source_note))
+        # source_class is a runtime-validated str; physical modules must not
+        # import SourceClass from core, so narrow it with a scoped ignore.
+        return _Provenance(
+            source_class=source_class,  # type: ignore[arg-type]
+            source_note=str(source_note),
+        )
     except (TypeError, ValueError) as exc:
         if source_class not in ALLOWED_SOURCE_CLASSES:
             raise SyntheticInstrumentError(

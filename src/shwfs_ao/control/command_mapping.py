@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from types import MappingProxyType
-from typing import Literal
+from typing import Final, Literal
 
 import numpy as np
+import numpy.typing as npt
 
 from ..core.hashing import component_config_hash
 from ..core.types import DmCommandVector, ReconstructionEstimate
@@ -20,10 +21,10 @@ __all__ = (
 )
 
 
-_COMMAND_UNIT = "m_opd_equivalent"
-_MODAL_UNIT = "m_opd_rms"
-_MAPPING_UNIT = "m_opd_equivalent_per_m_opd_rms"
-_MAPPING_SIGN = "positive_modal_aberration_maps_to_positive_dm_correction"
+_COMMAND_UNIT: Final = "m_opd_equivalent"
+_MODAL_UNIT: Final = "m_opd_rms"
+_MAPPING_UNIT: Final = "m_opd_equivalent_per_m_opd_rms"
+_MAPPING_SIGN: Final = "positive_modal_aberration_maps_to_positive_dm_correction"
 
 
 class CommandMappingError(ValueError):
@@ -284,7 +285,12 @@ class ModalToActuatorCommandProjector:
         )
 
 
-def _validate_estimate(projector: object, estimate: object) -> None:
+def _validate_estimate(
+    projector: IdentityCommandProjector
+    | ControlledSubsetCommandProjector
+    | ModalToActuatorCommandProjector,
+    estimate: object,
+) -> None:
     if not isinstance(estimate, ReconstructionEstimate):
         raise CommandMappingError("estimate must be a ReconstructionEstimate.")
     if estimate.coordinate_ids != projector.input_coordinate_ids:
@@ -342,7 +348,7 @@ def _nonempty_string(value: object, *, label: str) -> str:
     return value
 
 
-def _immutable_array(value: object, *, dtype: object) -> np.ndarray:
+def _immutable_array(value: object, *, dtype: npt.DTypeLike) -> np.ndarray:
     contiguous = np.ascontiguousarray(np.array(value, dtype=dtype, copy=True))
     immutable = np.frombuffer(
         contiguous.tobytes(order="C"),

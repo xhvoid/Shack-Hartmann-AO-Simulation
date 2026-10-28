@@ -18,6 +18,8 @@ are implemented in ``synthetic_instrument_data.measure_detector_shwfs``.
 
 from __future__ import annotations
 
+from typing import cast as _cast
+
 import numpy as np
 
 from ..backends.native.shwfs import (
@@ -32,6 +34,7 @@ from ..core.random import (
 )
 from ..detector.centroid import (
     CentroidConfig as _CentroidConfig,
+    CentroidMethod as _CentroidMethod,
     estimate_centroid as _estimate_centroid,
 )
 from ..detector.config import DetectorConfig as _DetectorConfig
@@ -91,7 +94,7 @@ def add_detector_noise(
     )
     spot = np.asarray(normalized_spot, dtype=float)
     if seed is None:
-        root_seed = int(np.random.SeedSequence().entropy)
+        root_seed = int(_cast(int, np.random.SeedSequence().entropy))
         legacy_seed = None
     elif isinstance(seed, (int, np.integer)) and not isinstance(seed, (bool, np.bool_)):
         root_seed = int(seed)
@@ -101,7 +104,7 @@ def add_detector_noise(
     streams = _NamedRandomStreams(root_seed)
     realization = _DetectorRealization.create(
         config,
-        tuple(int(value) for value in spot.shape),
+        _cast("tuple[int, int]", tuple(int(value) for value in spot.shape)),
         random_streams=streams,
     )
     frame = _apply_legacy_detector_effects(
@@ -126,7 +129,7 @@ def centroid(
     The coordinate origin is the geometric center of the image. Positive x is
     to the right; positive y is upward in mathematical coordinates.
     """
-    estimator = (
+    estimator: _CentroidMethod = (
         "thresholded_center_of_gravity"
         if threshold_fraction > 0.0
         else "center_of_gravity"
@@ -380,7 +383,7 @@ def _legacy_detector_sensor(
     """Build the stateless legacy call's canonical detector-sensor context."""
 
     if seed is None:
-        root_seed = int(np.random.SeedSequence().entropy)
+        root_seed = int(_cast(int, np.random.SeedSequence().entropy))
     elif isinstance(seed, (int, np.integer)) and not isinstance(
         seed,
         (bool, np.bool_),
@@ -501,7 +504,7 @@ def build_detector_response_matrix(
     )
     # The historical detector builder canonicalized non-finite mode samples
     # with ``nan_to_num`` before applying phase amplitudes.
-    compatible_modes = {
+    compatible_modes: dict[object, np.ndarray] = {
         name: np.nan_to_num(mode, nan=0.0) for name, mode in modes.items()
     }
     response, names = _calibrate_legacy_modal_columns(
@@ -518,7 +521,7 @@ def build_detector_response_matrix(
     response = _legacy_y_up_matrix(response)
     return (
         np.array(response, dtype=float, copy=True),
-        list(names),
+        list(_cast("list[str]", names)),
         centers,
         masks,
         reference,
@@ -627,10 +630,10 @@ def centroid_noise_scan(
             residuals.append(rms(res, pupil_mask))
             valid_counts.append(diag["n_valid"])
 
-        residuals = np.asarray(residuals, dtype=float)
+        residuals_arr = np.asarray(residuals, dtype=float)
         out[float(photons)] = {
-            "mean_residual_rms": float(np.nanmean(residuals)),
-            "std_residual_rms": float(np.nanstd(residuals)),
+            "mean_residual_rms": float(np.nanmean(residuals_arr)),
+            "std_residual_rms": float(np.nanstd(residuals_arr)),
             "mean_valid_centroids": float(np.mean(valid_counts)),
         }
 

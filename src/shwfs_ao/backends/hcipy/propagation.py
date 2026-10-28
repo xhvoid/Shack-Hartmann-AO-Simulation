@@ -35,7 +35,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 from numbers import Real
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Final
 
 import numpy as np
 
@@ -52,7 +52,7 @@ from .conversion import (
 
 
 _BACKEND_NAME = "hcipy"
-_NORMALIZATION = "unit_total_flux"
+_NORMALIZATION: Final = "unit_total_flux"
 _PROPAGATION_ID = "fraunhofer_unit_focal_length_angular_grid-v1"
 """Identifier of the optical construction (part of the config hash)."""
 

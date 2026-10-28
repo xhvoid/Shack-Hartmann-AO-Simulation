@@ -212,7 +212,9 @@ def _nonnegative_finite_float(value: object, *, label: str) -> float:
     if isinstance(value, (bool, np.bool_)):
         raise InteractionDiagnosticsError(f"{label} must be a finite number.")
     try:
-        result = float(value)
+        # Defensive coercion of arbitrary input; non-numeric raises here and
+        # is caught below.
+        result = float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError) as exc:
         raise InteractionDiagnosticsError(
             f"{label} must be a finite number."

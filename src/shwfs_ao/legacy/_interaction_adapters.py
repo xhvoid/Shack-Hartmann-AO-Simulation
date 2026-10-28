@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 import math
+from typing import Any, cast
 
 import numpy as np
 
@@ -19,6 +20,7 @@ from ..backends.native.modes import (
     normalize_mode_to_unit_pupil_rms,
 )
 from ..calibration.interaction import (
+    CalibrationMethod,
     DmActuatorProbeBasis,
     ModalProbeBasis,
     calibrate_interaction_matrix,
@@ -99,7 +101,7 @@ def calibrate_legacy_modal_columns(
                 sensor,
                 amplitude_m,
                 random_streams=random_streams,
-                method=method,
+                method=cast(CalibrationMethod, method),
                 include_noise=False,
                 repeats=1,
             )
@@ -150,7 +152,7 @@ def calibrate_legacy_influence_columns(
                 sensor,
                 requested_amplitude,
                 random_streams=random_streams,
-                method=method,
+                method=cast(CalibrationMethod, method),
                 include_noise=False,
                 repeats=1,
             )
@@ -259,7 +261,7 @@ def _positive_finite(value: object, *, label: str) -> float:
     if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{label} must be a positive finite number.")
     try:
-        result = float(value)
+        result = float(cast(Any, value))
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{label} must be a positive finite number.") from exc
     if not math.isfinite(result) or result <= 0.0:

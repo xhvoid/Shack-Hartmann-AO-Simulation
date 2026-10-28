@@ -10,9 +10,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
-from typing import Sequence
+from typing import Sequence, cast
 
-from ..core.provenance import ALLOWED_SOURCE_CLASSES, Provenance as _Provenance
+from ..core.provenance import (
+    ALLOWED_SOURCE_CLASSES,
+    Provenance as _Provenance,
+    SourceClass,
+)
 from ..io.public_data import EsoAsmSnapshot
 
 
@@ -389,7 +393,7 @@ def _condition_provenance(
         raise AOConditionError("source_note must be non-empty.")
     try:
         return _Provenance(
-            source_class=source_class,
+            source_class=cast(SourceClass, source_class),
             source_note=source_note,
         )
     except (TypeError, ValueError) as exc:

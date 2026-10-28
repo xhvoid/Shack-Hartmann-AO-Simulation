@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 import math
 from numbers import Integral
-from typing import Any, Protocol, cast, runtime_checkable
+from typing import Any, Final, Protocol, cast, runtime_checkable
 
 import numpy as np
 
@@ -49,7 +49,7 @@ __all__ = (
 )
 
 
-_COMMAND_UNIT = "m_opd_equivalent"
+_COMMAND_UNIT: Final = "m_opd_equivalent"
 
 
 class ControlLoopError(ValueError):
@@ -236,7 +236,9 @@ def run_closed_loop(
                 raise ControlLoopError(
                     "atmospheric OPD must contain at least one finite pupil sample."
                 )
-        elif not np.array_equal(np.isfinite(atmospheric_opd), pupil_mask):
+        elif not np.array_equal(
+            np.isfinite(atmospheric_opd), cast(np.ndarray, pupil_mask)
+        ):
             raise ControlLoopError(
                 "atmospheric finite-pupil support must remain constant across frames."
             )
@@ -484,6 +486,13 @@ def _preflight(
     ):
         if not isinstance(value, protocol):
             raise ControlLoopError(f"{label} does not implement its canonical protocol.")
+    random_streams = cast(RandomStreams, random_streams)
+    atmosphere = cast(AtmosphereModel, atmosphere)
+    wfs = cast(WavefrontSensor, wfs)
+    dm = cast(DeformableMirrorModel, dm)
+    reconstructor = cast(Reconstructor, reconstructor)
+    command_projector = cast(CommandProjector, command_projector)
+    controller = cast(Controller, controller)
     if not isinstance(interaction_matrix, InteractionMatrix):
         raise ControlLoopError("interaction_matrix must be an InteractionMatrix.")
     if not isinstance(include_noise, (bool, np.bool_)):
@@ -499,7 +508,7 @@ def _preflight(
             "random_streams.root_seed must equal config.root_seed."
         )
     _validate_atmosphere_seed(
-        cast(AtmosphereModel, atmosphere),
+        atmosphere,
         expected_root_seed=config.root_seed,
     )
     if reconstructor.matrix_hash != interaction_matrix.matrix_hash:

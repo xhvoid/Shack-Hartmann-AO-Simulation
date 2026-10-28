@@ -24,8 +24,12 @@ from ..backends.native.dm import (
     square_grid_actuator_centers as _native_square_grid_actuator_centers,
     synthesize_opd as _native_synthesize_opd,
 )
+from ..control import LoopHistory as _CanonicalLoopHistory
 from ..core import wavefront as _wavefront
-from ..core.provenance import ALLOWED_SOURCE_CLASSES, Provenance as _Provenance
+from ..core.provenance import (
+    ALLOWED_SOURCE_CLASSES,
+    Provenance as _Provenance,
+)
 from ..wfs.shack_hartmann.geometric import (
     NativeGeometricShackHartmannSensor as _NativeGeometricShackHartmannSensor,
 )
@@ -484,7 +488,9 @@ def run_detector_integrator_loop(
         include_detector_noise=bool(config.include_detector_noise),
         frame_seeds=frame_seeds,
     )
-    canonical_history = canonical_run.history
+    # canonical_run.history is typed ``object`` at the adapter boundary but is
+    # always the canonical LoopHistory returned by run_closed_loop.
+    canonical_history: _CanonicalLoopHistory = canonical_run.history  # type: ignore[assignment]
     command_history_nm = np.asarray(
         canonical_history.applied_command_history_opd_m,
         dtype=float,
@@ -505,8 +511,10 @@ def run_detector_integrator_loop(
         zip(phase_sequence, command_history_nm, strict=True)
     ):
         _assert_masked_finite(atmosphere_phase, calibration.pupil_mask, f"atmosphere phase step {step_index}")
+        # synthesize_dm_phase_rad accepts array-likes at runtime (np.asarray);
+        # its public annotation is frozen as Sequence[float].
         dm_before_phase, _ = synthesize_dm_phase_rad(
-            previous_commands_nm,
+            previous_commands_nm,  # type: ignore[arg-type]
             dm_model,
             wavelength_m=calibration.geometry.wfs_wavelength_m,
             remove_piston=True,
@@ -668,7 +676,7 @@ def run_closed_loop_ao(
     )
     sx_step, sy_step = wind_shift_per_step
 
-    hist = {
+    hist: dict[str, list[float]] = {
         "rms_atmosphere": [],
         "rms_before": [],
         "rms_after": [],
@@ -777,7 +785,7 @@ def run_closed_loop_ao_detector(
         ),
     )
 
-    hist = {
+    hist: dict[str, list[float]] = {
         "rms_atmosphere": [],
         "rms_before": [],
         "rms_after": [],
@@ -1116,7 +1124,12 @@ def _loop_provenance(source_class: str, source_note: str) -> _Provenance:
     """Build canonical provenance while retaining legacy loop errors."""
 
     try:
-        return _Provenance(source_class=source_class, source_note=str(source_note))
+        # source_class is a runtime-validated str; physical modules must not
+        # import SourceClass from core, so narrow it with a scoped ignore.
+        return _Provenance(
+            source_class=source_class,  # type: ignore[arg-type]
+            source_note=str(source_note),
+        )
     except (TypeError, ValueError) as exc:
         if source_class not in ALLOWED_SOURCE_CLASSES:
             raise ClosedLoopError(

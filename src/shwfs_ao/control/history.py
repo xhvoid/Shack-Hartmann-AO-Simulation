@@ -9,6 +9,7 @@ from types import MappingProxyType
 from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 
 
 __all__ = ("LoopHistoryError", "LoopHistory")
@@ -405,7 +406,7 @@ def _positive_float(value: object, *, label: str) -> float:
     if isinstance(value, bool):
         raise LoopHistoryError(f"{label} must be a positive finite number.")
     try:
-        result = float(value)
+        result = float(value)  # type: ignore[arg-type]  # defensive: non-numeric caught below
     except (TypeError, ValueError) as exc:
         raise LoopHistoryError(f"{label} must be a positive finite number.") from exc
     if not math.isfinite(result) or result <= 0.0:
@@ -459,7 +460,7 @@ def _sha256(value: object, *, label: str) -> str:
     return value
 
 
-def _immutable_array(value: object, *, dtype: object) -> np.ndarray:
+def _immutable_array(value: npt.ArrayLike, *, dtype: npt.DTypeLike) -> np.ndarray:
     contiguous = np.ascontiguousarray(np.array(value, dtype=dtype, copy=True))
     immutable = np.frombuffer(
         contiguous.tobytes(order="C"),
