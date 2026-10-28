@@ -1,0 +1,216 @@
+{
+  "schema_name": "shwfs_ao.system_profile",
+  "schema_version": 5,
+  "profile_name": "eso_scao_smoke_5m_software",
+  "profile_version": 1,
+  "baseline_rationale": "ESO-derived SCAO benchmark, software smoke tier (5 m, 10x10 SH, 11x11 DM, 120 samples, 32 frames). Normative scales from the ESO E-ELT DRM AO technical-data page (R1) and telescope page (R2): obstruction ratio 0.28, ten-layer von Karman atmosphere (r0 and L0 from R1, fractions renormalized from their printed 1.001, every layer toward +x), linear-spline ground DM in Fried geometry, 500 Hz, a three-interval command delay (latency_frames=2), deterministic noiseless image-based SH sensing at 700 nm. Every executable value not fixed by R1/R2 is an explicit engineering assumption in the packaged assumption ledger. Not an ESO instrument model and not a reproduction of the R3/R4 SCAO studies.",
+  "provenance": {
+    "schema_name": "shwfs_ao.provenance",
+    "schema_version": 2,
+    "source_class": "synthetic_assumed",
+    "note": "ESO-derived synthetic engineering SCAO configuration: R1/R2 scales and the literature_derived ESO DRM atmosphere, with every other value an explicit engineering assumption (assumption ledger A01-A12). Not observatory telemetry.",
+    "source_id": "shwfs_ao.system_profile.eso_scao_smoke_5m_software.v1",
+    "url": "https://www.eso.org/sci/facilities/eelt/science/drm/tech_data/ao/",
+    "access_time": "2026-10-14",
+    "fallback_used": false,
+    "references": [
+      "R1: ESO E-ELT DRM, AO performance and PSFs (updated 2011-05-25)",
+      "R2: ESO E-ELT DRM, telescope technical data (2013-03-20)",
+      "benchmarks/eso_scao_source_ledger.v1.json",
+      "benchmarks/eso_drm_42m_scao_derived.assumptions.v1.json",
+      "docs/eso_scao_benchmark.md"
+    ]
+  },
+  "config": {
+    "backend": "native",
+    "wfs_model": "detector_level",
+    "atmosphere_model": "native_layered",
+    "telescope_diameter_m": 5.0,
+    "pupil_pixels": 120,
+    "lenslets_across": 10,
+    "actuators_across": 11,
+    "wfs_wavelength_m": 7e-07,
+    "science_wavelengths_m": [
+      1.65e-06,
+      2.2e-06
+    ],
+    "atmosphere": {
+      "r0_m": 0.13,
+      "r0_reference_wavelength_m": 5e-07,
+      "outer_scale_m": 25.0,
+      "wind_m_per_s": [
+        0.0,
+        0.0
+      ],
+      "target_rms_opd_m": null,
+      "normalize_rms": false,
+      "layers": [
+        {
+          "altitude_m": 0.0,
+          "cn2_fraction": 0.33466533466533466,
+          "wind_m_per_s": [
+            12.1,
+            0.0
+          ]
+        },
+        {
+          "altitude_m": 600.0,
+          "cn2_fraction": 0.22277722277722276,
+          "wind_m_per_s": [
+            8.6,
+            0.0
+          ]
+        },
+        {
+          "altitude_m": 1200.0,
+          "cn2_fraction": 0.11188811188811187,
+          "wind_m_per_s": [
+            18.6,
+            0.0
+          ]
+        },
+        {
+          "altitude_m": 2500.0,
+          "cn2_fraction": 0.08991008991008989,
+          "wind_m_per_s": [
+            12.4,
+            0.0
+          ]
+        },
+        {
+          "altitude_m": 5000.0,
+          "cn2_fraction": 0.0799200799200799,
+          "wind_m_per_s": [
+            8.0,
+            0.0
+          ]
+        },
+        {
+          "altitude_m": 9000.0,
+          "cn2_fraction": 0.05194805194805194,
+          "wind_m_per_s": [
+            33.7,
+            0.0
+          ]
+        },
+        {
+          "altitude_m": 11500.0,
+          "cn2_fraction": 0.044955044955044945,
+          "wind_m_per_s": [
+            23.2,
+            0.0
+          ]
+        },
+        {
+          "altitude_m": 12800.0,
+          "cn2_fraction": 0.03396603396603397,
+          "wind_m_per_s": [
+            22.2,
+            0.0
+          ]
+        },
+        {
+          "altitude_m": 14500.0,
+          "cn2_fraction": 0.01898101898101898,
+          "wind_m_per_s": [
+            8.0,
+            0.0
+          ]
+        },
+        {
+          "altitude_m": 18500.0,
+          "cn2_fraction": 0.010989010989010986,
+          "wind_m_per_s": [
+            10.0,
+            0.0
+          ]
+        }
+      ]
+    },
+    "detector": {
+      "enabled": true,
+      "photons_per_subap_frame": 100000.0,
+      "read_noise_e": 0.0,
+      "dark_e_per_s": 0.0,
+      "background_e_per_pixel_frame": 0.0,
+      "full_well_e": null,
+      "qe": 1.0,
+      "prnu_rms": 0.0,
+      "exposure_s": 0.002,
+      "prnu_mode": "persistent",
+      "bad_pixel_fraction": 0.0
+    },
+    "wfs": {
+      "min_fill_fraction": 0.5,
+      "pad_factor": 2,
+      "detector_window_px": 24,
+      "centroid_estimator": "center_of_gravity",
+      "threshold_fraction": 0.0,
+      "subtract_minimum": false,
+      "min_flux_e": 100.0,
+      "min_peak_snr": 3.0,
+      "max_centroid_sigma_px": 0.5,
+      "max_window_clipping_fraction": 0.15,
+      "central_obstruction_ratio": 0.28,
+      "spider_width_m": 0.0,
+      "photon_allocation": "throughput_scaled",
+      "clip_negative_pixels": true
+    },
+    "dm": {
+      "influence_model": "linear_spline",
+      "coupling_width_pitch": 1.0,
+      "stroke_limit_opd_m": 0.0001,
+      "include_edge_actuators": true,
+      "actuator_margin_fraction": 0.282842712474619,
+      "dead_actuator_indices": [],
+      "stuck_actuator_indices": [],
+      "stuck_command_opd_m": 0.0
+    },
+    "calibration": {
+      "source": "build",
+      "method": "central",
+      "probe_kind": "dm_actuator",
+      "amplitude_m": 2e-08,
+      "include_noise": false,
+      "repeats": 1,
+      "resource_name": null
+    },
+    "reconstructor": {
+      "kind": "sparse_lsmr_tikhonov",
+      "rcond": null,
+      "alpha": 0.001,
+      "min_valid_fraction": 0.5,
+      "min_rank": 1,
+      "max_cached_masks": 0
+    },
+    "command_projector": {
+      "kind": "controlled_subset",
+      "mapping_resource": null
+    },
+    "controller": {
+      "n_steps": 32,
+      "gain": 0.4,
+      "leak": 0.0,
+      "latency_frames": 2,
+      "frame_rate_hz": 500.0,
+      "include_noise": false
+    },
+    "science": {
+      "psf_pad_factor": 2
+    },
+    "random": {
+      "root_seed": 1,
+      "derivation_scheme_id": "shwfs_ao.random.sha256-json-pcg64-v1"
+    },
+    "scalable": {
+      "dm_operator": "linear_spline_local_sparse",
+      "wfs_geometry": "compact_cells",
+      "calibration_strategy": "grouped_local_noiseless",
+      "solver": "lsmr",
+      "solver_atol": 1e-08,
+      "solver_btol": 1e-08,
+      "solver_max_iterations": 5000,
+      "nonconverged_policy": "reject"
+    }
+  }
+}

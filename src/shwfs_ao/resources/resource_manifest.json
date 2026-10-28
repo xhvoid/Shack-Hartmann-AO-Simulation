@@ -11,6 +11,18 @@
       "sha256": "8711c48d3ff1073c7441d9e25070865c1e8b4f52f3659401be44c5cb2ce3be70"
     },
     {
+      "logical_name": "benchmarks/eso_drm_42m_scao_derived.assumptions.v1.json",
+      "sha256": "adc5e93d97b2db8a29850eb05c63bcad0ec5c14e8881d7128438f21b5318b15d"
+    },
+    {
+      "logical_name": "benchmarks/eso_drm_42m_scao_derived.assumptions.v2.json",
+      "sha256": "93d889e20529234cbdfecc73db0327612cb5da1a5e643ddc38e5af78dd14e1a5"
+    },
+    {
+      "logical_name": "benchmarks/eso_scao_source_ledger.v1.json",
+      "sha256": "abbfd14af06f38a9296723a7c5e2a2fede7faa3472d3a3fe5e9b2ac88ba2b522"
+    },
+    {
       "logical_name": "deprecation_clock.json",
       "sha256": "e7e16c4c1a9879ec2078b45968683ea6d8e39a9f5d51cd8c21c9e77626482b60"
     },
@@ -157,6 +169,38 @@
     {
       "logical_name": "synthetic_presets/dm_2m_fast_gaussian.json",
       "sha256": "4753566272ea121449f2e3d12d00bdd0a4e5cfce22df42a6302603384ac3e57c"
+    },
+    {
+      "logical_name": "synthetic_presets/eso_drm_42m_scao_derived.v1.json",
+      "sha256": "77d60f159bb4ea4569d30470675da23f93c1642203285da9b0b1f1ca363f1879"
+    },
+    {
+      "logical_name": "synthetic_presets/eso_drm_42m_scao_derived.v2.json",
+      "sha256": "49b52a18c845f0a7ea2c5ea30419aed87dda7a3d2ab7e304372c2f20db596044"
+    },
+    {
+      "logical_name": "synthetic_presets/eso_scao_medium_12m_derived.v1.json",
+      "sha256": "9c3b7870a097188b8e6d35d1200010409468dfbcb89e2457e1d66515e5ea3726"
+    },
+    {
+      "logical_name": "synthetic_presets/eso_scao_medium_12m_derived.v2.json",
+      "sha256": "5da2452b216a595ae69132480c8e45e3fb9fd70df21a328e880ef9b4e95f356c"
+    },
+    {
+      "logical_name": "synthetic_presets/eso_scao_medium_12m_weak_gate.v1.json",
+      "sha256": "6cea65b53689cb88eed75f53c2733eabf9327ed392595cafd8c360823e66646c"
+    },
+    {
+      "logical_name": "synthetic_presets/eso_scao_medium_12m_weak_gate.v2.json",
+      "sha256": "9800a3c5655d2c79acf07235d296c88a99775d68ccb5784691dc86ec69aa19d9"
+    },
+    {
+      "logical_name": "synthetic_presets/eso_scao_smoke_5m_software.v1.json",
+      "sha256": "baa7c07700b64edd70e93fad7c3a8f931c1b75f37ca71e58b88f66178965b05a"
+    },
+    {
+      "logical_name": "synthetic_presets/eso_scao_smoke_5m_software.v2.json",
+      "sha256": "d24a5d073ef31382084156f2c45e64fb00359daa69e320067b89965a46eca04c"
     },
     {
       "logical_name": "synthetic_presets/eso_turbulence_2m_detector.v1.json",

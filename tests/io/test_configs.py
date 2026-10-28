@@ -58,6 +58,14 @@ EXPECTED_PROFILES = (
     ("high_order_10m_hcipy", 2),
     ("high_order_10m_hcipy", 3),
     ("eso_turbulence_2m_detector", 1),
+    ("eso_scao_smoke_5m_software", 1),
+    ("eso_scao_medium_12m_derived", 1),
+    ("eso_scao_medium_12m_weak_gate", 1),
+    ("eso_drm_42m_scao_derived", 1),
+    ("eso_scao_smoke_5m_software", 2),
+    ("eso_scao_medium_12m_derived", 2),
+    ("eso_scao_medium_12m_weak_gate", 2),
+    ("eso_drm_42m_scao_derived", 2),
 )
 CURRENT_2M_PROFILES = (
     ("fast_2m_detector", 2),
@@ -230,7 +238,7 @@ def test_each_record_schema_version_has_an_exact_field_set() -> None:
     )
 
     # An unsupported record schema version is refused with the supported set.
-    v1_record["schema_version"] = 5
+    v1_record["schema_version"] = PROFILE_SCHEMA_VERSION + 1
     with pytest.raises(SystemConfigError, match="unsupported profile schema_version"):
         system_config_from_mapping(v1_record)
 
@@ -270,7 +278,7 @@ def test_a_configuration_cannot_claim_a_schema_that_cannot_express_it() -> None:
     assert kept.config_hash != v2.config_hash
 
     with pytest.raises(SystemConfigError, match="unsupported profile schema_version"):
-        replace(v1, record_schema_version=5)
+        replace(v1, record_schema_version=PROFILE_SCHEMA_VERSION + 1)
     # ``True`` is not a schema version, however conveniently it compares to 1.
     with pytest.raises(SystemConfigError, match="record_schema_version must be an integer"):
         replace(v1, record_schema_version=True)
@@ -350,6 +358,17 @@ def test_every_packaged_profile_identity_is_pinned() -> None:
         ("fast_2m_detector", 4): "8c2c96a97b464fee1cd26d3eecd665f31d0df4b4a036198c6a03d8cd4b898f46",
         ("portfolio_2m_detector", 4): "52463b37fdba955c84faa639278a569234b4692f0bf3a5cc3e54a4c9693f8e13",
         ("eso_turbulence_2m_detector", 1): "f6858605a03e5b946f00ba501c72b657a07893d7c3f410e8455d3cbfedb19157",
+        # Schema-v5 ESO-derived SCAO benchmark tiers: new identities, added
+        # without moving any entry above.
+        ("eso_scao_smoke_5m_software", 1): "cad92b4db22b3050c041bc2bf30e3ecd6565034e91880666a4b5ee15eeaff48c",
+        ("eso_scao_medium_12m_derived", 1): "42efcdad394516440a6bb43233d31c5b6ecc53a9f2b32dfad51af11e280d83da",
+        ("eso_scao_medium_12m_weak_gate", 1): "4e10f6a799d697bdebc48c9385ef070a8c0c37f3b6d02bc3ca7002d57f2557a9",
+        ("eso_drm_42m_scao_derived", 1): "eeee232387395158293e7fc28de8afc5a5f7370fd645a68ecda6551ab173e25c",
+        # Version 2: a 23-pixel detector window symmetric about the axis.
+        ("eso_scao_smoke_5m_software", 2): "7a522a8315978b3bba7c1fc785e417de762985328bc38727386ac703caf9385b",
+        ("eso_scao_medium_12m_derived", 2): "659afd9993de3d9beb1d6fdc9e821ca7df7f8bcfb1bb41bf372fa445dce0a3f0",
+        ("eso_scao_medium_12m_weak_gate", 2): "946b1d96a4cef1eb751ef570d2cdb32015b92fff687527dd80838ff7d0b99bb9",
+        ("eso_drm_42m_scao_derived", 2): "c9c64a75e343cc57775b19b97f572d2c104887e1ad9d424f18141e782926a31d",
     }
     observed = {
         key: load_system_profile(*key).config_hash for key in available_system_profiles()
@@ -399,6 +418,16 @@ def test_every_packaged_nested_wfs_identity_is_pinned() -> None:
         # as a schema-v4 record it hashes the current WfsConfig shape (with
         # clip_negative_pixels) rather than the schema-v2 stand-in.
         ("eso_turbulence_2m_detector", 1): "0df31b2c43b7cfa8915f81e75fb8448bd5e9bbd316747f841de8c45c40f66979",
+        # The four ESO SCAO benchmark tiers share one WFS policy.
+        ("eso_scao_smoke_5m_software", 1): "a1d51021742aee68894e73cfe203b00f9d508a9bc5af4ac161b2ce8ae7cbc175",
+        ("eso_scao_medium_12m_derived", 1): "a1d51021742aee68894e73cfe203b00f9d508a9bc5af4ac161b2ce8ae7cbc175",
+        ("eso_scao_medium_12m_weak_gate", 1): "a1d51021742aee68894e73cfe203b00f9d508a9bc5af4ac161b2ce8ae7cbc175",
+        ("eso_drm_42m_scao_derived", 1): "a1d51021742aee68894e73cfe203b00f9d508a9bc5af4ac161b2ce8ae7cbc175",
+        # Version 2 moves exactly the WFS identity (the detector window).
+        ("eso_scao_smoke_5m_software", 2): "f52f89c98e2d44bcbe0706a1fc29c2aab4da7b927c5747db746919d484d8809d",
+        ("eso_scao_medium_12m_derived", 2): "f52f89c98e2d44bcbe0706a1fc29c2aab4da7b927c5747db746919d484d8809d",
+        ("eso_scao_medium_12m_weak_gate", 2): "f52f89c98e2d44bcbe0706a1fc29c2aab4da7b927c5747db746919d484d8809d",
+        ("eso_drm_42m_scao_derived", 2): "f52f89c98e2d44bcbe0706a1fc29c2aab4da7b927c5747db746919d484d8809d",
     }
     observed = {
         key: load_system_profile(*key).component_config_hashes["wfs"]
@@ -476,7 +505,7 @@ def test_a_bare_wfs_config_hashes_under_the_current_record_schema() -> None:
 
     # An unknown schema is not silently treated as the newest one.
     with pytest.raises(SystemConfigError, match="unsupported profile schema_version"):
-        v2.wfs.config_hash_for_record_schema(5)
+        v2.wfs.config_hash_for_record_schema(PROFILE_SCHEMA_VERSION + 1)
     with pytest.raises(SystemConfigError, match="record_schema_version must be an integer"):
         v2.wfs.config_hash_for_record_schema(True)  # type: ignore[arg-type]
 

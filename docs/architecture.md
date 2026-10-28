@@ -154,6 +154,7 @@ canonical shared SCAO contracts directly.
 | `shwfs_ao.validation` | physical estimators, regression governance, native-versus-HCIPy comparison | baseline mutation during ordinary runs |
 | `shwfs_ao.io` | strict profile/public-data/resource loading and explicit artifact serialization | physical propagation or control |
 | `shwfs_ao.experimental.pwfs` | frozen exploratory PWFS forward model | stable SH-WFS protocol conformance or validated PWFS control |
+| `shwfs_ao.runtime` | standard-library desktop resource policy: memory-budget preflight, native thread limits, process-group supervision | numerics (it never imports NumPy), physics |
 
 `build_scao_system()` has built-in native and HCIPy profile factories; the
 HCIPy registration resolves without the optional dependency and fails closed
@@ -217,9 +218,22 @@ leak. The frame does not become a zero-valued valid measurement and does not
 pause the queue. After clipping/dead/stuck policy, `accept_applied_commands()`
 synchronizes controller state to the applied command.
 
-Science propagation is not executed inside `control.loop.run_closed_loop`;
-callers pass a selected residual OPD to the configured propagator after or
-alongside loop analysis.
+Science propagation is not executed inside `control.loop.run_closed_loop`.
+Callers either pass a selected residual OPD to the configured propagator, or
+attach passive frame observers (`control.observation.FrameObserver`, e.g.
+`science.long_exposure.StreamingLongExposure`). Observers receive immutable
+per-frame atmosphere and pre-/post-update residual snapshots after each DM
+update. They cannot reach live components, and the run's telemetry and hash
+are identical with or without them.
+
+Schema-v5 profiles with a `scalable` block take the high-order path through
+the same factory and loop: the sparse linear-spline DM operator
+(`backends.native.dm_operator`), the compact lenslet geometry
+(`wfs.shack_hartmann.compact_geometry`) with batched native optics
+(`backends.native.shwfs_batched`), grouped local calibration into a
+`calibration.sparse.SparseInteractionMatrix`, and the
+`calibration.sparse.SparseLsmrReconstructor`. See
+[ESO-derived SCAO benchmark](eso_scao_benchmark.md).
 
 SH-WFS row order is immutable: for each retained physical subaperture ID `S`,
 the rows are `S:x` then `S:y`. Positive x/y OPD tilts retain their sign through

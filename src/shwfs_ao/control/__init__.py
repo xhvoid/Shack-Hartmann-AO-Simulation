@@ -9,6 +9,13 @@ from .command_mapping import (
 )
 from .controller import ControllerError, LeakyIntegratorController
 from .history import LoopHistory, LoopHistoryError
+from .observation import (
+    OBSERVABLE_FIELDS,
+    OBSERVATION_POINT,
+    FrameObservation,
+    FrameObservationError,
+    FrameObserver,
+)
 from .loop import (
     ControlLoopError,
     ControlLoopWarning,
@@ -36,6 +43,11 @@ __all__ = (
     "LeakyIntegratorController",
     "LoopHistoryError",
     "LoopHistory",
+    "OBSERVABLE_FIELDS",
+    "OBSERVATION_POINT",
+    "FrameObservation",
+    "FrameObservationError",
+    "FrameObserver",
     "ControlLoopError",
     "ControlLoopWarning",
     "validate_closed_loop_components",

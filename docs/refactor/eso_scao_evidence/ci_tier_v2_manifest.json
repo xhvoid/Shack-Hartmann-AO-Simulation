@@ -1,0 +1,264 @@
+{
+  "atmosphere": {
+    "max_travel_m": 2.0894000000000004,
+    "periodic_band_repeated": false,
+    "screen_period_m": 10.084033613445342
+  },
+  "calibration": {
+    "cache_key": "880dbda11f7502c7f5ced6381119d91000e250dbead7a9dae388053d9a7b19b4",
+    "calibration_hash": "c509c8930a9e8040f432e1c8f8419a5495ccd6596ba54f2625c5fbf5cb7c24ab",
+    "nnz": 576,
+    "probe_group_count": 5,
+    "reused_from_cache": false,
+    "sensor_call_count": 11,
+    "stored_bytes": 10376,
+    "strategy": "grouped_local_noiseless_v1"
+  },
+  "claim_boundary": "software correctness and agreement with the declared ESO-derived model only; not an ESO instrument model, not validated against ESO SCAO data, and not comparable to the R1 GLAO/LTAO PSF files",
+  "component_timings_s": {
+    "atmosphere_frame": 0.0057613470902045565,
+    "dm_synthesis": 0.00013002753257751465,
+    "reconstruction": 0.0014750550811489422,
+    "science_propagation_all_wavelengths": 0.0022134166210889816,
+    "wfs_measurement": 0.013998708377281824
+  },
+  "config_hash": "7a522a8315978b3bba7c1fc785e417de762985328bc38727386ac703caf9385b",
+  "counts": {
+    "actuators": {
+      "calibrated_coordinates": 96,
+      "controllable": 117,
+      "excluded_by_reason": {
+        "no_retained_lenslet_support": 12,
+        "zero_illuminated_support": 9
+      },
+      "illuminated": 108,
+      "nominal": 121,
+      "retained_layout": 117
+    },
+    "lenslets": {
+      "calibration_valid": 72,
+      "nominal": 100,
+      "retained": 72
+    }
+  },
+  "execution": {
+    "atmosphere_band_storage": "materialized",
+    "authorization_note": null,
+    "host": {
+      "available_bytes": 5038915584,
+      "available_source": "psutil.virtual_memory",
+      "cpu_count": 8,
+      "machine": "arm64",
+      "physical_bytes": 17179869184,
+      "platform": "darwin",
+      "pressure_level": "normal",
+      "pressure_raw": "1",
+      "pressure_source": "sysctl:kern.memorystatus_vm_pressure_level",
+      "reliable": true,
+      "timestamp_unix_s": 1792029152.030611
+    },
+    "lenslet_batch_size": 512,
+    "numpy": "2.5.0",
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "process_peak_rss_bytes": 137674752,
+    "python": "3.14.3",
+    "thread_environment": {
+      "MKL_NUM_THREADS": "2",
+      "NUMEXPR_NUM_THREADS": "2",
+      "OMP_NUM_THREADS": "2",
+      "OPENBLAS_NUM_THREADS": "2",
+      "VECLIB_MAXIMUM_THREADS": "2"
+    }
+  },
+  "gates": {},
+  "label": "ESO-derived SCAO benchmark",
+  "ledgers": {
+    "benchmarks/eso_drm_42m_scao_derived.assumptions.v2.json": "93d889e20529234cbdfecc73db0327612cb5da1a5e643ddc38e5af78dd14e1a5",
+    "benchmarks/eso_scao_source_ledger.v1.json": "abbfd14af06f38a9296723a7c5e2a2fede7faa3472d3a3fe5e9b2ac88ba2b522"
+  },
+  "loop": {
+    "final_post_update_residual_rms_nm": 173.70227603418465,
+    "loop_hash": "888d5cf80619ee82391459180026cd0bc6f01a7ca956d74490ab4bab76435ffd",
+    "max_saturation_fraction": 0.0,
+    "mean_open_loop_rms_nm": 1434.795599509017,
+    "mean_post_burn_in_residual_rms_nm": 233.48948358655957,
+    "reconstruction_usable_fraction": 1.0,
+    "usable_nonzero_updates": 32
+  },
+  "n_steps": 32,
+  "observer_neutrality": {
+    "arrays_equal": {
+      "applied_command_history_opd_m": true,
+      "measurement_row_masks": true,
+      "post_update_residual_opd_rms_m": true,
+      "pre_update_residual_opd_rms_m": true,
+      "requested_command_history_opd_m": true
+    },
+    "loop_hash_equal": true,
+    "passed": true
+  },
+  "observing_conditions_hash": "fd9e333437a45d7f9399b0ad08b9f48c4df4789902537241b9c922348f4e0e7c",
+  "process_peak_rss_high_water_bytes": {
+    "after_build": 115621888,
+    "after_closed_loop": 127483904,
+    "after_component_probe": 135643136,
+    "after_science_metrics": 127631360
+  },
+  "profile": "eso_scao_smoke_5m_software@2",
+  "profile_component_config_hashes": {
+    "atmosphere": "a20950bcc29f4d1a7f8634a1a22e940a4137c53769d980735a296669195d93af",
+    "calibration": "410d850f4fa10ad67d1aa9c61d60ccdb15fdeafb8077a9a26ce480a9422a48f5",
+    "command_projector": "f4985996c70388a4a777684c16bde99947e3ef552b389bd012cfc6d6f04c84cb",
+    "controller": "87c35f4bebcd2489db6a583959d2995eb9b4a44c6449623b7c2f971f73626871",
+    "detector": "f9c7f6db3ba5cccbbe6870d7ea685b834b9f98cb2586e658c60a9ceb40089438",
+    "dm": "c4458122b83b83e4e8ef8dcfcbe5aa1fa4d400656cc71eec2d039bc85bd15665",
+    "profile": "ac9e857bd6b1dfa15963049e0b6cdf32a3e9c2552b80c846b1d75436199bcec4",
+    "random": "02bced068b5fe270ac9e8f27bb3e4e79b054b08ef941de956fb5d94ecac55c76",
+    "reconstructor": "5592550a7c9b0c82aad62103e14820abb8116d9b73663bdc7058ba5c7055f0e2",
+    "scalable": "d9b37f0f18f753b172a4c540790d061a79e9b9934495c0c2eb7fd1afbc47350a",
+    "science": "1c5bdbe967a97b4a8709a5a8116b0be1ce8691d56a94231b7e0d5f6d2721745f",
+    "wfs": "f52f89c98e2d44bcbe0706a1fc29c2aab4da7b927c5747db746919d484d8809d"
+  },
+  "profile_n_steps": 32,
+  "purpose": "software smoke: numerical behaviour and regression (desktop safe)",
+  "realization_index": 0,
+  "root_seed": 1,
+  "schema": "shwfs_ao.eso_scao_benchmark_result.v1",
+  "science": {
+    "config_hash": "69f8d1f817f75500c73825b452c6e0ecabfa840bd26e30d2377f59faba1b0afb",
+    "flux_denominator": "normalized_source_grid_flux",
+    "metadata": {
+      "coaddition": "intensity",
+      "flux_denominator": "normalized_source_grid_flux",
+      "recentering": "none",
+      "temporal_quadrature": "instantaneous_snapshot_rectangle_rule"
+    },
+    "metrics": [
+      {
+        "centering": "final_image_peak_for_fwhm_ee_profile_optical_axis_for_on_axis_strehl",
+        "ee50_radius_rad": 5.162807126457659e-07,
+        "ee80_radius_rad": 2.29610005680749e-06,
+        "flux_denominator": "normalized_source_grid_flux",
+        "fwhm_lambda_over_d": 1.0356377764312896,
+        "fwhm_rad": 3.4176046622232556e-07,
+        "ideal_ee50_radius_rad": 2.0259165222051455e-07,
+        "ideal_ee80_radius_rad": 5.490926273740306e-07,
+        "ideal_fwhm_rad": 3.0751330071286635e-07,
+        "lambda_over_d_rad": 3.3e-07,
+        "on_axis_strehl": 0.5007409923425201,
+        "peak_offset_xy_rad": [
+          0.0,
+          0.0
+        ],
+        "peak_strehl": 0.5007409923425201,
+        "wavelength_m": 1.65e-06
+      },
+      {
+        "centering": "final_image_peak_for_fwhm_ee_profile_optical_axis_for_on_axis_strehl",
+        "ee50_radius_rad": 4.259958731612569e-07,
+        "ee80_radius_rad": 2.0553183322442513e-06,
+        "flux_denominator": "normalized_source_grid_flux",
+        "fwhm_lambda_over_d": 1.0060732336500455,
+        "fwhm_rad": 4.4267222280602003e-07,
+        "ideal_ee50_radius_rad": 2.7012220296068606e-07,
+        "ideal_ee80_radius_rad": 7.321235031653742e-07,
+        "ideal_fwhm_rad": 4.100177342838216e-07,
+        "lambda_over_d_rad": 4.4e-07,
+        "on_axis_strehl": 0.6527947203966998,
+        "peak_offset_xy_rad": [
+          0.0,
+          0.0
+        ],
+        "peak_strehl": 0.6527947203966998,
+        "wavelength_m": 2.2e-06
+      }
+    ],
+    "propagator_backend": "native",
+    "propagator_config_hash": "40224c19472f1478cf0733c5cdb34d795e68f9d39f16207b2ec68fd13c751cef",
+    "reset_count": 0,
+    "residual": "pre_update",
+    "schema": "shwfs_ao.science.long_exposure_result.v1",
+    "selection": {
+      "burn_in_frames": 8,
+      "first_frame": 8,
+      "first_time_s": 0.016,
+      "frame_period_s": 0.002,
+      "last_frame": 31,
+      "last_time_s": 0.062,
+      "quadrature_exposure_s": 0.048,
+      "residual": "pre_update",
+      "residual_description": "pre-update residual measured by the WFS at each selected frame",
+      "sample_center_span_s": 0.046,
+      "sample_count": 24,
+      "sample_interval_s": 0.002,
+      "stride": 1,
+      "temporal_quadrature": "instantaneous_snapshot_rectangle_rule",
+      "uniform_weights": true,
+      "weight_sum": 24.0
+    },
+    "wavelengths_m": [
+      1.65e-06,
+      2.2e-06
+    ]
+  },
+  "science_files": {
+    "1650nm": "science_1650nm.npz",
+    "2200nm": "science_2200nm.npz"
+  },
+  "science_sha256": {
+    "1650nm": "99e0688f78c6fe7d2f773ebaf9e94f57e1d35fddfba9b2a1f530a0b48ca78ec3",
+    "2200nm": "db302c75028b245cc3018243b552c0bae7923f3d5a981f6d17f8c52fe6bfe7c1"
+  },
+  "solver": {
+    "atol": 1e-08,
+    "btol": 1e-08,
+    "converged": 64,
+    "damping_absolute": 3384.5537501942454,
+    "damping_relative": 0.001,
+    "initial_guess": "zero",
+    "iterations": 3466,
+    "max_iterations": 5000,
+    "max_iterations_used": 56,
+    "min_valid_fraction": 0.5,
+    "nonconverged_policy": "reject",
+    "rejected": 0,
+    "solver": "lsmr",
+    "solves": 64
+  },
+  "system_component_hashes": {
+    "atmosphere": "1a22db13b4672afded177c2044d6087a7abfcb109248c660ee40e681dfa68a11",
+    "command_projector": "160ec7cdd0c9f098af1dc5a193e85c494fd59e9b2ca4cdc6869d72b8e589ec6d",
+    "controller": "4f75e9023a663acc66883a5ebe2808e6874688916f38362570ad6c6aa0147641",
+    "dm": "63d5f873eface627af69332cdde70131e96bc2ff9267b28f457a4019dd953a74",
+    "interaction_matrix": "c509c8930a9e8040f432e1c8f8419a5495ccd6596ba54f2625c5fbf5cb7c24ab",
+    "pupil_geometry": "bd99e39156a1355cd3baf6e8a66d4c1206f082e100edb6f661768195bd361be5",
+    "random_streams": "2750dcfb47cd886b8f42c20ef4006e356a8463baa3ca7f9eaba28bb24c9f27ca",
+    "reconstructor": "9c29e49d416033ae3b964301acc48716e00b41ff3f81988f097b87b60ab11a84",
+    "science_propagator": "40224c19472f1478cf0733c5cdb34d795e68f9d39f16207b2ec68fd13c751cef",
+    "wfs": "45ad2aa4055fb245585a9cb1204495f26f6b9419f15f4abdcd74c895ebf06aa6"
+  },
+  "telemetry_file": "telemetry.npz",
+  "telemetry_sha256": {
+    "applied_command_history_opd_m": "123acdd044c308e1f4a0dd15bf35a20065d0cea787fa3b53643e8a2437d85bb1",
+    "pre_update_residual_opd_rms_m": "096062b36c162b1fbc4c960e09c2582db18b606209e54fc0550d4e63f7433bb7"
+  },
+  "tier": "ci",
+  "timing_semantics": {
+    "command_release": "controller queue releases frame k's increment in the update of frame k + latency_frames",
+    "detector_exposure_field_s": 0.002,
+    "detector_integration": "none: instantaneous snapshot (exposure_s is recorded, not integrated)",
+    "frame_period_s": 0.002,
+    "frame_timestamp": "k / frame_rate_hz; one instantaneous atmosphere sample per frame",
+    "latency_frames": 2,
+    "measured_to_first_seen_delay_frames": 3,
+    "science_residual": "pre-update residual measured by the WFS at each selected frame",
+    "science_temporal_quadrature": "instantaneous_snapshot_rectangle_rule"
+  },
+  "timings_s": {
+    "build_including_calibration_s": 0.19554991740733385,
+    "closed_loop_with_science_s": 0.7492731250822544,
+    "observer_free_rerun_s": 0.6979785412549973,
+    "per_frame_mean_s": 0.02341478515882045,
+    "science_metrics_s": 0.08087295945733786
+  }
+}

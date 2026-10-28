@@ -1,0 +1,138 @@
+{
+  "schema_name": "shwfs_ao.source_ledger",
+  "schema_version": 1,
+  "ledger_id": "eso_scao_source_ledger",
+  "access_note": "URLs and locators as checked on 2026-10-14 for docs/refactor/ESO_SCAO_DEVELOPMENT_PROMPT.md; they were not re-fetched in the implementing session. Historical content dates matter more than site navigation dates. Complete external PDFs are not redistributed.",
+  "sources": [
+    {
+      "id": "R1",
+      "title": "ESO E-ELT Design Reference Mission: AO performance and PSFs (technical data)",
+      "url": "https://www.eso.org/sci/facilities/eelt/science/drm/tech_data/ao/",
+      "locator": "'Atmosphere' and 'Parameters of layers' tables; system/simulation parameter table; PSF database description",
+      "content_date": "2011-05-25",
+      "accessed": "2026-10-14",
+      "role": "normative",
+      "supports": [
+        "integrated Fried parameter r0 = 0.13 m at 500 nm (seeing 0.8 arcsec), von Karman spectrum, outer scale 25 m, inner scale = pixel size",
+        "ten turbulent layers 0-18.5 km with fractional Cn2 (printed sum 1.001) and wind speeds 8.0-33.7 m/s; wind directions not published",
+        "84x84 Shack-Hartmann scale and an 85x85 ground-conjugate DM with linear-spline influence family",
+        "500 Hz loop rate, 2000 iterations (4 s), a three-iteration command delay",
+        "idealized (noiseless) sensing in the simulation parameter set"
+      ],
+      "limitations": [
+        "the PSF database covers GLAO, LTAO and NOAO only; there is no SCAO PSF to compare against",
+        "the system scales come from multi-conjugate/LGS studies and are borrowed into a one-NGS SCAO topology",
+        "the CCD sampling row reads '6' without a dimensional interpretation; it is not used as a 6x6 detector claim",
+        "the linear-spline basis is named, not defined; the separable bilinear tent is an assumption (A06)"
+      ]
+    },
+    {
+      "id": "R2",
+      "title": "ESO E-ELT Design Reference Mission: telescope technical data",
+      "url": "https://www.eso.org/sci/facilities/eelt/science/drm/tech_data/telescope/",
+      "locator": "'Photon collecting area' section",
+      "content_date": "2013-03-20",
+      "accessed": "2026-10-14",
+      "role": "normative",
+      "supports": [
+        "historical 42 m primary diameter",
+        "central-obstruction diameter ratio 0.28 (annular collecting area pi/4 D^2 (1 - 0.28^2))"
+      ],
+      "limitations": [
+        "segmentation, spiders and gaps are omitted in this reference case",
+        "the historical 42 m design differs from the current 39 m ELT"
+      ]
+    },
+    {
+      "id": "R3",
+      "title": "S. Gladysz and R. Rebolo, The E-ELT Design Reference Mission: Direct imaging of terrestrial and giant exoplanets (DRM report S3, v2)",
+      "url": "https://www.eso.org/sci/facilities/eelt/science/drm/S3/S3_1_report.pdf#page=17",
+      "locator": "Table 1, p. 17; methodology section 2.2.1, pp. 5-6",
+      "content_date": "2010-06-01",
+      "accessed": "2026-10-14",
+      "role": "contextual_reference_case",
+      "supports": [
+        "a separate SCAO case: spatially filtered SH 84x84, 2 ms integration, 6 ms readout-plus-reconstruction lag, 3 e- read noise, 0.6-0.9 um sensing, 30 nm NCPA"
+      ],
+      "limitations": [
+        "PAOLA-based analytic method with 0.7 arcsec seeing, its own pupil and perfect spatial filtering",
+        "its lag definition differs from the R1 delayed-command convention; values are not merged into the normative case"
+      ]
+    },
+    {
+      "id": "R4",
+      "title": "C. Bechet and M. Tallon, Reducing the Fractal Iterative Method (FRiM) to the cost of half an iteration, ESO RTC workshop 2012",
+      "url": "https://www.eso.org/sci/meetings/2012/RTCWorkshop/6_1_bechet.pdf#page=7",
+      "locator": "slide 7 and slides 15-16; programme https://www.eso.org/sci/meetings/2012/RTCWorkshop/program.html",
+      "content_date": "2012",
+      "accessed": "2026-10-14",
+      "role": "contextual_reference_case",
+      "supports": [
+        "an independent FRiM/OCTOPUS SCAO experiment: 42 m, obstruction 0.28, 500 Hz, nine layers, r0 = 0.129 m, tau0 = 2.8 ms, ground DM 85x85, one NGS, SH 84x84, 1e5 photons/frame/subaperture"
+      ],
+      "limitations": [
+        "slides, not a complete reproducible input deck or a raw SCAO PSF dataset",
+        "its nine-layer profile is not the packaged ten-layer R1 profile; substituting one for the other is not a reproduction"
+      ]
+    }
+  ],
+  "reference_cases": [
+    {
+      "case_id": "R3_gladysz_rebolo_2010_exoplanet_scao",
+      "source_ids": ["R3"],
+      "status": "documented_not_runnable",
+      "parameters": {
+        "sh_subapertures_across": 84,
+        "spatial_filter": "ideal (perfect filtering)",
+        "integration_s": 0.002,
+        "readout_plus_reconstruction_lag_s": 0.006,
+        "read_noise_e": 3.0,
+        "sensing_band_um": [0.6, 0.9],
+        "ncpa_nm_rms": 30.0,
+        "seeing_arcsec": 0.7,
+        "method": "PAOLA analytic"
+      },
+      "why_not_runnable": "analytic PAOLA study with a different atmosphere, pupil, filtering, noise and lag convention; no end-to-end input deck"
+    },
+    {
+      "case_id": "R4_bechet_tallon_2012_frim_octopus_scao",
+      "source_ids": ["R4"],
+      "status": "documented_not_runnable",
+      "parameters": {
+        "diameter_m": 42.0,
+        "obstruction_ratio": 0.28,
+        "loop_rate_hz": 500.0,
+        "layers": 9,
+        "r0_m_at_500nm": 0.129,
+        "tau0_s": 0.0028,
+        "dm_actuators_across": 85,
+        "sh_subapertures_across": 84,
+        "guide_stars": 1,
+        "photons_per_frame_per_subaperture": 100000.0
+      },
+      "why_not_runnable": "the nine-layer profile, noise model and reconstruction details are not published in reproducible form"
+    }
+  ],
+  "contradictions": [
+    {
+      "id": "C1",
+      "description": "R1 states a delayed command of three iteration intervals; R3 states a 2 ms integration and a 6 ms readout-plus-reconstruction lag.",
+      "resolution": "the normative benchmark uses R1 (latency_frames = 2, total measured-to-applied delay three frame intervals, A10); R3 stays a separate reference case."
+    },
+    {
+      "id": "C2",
+      "description": "R1 gives 10 layers with r0 = 0.13 m; R4 gives 9 layers with r0 = 0.129 m.",
+      "resolution": "the benchmark uses the packaged R1 ten-layer profile; R4 is not reproduced."
+    },
+    {
+      "id": "C3",
+      "description": "R1 assumes idealized sensing; R3 uses 3 e- read noise; R4 uses 1e5 photons per frame per subaperture.",
+      "resolution": "deterministic noiseless sensing with a declared numerical electron scale (A09); no noise model is borrowed from R3 or R4."
+    },
+    {
+      "id": "C4",
+      "description": "R1 seeing 0.8 arcsec versus R3 0.7 arcsec.",
+      "resolution": "r0 = 0.13 m at 500 nm from R1 is primary."
+    }
+  ]
+}

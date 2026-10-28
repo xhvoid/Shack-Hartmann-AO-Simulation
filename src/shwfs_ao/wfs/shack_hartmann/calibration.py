@@ -22,6 +22,7 @@ from ...detector.centroid import CentroidConfig, estimate_centroid
 from ...detector.config import DetectorConfig
 from ...detector.effects import apply_detector_effects
 from ...detector.random import DetectorRealization
+from .compact_geometry import CompactShackHartmannGeometry, geometries_match
 from .geometry import ShackHartmannGeometry
 from .optics import validate_spot_intensity_result
 
@@ -62,7 +63,9 @@ class ShackHartmannCalibration:
     clip_negative_pixels: bool = True
 
     def __post_init__(self) -> None:
-        if not isinstance(self.geometry, ShackHartmannGeometry):
+        if not isinstance(
+            self.geometry, (ShackHartmannGeometry, CompactShackHartmannGeometry)
+        ):
             raise ShackHartmannCalibrationError(
                 "geometry must be a ShackHartmannGeometry."
             )
@@ -198,7 +201,7 @@ def calibrate_zero_phase_reference(
     negative pixel to clip.
     """
 
-    if not isinstance(geometry, ShackHartmannGeometry):
+    if not isinstance(geometry, (ShackHartmannGeometry, CompactShackHartmannGeometry)):
         raise ShackHartmannCalibrationError(
             "geometry must be a ShackHartmannGeometry."
         )
@@ -611,14 +614,13 @@ def _validate_backend_declared_context(
 ) -> None:
     declared_geometry = getattr(optics_backend, "geometry", None)
     if declared_geometry is not None:
-        if not isinstance(declared_geometry, ShackHartmannGeometry):
+        if not isinstance(
+            declared_geometry, (ShackHartmannGeometry, CompactShackHartmannGeometry)
+        ):
             raise ShackHartmannCalibrationError(
                 "optics_backend.geometry must be a ShackHartmannGeometry."
             )
-        if stable_hash(
-            declared_geometry,
-            namespace="shack_hartmann_geometry",
-        ) != stable_hash(geometry, namespace="shack_hartmann_geometry"):
+        if not geometries_match(declared_geometry, geometry):
             raise ShackHartmannCalibrationError(
                 "optics_backend geometry does not match calibration geometry."
             )

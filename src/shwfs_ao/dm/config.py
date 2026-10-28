@@ -25,6 +25,7 @@ __all__ = (
     "MIN_ACTUATORS_ACROSS",
     "NM_TO_M",
     "VALID_INFLUENCE_MODELS",
+    "SCALABLE_INFLUENCE_MODELS",
     "DMModelError",
     "DMConfigError",
     "DMConfig",
@@ -42,6 +43,12 @@ DEFAULT_DM_SOURCE_NOTE = (
 VALID_INFLUENCE_MODELS = frozenset(
     {"gaussian", "compact_gaussian", "pyramid_like"}
 )
+# Influence families built by a sparse local operator instead of a dense
+# influence stack.  ``linear_spline`` is the separable bilinear tent of
+# ``shwfs_ao.backends.native.dm_operator``; its support half-width is exactly
+# one pitch, so ``coupling_width_pitch`` must be 1.0.  Kept apart from
+# VALID_INFLUENCE_MODELS, whose members the frozen dense builders implement.
+SCALABLE_INFLUENCE_MODELS = frozenset({"linear_spline"})
 NM_TO_M = 1.0e-9
 DEFAULT_ACTUATOR_MARGIN_FRACTION = 0.0
 MIN_ACTUATORS_ACROSS = 2
@@ -94,15 +101,21 @@ class DMConfig:
             raise DMConfigError(
                 f"n_actuators_across must be >= {MIN_ACTUATORS_ACROSS}."
             )
-        if self.influence_model not in VALID_INFLUENCE_MODELS:
+        allowed_models = VALID_INFLUENCE_MODELS | SCALABLE_INFLUENCE_MODELS
+        if self.influence_model not in allowed_models:
             raise DMConfigError(
                 f"influence_model={self.influence_model!r}; expected one of "
-                f"{sorted(VALID_INFLUENCE_MODELS)}."
+                f"{sorted(allowed_models)}."
             )
         coupling = _positive_float(
             self.coupling_width_pitch,
             label="coupling_width_pitch",
         )
+        if self.influence_model == "linear_spline" and coupling != 1.0:
+            raise DMConfigError(
+                "influence_model='linear_spline' has a support half-width of "
+                "exactly one pitch; coupling_width_pitch must be 1.0."
+            )
         stroke = _positive_float(self.stroke_limit_nm, label="stroke_limit_nm")
         if stroke * NM_TO_M <= 0.0:
             raise DMConfigError(

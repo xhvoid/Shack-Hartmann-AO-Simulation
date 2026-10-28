@@ -39,6 +39,7 @@ from .calibration import (
     legacy_calibration_seeds,
     shack_hartmann_noise_stream_identity,
 )
+from .compact_geometry import CompactShackHartmannGeometry, geometries_match
 from .geometry import ShackHartmannGeometry
 from .optics import validate_spot_intensity_result
 
@@ -238,7 +239,7 @@ class DetectorShackHartmannSensor:
         :class:`~shwfs_ao.wfs.shack_hartmann.calibration.ShackHartmannCalibration`.
         """
 
-        if not isinstance(geometry, ShackHartmannGeometry):
+        if not isinstance(geometry, (ShackHartmannGeometry, CompactShackHartmannGeometry)):
             raise ShackHartmannMeasurementError(
                 "geometry must be a ShackHartmannGeometry."
             )
@@ -912,14 +913,15 @@ def _validate_backend_context(
 ) -> None:
     declared_geometry = getattr(backend, "geometry", None)
     if declared_geometry is not None:
-        if not isinstance(declared_geometry, ShackHartmannGeometry):
+        if not isinstance(
+            declared_geometry, (ShackHartmannGeometry, CompactShackHartmannGeometry)
+        ):
             raise ShackHartmannMeasurementError(
                 "optics_backend.geometry must be a ShackHartmannGeometry."
             )
-        if stable_hash(
-            declared_geometry,
-            namespace="shack_hartmann_geometry",
-        ) != stable_hash(geometry, namespace="shack_hartmann_geometry"):
+        # The same immutable geometry object is accepted without rehashing it;
+        # this check runs on every frame.
+        if not geometries_match(declared_geometry, geometry):
             raise ShackHartmannMeasurementError(
                 "optics_backend geometry does not match calibration geometry."
             )

@@ -343,6 +343,50 @@ config = replace(
 )
 ```
 
+## ESO-derived 42 m SCAO benchmark
+
+The repository also contains an **ESO-derived SCAO benchmark**. It uses the
+historical E-ELT DRM scales: a 42 m aperture with a 0.28 central obstruction,
+the ten-layer atmosphere above, an 84×84 Shack-Hartmann and an 85×85
+linear-spline ground DM. The loop runs at 500 Hz with a three-interval command
+delay and noiseless image-based sensing. It is a single on-axis NGS SCAO
+adaptation, not an ESO instrument model, and no parameter was tuned toward a
+published Strehl. Every executable value is traced to a packaged source
+ledger (ESO DRM pages R1/R2; two further studies kept as separate reference
+cases) or to an explicit assumption in a packaged assumption ledger, which
+the tests check against every profile.
+
+At the full spatial scale nothing is dense. The DM is a sparse local operator
+(5873 laid-out actuators). The 5112 retained lenslets are stored as cells and
+transformed in bounded FFT batches. Calibration groups actuators that share no
+lenslet, so the 5328 eligible actuators (geometric exclusions are recorded by
+ID and reason) are calibrated with 11 sensor measurements, exactly equal to
+per-actuator central differences. Reconstruction is damped LSMR on the sparse
+response. A passive frame observer accumulates long-exposure science images
+as averages of instantaneous intensities, never of OPD. On the development
+desktop the full 84×84 / 85×85 / 1008-pixel system builds and runs 20
+closed-loop frames at 1.5 GB peak memory in about 110 s, with every solve
+converged and zero DM saturation. A 2000-frame (4 s) run that reuses the
+verified calibration takes about an hour. It holds a 173 nm residual and
+gives a long-exposure Strehl ratio of 0.78 at 2.2 µm in this noiseless,
+single-realization model.
+
+<!-- readme-smoke: native -->
+```bash
+AO_DEMO_OUTPUT_DIR=readme-smoke-output python examples/run_eso_scao_benchmark.py
+python examples/run_eso_scao_benchmark.py --tier full --dry-run
+```
+
+The first command runs the 5 m software-smoke tier in a supervised,
+thread-limited child process. The second prints the full tier's configuration
+and peak-memory estimate without building it. Larger tiers need
+`--enable-large-run`, and the desktop memory policy may also require an
+explicitly authorized budget. Sources, assumptions, tiers, the high-order
+path and the long-exposure definitions are in the
+[benchmark notes](docs/eso_scao_benchmark.md). The commands run, their
+results, and the gates still pending are in the
+[execution record](docs/refactor/ESO_SCAO_DEVELOPMENT_STATUS.md).
+
 ## Validation evidence
 
 The project treats reproducibility, numerical correctness and agreement with

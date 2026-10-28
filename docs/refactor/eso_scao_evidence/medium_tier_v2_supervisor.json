@@ -1,0 +1,145 @@
+{
+  "dry_run": {
+    "actuators_across": 25,
+    "atmosphere_band_storage": "materialized",
+    "burn_in_frames": 50,
+    "config_hash": "659afd9993de3d9beb1d6fdc9e821ca7df7f8bcfb1bb41bf372fa445dce0a3f0",
+    "counts": {
+      "estimated_retained_actuators_upper": 614,
+      "estimated_retained_lenslets_upper": 513,
+      "nominal_actuators": 625,
+      "nominal_lenslets": 576
+    },
+    "estimate": {
+      "baseline_bytes": 167772160,
+      "components": {
+        "atmosphere_band_power": 2654208,
+        "atmosphere_frame_temporaries": 20570112,
+        "atmosphere_layer_coefficients": 53084160,
+        "calibration_probe_maps": 1990656,
+        "compact_geometry_and_label_map": 505170,
+        "dm_construction_transients": 16975872,
+        "dm_sparse_operator_and_hashing": 16975872,
+        "history": 2375200,
+        "observer_snapshots": 1327104,
+        "pupil_grids_and_copies": 5640192,
+        "science_per_wavelength": 34504704,
+        "sparse_response": 235776,
+        "wfs_measurement": 45221472
+      },
+      "label": "eso_scao_medium_12m_derived@2 (200 frames)",
+      "largest_buffer_bytes": 5308416,
+      "margin": 2.0,
+      "notes": [
+        "analytic upper estimate from the profile; nothing was built",
+        "atmosphere screen 576x576 complex per layer",
+        "science grid 576x576 per wavelength"
+      ],
+      "raw_bytes": 369832658,
+      "required_bytes": 739665316
+    },
+    "lenslets_across": 24,
+    "n_steps": 200,
+    "n_steps_override": null,
+    "output_dir": "<scratch>/bench/medium_fresh",
+    "preflight": {
+      "accepted": true,
+      "budget_bytes": 1213448192,
+      "budget_rationale": "min(2 GiB, 12.5% physical, 25% available) set by available_25pct",
+      "estimate": {
+        "baseline_bytes": 167772160,
+        "components": {
+          "atmosphere_band_power": 2654208,
+          "atmosphere_frame_temporaries": 20570112,
+          "atmosphere_layer_coefficients": 53084160,
+          "calibration_probe_maps": 1990656,
+          "compact_geometry_and_label_map": 505170,
+          "dm_construction_transients": 16975872,
+          "dm_sparse_operator_and_hashing": 16975872,
+          "history": 2375200,
+          "observer_snapshots": 1327104,
+          "pupil_grids_and_copies": 5640192,
+          "science_per_wavelength": 34504704,
+          "sparse_response": 235776,
+          "wfs_measurement": 45221472
+        },
+        "label": "eso_scao_medium_12m_derived@2 (200 frames)",
+        "largest_buffer_bytes": 5308416,
+        "margin": 2.0,
+        "notes": [
+          "analytic upper estimate from the profile; nothing was built",
+          "atmosphere screen 576x576 complex per layer",
+          "science grid 576x576 per wavelength"
+        ],
+        "raw_bytes": 369832658,
+        "required_bytes": 739665316
+      },
+      "reasons": [],
+      "required_bytes": 739665316,
+      "snapshot": {
+        "available_bytes": 4853792768,
+        "available_source": "psutil.virtual_memory",
+        "cpu_count": 8,
+        "machine": "arm64",
+        "physical_bytes": 17179869184,
+        "platform": "darwin",
+        "pressure_level": "normal",
+        "pressure_raw": "1",
+        "pressure_source": "sysctl:kern.memorystatus_vm_pressure_level",
+        "reliable": true,
+        "timestamp_unix_s": 1792023881.490379
+      }
+    },
+    "profile": "eso_scao_medium_12m_derived@2",
+    "pupil_pixels": 288,
+    "purpose": "end-to-end scaling and calibration at 24x24/25x25 (explicit opt-in)",
+    "requires_explicit_enable": true,
+    "science_wavelengths_m": [
+      2.2e-06
+    ],
+    "threads": 2,
+    "tier": "medium",
+    "timeout_s": 1800.0
+  },
+  "supervisor": {
+    "budget_bytes": 1213448192,
+    "command": [
+      "/Users/xuhan/Documents/AO Simulation/.venv/bin/python",
+      "-m",
+      "shwfs_ao.experiments.eso_scao_benchmark",
+      "--child",
+      "--tier",
+      "medium",
+      "--output-dir",
+      "<scratch>/bench/medium_fresh",
+      "--realization-index",
+      "0",
+      "--lenslet-batch-size",
+      "512",
+      "--calibration-cache",
+      "<scratch>/bench/cache_medium",
+      "--authorization-note",
+      "User authorized the medium and medium-gate tiers in chat on 2026-10-15",
+      "--verify-observer-neutrality",
+      "--enable-large-run"
+    ],
+    "environment_thread_limits": {
+      "MKL_NUM_THREADS": "2",
+      "NUMEXPR_NUM_THREADS": "2",
+      "OMP_NUM_THREADS": "2",
+      "OPENBLAS_NUM_THREADS": "2",
+      "VECLIB_MAXIMUM_THREADS": "2"
+    },
+    "log_path": "<scratch>/bench/medium_fresh/run.log",
+    "peak_rss_bytes": 315195392,
+    "pressure_levels_seen": [
+      "normal"
+    ],
+    "reason": "child exited with status 0",
+    "returncode": 0,
+    "rss_samples": 91,
+    "status": "COMPLETED",
+    "timeout_s": 1800.0,
+    "wall_s": 46.49893204122782
+  }
+}
