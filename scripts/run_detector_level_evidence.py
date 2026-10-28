@@ -2026,13 +2026,15 @@ def _json_default(value: Any) -> Any:
 
 
 def _caller_path(path: Any) -> Path:
-    """``path`` as an absolute, normalized location against this process's working directory.
+    """``path`` made absolute against this process's working directory, without lexical normalization.
 
     A relative location is the caller's: it is fixed here, before a child starts in its own working directory, so
-    every path the parent records and the child is given names the same place.  Symbolic links are kept as given.
+    every path the parent records and the child is given names the same place.  ``..`` is left for the kernel to
+    resolve (``link/../jobs`` stays the parent of the link's target, as for any other path the caller passes) and
+    symbolic links are kept as given.
     """
 
-    return Path(os.path.abspath(os.fspath(path)))
+    return Path(os.getcwd(), os.fspath(path))
 
 
 def _check_fresh_process_options(target: Any, timeout_s: Any, budget_bytes: Any) -> None:
@@ -2206,9 +2208,9 @@ def fresh_process_runner(
 ) -> Any:
     """A run function with ``science_run``'s signature that runs every call in a fresh interpreter (G4, opt-in).
 
-    ``directory`` must not exist; it is created for the first call and holds one job directory per call.  A
-    relative ``directory`` or import path is resolved here, against the caller's working directory at
-    construction.  The returned result is the job's own (science_run's fields unchanged) plus
+    ``directory`` must not exist; it is created with the first job and holds one job directory per call (a call
+    refused before its job directory exists leaves nothing behind).  A relative ``directory`` or import path is
+    resolved here, against the caller's working directory at construction.  The returned result is the job's own (science_run's fields unchanged) plus
     ``execution_envelope``.  A job that raised re-raises its exception here, so a configuration the system
     refuses is still recorded as refused; any other unsuccessful job raises :class:`FreshProcessError`
     carrying its envelope.
@@ -2226,13 +2228,15 @@ def fresh_process_runner(
     def run(config: Any, *, root_seed: int | None = None, n_steps: int | None = None, burn_in_frames: int, execution: Any = None, realization_index: int = 0) -> dict[str, Any]:
         import pickle
 
-        if not calls:
-            directory.mkdir(parents=True)
-        calls.append(root_seed)
-        label = f"{len(calls):04d}-seed{root_seed}-{str(getattr(config, 'config_hash', 'config'))[:12]}"
+        if not calls and os.path.lexists(directory):
+            raise FreshProcessError(f"{directory} exists: --fresh-process-dir must name a new directory; nothing ran.")
+        label = f"{len(calls) + 1:04d}-seed{root_seed}-{str(getattr(config, 'config_hash', 'config'))[:12]}"
         job_dir = directory / "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in label)
         kwargs = {"root_seed": root_seed, "n_steps": n_steps, "burn_in_frames": burn_in_frames, "execution": execution, "realization_index": realization_index}
+        # run_in_fresh_process creates the directory (with the job's) only once the payload is serialized; a call
+        # refused before that leaves nothing behind and is not counted.
         result, envelope = run_in_fresh_process(target, (config,), kwargs, job_dir=job_dir, label=label, timeout_s=timeout_s, budget_bytes=budget_bytes, import_paths=paths)
+        calls.append(root_seed)
         if envelope["status"] == "succeeded":
             return {**result, "execution_envelope": envelope}
         failure = FreshProcessError(f"{label}: {envelope['status']} ({envelope['status_reason']}); see {job_dir / 'envelope.json'}", envelope)
@@ -2277,7 +2281,7 @@ def _fresh_process_child(job_path: Path) -> int:
 
     from shwfs_ao.runtime.resource_guard import THREAD_ENV_VARS
 
-    job_path = Path(os.path.abspath(job_path))  # the parent passes it absolute; a hand-run child resolves it here
+    job_path = _caller_path(job_path)  # the parent passes it absolute; a hand-run child resolves it here
     job_dir = job_path.parent
     report: dict[str, Any] = {"pid": os.getpid(), "ppid": os.getppid(), "started_unix_s": time.time(), "outcome": None}
     returncode = 1

@@ -261,16 +261,21 @@ def _forbid_science(monkeypatch):
     import shwfs_ao.experiments.detector_level
     import shwfs_ao.experiments.scao
 
+    originals = (
+        shwfs_ao.experiments.detector_level.science_run,
+        shwfs_ao.experiments.scao.build_scao_system,
+        shwfs_ao.experiments.scao.run_closed_loop,
+        shwfs_ao.control.loop.run_closed_loop,
+    )
+
     def forbidden(*_, **__):
         raise AssertionError("a fresh-process test reached a science entry point")
 
-    for module, name in (
-        (shwfs_ao.experiments.detector_level, "science_run"),
-        (shwfs_ao.experiments.scao, "build_scao_system"),
-        (shwfs_ao.experiments.scao, "run_closed_loop"),
-        (shwfs_ao.control.loop, "run_closed_loop"),
-    ):
-        monkeypatch.setattr(module, name, forbidden)
+    # Every loaded reference, import-time aliases included (``from .scao import build_scao_system`` and the like).
+    for module in [module for name, module in list(sys.modules.items()) if name == "shwfs_ao" or name.startswith("shwfs_ao.")]:
+        for name, value in list(vars(module).items()):
+            if any(value is original for original in originals):
+                monkeypatch.setattr(module, name, forbidden)
 
 
 @pytest.fixture
@@ -313,6 +318,19 @@ def test_every_job_dir_form_names_one_place_for_parent_and_child(caller_cwd, for
     # Nothing is created anywhere but the requested place: no doubled job directory inside it, nothing else here.
     top = Path(requested).parts[0] if not Path(requested).is_absolute() else "absolute job"
     assert [path.name for path in caller_cwd.iterdir()] == [top]
+
+
+def test_dot_dot_after_a_symbolic_link_is_left_to_the_kernel(caller_cwd):
+    # ``link/../jobs`` names the parent of the link's target, as the kernel resolves it; a lexical normalization
+    # would have moved the job to ``<cwd>/jobs``.
+    target = caller_cwd.parent / "elsewhere" / "deep"
+    target.mkdir(parents=True)
+    (caller_cwd / "link").symlink_to(target, target_is_directory=True)
+    result, envelope = _relative_job("report_paths", job_dir="link/../jobs")
+    real = caller_cwd.parent / "elsewhere" / "jobs"
+    assert envelope["status"] == "succeeded" and envelope["job_dir"] == str(caller_cwd / "link" / ".." / "jobs")
+    assert result["cwd"] == str(real) and (real / "result.json").is_file()
+    assert sorted(path.name for path in caller_cwd.iterdir()) == ["link"]
 
 
 def test_a_relative_import_path_is_the_callers_and_is_recorded_as_given(caller_cwd):
@@ -373,6 +391,18 @@ def test_the_adapter_fixes_its_directory_at_construction(caller_cwd, monkeypatch
     job_dir = caller_cwd / "adapter jobs" / "ü" / f"0001-seed31-{config.config_hash[:12]}"
     assert first["execution_envelope"]["job_dir"] == str(job_dir) and (job_dir / "result.json").is_file()
     assert list(elsewhere.iterdir()) == []
+
+
+def test_an_adapter_call_refused_before_its_job_leaves_nothing_behind(caller_cwd):
+    import pickle
+
+    config = load_system_profile("det_ccd_2m_synthetic", 1)
+    run = runner.fresh_process_runner("adapter jobs", timeout_s=TIMEOUT_S, budget_bytes=BUDGET, target="fresh_process_workers:mock_science_run", import_paths=(WORKERS,))
+    with pytest.raises((pickle.PicklingError, AttributeError, TypeError)):  # the type depends on the Python version
+        run(config, root_seed=41, n_steps=400, burn_in_frames=100, execution=lambda: None)
+    assert list(caller_cwd.iterdir()) == []  # neither the series directory nor a job directory
+    retried = run(config, root_seed=41, n_steps=400, burn_in_frames=100)
+    assert retried["execution_envelope"]["label"].startswith("0001-seed41-") and retried["execution_envelope"]["status"] == "succeeded"
 
 
 def _cli(*options: str, command: str = "det08") -> list[str]:
