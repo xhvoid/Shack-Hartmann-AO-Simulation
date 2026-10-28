@@ -41,6 +41,7 @@ import binary_scene
 import identity
 import producer
 import protocol
+import web_contract
 
 
 WEB_SCHEMA_VERSION = "ao-explorer.web.v1"
@@ -68,9 +69,15 @@ class RenderError(RuntimeError):
 # Derived identities (review round 1, R1-F13).  The observation arrays are
 # bound to the code that computes them; the web export to the code that
 # writes the bundle.  Orchestration (export.py) and checking (validate.py)
-# produce no bundle content and are not part of either identity.
+# produce no bundle content and are not part of either identity.  The web
+# export judges every production record's producer checks by the shared rule
+# (web_contract.py), whose v1 contract is read from the source of producer.py
+# and observer.py and whose window is the contract's (protocol.py), so those
+# four sources are part of the export content identity: a change to any of
+# them can change what this exporter accepts.  The derive stage does not read
+# the rule, so the observation identity is unchanged.
 OBSERVATION_FILES = ("binary_scene.py", "render.py")
-EXPORT_FILES = ("binary_scene.py", "render.py", "research.py")
+EXPORT_FILES = ("binary_scene.py", "render.py", "research.py", "web_contract.py", "producer.py", "observer.py", "protocol.py")
 
 
 def _code_identity(names: Tuple[str, ...]) -> Dict[str, Any]:
@@ -568,6 +575,52 @@ def metrics_csv(per_frame: Dict[str, Any]) -> bytes:
     return buffer.getvalue().encode("utf-8")
 
 
+def producer_record_problems(record: Any, *, window: Tuple[int, int], count: int) -> web_contract.ProducerCheckProblems:
+    """A v1 job record's producer checks judged by the validator's rule (``web_contract``) on the declared window.
+
+    Every reader applies the same contract: the recorded fields, each verdict literally ``True``, the job record's
+    ``burn_in`` and ``n_steps`` as ints naming ``window`` and ``count``, the diagnostics' keys and finite values.  A
+    truthiness filter over the booleans alone would pass a missing check, a string ``"false"``, ``null`` or an empty
+    checks mapping.
+    """
+
+    observer = record.get("observer") if isinstance(record, dict) else None
+    checks = observer.get("checks") if isinstance(observer, dict) else None
+    job = record.get("job") if isinstance(record, dict) else None
+    return web_contract.producer_check_problems(checks, web_contract.V1.producer_checks, window, count, job=job)
+
+
+def case_validation(record: Any, *, window: Tuple[int, int], count: int) -> Dict[str, bool]:
+    """The ``validation`` record of a case entry, by the same rule :func:`bind_case_records` requires."""
+
+    return {"producer_checks_passed": producer_record_problems(record, window=window, count=count).ok}
+
+
+def bind_case_records(series_dir: Path, plan: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    """Every production case's completed attempt and job record, judged before anything is written.
+
+    The plan's production window must be the v1 contract's; each record's producer checks must meet the producer's
+    contract and name that window.  A refused record leaves no bundle, dataset directory or entry behind.
+    """
+
+    contract = web_contract.V1
+    window, count = contract.analysis_window, contract.analysis_count
+    bound: Dict[str, Dict[str, Any]] = {}
+    for case in protocol.CASES:
+        job_id = f"case-{case['id']}"
+        job = producer.plan_job(plan, job_id)
+        _require(job.get("role") == "production" and (job.get("burn_in"), job.get("n_steps")) == window,
+                 f"{job_id}: the plan's window [{job.get('burn_in')!r}, {job.get('n_steps')!r}) is not the {contract.name} contract's [{window[0]}, {window[1]})")
+        attempt = _attempt(series_dir, job_id)
+        record = producer.read_json(attempt / "job_record.json")
+        problems = producer_record_problems(record, window=window, count=count)
+        _require(problems.kind is None and not (problems.missing or problems.unexpected or problems.not_true or problems.diagnostics),
+                 f"{job_id}: the production record checks do not meet the producer's contract ({problems})")
+        _require(not (problems.frames_wrong or problems.count_wrong), f"{job_id}: the record's analysis window is not [{window[0]}, {window[1]}) with {count} frames")
+        bound[job_id] = {"attempt": attempt, "record": record, "validation": case_validation(record, window=window, count=count)}
+    return bound
+
+
 def command_web(series_dir: Path, web_dir: Path) -> Dict[str, Any]:
     import research
     import site_build
@@ -579,6 +632,8 @@ def command_web(series_dir: Path, web_dir: Path) -> Dict[str, Any]:
     if site["problems"]:
         raise RenderError("the site code is not in its content-addressed build directory: " + "; ".join(site["problems"]))
     plan = producer.load_plan(series_dir, frozen=True)
+    # Every production record is judged before anything is written (the derive stage does the same for its parents).
+    bound_records = bind_case_records(series_dir, plan)
     observation_code = observation_identity()
     observation_dir = observations_dir(series_dir, observation_code["sha256"])
     if not (observation_dir / "observations.json").exists():
@@ -674,8 +729,8 @@ def command_web(series_dir: Path, web_dir: Path) -> Dict[str, Any]:
     for case in protocol.CASES:
         job_id = f"case-{case['id']}"
         job = producer.plan_job(plan, job_id)
-        attempt = _attempt(series_dir, job_id)
-        record = producer.read_json(attempt / "job_record.json")
+        attempt = bound_records[job_id]["attempt"]
+        record = bound_records[job_id]["record"]
         with np.load(attempt / "history.npz") as data:
             history = {name: np.array(data[name]) for name in data.files}
         with np.load(attempt / "movie.npz") as data:
@@ -886,7 +941,7 @@ def command_web(series_dir: Path, web_dir: Path) -> Dict[str, Any]:
                 "observation": ref(obs_entry, f"{prefix}/case.json"),
             },
             "pairing": pairing,
-            "validation": {"producer_checks_passed": all(value for value in record["observer"]["checks"].values() if isinstance(value, bool))},
+            "validation": bound_records[job_id]["validation"],
             "limitations": [
                 "Short single-realization synthetic SCAO demonstration (one seed, 180 frames); no ensemble uncertainty is shown.",
                 "Science samples are frame-start snapshots; averages are equal-weight means of sampled instantaneous images.",

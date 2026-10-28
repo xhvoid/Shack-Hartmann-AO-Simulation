@@ -592,11 +592,40 @@ PRODUCER_DIAGNOSTICS = {
 }
 
 
+# Written out from producer.run_job and ExplorerObserver.finish by hand: the oracle for the parsed v1 contract.  The v1
+# producer records its verdicts without refusing, so the required checks are its bool/all verdicts (the exporter
+# requires them literally true before a case is published); its analysis window is the job record's burn_in and
+# n_steps, not a field of the checks mapping.
+V1_PRODUCER_REQUIRED_TRUE = (
+    "atmosphere_rms_matches_history", "residual_rms_matches_history", "times_match_history", "usable_matches_history",
+    "saturation_matches_history", "display_frame_reductions_within_tolerance", "streaming_within_tolerance", "instantaneous_unit_flux",
+)
+V1_PRODUCER_DIAGNOSTICS = {"streaming_max_abs_difference": (("uncorrected", "corrected"), True), "mean_unit_flux": (("uncorrected", "corrected"), False)}
+V1_PRODUCER_RECORD_LISTS = {
+    "display_frame_independent_reductions": (
+        ("frame", "atmosphere_rms_abs_error_m", "residual_rms_abs_error_m", "uncorrected_strehl_abs_error", "corrected_strehl_abs_error",
+         "held_correction_identity_max_abs_m"),
+        ("atmosphere_rms_abs_error_m", "residual_rms_abs_error_m", "uncorrected_strehl_abs_error", "corrected_strehl_abs_error",
+         "held_correction_identity_max_abs_m"),
+    ),
+}
+
+
+def test_v1_producer_checks_are_read_from_the_producer_source():
+    checks = web_contract.V1.producer_checks
+    assert checks is not None and checks.source == "producer.run_job" and checks.required_true == V1_PRODUCER_REQUIRED_TRUE
+    assert checks.window_fields == ("burn_in", "n_steps") and checks.window_in_checks is False
+    assert checks.diagnostics == V1_PRODUCER_DIAGNOSTICS and checks.record_lists == V1_PRODUCER_RECORD_LISTS
+    assert set(checks.recorded) == set(V1_PRODUCER_REQUIRED_TRUE) | set(V1_PRODUCER_DIAGNOSTICS) | set(V1_PRODUCER_RECORD_LISTS) and len(checks.recorded) == 11
+    # The validator's v1 provenance checks are unchanged (job id and raw-evidence bindings); the contract is applied
+    # by the v1 exporter before a case is written.
+    assert web_contract.V1.producer_checks is not web_contract.V2.producer_checks
+
+
 def test_v2_producer_checks_are_read_from_the_producer_source(web_dir):
     checks = web_contract.V2.producer_checks
-    assert web_contract.V1.producer_checks is None  # legacy v1 provenance keeps its own (job id) checks
     assert checks.source == "long_series.run_case" and checks.required_true == PRODUCER_REQUIRED_TRUE
-    assert checks.window_fields == ("analysis_frames", "analysis_count")
+    assert checks.window_fields == ("analysis_frames", "analysis_count") and checks.window_in_checks is True and checks.record_lists == {}
     assert checks.diagnostics == PRODUCER_DIAGNOSTICS
     assert set(checks.recorded) == set(PRODUCER_REQUIRED_TRUE) | set(checks.window_fields) | set(PRODUCER_DIAGNOSTICS) and len(checks.recorded) == 17
     # The parsed modules are the ones that produced the committed dataset (its recorded production identity).

@@ -30,6 +30,10 @@ provenance copies) are read from the source of ``long_series.run_case`` and the
 observers it uses, without importing them (``producer_checks_v2``), and one
 rule judges such a mapping wherever it is read (``producer_check_problems``):
 in the provenance by the validator and in the case record by ``long_export.py``.
+The v1 producer's checks are read the same way from the source of
+``producer.run_job`` and ``ExplorerObserver.finish`` (``producer_checks_v1``)
+and judged by the same rule in ``render.py`` before a case is published; v1
+records its analysis window in the job record, not in the checks mapping.
 """
 
 from __future__ import annotations
@@ -161,11 +165,17 @@ class UnsupportedContract(Exception):
 class ProducerChecks:
     """The ``checks`` mapping a producer writes into every case record, as its own source defines it.
 
-    ``required_true`` are the checks without which the producer refuses to write the record, so a record it
-    wrote carries each of them literally ``true``; ``window_fields`` name the recorded analysis frames
-    (half-open ``[first, last + 1)``) and count, which the producer also requires to equal the contract's;
-    ``diagnostics`` are the numeric records kept beside them: their keys and whether every value is an absolute
-    deviation (so non-negative).  The diagnostics carry no tolerance here; the producer judged them already.
+    ``required_true`` are the Boolean verdicts a reader requires literally ``true``: for the one-second producer
+    the checks without which it refuses to write the record (so a record it wrote carries each of them literally
+    ``true``); for the 180-frame producer, which records its verdicts and writes the record regardless, the
+    ``bool``/``all`` verdicts the exporter requires before a case is published.  ``window_fields`` name where the
+    analysis window is recorded: with ``window_in_checks`` the mapping's own frames (half-open ``[first, last + 1)``)
+    and count, which the producer also requires to equal the contract's (v2); without it the job record's
+    ``burn_in`` and ``n_steps``, whose interval the observer enforces (v1).  ``diagnostics`` are the numeric records
+    kept beside them: their keys and whether every value is an absolute deviation (so non-negative);
+    ``record_lists`` are diagnostics recorded as a list of such records (one per retained display frame): their keys
+    and the keys that are absolute deviations.  The diagnostics carry no tolerance here; the producer judged them
+    already.
     """
 
     source: str
@@ -173,6 +183,8 @@ class ProducerChecks:
     required_true: Tuple[str, ...]
     window_fields: Tuple[str, str]
     diagnostics: Dict[str, Tuple[Tuple[str, ...], bool]]
+    window_in_checks: bool = True
+    record_lists: Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -182,7 +194,8 @@ class ProducerCheckProblems:
     ``kind`` is the type name when the mapping is not an object (then nothing else is judged); ``missing`` and
     ``unexpected`` compare its fields with the recorded ones; ``not_true`` lists required checks that are absent
     or not literally ``True``; ``frames_wrong`` and ``count_wrong`` say the recorded analysis window is not the
-    contract's; ``diagnostics`` lists diagnostic records with other keys, a non-finite value or a negative absolute deviation.
+    contract's; ``diagnostics`` lists diagnostic records with other keys, a non-finite value or a negative absolute
+    deviation, and record lists that are not a non-empty list of such records.
     """
 
     kind: Optional[str] = None
@@ -202,13 +215,16 @@ def _finite_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
-def producer_check_problems(checks: Any, expected: ProducerChecks, window: Tuple[int, int], count: int) -> ProducerCheckProblems:
+def producer_check_problems(checks: Any, expected: ProducerChecks, window: Tuple[int, int], count: int, job: Any = None) -> ProducerCheckProblems:
     """Judge a producer ``checks`` mapping against the producer's own contract, without tolerance or coercion.
 
     The one rule for every reader: exactly the recorded fields; each required check literally ``True`` (a string,
-    number or null is not a pass, and a check the filter cannot see is not a pass either); the analysis frames a
-    list of ints equal to ``[window[0], window[1]]`` and the count the int ``count``; every diagnostic with the
-    producer's keys and finite numbers, absolute deviations non-negative.
+    number or null is not a pass, and a check the filter cannot see is not a pass either); the analysis window the
+    contract's -- recorded in the mapping as a list of ints equal to ``[window[0], window[1]]`` and the int ``count``
+    (``window_in_checks``), or in the job record ``job`` as the ints ``burn_in == window[0]`` and
+    ``n_steps == window[1]`` with ``n_steps - burn_in == count`` (a bool is not an int); every diagnostic with the
+    producer's keys and finite numbers, absolute deviations non-negative, and every record list a non-empty list of
+    records judged the same way.
     """
 
     if not isinstance(checks, dict):
@@ -216,8 +232,17 @@ def producer_check_problems(checks: Any, expected: ProducerChecks, window: Tuple
     missing = tuple(name for name in expected.recorded if name not in checks)
     unexpected = tuple(sorted(str(name) for name in checks if name not in expected.recorded))
     not_true = tuple(f"{name}={checks[name]!r}" if name in checks else f"{name} missing" for name in expected.required_true if checks.get(name) is not True)
-    frames_key, count_key = expected.window_fields
-    frames, recorded_count = checks.get(frames_key), checks.get(count_key)
+    first_key, second_key = expected.window_fields
+    if expected.window_in_checks:
+        frames, recorded_count = checks.get(first_key), checks.get(second_key)
+        frames_wrong = not (isinstance(frames, list) and all(type(value) is int for value in frames) and frames == list(window))
+        count_wrong = not (type(recorded_count) is int and recorded_count == count)
+    else:
+        record = job if isinstance(job, dict) else {}
+        first, stop = record.get(first_key), record.get(second_key)
+        exact = type(first) is int and type(stop) is int
+        frames_wrong = not (exact and (first, stop) == (window[0], window[1]))
+        count_wrong = not (exact and stop - first == count)
     bad: List[str] = []
     for name, (keys, absolute) in expected.diagnostics.items():
         record = checks.get(name)
@@ -225,11 +250,17 @@ def producer_check_problems(checks: Any, expected: ProducerChecks, window: Tuple
             bad.append(f"{name} keys {sorted(record) if isinstance(record, dict) else type(record).__name__}")
             continue
         bad.extend(f"{name}.{key}={record[key]!r}" for key in keys if not _finite_number(record[key]) or (absolute and record[key] < 0))
-    return ProducerCheckProblems(
-        missing=missing, unexpected=unexpected, not_true=not_true,
-        frames_wrong=not (isinstance(frames, list) and all(type(value) is int for value in frames) and frames == list(window)),
-        count_wrong=not (type(recorded_count) is int and recorded_count == count), diagnostics=tuple(bad),
-    )
+    for name, (keys, absolute_keys) in expected.record_lists.items():
+        records = checks.get(name)
+        if not isinstance(records, list) or not records:
+            bad.append(f"{name} {'empty' if isinstance(records, list) else type(records).__name__}")
+            continue
+        for index, record in enumerate(records):
+            if not isinstance(record, dict) or sorted(record) != sorted(keys):
+                bad.append(f"{name}[{index}] keys {sorted(record) if isinstance(record, dict) else type(record).__name__}")
+                continue
+            bad.extend(f"{name}[{index}].{key}={record[key]!r}" for key in keys if not _finite_number(record[key]) or (key in absolute_keys and record[key] < 0))
+    return ProducerCheckProblems(missing=missing, unexpected=unexpected, not_true=not_true, frames_wrong=frames_wrong, count_wrong=count_wrong, diagnostics=tuple(bad))
 
 
 def _function(tree: ast.AST, name: str, owner: Optional[str] = None) -> ast.FunctionDef:
@@ -267,6 +298,39 @@ def _assigned_dict(function: ast.FunctionDef, target: str) -> ast.Dict:
     raise ValueError(f"{function.name}: no dict literal assigned to {target}")
 
 
+def _appended_dict(function: ast.FunctionDef, target: str) -> ast.Dict:
+    """The dict literal appended to the list ``target`` inside ``function`` (``target.append({...})``)."""
+
+    for node in ast.walk(function):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "append"
+                and ast.unparse(node.func.value) == target and len(node.args) == 1 and isinstance(node.args[0], ast.Dict)):
+            return node.args[0]
+    raise ValueError(f"{function.name}: no dict literal appended to {target}")
+
+
+def _checks_entries(function: ast.FunctionDef) -> Dict[str, ast.AST]:
+    """The ``checks`` entries of ``function``: its dict literal and every later ``checks[<literal>] = ...``."""
+
+    literal = _assigned_dict(function, "checks")
+    values = dict(zip(_string_keys(literal, f"{function.name} checks"), literal.values))
+    for node in ast.walk(function):
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Subscript) and ast.unparse(node.targets[0].value) == "checks":
+            key = node.targets[0].slice
+            if not (isinstance(key, ast.Constant) and isinstance(key.value, str)) or key.value in values:
+                raise ValueError(f"{function.name}: a later checks entry is not a new string-literal key")
+            values[key.value] = node.value
+    return values
+
+
+def _finish_dict(observer: ast.AST) -> Dict[str, ast.AST]:
+    """The dict literal ``ExplorerObserver.finish`` returns, by key."""
+
+    returned = next((node.value for node in ast.walk(_function(observer, "finish", "ExplorerObserver")) if isinstance(node, ast.Return) and isinstance(node.value, ast.Dict)), None)
+    if returned is None:
+        raise ValueError("ExplorerObserver.finish no longer returns a dict literal")
+    return dict(zip(_string_keys(returned, "ExplorerObserver.finish"), returned.values))
+
+
 def producer_checks_v2() -> ProducerChecks:
     """Read the one-second producer's record checks from ``long_series.run_case`` and its observers' source.
 
@@ -279,14 +343,7 @@ def producer_checks_v2() -> ProducerChecks:
     series = ast.parse(series_path.read_text(encoding="utf-8"))
     observer = ast.parse(series_path.with_name("observer.py").read_text(encoding="utf-8"))
     run_case = _function(series, "run_case")
-    literal = _assigned_dict(run_case, "checks")
-    values = dict(zip(_string_keys(literal, "run_case checks"), literal.values))
-    for node in ast.walk(run_case):
-        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Subscript) and ast.unparse(node.targets[0].value) == "checks":
-            key = node.targets[0].slice
-            if not (isinstance(key, ast.Constant) and isinstance(key.value, str)) or key.value in values:
-                raise ValueError("run_case: a later checks entry is not a new string-literal key")
-            values[key.value] = node.value
+    values = _checks_entries(run_case)
     failed = next((node.value for node in ast.walk(run_case) if isinstance(node, ast.Assign) and [ast.unparse(t) for t in node.targets] == ["failed"]), None)
     names = failed.generators[0].iter if isinstance(failed, ast.ListComp) and len(failed.generators) == 1 else None
     if not isinstance(names, ast.Tuple) or not all(isinstance(item, ast.Constant) and isinstance(item.value, str) for item in names.elts):
@@ -300,10 +357,7 @@ def producer_checks_v2() -> ProducerChecks:
     window = ("analysis_frames", "analysis_count")
     if [ast.unparse(values[key]) if key in values else None for key in window] != ["[finish['analysis_frames'][0], finish['analysis_frames'][-1] + 1]", "finish['analysis_count']"]:
         raise ValueError("run_case: the recorded analysis frames and count are no longer the observer's half-open window and count")
-    returned = next((node.value for node in ast.walk(_function(observer, "finish", "ExplorerObserver")) if isinstance(node, ast.Return) and isinstance(node.value, ast.Dict)), None)
-    if returned is None:
-        raise ValueError("ExplorerObserver.finish no longer returns a dict literal")
-    finish = dict(zip(_string_keys(returned, "ExplorerObserver.finish"), returned.values))
+    finish = _finish_dict(observer)
     archive_keys = _string_keys(_assigned_dict(_function(series, "__init__", "ArchiveObserver"), "self.max_errors"), "ArchiveObserver.max_errors")
     archive_errors = _assigned_dict(_function(series, "observe", "ArchiveObserver"), "errors")
     if _string_keys(archive_errors, "ArchiveObserver.observe errors") != archive_keys:
@@ -321,6 +375,52 @@ def producer_checks_v2() -> ProducerChecks:
             raise ValueError(f"run_case: checks entry {key!r} is neither a required check, the analysis window nor a diagnostic record")
         diagnostics[key] = (_string_keys(value, f"checks[{key!r}]"), all(_absolute(item) for item in value.values))
     return ProducerChecks(source="long_series.run_case", recorded=tuple(values), required_true=required, window_fields=window, diagnostics=diagnostics)
+
+
+def producer_checks_v1() -> ProducerChecks:
+    """Read the 180-frame producer's record checks from ``producer.run_job`` and ``ExplorerObserver.finish``.
+
+    Parsed, never imported (``producer.py`` needs NumPy and the AO package).  The v1 producer records every verdict
+    and writes the record regardless (it refuses only before the run: identities, admission, horizon), so the
+    required checks are its ``bool(...)`` and ``all(...)`` verdicts, which the exporter (``render.py``) requires
+    literally ``True`` before a case is published.  The analysis window is not in the checks mapping: the job
+    record's ``burn_in`` and ``n_steps`` name it and the observer refuses any other interval (``finish``), so the
+    rule reads those two fields from the job record.  Diagnostic dicts come from the literal or the observer's
+    ``finish`` entry they copy; the per-display-frame list from the dict literal appended to it.  Any change to the
+    shape read here raises instead of guessing.
+    """
+
+    producer_path = Path(protocol.__file__).with_name("producer.py")
+    source = ast.parse(producer_path.read_text(encoding="utf-8"))
+    observer = ast.parse(producer_path.with_name("observer.py").read_text(encoding="utf-8"))
+    run_job = _function(source, "run_job")
+    values = _checks_entries(run_job)
+    enforced = {ast.unparse(node) for node in ast.walk(_function(observer, "finish", "ExplorerObserver")) if isinstance(node, (ast.Assign, ast.Compare))}
+    if "expected = list(range(self._burn_in, self._n_steps))" not in enforced or "self._analysis_frames != expected" not in enforced:
+        raise ValueError("ExplorerObserver.finish no longer enforces the analysis window range(burn_in, n_steps)")
+    finish = _finish_dict(observer)
+    window = ("burn_in", "n_steps")
+    required: List[str] = []
+    diagnostics: Dict[str, Tuple[Tuple[str, ...], bool]] = {}
+    record_lists: Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]] = {}
+    for key, value in values.items():
+        if isinstance(value, ast.Call) and isinstance(value.func, ast.Name) and value.func.id in ("bool", "all"):
+            required.append(key)
+            continue
+        if isinstance(value, ast.Name):
+            appended = _appended_dict(run_job, value.id)
+            keys = _string_keys(appended, f"checks[{key!r}] records")
+            record_lists[key] = (keys, tuple(name for name, item in zip(keys, appended.values) if _absolute(item)))
+            continue
+        if isinstance(value, ast.Subscript) and ast.unparse(value.value) == "finish" and isinstance(value.slice, ast.Constant):
+            value = finish.get(value.slice.value, value)
+        if not isinstance(value, ast.Dict):
+            raise ValueError(f"run_job: checks entry {key!r} is neither a verdict, a diagnostic record nor a list of them")
+        diagnostics[key] = (_string_keys(value, f"checks[{key!r}]"), all(_absolute(item) for item in value.values))
+    if not required:
+        raise ValueError("run_job: no bool/all verdicts are recorded")
+    return ProducerChecks(source="producer.run_job", recorded=tuple(values), required_true=tuple(required), window_fields=window,
+                          diagnostics=diagnostics, window_in_checks=False, record_lists=record_lists)
 
 
 @dataclass(frozen=True)
@@ -455,6 +555,7 @@ V1 = Contract(
     shared_images=False,
     raw_layout="movie_npz",
     metrics_display_indices=False,
+    producer_checks=producer_checks_v1(),
 )
 
 V2 = Contract(
