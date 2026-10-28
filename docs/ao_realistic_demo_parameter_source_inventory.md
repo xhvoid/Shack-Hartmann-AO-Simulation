@@ -1,6 +1,6 @@
 # AO detector-level extension parameter-source inventory
 
-Prepared: 2026-07-10 22:24
+Prepared: 2026-07-20 22:42
 
 Scope: tracked public caches, derived calculations, synthetic model parameters, and derived result artifacts used by the detector-level AO extension. Direct public data are separated from synthetic AO proxies.
 
@@ -53,47 +53,47 @@ Scope: tracked public caches, derived calculations, synthetic model parameters, 
 
 | case | photons | closed_rms_nm | h_strehl | command_rms_nm | saturated_frac | provenance |
 | --- | --- | --- | --- | --- | --- | --- |
-| Pan-STARRS direct estimate | 0.010435 | 66.957866 | 0.936836 | 0 | 0 | photon=direct_public_data; loop=synthetic_assumed |
-| engineering 50 photons | 50 | 66.957866 | 0.936836 | 0 | 0 | photon=synthetic_assumed; loop=synthetic_assumed |
-| engineering 200 photons | 200 | 61.081576 | 0.946655 | 306.124599 | 0.269231 | photon=synthetic_assumed; loop=synthetic_assumed |
-| Nominal 8000 photons | 8000 | 46.839682 | 0.968439 | 266.914033 | 0.230769 | photon=synthetic_assumed; loop=synthetic_assumed |
+| Pan-STARRS direct estimate | 0.010435 | infeasible | infeasible | infeasible | infeasible | photon=direct_public_data; loop=synthetic_assumed |
+| engineering 50 photons | 50 | infeasible | infeasible | infeasible | infeasible | photon=synthetic_assumed; loop=synthetic_assumed |
+| engineering 200 photons | 200 | 73.609571 | 0.924606 | 82.978653 | 0.230769 | photon=synthetic_assumed; loop=synthetic_assumed |
+| Nominal 8000 photons | 8000 | 56.370882 | 0.955186 | 72.878359 | 0.230769 | photon=synthetic_assumed; loop=synthetic_assumed |
 
 ## Public-data-informed scenario results
 
 | condition | enabled_effects | closed_rms_nm | h_strehl | valid_centroid_frac | command_rms_nm | saturated_frac | decomposition |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| nominal_synthetic | synthetic_conditioned_phase_sequence+detector_noise+latency_1_frames+science_path_ncpa | 17.852795 | 0.995355 | 1 | 311.985165 | 0 | WFS/science no-NCPA proxy=9.681028 nm; plus NCPA=17.852795 nm |
-| paranal_night_asm | eso_asm_conditioned_synthetic_phase_sequence+detector_noise+latency_1_frames+dm_stroke_limit+science_path_ncpa | 62.300993 | 0.944969 | 1 | 505.232264 | 0 | WFS/science no-NCPA proxy=57.064995 nm; plus NCPA=62.300993 nm |
-| poor_seeing | eso_asm_conditioned_synthetic_phase_sequence+detector_noise+latency_2_frames+dm_stroke_limit+wfs_dm_misregistration_proxy+science_path_ncpa | 80.145051 | 0.910386 | 1 | 465.641814 | 0.230769 | WFS/science no-NCPA proxy=72.098747 nm; plus NCPA=80.145051 nm |
-| faint_ngs | eso_asm_conditioned_synthetic_phase_sequence+detector_noise+latency_2_frames+dm_stroke_limit+wfs_dm_misregistration_proxy+science_path_ncpa | 58.835806 | 0.951147 | 0 | 0 | 0 | WFS/science no-NCPA proxy=37.903193 nm; plus NCPA=58.835806 nm |
-| stress_all_effects | eso_asm_conditioned_synthetic_phase_sequence+detector_noise+latency_3_frames+dm_stroke_limit+wfs_dm_misregistration_proxy+science_path_ncpa | 80.718824 | 0.909827 | 0 | 0 | 0 | WFS/science no-NCPA proxy=40.193638 nm; plus NCPA=80.718824 nm |
+| nominal_synthetic | synthetic_conditioned_phase_sequence+detector_noise+latency_1_frames+science_path_ncpa | 18.313289 | 0.995123 | 1 | 113.019523 | 0 | WFS/science no-NCPA proxy=10.506025 nm; plus NCPA=18.313289 nm |
+| paranal_night_asm | eso_asm_conditioned_synthetic_phase_sequence+detector_noise+latency_1_frames+dm_stroke_limit+science_path_ncpa | 68.265238 | 0.934878 | 1 | 143.679588 | 0 | WFS/science no-NCPA proxy=63.522773 nm; plus NCPA=68.265238 nm |
+| poor_seeing | eso_asm_conditioned_synthetic_phase_sequence+detector_noise+latency_2_frames+dm_stroke_limit+wfs_dm_misregistration_proxy+science_path_ncpa | 86.783779 | 0.897049 | 1 | 133.163689 | 0.153846 | WFS/science no-NCPA proxy=79.412999 nm; plus NCPA=86.783779 nm |
+| faint_ngs | eso_asm_conditioned_synthetic_phase_sequence+detector_noise+latency_2_frames+dm_stroke_limit+wfs_dm_misregistration_proxy+science_path_ncpa | infeasible | infeasible | infeasible | infeasible | infeasible | infeasible |
+| stress_all_effects | eso_asm_conditioned_synthetic_phase_sequence+detector_noise+latency_3_frames+dm_stroke_limit+wfs_dm_misregistration_proxy+science_path_ncpa | infeasible | infeasible | infeasible | infeasible | infeasible | infeasible |
 
 ## H-band science metrics
 
 | case | opd_rms_nm | h_strehl | source_class |
 | --- | --- | --- | --- |
-| open_loop | 130.503151 | 0.780246 | synthetic_assumed |
+| open_loop | 130.503151 | 0.780666 | synthetic_assumed |
 | ideal_closed_loop | 0 | 1 | synthetic_assumed |
-| realistic_closed_loop | 28.710693 | 0.988031 | synthetic_assumed |
+| realistic_closed_loop | 28.710693 | 0.988057 | synthetic_assumed |
 
 ## Error-budget scenario results
 
 | scenario | closed_rms_nm | h_strehl | command_rms_nm | saturated_frac | source_class |
 | --- | --- | --- | --- | --- | --- |
-| ideal_static | 1.030423 | 0.999984 | 424.020749 | 0 | synthetic_assumed |
-| dynamic_multilayer_proxy | 6.852974 | 0.99931 | 288.294915 | 0 | synthetic_assumed |
-| detector_noise | 6.993077 | 0.999283 | 288.830061 | 0 | synthetic_assumed |
-| latency | 27.155442 | 0.989286 | 415.676117 | 0 | synthetic_assumed |
-| stroke_limit | 10.152356 | 0.99848 | 235.960176 | 0.192308 | synthetic_assumed |
-| misregistration | 8.512633 | 0.998943 | 287.370111 | 0 | synthetic_assumed |
-| ncpa | 44.721191 | 0.971193 | 288.507063 | 0 | synthetic_assumed |
-| all_effects | 48.348567 | 0.96641 | 273.193914 | 0.230769 | synthetic_assumed |
+| ideal_static | 1.052463 | 0.999983 | 117.536223 | 0 | synthetic_assumed |
+| dynamic_multilayer_proxy | 7.207515 | 0.999242 | 89.600338 | 0 | synthetic_assumed |
+| detector_noise | 7.498357 | 0.999177 | 89.906955 | 0 | synthetic_assumed |
+| latency | 20.375744 | 0.993964 | 122.929464 | 0 | synthetic_assumed |
+| stroke_limit | 11.97703 | 0.997881 | 68.736172 | 0.230769 | synthetic_assumed |
+| misregistration | 9.176844 | 0.998771 | 89.600338 | 0 | synthetic_assumed |
+| ncpa | 45.328955 | 0.970492 | 89.600338 | 0 | synthetic_assumed |
+| all_effects | 50.805583 | 0.963137 | 75.601849 | 0.230769 | synthetic_assumed |
 
 ## Long-run runtime records
 
 | script | started_utc | finished_utc | runtime_minutes | limit_minutes | within_limit | source |
 | --- | --- | --- | --- | --- | --- | --- |
-| examples/run_public_data_informed_ao_demo.py | 2026-07-09T20:25:56Z | 2026-07-09T20:33:23Z | 7.454244 | 30 | True | Local wall-clock runtime for the public-data-informed Notebook 11 demo. The run uses tracked public caches and synthetic AO proxies; no live archive query is performed. |
+| examples/run_public_data_informed_ao_demo.py | 2026-07-20T20:16:15Z | 2026-07-20T20:26:46Z | 10.51729 | 30 | True | Local wall-clock runtime for the public-data-informed Notebook 11 demo. The run uses tracked public caches and synthetic AO proxies; no live archive query is performed. |
 
 **Validation scope note:** the public-data-informed checks below confirm public-data provenance, finite metrics, cache presence, and runtime. They are not an adaptive-optics performance validation. A faint scenario with `valid_centroid_frac = 0` has no usable WFS centroids, so its loop is frozen (closed RMS approaches open-loop) yet still passes these provenance/finite checks.
 
@@ -103,10 +103,11 @@ Scope: tracked public caches, derived calculations, synthetic model parameters, 
 | --- | --- | --- | --- | --- | --- |
 | nighttime_eso_asm_condition_present | True | 4 | 1 | direct_public_data | At least one public-data-informed condition uses the nighttime ESO ASM cache. |
 | catalog_photon_condition_present | True | 2 | 1 | direct_public_data | At least one condition uses catalog-derived Pan-STARRS photon-budget input. |
-| scenario_metrics_finite | True | 1 | 1 | synthetic_assumed | Public-data-informed scenario metrics are finite. |
+| scenario_metrics_finite | True | 1 | 1 | synthetic_assumed | Public-data-informed scenario metrics are finite for every calibration-feasible condition. |
+| infeasible_conditions_recorded | True | 2 | 5 | synthetic_assumed | Conditions whose photon budget cannot calibrate the WFS are recorded as infeasible with an explicit reason. |
 | internal_ao_terms_not_direct_public | True | 1 | 1 | synthetic_assumed | Scenario rows do not claim synthetic AO internals as direct public data. |
 | jhk_svo_direct_caches_expected | True | 1 | 1 | direct_public_data | J/H/K science metrics are configured to prefer SVO direct caches. |
-| runtime_under_30m | True | 7.454244 | 30 | package_reference | Public-data-informed AO demo runtime stays below the documented 30 minute local-run limit. |
+| runtime_under_30m | True | 10.51729 | 30 | package_reference | Public-data-informed AO demo runtime stays below the documented 30 minute local-run limit. |
 
 ## Selected visual/result artifacts
 

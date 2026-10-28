@@ -127,6 +127,15 @@ def test_each_root_shim_warns_once_with_replacement(tmp_path, module_name):
     clock = _deprecation.deprecation_clock()
     assert clock["planned_removal_release"] in message
     assert clock["deprecation_release"] in message
+    # The release claim must match the recorded publication state: an
+    # unpublished deprecation release is announced as scheduled, never
+    # asserted as an accomplished release.
+    release = clock["deprecation_release"]
+    if clock["publication_status"] == "published":
+        assert f"as of release {release}" in message
+    else:
+        assert f"scheduled for release {release}, not yet published" in message
+        assert f"as of release {release}" not in message
 
 
 def test_import_shwfs_ao_is_silent(tmp_path):
@@ -145,6 +154,9 @@ def test_import_shwfs_ao_is_silent(tmp_path):
         "shwfs_ao.science.bandpass",
         "shwfs_ao.experiments.scao",
         "shwfs_ao.experiments.error_budget",
+        "shwfs_ao.experiments.integration",
+        "shwfs_ao.experiments.scenario_instrument",
+        "shwfs_ao.validation.checks",
         "shwfs_ao.io.resources",
         "shwfs_ao.backends.native.atmosphere",
         "shwfs_ao.core.hashing",
@@ -260,6 +272,56 @@ def test_packaged_clock_is_not_yet_removable_during_phase_a():
     # The committed clock is still in the planned/unpublished state, so Phase B
     # deletion is not permitted regardless of the calendar.
     assert not _deprecation.removal_boundaries_satisfied(clock, datetime.date(2099, 1, 1))
+
+
+def test_warning_release_clause_follows_the_publication_state(monkeypatch):
+    base = dict(_deprecation.deprecation_clock())
+
+    def _with_status(status):
+        clock = dict(base)
+        clock["publication_status"] = status
+        return clock
+
+    monkeypatch.setattr(
+        _deprecation, "deprecation_clock", lambda: _with_status("planned")
+    )
+    planned_shim = _deprecation.root_shim_deprecation_message("zernike")
+    planned_alias = _deprecation.resource_alias_deprecation_message()
+    for message in (planned_shim, planned_alias):
+        assert (
+            f"(scheduled for release {base['deprecation_release']}, "
+            "not yet published)"
+        ) in message
+        assert f"as of release {base['deprecation_release']}" not in message
+
+    monkeypatch.setattr(
+        _deprecation, "deprecation_clock", lambda: _with_status("published")
+    )
+    published_shim = _deprecation.root_shim_deprecation_message("zernike")
+    published_alias = _deprecation.resource_alias_deprecation_message()
+    for message in (published_shim, published_alias):
+        assert f"deprecated as of release {base['deprecation_release']}" in message
+        assert "not yet published" not in message
+
+
+def test_invalid_publication_status_is_rejected(tmp_path, monkeypatch):
+    bad = json.loads(
+        (SRC / "shwfs_ao/resources/deprecation_clock.json").read_text(encoding="utf-8")
+    )
+    bad["publication_status"] = "tagged"
+
+    def _fake_loader(name):
+        assert name == _deprecation.CLOCK_RESOURCE_NAME
+        return bad
+
+    _deprecation.deprecation_clock.cache_clear()
+    monkeypatch.setattr(_deprecation, "_load_json_resource", _fake_loader)
+    with pytest.raises(
+        _deprecation.DeprecationMetadataError,
+        match="publication_status",
+    ):
+        _deprecation.deprecation_clock()
+    _deprecation.deprecation_clock.cache_clear()
 
 
 def test_invalid_clock_earliest_removal_is_rejected(tmp_path, monkeypatch):
@@ -398,6 +460,28 @@ def test_no_canonical_module_imports_legacy_except_allowlist():
         )
         if imports_legacy and dotted not in allowed:
             offenders.append(dotted)
+    assert offenders == [], offenders
+
+
+def test_owned_examples_import_only_canonical_surfaces():
+    # AO-REF-021 Phase A prerequisite (review finding F12): the shipped
+    # examples demonstrate the canonical architecture, so none of them may
+    # consume the frozen legacy layer or the deprecated root shims.
+    example_paths = sorted((ROOT / "examples").glob("*.py"))
+    assert len(example_paths) == 10
+    offenders: list[tuple[str, str]] = []
+    for path in example_paths:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module is not None:
+                names = [node.module]
+            else:
+                continue
+            for name in names:
+                if name.startswith("shwfs_ao.legacy") or name.split(".")[0] in ROOT_SHIM_MODULES:
+                    offenders.append((path.name, name))
     assert offenders == [], offenders
 
 

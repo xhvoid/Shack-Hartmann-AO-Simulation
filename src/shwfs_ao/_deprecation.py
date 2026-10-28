@@ -80,6 +80,20 @@ def deprecation_clock() -> dict[str, _Any]:
         raise DeprecationMetadataError(
             "Deprecation clock schema_name must be 'shwfs_ao.deprecation_clock'."
         )
+    for label, status in (
+        ("publication_status", clock["publication_status"]),
+        (
+            "subsequent_minor_release.publication_status",
+            clock["subsequent_minor_release"].get("publication_status")
+            if isinstance(clock["subsequent_minor_release"], dict)
+            else None,
+        ),
+    ):
+        if status not in {"planned", "published"}:
+            raise DeprecationMetadataError(
+                f"Deprecation clock {label} must be 'planned' or 'published', "
+                f"got {status!r}."
+            )
     recorded = parse_utc_date(clock["earliest_removal_utc_date"])
     recomputed = earliest_removal_utc_date(clock)
     if recorded != recomputed:
@@ -174,13 +188,29 @@ def root_shim_replacement(module_name: str) -> str:
     )
 
 
+def deprecation_release_clause() -> str:
+    """Phrase the deprecation release honestly for the recorded clock state.
+
+    While ``publication_status`` is ``"planned"`` the deprecation release has
+    not been tagged, so the message must announce a schedule rather than
+    assert an accomplished release; once the clock records ``"published"``
+    the wording becomes the plain "as of" form with no code change.
+    """
+
+    clock = deprecation_clock()
+    release = clock["deprecation_release"]
+    if clock["publication_status"] == "published":
+        return f"as of release {release}"
+    return f"(scheduled for release {release}, not yet published)"
+
+
 def root_shim_deprecation_message(module_name: str) -> str:
     """Build the import-time DeprecationWarning message for one root shim."""
 
     clock = deprecation_clock()
     return (
-        f"Importing the root-level module {module_name!r} is deprecated as of "
-        f"release {clock['deprecation_release']}; use "
+        f"Importing the root-level module {module_name!r} is deprecated "
+        f"{deprecation_release_clause()}; use "
         f"{root_shim_replacement(module_name)} instead. This installed shim is "
         f"scheduled for removal in release {clock['planned_removal_release']} "
         f"(no earlier than {clock['earliest_removal_utc_date']} UTC and only "
@@ -196,7 +226,7 @@ def resource_alias_deprecation_message() -> str:
     clock = deprecation_clock()
     return (
         "Importing the 'ao_simulation_data' resource alias package is "
-        f"deprecated as of release {clock['deprecation_release']}; read "
+        f"deprecated {deprecation_release_clause()}; read "
         "packaged data through shwfs_ao.io.resources (canonical package "
         "shwfs_ao.resources) instead. This installed alias is scheduled for "
         f"removal in release {clock['planned_removal_release']} (no earlier "
