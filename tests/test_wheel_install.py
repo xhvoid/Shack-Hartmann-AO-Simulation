@@ -215,6 +215,7 @@ CONTROL_HISTORY_EXPORTS = (
 )
 CONTROL_LOOP_EXPORTS = (
     "ControlLoopError",
+    "ControlLoopWarning",
     "validate_closed_loop_components",
     "run_closed_loop",
 )
@@ -526,6 +527,7 @@ AO_REF_011_SYSTEM_PROFILES = (
     ("fast_2m_detector", 1),
     ("fast_2m_detector", 2),
     ("fast_2m_detector", 3),
+    ("fast_2m_detector", 4),
     ("portfolio_2m_detector", 1),
     ("portfolio_2m_detector", 2),
     ("portfolio_2m_detector", 3),
@@ -1753,5 +1755,5 @@ def test_pep660_editable_install_generates_resource_alias_only_in_environment(
         capture_output=True,
         text=True,
     )
-    assert result.stdout.strip() == "editable-resource-alias-ok:53"
+    assert result.stdout.strip() == "editable-resource-alias-ok:54"
     assert not source_alias.exists()

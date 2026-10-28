@@ -119,6 +119,11 @@
       "requires": []
     },
     {
+      "source": "tests/experiments/test_scao_profile_closure.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
       "source": "tests/io/test_artifacts.py",
       "kind": "test",
       "requires": []

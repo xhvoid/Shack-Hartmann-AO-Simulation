@@ -233,3 +233,34 @@ def test_history_rejects_semantically_false_metadata(
     metadata[key] = value
     with pytest.raises(LoopHistoryError, match=key):
         _history(metadata=metadata)
+
+
+def test_history_usable_frame_summary_is_optional_and_matches_the_flags() -> None:
+    assert "reconstruction_usable_frames" not in _history().metadata
+
+    metadata = _metadata()
+    metadata["reconstruction_usable_frames"] = 1
+    metadata["reconstruction_usable_fraction"] = 0.5
+    history = _history(metadata=metadata)
+    assert history.metadata["reconstruction_usable_frames"] == 1
+    assert history.metadata["reconstruction_usable_fraction"] == 0.5
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("reconstruction_usable_frames", 2),
+        ("reconstruction_usable_frames", True),
+        ("reconstruction_usable_frames", 1.0),
+        ("reconstruction_usable_fraction", 1.0),
+        ("reconstruction_usable_fraction", "0.5"),
+    ],
+)
+def test_history_rejects_a_usable_frame_summary_that_misreports_closure(
+    key: str,
+    value: object,
+) -> None:
+    metadata = _metadata()
+    metadata[key] = value
+    with pytest.raises(LoopHistoryError, match=key):
+        _history(metadata=metadata)

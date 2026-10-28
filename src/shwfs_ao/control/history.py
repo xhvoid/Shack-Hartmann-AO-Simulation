@@ -160,6 +160,26 @@ class LoopHistory:
             label="reconstruction_usable",
             length=n_steps,
         )
+        # The usable-frame summary is optional, but a summary that disagrees
+        # with the per-frame flags would misreport whether the loop ever closed.
+        usable_frames = int(np.count_nonzero(reconstruction_usable))
+        if "reconstruction_usable_frames" in metadata:
+            recorded_frames = metadata["reconstruction_usable_frames"]
+            if type(recorded_frames) is not int or recorded_frames != usable_frames:
+                raise LoopHistoryError(
+                    "metadata.reconstruction_usable_frames must count the "
+                    "reconstruction_usable frames."
+                )
+        if "reconstruction_usable_fraction" in metadata:
+            recorded_fraction = metadata["reconstruction_usable_fraction"]
+            if (
+                type(recorded_fraction) is not float
+                or recorded_fraction != usable_frames / n_steps
+            ):
+                raise LoopHistoryError(
+                    "metadata.reconstruction_usable_fraction must equal the "
+                    "usable frame count divided by n_steps."
+                )
         row_masks = _bool_matrix(
             self.measurement_row_masks,
             label="measurement_row_masks",
