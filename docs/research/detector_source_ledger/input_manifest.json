@@ -1,0 +1,451 @@
+{
+  "record_type": "shwfs_ao.research.input_manifest",
+  "purpose": "Source identity and input digests of the G11 source-ledger correction research",
+  "source_identity": {
+    "repository": "https://github.com/xhvoid/Shack-Hartmann-AO-Simulation",
+    "requested_branch": "claude/cleanup-refactor-exec",
+    "frozen_source_commit": "10f04e268871a19bfedb47b035f2905b67f23e43",
+    "checked_out_commit": "10f04e268871a19bfedb47b035f2905b67f23e43",
+    "origin_branch_head_at_fetch": "10f04e268871a19bfedb47b035f2905b67f23e43",
+    "commit_subject": "Harden the package code identity of both evidence scripts",
+    "commit_date": "2026-10-20T15:32:46+02:00",
+    "task_branch": "claude/fervent-einstein-4g3syq",
+    "task_branch_base": "10f04e268871a19bfedb47b035f2905b67f23e43",
+    "working_tree_at_research": "clean apart from the new docs/research/g11_source_ledger/ directory"
+  },
+  "environment": {
+    "date": "2026-10-20",
+    "platform": "Linux cloud container",
+    "python": "3.13.16 (system; not the project lock)",
+    "numpy": "2.5.3",
+    "scipy": "not installed",
+    "network": "egress proxy; doi.org, api.crossref.org, publisher, arXiv, ADS, HAL and other literature hosts denied; WebFetch could not resolve any host; WebSearch summaries only (REFERENCES.md section 1)"
+  },
+  "inputs": {
+    "ledgers_under_correction": [
+      {
+        "path": "src/shwfs_ao/resources/benchmarks/detector_source_ledger.v1.json",
+        "sha256": "2b8cc13ebca067f9c48af1861680a84de619834019567a33a7d671ec606882fc",
+        "git_blob": "2ab320ea160236d4ea3cee89c66049deb529fd6b",
+        "bytes": 10465
+      },
+      {
+        "path": "src/shwfs_ao/resources/benchmarks/detector_level.assumptions.v1.json",
+        "sha256": "33073748f7a919749b6908c851318efefa02b2d8379a4f8bd12647a7bdeb7ffa",
+        "git_blob": "13fc1735cf6e473818e1d9268a3e4e69a7b4d728",
+        "bytes": 83328
+      }
+    ],
+    "resource_context": [
+      {
+        "path": "src/shwfs_ao/resources/resource_manifest.json",
+        "sha256": "d1cc4d9a5ff4f102e6dfb2de71630b8674931d671ec732e2b2d70618a37167cf",
+        "git_blob": "97f9faf5b1c35e34ffea1821c955cb264a607117",
+        "bytes": 13358
+      },
+      {
+        "path": "src/shwfs_ao/resources/benchmarks/eso_drm_42m_scao_derived.assumptions.v1.json",
+        "sha256": "adc5e93d97b2db8a29850eb05c63bcad0ec5c14e8881d7128438f21b5318b15d",
+        "git_blob": "6d4ffbb86612e88e4564ea94e584b0798b79b37e",
+        "bytes": 29611
+      },
+      {
+        "path": "src/shwfs_ao/resources/benchmarks/eso_drm_42m_scao_derived.assumptions.v2.json",
+        "sha256": "93d889e20529234cbdfecc73db0327612cb5da1a5e643ddc38e5af78dd14e1a5",
+        "git_blob": "1439b53492d7add2933a179f296d679736fb5779",
+        "bytes": 34504
+      },
+      {
+        "path": "src/shwfs_ao/resources/synthetic_presets/det_ccd_2m_synthetic.v1.json",
+        "sha256": "063d172dc88689137a3eb70257d0a3a6a4f0ba2d25944fac8172b153c88cf154",
+        "git_blob": "e28184c510c50985b6c75061ac2350499f10a14f",
+        "bytes": 5369
+      },
+      {
+        "path": "src/shwfs_ao/resources/synthetic_presets/det_emccd_2m_synthetic.v1.json",
+        "sha256": "8ee39a63e9897539ef11b52b2409969a8dccb4a81e94b09598ab27269d9d801b",
+        "git_blob": "6cb9d9626adf2f9649d42c727a914f7277d294a2",
+        "bytes": 5377
+      },
+      {
+        "path": "src/shwfs_ao/resources/synthetic_presets/det_cmos_2m_synthetic.v1.json",
+        "sha256": "49f726187dba27d91e2941ffc9787a23308503ca3a67fc55e603cc0c62dd1615",
+        "git_blob": "10a33e0b6d894c5c15ed92888c845b6c73a13750",
+        "bytes": 5373
+      },
+      {
+        "path": "src/shwfs_ao/resources/synthetic_presets/det_emccd_2m_plane_synthetic.v1.json",
+        "sha256": "1109069a34312cbe83399f4628efe99e9e8981e27726a50580ba0448eab64528",
+        "git_blob": "ce68d3e4a7a6878511fa862ef10087c55811e2ff",
+        "bytes": 5433
+      },
+      {
+        "path": "src/shwfs_ao/resources/synthetic_presets/det_emccd_12m_medium_derived.v1.json",
+        "sha256": "378b3643a69508b76ea290185547c02cf27dd1aafa8e16b37c42e0c75917a9a5",
+        "git_blob": "b8ecf5a038e2999ea88c5f26d3c74641afdd435e",
+        "bytes": 7498
+      },
+      {
+        "path": "src/shwfs_ao/resources/synthetic_presets/det_emccd_12m_medium_derived.v2.json",
+        "sha256": "de4faf333619456fdaf2ec1d9d1680565b318ceb123e3404f3bbc5095ecd3574",
+        "git_blob": "f53173028a9792f27ea552452c69a8bdf0fa5f54",
+        "bytes": 7704
+      },
+      {
+        "path": "src/shwfs_ao/resources/synthetic_presets/det_emccd_12m_medium_derived.v3.json",
+        "sha256": "03b2782958f834b776d2032a948d1b96f642a9946c58e54c3ac4ac4b4293d004",
+        "git_blob": "5ff73429540ab0e66b93dba3d05b03e92ba5d398",
+        "bytes": 7918
+      },
+      {
+        "path": "src/shwfs_ao/resources/synthetic_presets/det_ccd_42m_r3band_derived.v1.json",
+        "sha256": "56d8a6bac412b56c995a359f56458eb4ad5383d6f5fe47b9fa60b58a3a6714ff",
+        "git_blob": "941342f152c260076da1382583e610f49fa73297",
+        "bytes": 7484
+      }
+    ],
+    "code_consumers": [
+      {
+        "path": "src/shwfs_ao/io/benchmark_ledgers.py",
+        "sha256": "5e9586c6de3ea8f555f8059f5349eec11d460b11ee11b971ccfe0bce5cfad012",
+        "git_blob": "eb629fc4fbb8ec7f61ce38057402d28ed44485fc",
+        "bytes": 11926
+      },
+      {
+        "path": "src/shwfs_ao/io/configs.py",
+        "sha256": "c68dfc8871855b8f1a6a6146c5f37360b90bfbd63be7a7789540ffcdc68404f5",
+        "git_blob": "2e5c26217bb89e7c0471ca4a79ea761924ec25ae",
+        "bytes": 93596
+      },
+      {
+        "path": "src/shwfs_ao/io/resources.py",
+        "sha256": "e5b857e3c09ff3d20c17bd5d1f46cbd4214261534b10f03e0174377b3fa0cbff",
+        "git_blob": "1793e3e38409bd1f62866cb3b969c0165ef1d558",
+        "bytes": 9973
+      },
+      {
+        "path": "src/shwfs_ao/detector/noise_model.py",
+        "sha256": "a77e37432b623f38e7ae5b545eeb14152937f962bdcc299ea2168df1e71f25df",
+        "git_blob": "74544c0dad785f2e83175ddb50679dbfbdfd0a10",
+        "bytes": 21975
+      },
+      {
+        "path": "src/shwfs_ao/detector/validity.py",
+        "sha256": "9a120cf5d6efe2183ad481f35671fccb0ff69fd9af2d74f31144c4a24605c551",
+        "git_blob": "a3825bb84eb1e036d0a6a59460d14c89b8fdb169",
+        "bytes": 20172
+      },
+      {
+        "path": "src/shwfs_ao/detector/centroid.py",
+        "sha256": "423ecc774561856ab8fc1e4ce4d0a97d2cb3dad4eb12d68e32ee529f43df68c0",
+        "git_blob": "2972a624352eadc12d7f8e4a6018b4d2410f6d3a",
+        "bytes": 9981
+      },
+      {
+        "path": "src/shwfs_ao/experiments/detector_noise.py",
+        "sha256": "cb98b7b26f514faa9901ff86b46fbdf03d66b8872fe384a38d0784ce780d8871",
+        "git_blob": "4ce6814aff011347a4a61c06fa5970d119f3cd78",
+        "bytes": 10094
+      },
+      {
+        "path": "src/shwfs_ao/experiments/eso_scao_benchmark.py",
+        "sha256": "183967bd0b8ac56888fc16d19bb2b1d67c8871183971b2ff67f45d165b50a8ec",
+        "git_blob": "22c236b992fc2ab3fcf4802103e5afb12bd72521",
+        "bytes": 37981
+      },
+      {
+        "path": "src/shwfs_ao/wfs/shack_hartmann/physical_measurement.py",
+        "sha256": "f454d03eee2015aed90d857af3ff78e1850e7c9b9f7cb1365e3a29587c50a3ab",
+        "git_blob": "268f6b643b63c861e9742649af312fe35589f1b5",
+        "bytes": 37244
+      },
+      {
+        "path": "scripts/generate_detector_level_profiles.py",
+        "sha256": "a1bf752500352c014808eb4f01646576b5dfa573964f8679c7858d42283debd5",
+        "git_blob": "d6077dc8a4bd84eaa7a6873c0235ea0f8e45bebb",
+        "bytes": 36038
+      },
+      {
+        "path": "scripts/generate_eso_scao_profiles.py",
+        "sha256": "6499cac6b2c91370b94d5b812a36d5d4ac1423385ab61151e0cd5288c36fd251",
+        "git_blob": "3643eebcfdb34376225a4bab69b4f0eec93d962e",
+        "bytes": 10651
+      },
+      {
+        "path": "scripts/run_detector_level_evidence.py",
+        "sha256": "68294e07304415bdb06002fb27b581dedff5db888e1810d909e3f6873e0d7bf9",
+        "git_blob": "315237f277fd94e21df49b0e2b086fa33dc30134",
+        "bytes": 54370
+      },
+      {
+        "path": "scripts/eso_scao_paired_convergence_study.py",
+        "sha256": "2e08a362b6cab1f57b16b4380bd27feeb0b7ffb4cd824d1ba7b36a45e2285f1d",
+        "git_blob": "293d8a75748ca5f72b054ee8680db5cc9a062fbc",
+        "bytes": 30752
+      },
+      {
+        "path": "build_support/resource_alias.py",
+        "sha256": "d032609a61ed800a704236f2706a6c5ad722ab17025cdf25b63c8ae90fb23768",
+        "git_blob": "47f8b963fa41db26ccd9316243c6c370332cc440",
+        "bytes": 9321
+      },
+      {
+        "path": "pyproject.toml",
+        "sha256": "0ec98a070f7695a3a6d5dac2eaaa36151c866771f1db76e8da86c5a6b5051fb9",
+        "git_blob": "75b3a81e691c88368309a1c1d5a1730ce08b5f36",
+        "bytes": 6047
+      }
+    ],
+    "tests": [
+      {
+        "path": "tests/io/test_detector_level_ledgers.py",
+        "sha256": "ded1aba1c6249d74366ed932451c0a0b502e0dc0cdeea6fa980b598f3a358e99",
+        "git_blob": "365bdd75a00f7c6c093fd32d1daca7b88e99dccc",
+        "bytes": 2113
+      },
+      {
+        "path": "tests/io/test_resources.py",
+        "sha256": "7357c84f063095e8eccb802161facb75b332bd41740e12de162a72da6897bb57",
+        "git_blob": "6fb39653c4c4057d83a7e86495997ddbe06ce730",
+        "bytes": 6118
+      },
+      {
+        "path": "tests/io/test_configs.py",
+        "sha256": "bbbb0bd057be32ad9613cdcb7c4c61ff724f78d566b1ff5474d8c35a5b0392e9",
+        "git_blob": "a421105296a0ddff6576a3f8aae561a87859e74a",
+        "bytes": 52647
+      },
+      {
+        "path": "tests/io/test_eso_scao_profiles.py",
+        "sha256": "31415eae833eff92170078560d7300aa9d0e1b7d23479333851346abef498a88",
+        "git_blob": "b4c69b3f6b3cc9de4499b9cf1097354cf9a5f5dc",
+        "bytes": 11680
+      },
+      {
+        "path": "tests/io/test_detector_level_profiles.py",
+        "sha256": "dfa6799e4306bdc7ea7cd053cd48e8e629df8eae633e0817a3967af4929da062",
+        "git_blob": "5ab3851ca46a317ee641ea76c5c813a625d7d168",
+        "bytes": 7660
+      },
+      {
+        "path": "tests/detector/test_noise_model.py",
+        "sha256": "edd8f4bf87768f6cde5dab789b89ff5c23e7af479735d0a512eb7272517c9d0e",
+        "git_blob": "016c2f215d56a13a0dc5805fd766ace00f28a089",
+        "bytes": 31336
+      },
+      {
+        "path": "tests/test_refactor_contract.py",
+        "sha256": "0be70700f8074fdb5c027e4d85d6d3f2b66f89832a90403922af37108b0af8b0",
+        "git_blob": "6341afedf368d6415d53b2e30186f9184eacdf7b",
+        "bytes": 39835
+      }
+    ],
+    "documentation": [
+      {
+        "path": "docs/roadmap.md",
+        "sha256": "ec9534756c99a25674c6c023eb33bb2cb882cb537973ad2bd3c3786830c0eb5a",
+        "git_blob": "5e5d0dfebc99ba93b6d4d993cc2da5b989d3f8a5",
+        "bytes": 16110
+      },
+      {
+        "path": "docs/technical_reference.md",
+        "sha256": "6d5d94139aba8850a09f38952d069cb485af726391f3aabaa62d5c6de1dde11d",
+        "git_blob": "0a04e61836435b5c0d89ea26a794fa159a01fd4e",
+        "bytes": 135614
+      },
+      {
+        "path": "docs/current_limitations.md",
+        "sha256": "0fc741250aaf28313664656a80edc46c014a8ea1915ba0b89052e34817c34c9e",
+        "git_blob": "ecda41f3141fa9b46b12eede1596bb023164972c",
+        "bytes": 35834
+      },
+      {
+        "path": "docs/detector_model.md",
+        "sha256": "bd0897355be745ea0a93cb7614650c40771342ad1639530299903d0cd064c4ee",
+        "git_blob": "6ed8022caebf4ecda6d71c3a2810228764683ac3",
+        "bytes": 15758
+      },
+      {
+        "path": "docs/releasing.md",
+        "sha256": "15fba5bb81b8012a7bd22041f6c363f7ac62f1834a643d30d40fb660c0a0a244",
+        "git_blob": "f41e783d1f89c6379cc25aa54842acbb86cd8218",
+        "bytes": 3561
+      },
+      {
+        "path": "docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md",
+        "sha256": "5ebe6977af60ff5bf9b38f5a33319b92ff2563f5030806a9abd8fd226fc34cf8",
+        "git_blob": "5cdf6cad8582c39d34fe743e64f77d0dbb5d6fcf",
+        "bytes": 162008
+      },
+      {
+        "path": "docs/refactor/CLEANUP_REFACTOR_STATUS.md",
+        "sha256": "e1c91212a48b02d3dcd853acd65dd54a8d01d5751028eabdc8ef643ce0215e46",
+        "git_blob": "0bebc97d9dbc452fe745b0970ea0d618f442373f",
+        "bytes": 96874
+      }
+    ],
+    "historical_evidence_consulted": [
+      {
+        "path": "docs/refactor/detector_level_evidence/det07_e1_centroid_noise.json",
+        "sha256": "522e021ea99cf97140b9b3bff395554db745653eba7687d59af84cead9107701",
+        "git_blob": "7045f6e06afbb06a8994e4b2907bc4455fa30522",
+        "bytes": 59559
+      },
+      {
+        "path": "docs/refactor/detector_level_evidence/det07_e1_centroid_noise_review.json",
+        "sha256": "9d75f7e38c43ef5544ec4b2212e8b49eecec96d9b02269cf873f5b4097601167",
+        "git_blob": "5b4bb7b099ddf11b37915de2bd534af35e4fbda6",
+        "bytes": 59608
+      },
+      {
+        "path": "docs/refactor/detector_level_evidence/det09_e2_noise_propagation_review.json",
+        "sha256": "f5bd1f9d193335cd418d03ae8285607846a29222aa5cb88becc31723219b24b2",
+        "git_blob": "0269d49a46808709bf478a8d35550efd709b2e8e",
+        "bytes": 7029
+      },
+      {
+        "path": "docs/refactor/detector_level_evidence/det09_e2_noise_propagation_12m_review.json",
+        "sha256": "fa48f33ad77a86d11540a425e3b6494165842e3b03c91567ff0bed0b03e53b35",
+        "git_blob": "f7dc017842c94c3685fabbeb989732cc726177d9",
+        "bytes": 14381
+      },
+      {
+        "path": "docs/refactor/detector_level_evidence/det09_gain_scan.json",
+        "sha256": "fb748911272ed4ec1921cf90111d16d4aa5eae2b53ca07d361b0bf4933928a20",
+        "git_blob": "86d599cef4a6382987ded066c0145b380a80e93a",
+        "bytes": 37325
+      },
+      {
+        "path": "docs/refactor/detector_level_evidence/det09_e3_magnitude_scan_12m.json",
+        "sha256": "016a45ed22d59bbe56650932bb5d7149f7f5d166291471c38d4e4753d1cac4f9",
+        "git_blob": "6ab9d5956990938f8b759085392e774ee1808c52",
+        "bytes": 23201
+      },
+      {
+        "path": "docs/refactor/detector_level_evidence/det09_e3_magnitude_scan_12m_v2.json",
+        "sha256": "90152c5fe752b87b98176a96a845d674b33de762e2033132dc7d4bd7d9c005b2",
+        "git_blob": "e6b3b69d090f35d9ce35f318f98f9d9b4bc014ba",
+        "bytes": 30162
+      },
+      {
+        "path": "docs/refactor/detector_level_evidence/det09_e4_camera_comparison_12m_v2.json",
+        "sha256": "6508b308c6b25ebb9f5eef192d0642a484ff65103b47536ccbb4b7a2aefa6034",
+        "git_blob": "6016370256b03d68db4540e3b1babce136ae1071",
+        "bytes": 29007
+      },
+      {
+        "path": "docs/refactor/detector_level_evidence/det_excursion_e3_12m_v2.json",
+        "sha256": "a6ff188e90eee77c0489769c3200ae90b4877eb5328f3953dee2d053f663ddfb",
+        "git_blob": "7ea37eb9706b0b7725ba57582fe2e6c6553bd20a",
+        "bytes": 101200
+      },
+      {
+        "path": "docs/refactor/detector_level_evidence/det_recovery_e3_12m_v2.json",
+        "sha256": "690feada263d343a04676ec63e93761e20d71bbe34fdbe3897a41a24a46d4a90",
+        "git_blob": "a38bb3bc593f5b7c91d3fbc2b7cadbec6394f234",
+        "bytes": 68678
+      }
+    ],
+    "instructions": [
+      {
+        "path": ".claude/references/common-contract.md",
+        "sha256": "b600a71571c660081bebe0c25b59d689204181754c791ea821c23c825f986001",
+        "git_blob": "f15af2c9d5b8cf01c689fe89821dfa2c4a969f3f",
+        "bytes": 6032
+      },
+      {
+        "path": ".claude/references/evidence-and-reporting.md",
+        "sha256": "35d48027baf634e483f6aff47a7c4fa67a04bc995dce7e8ad3f7dc3be11031ab",
+        "git_blob": "65f77433691a91251caf1071d310294ea39194e7",
+        "bytes": 3943
+      },
+      {
+        "path": ".claude/references/project-integration.md",
+        "sha256": "4b1eaca83d40ea0f993fd84756ac582844183550276e7a881b1e33d328db5226",
+        "git_blob": "4e12160d720fa2d85bd3b562527d139aa0922af1",
+        "bytes": 4229
+      },
+      {
+        "path": ".claude/skills/ao-research-workflow/SKILL.md",
+        "sha256": "8e6d644137cfabfadd84e8caff1c9472013d7470b9fc25e167e659a8854e2b6a",
+        "git_blob": "5d996224ac60932c8afd6a4d92210646365016e4",
+        "bytes": 5588
+      },
+      {
+        "path": ".claude/skills/ao-resource-analysis/SKILL.md",
+        "sha256": "fb269db507c0a558505d8aa25dca3d0968cbb9dce2e2852cb660039f99826aa6",
+        "git_blob": "6abcebb01ceece3532d2b15fc328bc96c10cf67a",
+        "bytes": 3702
+      }
+    ],
+    "historical_code": [
+      {
+        "path": "src/shwfs_ao/detector/noise_model.py",
+        "sha256": "9f44aeda00e03f57c62d1d1d113bf73a8761fe5275de450809f711e2482061de",
+        "git_blob": "0f4ce55f6b2e451943e51b3457d8faaaa30a30cb",
+        "bytes": 17180,
+        "commit": "a31099b9a4258a3b0d00f5faf837defdf98046cc"
+      }
+    ]
+  },
+  "missing_inputs": [
+    {
+      "input": "pre-refactor audit report holding finding F-08",
+      "expected_location": "outputs/pre_refactor_audit/20261017T143700Z/ (main checkout, tree f09eb16; git-ignored)",
+      "status": "NOT_AVAILABLE"
+    },
+    {
+      "input": "report holding AR-008",
+      "expected_location": "a review run under outputs/audit_reconciliation/ (git-ignored); the ID does not occur in the tracked tree",
+      "status": "NOT_AVAILABLE"
+    },
+    {
+      "input": "audit reconciliation run records (ledger, acceptance, status)",
+      "expected_location": "outputs/audit_reconciliation/2026-10-18-claude-27f34fa/ and the 2026-10-19/20 runs (git-ignored)",
+      "status": "NOT_AVAILABLE"
+    },
+    {
+      "input": "S. Thomas et al., MNRAS 371, 323-336 (2006), full text",
+      "expected_location": "https://doi.org/10.1111/j.1365-2966.2006.10661.x",
+      "status": "NOT_AVAILABLE (network policy)"
+    },
+    {
+      "input": "arXiv:2410.04863 full text (secondary)",
+      "expected_location": "https://arxiv.org/abs/2410.04863",
+      "status": "NOT_AVAILABLE (network policy)"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "docs/research/detector_source_ledger/correction_specification.md",
+      "sha256": "2221d0fc84b06199ef035242c6c06d17282699c40792316f43514b21619b5e2b",
+      "bytes": 31844
+    },
+    {
+      "path": "docs/research/detector_source_ledger/proposed_corrections.json",
+      "sha256": "8162fdf4fcd4825a0ffcf563ee1f69a857385d9167254799ba239e9d232d4211",
+      "bytes": 33063
+    },
+    {
+      "path": "docs/research/detector_source_ledger/references.md",
+      "sha256": "975990c9ae1a01a84213ac90bac6f79edbb6ecfe80f20c9c07ad5055e47b2cf4",
+      "bytes": 12844
+    },
+    {
+      "path": "docs/research/detector_source_ledger/acceptance_plan.md",
+      "sha256": "5a1f3210d90977a029140bc4c7d277cc22fc815f7da16a8cdd46d29bdfce5945",
+      "bytes": 8002
+    },
+    {
+      "path": "docs/research/detector_source_ledger/input_manifest.json",
+      "sha256": null,
+      "note": "this file"
+    }
+  ],
+  "scratch_tools_not_committed": [
+    "build_candidates.py",
+    "validate_candidates.py",
+    "build_input_manifest.py"
+  ],
+  "publication_note": "Editorial integration and descriptive file names updated on 2026-10-22. Historical input identities and candidate current values are retained; the output digests describe the published companion documents."
+}
