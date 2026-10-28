@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from numbers import Real
 from typing import Any, Mapping
 
@@ -39,7 +40,23 @@ COMPARISON_LEVELS = (
     "physical_tolerance",
     "informational",
 )
+REQUIRED_COMPARISON_KINDS = (
+    "pupil_mask_and_throughput",
+    "zernike_modes",
+    "atmosphere_statistics",
+    "wfs_tip_tilt_response",
+    "lenslet_spot_morphology",
+    "dm_single_actuator_influence",
+    "dm_static_fitting",
+    "interaction_matrix_identity",
+    "normalized_singular_spectrum",
+    "psf_normalization",
+    "strehl_ratio",
+    "closed_loop_residual",
+    "runtime_and_memory",
+)
 _CRITERION_TYPES = ("equals", "abs_tolerance", "range", "informational")
+_CONTENT_HASH_64 = re.compile(r"[0-9a-f]{64}")
 
 _REQUIRED_ENVIRONMENT_FIELDS = (
     "python_version",
@@ -65,6 +82,7 @@ __all__ = (
     "CROSS_BACKEND_BASELINE_SCHEMA_VERSION",
     "CROSS_BACKEND_BASELINE_RESOURCE",
     "COMPARISON_LEVELS",
+    "REQUIRED_COMPARISON_KINDS",
     "BaselineContractError",
     "validate_cross_backend_report",
     "validate_cross_backend_baseline",
@@ -80,7 +98,16 @@ class BaselineContractError(ValueError):
 
 
 def validate_cross_backend_report(document: Mapping[str, Any]) -> Mapping[str, Any]:
-    """Validate the shared report body: identity, hashes, and metrics."""
+    """Validate the shared report body: identity, hashes, and metrics.
+
+    A valid document covers every kind in :data:`REQUIRED_COMPARISON_KINDS`
+    exactly once, in canonical order: one run of the comparison suite always
+    produces the complete AO-REF-018 inventory, and an accepted baseline that
+    silently dropped a comparison would stop gating it.  Every gating
+    criterion must carry finite numerics — a non-negative absolute tolerance
+    or an ordered range — so a malformed tolerance can never widen into an
+    always-passing gate.
+    """
 
     if not isinstance(document, Mapping):
         raise BaselineContractError("document must be a JSON object mapping.")
@@ -127,9 +154,10 @@ def validate_cross_backend_report(document: Mapping[str, Any]) -> Mapping[str, A
         if not isinstance(hashes, Mapping) or not hashes:
             raise BaselineContractError(f"{group} must be a non-empty mapping.")
         for key, value in hashes.items():
-            if not isinstance(value, str) or len(value) != 64:
+            if not isinstance(value, str) or not _CONTENT_HASH_64.fullmatch(value):
                 raise BaselineContractError(
-                    f"{group}[{key!r}] must be a 64-character content hash."
+                    f"{group}[{key!r}] must be a 64-character lowercase "
+                    "hexadecimal content hash."
                 )
     _require_fields(
         document["environment"],
@@ -140,6 +168,7 @@ def validate_cross_backend_report(document: Mapping[str, Any]) -> Mapping[str, A
     if not isinstance(comparisons, list) or not comparisons:
         raise BaselineContractError("comparisons must be a non-empty list.")
     seen_kinds: set[str] = set()
+    kinds: list[str] = []
     for comparison in comparisons:
         _validate_comparison(comparison)
         kind = comparison["comparison_kind"]
@@ -148,6 +177,15 @@ def validate_cross_backend_report(document: Mapping[str, Any]) -> Mapping[str, A
                 f"duplicate comparison_kind {kind!r} in document."
             )
         seen_kinds.add(kind)
+        kinds.append(kind)
+    if tuple(kinds) != REQUIRED_COMPARISON_KINDS:
+        missing = [kind for kind in REQUIRED_COMPARISON_KINDS if kind not in seen_kinds]
+        unexpected = [kind for kind in kinds if kind not in REQUIRED_COMPARISON_KINDS]
+        raise BaselineContractError(
+            "comparisons must cover the required comparison kinds in "
+            f"canonical order; missing={missing}, unexpected={unexpected}, "
+            f"observed={kinds}."
+        )
     return document
 
 
@@ -184,6 +222,16 @@ def validate_cross_backend_baseline(document: Mapping[str, Any]) -> Mapping[str,
                     f"baseline metric {metric.get('name')!r} in comparison "
                     f"{comparison['comparison_kind']!r} is missing its "
                     "scientific rationale."
+                )
+            criterion_type = metric["pass_criterion"]["type"]
+            if criterion_type in ("abs_tolerance", "range") and not (
+                _finite_number(metric["value"])
+            ):
+                raise BaselineContractError(
+                    f"baseline metric {metric['name']!r} in comparison "
+                    f"{comparison['comparison_kind']!r} carries a numeric "
+                    "criterion, so its recorded value must be a finite "
+                    "number."
                 )
     return document
 
@@ -391,24 +439,59 @@ def _validate_comparison(comparison: object) -> None:
             raise BaselineContractError(
                 f"metric {metric['name']!r} has an invalid pass_criterion."
             )
-        if criterion["type"] == "abs_tolerance" and (
-            "expected" not in criterion or "tolerance" not in criterion
-        ):
-            raise BaselineContractError(
-                f"metric {metric['name']!r} abs_tolerance criterion needs "
-                "expected and tolerance."
-            )
-        if criterion["type"] == "range" and (
-            "low" not in criterion or "high" not in criterion
-        ):
-            raise BaselineContractError(
-                f"metric {metric['name']!r} range criterion needs low and "
-                "high."
-            )
-        if criterion["type"] == "equals" and "expected" not in criterion:
-            raise BaselineContractError(
-                f"metric {metric['name']!r} equals criterion needs expected."
-            )
+        if criterion["type"] == "abs_tolerance":
+            if "expected" not in criterion or "tolerance" not in criterion:
+                raise BaselineContractError(
+                    f"metric {metric['name']!r} abs_tolerance criterion needs "
+                    "expected and tolerance."
+                )
+            if not _finite_number(criterion["expected"]):
+                raise BaselineContractError(
+                    f"metric {metric['name']!r} abs_tolerance expected value "
+                    "must be a finite number."
+                )
+            if (
+                not _finite_number(criterion["tolerance"])
+                or float(criterion["tolerance"]) < 0.0
+            ):
+                raise BaselineContractError(
+                    f"metric {metric['name']!r} tolerance must be a finite "
+                    "non-negative number."
+                )
+        if criterion["type"] == "range":
+            if "low" not in criterion or "high" not in criterion:
+                raise BaselineContractError(
+                    f"metric {metric['name']!r} range criterion needs low and "
+                    "high."
+                )
+            if not _finite_number(criterion["low"]) or not _finite_number(
+                criterion["high"]
+            ):
+                raise BaselineContractError(
+                    f"metric {metric['name']!r} range bounds must be finite "
+                    "numbers."
+                )
+            if float(criterion["low"]) > float(criterion["high"]):
+                raise BaselineContractError(
+                    f"metric {metric['name']!r} range low must not exceed "
+                    "high."
+                )
+        if criterion["type"] == "equals":
+            if "expected" not in criterion:
+                raise BaselineContractError(
+                    f"metric {metric['name']!r} equals criterion needs "
+                    "expected."
+                )
+            expected = criterion["expected"]
+            if (
+                isinstance(expected, Real)
+                and not isinstance(expected, bool)
+                and not math.isfinite(float(expected))
+            ):
+                raise BaselineContractError(
+                    f"metric {metric['name']!r} equals expectation must be "
+                    "finite."
+                )
         if (metric["level"] == "informational") != (
             criterion["type"] == "informational"
         ):
@@ -422,6 +505,14 @@ def _validate_comparison(comparison: object) -> None:
                 f"{comparison['comparison_kind']!r}."
             )
         seen_names.add(metric["name"])
+
+
+def _finite_number(value: object) -> bool:
+    return (
+        isinstance(value, Real)
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+    )
 
 
 def _metric_index(
