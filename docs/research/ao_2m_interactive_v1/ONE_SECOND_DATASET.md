@@ -531,7 +531,10 @@ the RMS derivative, is
   accepted the committed bundle as it stands, verifying the preserved
   dataset's Research Results in place; the galaxy and RMS derivatives are still
   covered only by `check_bindings.py`, and raw-evidence mode was not run
-  against the archives.
+  against the archives. **Update 2026-10-27 (later):** the producer checks each
+  provenance record copies are now required to be present and literally true,
+  with the [200, 1000) window and 800 frames; raw-evidence mode is tested on
+  synthetic archives only and has still not been run against these archives.
 - The RMS diagnostic describes the saved wavefronts only. Fitted tilt is not
   image-centroid motion, and the decomposition does not attribute causes.
 

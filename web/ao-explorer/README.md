@@ -191,6 +191,13 @@ instantaneous metrics. Add `--series-dir` with the dataset's own raw layout
 (`outputs/ao_explorer_1s/<series-id>` for the active dataset,
 `outputs/ao_explorer_v1/<series-id>` for the 180-frame one) to also bind it to
 the raw evidence; without it the report states that no raw array was checked.
+The raw path is tested on synthetic archives in both layouts
+(`tests/ao_explorer/test_validate_raw.py`); it has not been run against the
+real archives, which are not in the repository. A missing or malformed archive
+is reported as a failure of its case. For the active dataset the validator also
+checks each case's copy of the producer's record checks against
+`long_series.run_case`: every required check present and literally `true`, the
+analysis frames and count, and the diagnostics' keys and types.
 The galaxy and RMS derivatives and the other sections' bundles are covered by
 the binding check below, not by this validator.
 

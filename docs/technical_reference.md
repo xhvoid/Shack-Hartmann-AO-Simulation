@@ -1024,7 +1024,13 @@ one process report the series peak (as `science_run`'s
 aggregate RSS of the whole process group at intervals, so short peaks between
 samples are not observed. RSS counts resident native and Python allocations
 together; virtual memory is not reported. A missing value is unknown, not
-zero. The host (Apple M1 Pro, 8 cores, 16 GiB) carried a background load
+zero. **Note 2026-10-27 (G4):** on Linux an exec'd child's `ru_maxrss` also
+keeps the high-water mark of the image it was spawned from (with inert
+workers, a child of a parent holding about 100 MiB reported about 100 MiB of
+`ru_maxrss` against 41 MiB of `VmHWM`), so a fresh child's `ru_maxrss` is its
+own peak only when its parent was smaller; macOS was not checked and no
+recorded value is relabelled. The evidence runner's opt-in fresh-process mode
+records the child's `VmHWM` as `child_process_peak_rss_bytes` instead. The host (Apple M1 Pro, 8 cores, 16 GiB) carried a background load
 average of 2.6–4.1 during every current measurement.
 
 Timing boundaries do not overlap: `build` includes the interaction calibration
