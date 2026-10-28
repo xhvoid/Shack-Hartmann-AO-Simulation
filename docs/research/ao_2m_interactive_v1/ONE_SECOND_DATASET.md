@@ -502,7 +502,12 @@ twice. First, to `98b44b1218a0a18682454e6db345c76b72e092f986d7d36947e26f395e060e
 `3adc3074287a874abe19ee5f354974ffd9055a4043fa738feafec2dd2a4b3a48` (the RMS
 diagnostics call and the corrected limitation and block-notice wording).
 Neither version generated anything in this dataset; the generation identity
-recorded in every bundle stays `c6c53ce6…`. `rms_diagnostics.py`, which wrote
+recorded in every bundle stays `c6c53ce6…`. **Engineering closeout, 2026-10-27:** `long_export.py`
+changed a third time, to
+`45cfb23088068b2a6d7a4a2166492cf9ae62500b7ceca2a42c97775f99d5a920` (the producer
+checks of a case record judged by the validator's rule, `web_contract.producer_check_problems`,
+instead of a truthiness filter over the booleans present). It generated nothing
+in this dataset either, and was tested on synthetic records only. `rms_diagnostics.py`, which wrote
 the RMS derivative, is
 `e7e343b4f8dac065f6714618f379f6c245b92040f091fb06f0e64ca85d202cf6`.
 
