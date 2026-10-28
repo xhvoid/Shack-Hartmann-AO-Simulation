@@ -35,8 +35,9 @@ wheel-verified quick-start commands, scope, results, and limitations.
   schema 3, sidecars/manifests, upgrades, and baseline acceptance.
 - [Migration](migration.md) — deprecated import/resource replacements,
   release clock, and serialized compatibility paths.
-- [Cleanup and refactoring execution prompt](refactor/CLEANUP_REFACTOR_EXECUTION_PROMPT.md) — staged agent assignment, preservation contracts, technical-reference requirements and resource estimates.
-- [Independent cleanup review prompt](refactor/CLEANUP_REFACTOR_REVIEW_PROMPT.md) — source, scientific-behavior, documentation, packaging and resource-cost acceptance review.
+- [Research and validation methods](quality_methods/README.md) — focused guides for physical, numerical, code, literature, reproducibility and resource assessment.
+- [Repository consolidation plan](refactor/repository_consolidation_plan.md) — implementation stages, preservation contracts, technical-reference requirements and resource estimates.
+- [Independent consolidation review](refactor/repository_consolidation_review.md) — source, scientific-behavior, documentation, packaging and resource-cost acceptance review.
 - [Cleanup execution record](refactor/CLEANUP_REFACTOR_STATUS.md) — what the consolidation changed and verified, ticket by ticket.
 - [Parameter-source inventory (Markdown)](ao_realistic_demo_parameter_source_inventory.md) — tracked public caches, derived quantities, synthetic parameters, and result provenance.
 - [Parameter-source inventory (PDF)](ao_realistic_demo_parameter_source_inventory.pdf) — formatted version of the source inventory.
@@ -87,5 +88,5 @@ the package-level pages above and current notebooks under
 `notebooks/tutorials`, `notebooks/studies`, and `notebooks/experimental`;
 archived numbered notebooks are migration evidence, not the primary design
 description. Earlier plans (`AO_REFACTOR_MASTER_TICKETS_REVISED.md`,
-[`repository_optimization_ticket.md`](repository_optimization_ticket.md)) describe earlier repository
+[`repository_optimization_plan.md`](repository_optimization_plan.md)) describe earlier repository
 states; the [roadmap](roadmap.md) is the current plan.

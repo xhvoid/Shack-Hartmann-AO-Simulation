@@ -1,4 +1,4 @@
-"""GPT independent review AR-014: the S3 study resumes only its own runs.
+"""independent review AR-014: the S3 study resumes only its own runs.
 
 The study script is loaded by file, as the other script-guard tests do.  Its
 child launcher is replaced by a stand-in that writes the row a child would,

@@ -58,7 +58,7 @@ ADC code within :data:`ADC_HEADROOM_SIGMA` noise sigmas of either ADC limit
 
 Version 2 (2026-10-16 review, R2 and R4) replaces version 1, which formed the
 conditional mean from the ideal background and checked only the upper ADC
-limit without offsets.  A 2026-10-18 correction (GPT pre-refactor audit F-01)
+limit without offsets.  A 2026-10-18 correction (pre-refactor audit F-01)
 applies the half-step quantization condition to every pixel that enters the
 centroid, with its own read noise and step, instead of to the scalar read
 noise and the largest gain multiplier of the whole batch (which then rejected
