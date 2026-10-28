@@ -19,7 +19,7 @@ function member(name) {
 function setButtons() { prefixes.forEach(p=>{$(`${p}play`).textContent=playing?'Pause':'Play';$(`${p}play`).setAttribute('aria-pressed',String(playing));}); }
 function pause() { playing=false; setButtons(); }
 function fail(error) {
-  pause(); $('error').hidden=false; $('error').textContent=`42 m recording unavailable: ${error.message}. Any previously displayed frame remains the last frame that passed file integrity checks; reload to retry.`;
+  pause(); $('error').hidden=false; $('error').textContent=`42 m recording unavailable: ${error.message}. The viewer is paused at the last checked frame. Reload to try again.`;
   controls().forEach(e=>e.disabled=true);
   $('viewer').removeAttribute('aria-busy');
   $('status').textContent='The requested recording or asset failed its integrity checks.';
@@ -86,7 +86,7 @@ async function show(next, {speak=false}={}) {
     $('photo-readout').textContent=mean?'400-frame intensity mean · 0.200–1.000 s · same image mode as the PSF panels':`Recorded instantaneous images · frame ${k} · ${time} s`;
     $('mode-note').textContent=(mean?`PSFs and binary images: mean intensity of all 400 frames 100–499 (not only the snapshots). Wavefronts and RMS: frame ${k}. `:`All wavefronts, PSFs and binary images: recorded frame ${k}. `)+`Image field ${data.field_arcsec.toFixed(3)}″ × ${data.field_arcsec.toFixed(3)}″; native sampling ${(data.step_arcsec*1000).toFixed(2)} mas.`;
     charts();
-    $('status').textContent='Recorded simulation loaded · file integrity checked · 126 saved snapshots';
+    $('status').textContent='';
     if(speak&&!playing)announce(k);
     // Bounded prefetch: the next one or two snapshots only.
     for(const ahead of playing?[1,2]:[1])if(index+ahead<data.indices.length)atlas(data.indices[index+ahead]).catch(fail);
@@ -140,7 +140,7 @@ function download(host,label,name) {
   });$(host).append(link);
 }
 async function load(entry,entryUrl) {
-  if(loaded||loading)return;loading=true;$('status').textContent='Loading the 42 m simulation recording and checking file integrity…';
+  if(loaded||loading)return;loading=true;$('status').textContent='Loading the 42 m replay…';
   try {
     const e=entry.replay42;require(e?.schema==='ao-explorer.recording42-entry.v1','No supported 42 m recording entry');
     const r=await fetchVerifiedJson({href:e.manifest,bytes:e.manifest_bytes,sha256:e.manifest_sha256,media_type:'application/json'},entryUrl);
@@ -174,7 +174,7 @@ export function initReplay42(entry,entryUrl) {
   });
   const speed=$('speed');speed.value=String(slowdown);
   speed.addEventListener('change',()=>{slowdown=SLOWDOWNS.includes(Number(speed.value))?Number(speed.value):20;});
-  if(reducedMotion)$('motion-note').textContent=' Reduced motion is on: playback starts only when you press Play and uses the slowest presentation by default.';
+  if(reducedMotion)$('motion-note').textContent=' Reduced motion is on: playback starts only when you press Play and uses the slowest playback speed by default.';
   document.querySelectorAll('input[name="r42-mode"]').forEach(e=>e.addEventListener('change',()=>{mode=e.value;show(index,{speak:true});}));
   document.addEventListener('keydown',onKey);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});

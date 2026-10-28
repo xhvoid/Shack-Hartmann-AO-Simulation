@@ -1,6 +1,6 @@
 # AO Simulation Explorer
 
-A static, buildless site with six sections:
+A static, buildless site for exploring my adaptive-optics simulations, with six sections:
 
 - **Explore 2 m** — a precomputed native 2 m Shack-Hartmann SCAO experiment
   (`det_emccd_2m_synthetic@1`, seed 1) in eight recorded cases. The active
@@ -250,12 +250,13 @@ Home and End jump to the first and final frame and K plays or pauses. A
 frame that takes longer than 200 ms to verify is announced as loading; at
 most the next two snapshots are prefetched and at most 24 atlases are cached.
 
-"What the numerical checks establish" (`#c1-noise`) explains the separate
+"Would stronger damping reduce detector noise?" (`#c1-noise`) explains the separate
 static C1 noise assessment from the `c1Noise` entry, which binds
 `derived/c1-noise-<id>/` (a two-member summary written by
 `scripts/ao_explorer/c1_noise_bundle.py` from the accepted C1 records, verified
-by SHA-256; no simulation and no images). Its highlight control redraws only
-its zero-based chart; it never touches the replay. If the entry is absent or
+by SHA-256; no simulation and no images). A static zero-based chart shows
+both damping settings, their predicted difference and the experiment threshold.
+It is independent of the replay. If the entry is absent or
 fails verification, the panel says so and the replay is unaffected.
 
 See `docs/research/ao_42m_replay/README.md` for production, packaging and the
@@ -340,11 +341,15 @@ independent. The original NGS evidence and all draft assumptions are unchanged.
 
 ### Parameter summaries and control diagnosis
 
-The three main experiments have visible parameter/evidence cards. The 2 m
-card follows the currently selected verified case, including changes to guide
-brightness, turbulence, gain and queued delay. The 42 m and 2.2 m cards separate
-published input targets from local assumptions and state what the recorded
-evidence supports. They do not add instrument-validation claims.
+Each main experiment has a folded setup section. The 2 m section follows the
+selected case and includes its full parameter list; the case controls show
+one shared Baseline button. The 42 m and 2.2 m setup notes distinguish published
+inputs from modelling assumptions. Direct links open the corresponding notes.
+
+The page uses simple sections and tables, with figures and playback controls
+kept visible. The 2 m RMS values appear beside their diagnostic chart; 100 ms
+block summaries are folded below the main comparison table. Loading and error
+messages remain visible when needed, while routine load confirmations are cleared.
 
 `#ngs22-control` presents all 1500 native telemetry samples per 2.2 m run in
 four synchronized charts: effective measurement rows, reconstructed increment

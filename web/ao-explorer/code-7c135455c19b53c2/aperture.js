@@ -27,7 +27,7 @@ export function initApertureComparison(entry, entryUrl) {
   function failure(error) {
     stopAnimation();
     node('error').hidden = false;
-    node('error').textContent = `Comparison unavailable: ${error.message}. Any existing figure remains the last one that passed file integrity checks; reload to retry.`;
+    node('error').textContent = `Comparison unavailable: ${error.message}. The last checked figure remains on screen. Reload to try again.`;
     node('status').textContent = 'A comparison asset could not be verified.';
     buttons.forEach(button => button.disabled = true);
     node('animation-toggle').disabled = true;
@@ -61,7 +61,7 @@ export function initApertureComparison(entry, entryUrl) {
   async function loadComparison() {
     if (ready) return ready;
     ready = (async () => {
-      node('status').textContent = 'Loading saved figures and checking their file identities…';
+      node('status').textContent = 'Loading the comparison figures…';
       const e = entry.apertureComparison;
       require(e?.schema==='ao-explorer.aperture-entry.v1','No supported aperture-comparison entry');
       const manifestResult = await fetchVerifiedJson({href:e.manifest,bytes:e.manifest_bytes,sha256:e.manifest_sha256,media_type:'application/json'},entryUrl);
@@ -83,7 +83,7 @@ export function initApertureComparison(entry, entryUrl) {
       await Promise.all([showLag(100),picture('temporal','temporal_comparison.png','temporal-full')]);
       for (const [label,name] of [['Methods','README.md'],['Numerical results','comparison.json'],['Control comparison','control_comparison.json'],['Per-time values (CSV)','timeseries.csv'],['Matched wavefront arrays (12 MB)','matched_wavefronts.npz'],['Postprocessing source','analysis.py'],['Verification record','verification.json'],['Publication provenance','publication.json']]) addDownload(label,name);
       buttons.forEach(button=>button.disabled=false); node('animation-toggle').disabled=false;
-      node('status').textContent='Saved comparison loaded · file identities checked · existing data only';
+      node('status').textContent='';
     })();
     return ready;
   }

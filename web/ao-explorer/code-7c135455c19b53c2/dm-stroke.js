@@ -56,13 +56,13 @@ export function initDmStroke(entry, entryUrl) {
         });
         node('downloads').append(link);
       }
-      node('status').textContent = 'Saved saturation check loaded · existing data only';
+      node('status').textContent = '';
     })();
     return ready;
   }
   const start = () => loadStroke().catch(error => {
-    node('error').hidden = false; node('error').textContent = `Stroke evidence unavailable: ${error.message}. Reload to retry.`;
-    node('status').textContent = 'The saved stroke evidence could not be verified.';
+    node('error').hidden = false; node('error').textContent = `DM clipping analysis unavailable: ${error.message}. Reload to retry.`;
+    node('status').textContent = 'The DM clipping results could not be loaded or checked.';
   });
   if ('IntersectionObserver' in window) {
     const observer = new IntersectionObserver(entries => {if (entries.some(e => e.isIntersecting)) {observer.disconnect();start();}}, {rootMargin:'200px'});
