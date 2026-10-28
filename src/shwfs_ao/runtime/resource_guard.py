@@ -345,10 +345,16 @@ def read_memory_pressure() -> MemoryPressure:
 
 
 def _available_cpu_count() -> int:
-    try:
-        affinity = os.sched_getaffinity(0)  # type: ignore[attr-defined]
-    except (AttributeError, OSError):
-        affinity = None
+    # sched_getaffinity exists on Linux only.  Looking it up by name keeps the
+    # module free of platform-specific type: ignore comments, which mypy's
+    # warn_unused_ignores would flag on whichever platform does not need them.
+    getaffinity = getattr(os, "sched_getaffinity", None)
+    affinity: set[int] | None = None
+    if getaffinity is not None:
+        try:
+            affinity = set(getaffinity(0))
+        except OSError:
+            affinity = None
     if affinity:
         return max(1, len(affinity))
     return max(1, os.cpu_count() or 1)
