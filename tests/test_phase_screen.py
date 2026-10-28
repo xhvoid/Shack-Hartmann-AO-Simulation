@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from ao_closed_loop import shifted_atmosphere
-from phase_screen import (
+from shwfs_ao.legacy.ao_closed_loop import shifted_atmosphere
+from shwfs_ao.legacy.phase_screen import (
     fourier_phase_screen,
     frozen_flow_shift,
     frozen_flow_shift_physical,

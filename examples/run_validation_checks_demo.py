@@ -14,14 +14,14 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from ao_closed_loop import DetectorLoopConfig
-from ao_error_budget import (
+from shwfs_ao.legacy.ao_closed_loop import DetectorLoopConfig
+from shwfs_ao.experiments.error_budget import (
     ScenarioConfig,
     build_control_space_phase_sequence,
     default_jhk_bandpasses,
     run_error_budget_scenario,
 )
-from ao_validation import (
+from shwfs_ao.legacy.ao_validation import (
     check_centroid_noise_photon_monotonicity,
     check_diffraction_scale,
     check_dm_fitting_trend,
@@ -30,9 +30,9 @@ from ao_validation import (
     check_scenario_reproducibility,
     validation_results_as_dicts,
 )
-from dm_model import DMConfig, build_dm_model
-from interaction_matrix import PokeMatrixConfig, build_detector_dm_poke_matrix
-from synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build_detector_shwfs_calibration
+from shwfs_ao.legacy.dm_model import DMConfig, build_dm_model
+from shwfs_ao.legacy.interaction_matrix import PokeMatrixConfig, build_detector_dm_poke_matrix
+from shwfs_ao.legacy.synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build_detector_shwfs_calibration
 
 
 def _gaussian_spot(size: int = 17, sigma_px: float = 2.0) -> np.ndarray:

@@ -14,8 +14,8 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from shwfs_detector import measure_centroid_shifts
-from zernike import make_pupil_grid, synthesize_wavefront, zernike_named_modes
+from shwfs_ao.legacy.shwfs_detector import measure_centroid_shifts
+from shwfs_ao.legacy.zernike import make_pupil_grid, synthesize_wavefront, zernike_named_modes
 
 
 def main() -> None:

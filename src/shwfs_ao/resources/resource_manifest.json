@@ -8,7 +8,15 @@
     },
     {
       "logical_name": "__init__.py",
-      "sha256": "60e64eca95e6f727e378d1b11a017b1fc52e4e9163f096784d17039bb063e5fe"
+      "sha256": "8711c48d3ff1073c7441d9e25070865c1e8b4f52f3659401be44c5cb2ce3be70"
+    },
+    {
+      "logical_name": "deprecation_clock.json",
+      "sha256": "e7e16c4c1a9879ec2078b45968683ea6d8e39a9f5d51cd8c21c9e77626482b60"
+    },
+    {
+      "logical_name": "deprecation_inventory.json",
+      "sha256": "b2dc63f85ebe173beb71a2edc76e6c56dac168f0a6ddcd0bfaa3afc3904b7455"
     },
     {
       "logical_name": "literature_profiles/paranal_three_layer_literature_inspired.json",
@@ -76,7 +84,7 @@
     },
     {
       "logical_name": "reference_metrics/refactor_contract_manifest.json",
-      "sha256": "7f1e219b72da8727eafd46b7df136a967a39e02c63bc1d014f8fb85f69f50aac"
+      "sha256": "82ccbfc8bf7d37a86a5f6976766815d539f6e27ff06ecf76a08b18700f6bfdd5"
     },
     {
       "logical_name": "samples/eso_asm_snapshot_sample.json",

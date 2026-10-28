@@ -77,11 +77,19 @@ def _current_resource_path(historical_path: str) -> Path:
 
 
 def _assert_implementation_free_shim(path: Path, module_name: str, public_names: list[str]) -> None:
-    """Require re-export-only compatibility glue with no physical implementation."""
+    """Require re-export-only compatibility glue with no physical implementation.
+
+    AO-REF-021 Phase A adds a fixed deprecation-warning prologue to every root
+    shim: ``import warnings as _warnings``, ``import shwfs_ao._deprecation as
+    _deprecation``, and one module-level ``_warnings.warn(...)`` call built from
+    the packaged clock/inventory metadata.  The shim otherwise remains a pure
+    re-export with no physical implementation.
+    """
 
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     legacy_imports: list[str] = []
     implementation_alias_seen = False
+    plain_imports: list[tuple[str, str | None]] = []
     for node in tree.body:
         if isinstance(node, ast.ImportFrom):
             assert node.level == 0
@@ -94,6 +102,8 @@ def _assert_implementation_free_shim(path: Path, module_name: str, public_names:
                 assert node.module == f"shwfs_ao.legacy.{module_name}"
                 legacy_imports.extend(alias.name for alias in node.names)
                 assert all(alias.asname is None for alias in node.names)
+        elif isinstance(node, ast.Import):
+            plain_imports.extend((alias.name, alias.asname) for alias in node.names)
 
     # Python 3.14 exposes the __future__.annotations feature object as a
     # module global; older supported interpreters do not. The tiny conditional
@@ -104,6 +114,32 @@ def _assert_implementation_free_shim(path: Path, module_name: str, public_names:
         isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda))
         for node in ast.walk(tree)
     )
+
+    # The only non-legacy imports are the deprecation-warning prologue.
+    assert plain_imports == [
+        ("warnings", "_warnings"),
+        ("shwfs_ao._deprecation", "_deprecation"),
+    ]
+    warn_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "warn"
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "_warnings"
+    ]
+    assert len(warn_calls) == 1, module_name
+    (warn_call,) = warn_calls
+    # stacklevel=2 so the warning points at the importer, not the shim.
+    stacklevel = {kw.arg: kw.value for kw in warn_call.keywords}.get("stacklevel")
+    assert isinstance(stacklevel, ast.Constant) and stacklevel.value == 2
+    category = warn_call.args[1]
+    assert isinstance(category, ast.Name) and category.id == "DeprecationWarning"
+    message_source = warn_call.args[0]
+    assert isinstance(message_source, ast.Call)
+    assert isinstance(message_source.func, ast.Attribute)
+    assert message_source.func.attr == "root_shim_deprecation_message"
 
 
 def _serialized_default(value):
@@ -136,7 +172,11 @@ def test_manifest_has_explicit_dirty_snapshot_authority_and_ticket_boundary():
     }
 
 
-def test_all_legacy_import_names_are_exact_silent_shims_over_relocated_implementations():
+def test_all_legacy_import_names_are_exact_deprecated_shims_over_relocated_implementations():
+    # AO-REF-000 froze these root modules as re-export shims over the relocated
+    # implementations.  AO-REF-021 Phase A keeps the re-export surface identical
+    # but adds an import-time DeprecationWarning; the shims are no longer silent
+    # (see tests/compat/test_phase_a_isolation.py for the warning behavior).
     manifest = _manifest()
     records = manifest["public_api"]["modules"]
     expected_modules = [record["name"] for record in records]

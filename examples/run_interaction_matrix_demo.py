@@ -14,15 +14,15 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from dm_model import DMConfig, build_dm_model
-from interaction_matrix import (
+from shwfs_ao.legacy.dm_model import DMConfig, build_dm_model
+from shwfs_ao.legacy.interaction_matrix import (
     DEFAULT_POKE_AMPLITUDE_GRID_NM,
     PokeMatrixConfig,
     build_detector_dm_poke_matrix,
     poke_amplitude_scan,
     poke_matrix_summary,
 )
-from synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build_detector_shwfs_calibration
+from shwfs_ao.legacy.synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build_detector_shwfs_calibration
 
 
 def main() -> None:

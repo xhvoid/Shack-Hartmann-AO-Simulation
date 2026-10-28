@@ -14,8 +14,8 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from psf_tools import compute_psf_from_phase, marechal_strehl, strehl_ratio
-from zernike import make_pupil_grid, rms, synthesize_wavefront, zernike_named_modes
+from shwfs_ao.legacy.psf_tools import compute_psf_from_phase, marechal_strehl, strehl_ratio
+from shwfs_ao.legacy.zernike import make_pupil_grid, rms, synthesize_wavefront, zernike_named_modes
 
 
 def _summarize_case(name: str, phase: np.ndarray, mask: np.ndarray) -> dict[str, float | str]:

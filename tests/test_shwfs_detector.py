@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from shwfs_detector import add_detector_noise, centroid, measure_centroid_shifts
-from zernike import make_pupil_grid
+from shwfs_ao.legacy.shwfs_detector import add_detector_noise, centroid, measure_centroid_shifts
+from shwfs_ao.legacy.zernike import make_pupil_grid
 
 
 def test_centroid_of_symmetric_spot_is_near_zero():

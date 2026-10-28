@@ -13,18 +13,18 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from ao_closed_loop import DetectorLoopConfig, run_detector_integrator_loop
-from dm_model import DMConfig, build_dm_model, synthesize_dm_opd_nm, synthesize_dm_phase_rad
-from interaction_matrix import (
+from shwfs_ao.legacy.ao_closed_loop import DetectorLoopConfig, run_detector_integrator_loop
+from shwfs_ao.legacy.dm_model import DMConfig, build_dm_model, synthesize_dm_opd_nm, synthesize_dm_phase_rad
+from shwfs_ao.legacy.interaction_matrix import (
     PokeMatrixConfig,
     PokeMtxResult,
     build_detector_dm_poke_matrix,
     expand_controlled_commands,
     tsvd_reconstruct_commands,
 )
-from phase_screen import fourier_phase_screen, rms
-from psf_tools import compute_psf_from_phase, strehl_ratio
-from synthetic_instrument_data import (
+from shwfs_ao.legacy.phase_screen import fourier_phase_screen, rms
+from shwfs_ao.legacy.psf_tools import compute_psf_from_phase, strehl_ratio
+from shwfs_ao.legacy.synthetic_instrument_data import (
     DetectorConfig,
     ShwfsGeometryConfig,
     add_configured_detector_noise,

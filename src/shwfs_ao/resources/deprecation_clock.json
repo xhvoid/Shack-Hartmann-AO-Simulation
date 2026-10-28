@@ -1,0 +1,20 @@
+{
+  "schema_name": "shwfs_ao.deprecation_clock",
+  "schema_version": 1,
+  "ticket": "AO-REF-021",
+  "phase": "A",
+  "deprecation_release": "0.2.0",
+  "deprecation_tag": "v0.2.0",
+  "publication_status": "planned",
+  "publication_utc_date": "2026-07-18",
+  "planned_removal_release": "1.0.0",
+  "minimum_window_days": 90,
+  "minimum_subsequent_minor_releases": 1,
+  "subsequent_minor_release": {
+    "version": "0.3.0",
+    "publication_status": "planned",
+    "publication_utc_date": null
+  },
+  "earliest_removal_utc_date": "2026-10-16",
+  "notes": "Phase B removal may start only after BOTH boundaries hold: at least minimum_window_days days have elapsed since publication_utc_date, and at least minimum_subsequent_minor_releases subsequent minor releases have been published. earliest_removal_utc_date records the later of the publication date plus minimum_window_days and every published subsequent-minor-release date; while the subsequent minor release is unpublished this field is the day-count floor and the release boundary is still unsatisfied. When v0.2.0 is actually tagged, the maintainer updates publication_status, publication_utc_date, and earliest_removal_utc_date in the same commit as the tag (see docs/releasing.md)."
+}

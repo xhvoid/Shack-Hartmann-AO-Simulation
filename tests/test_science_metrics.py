@@ -5,8 +5,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from ao_closed_loop import DetectorLoopConfig, run_detector_integrator_loop
-from ao_diagnostics import (
+from shwfs_ao.legacy.ao_closed_loop import DetectorLoopConfig, run_detector_integrator_loop
+from shwfs_ao.legacy.ao_diagnostics import (
     AODiagnosticsError,
     ScienceBandpass,
     band_averaged_psf_metrics_from_opd,
@@ -19,10 +19,10 @@ from ao_diagnostics import (
     science_psf_metrics_from_opd,
     top_hat_bandpass,
 )
-from data_sources import load_svo_filter_curve
-from dm_model import DMConfig, build_dm_model, synthesize_dm_phase_rad
-from interaction_matrix import PokeMatrixConfig, build_detector_dm_poke_matrix, expand_controlled_commands
-from synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build_detector_shwfs_calibration
+from shwfs_ao.io.public_data import load_svo_filter_curve
+from shwfs_ao.legacy.dm_model import DMConfig, build_dm_model, synthesize_dm_phase_rad
+from shwfs_ao.legacy.interaction_matrix import PokeMatrixConfig, build_detector_dm_poke_matrix, expand_controlled_commands
+from shwfs_ao.legacy.synthetic_instrument_data import DetectorConfig, ShwfsGeometryConfig, build_detector_shwfs_calibration
 
 
 ROOT = Path(__file__).resolve().parents[1]
