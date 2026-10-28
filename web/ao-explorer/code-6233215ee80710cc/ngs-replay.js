@@ -155,3 +155,107 @@ export function initNgsReplay(entry, entryUrl) {
   window.addEventListener('hashchange',()=>{if(location.hash==='#ngs22-replay')open();});
   if(location.hash==='#ngs22-replay')open();
 }
+
+// Native telemetry has its own frame selector: it includes every recorded frame,
+// whereas the image player above contains a documented subset of snapshots.
+export function initNgsControl(entry, entryUrl) {
+  const root=document.getElementById('ngs22-control');
+  if(!root)return;
+  const $=name=>document.getElementById(`ngsc-${name}`);
+  let data,manifest,base,loading,frame=736,view='focus';
+  const names={v1:'Original v1',v2:'Repaired v2'},colors={v1:'#b3541e',v2:'#4d7a2a'};
+  const members=name=>{require(manifest.files[name],`Control member missing: ${name}`);return {href:name,...manifest.files[name]};};
+  const limits=()=>view==='focus'?[690,780]:[0,1499];
+  const fail=error=>{
+    $('error').hidden=false;$('error').textContent=`Control timeline unavailable: ${error.message}. Reload to retry.`;
+    $('status').textContent='Saved telemetry could not be verified.';
+    root.querySelectorAll('button,input').forEach(x=>x.disabled=true);
+  };
+  function plot(id,key,transform,y,extra={}) {
+    const range=view==='focus'?data.focus_interval_s:data.full_interval_s;
+    const [lo,hi]=limits();
+    lineChart($(id),{title:`${id} at native telemetry frame ${frame}`,height:190,
+      x:{label:'Frame-start time',unit:'s',range},y,
+      verticalLines:[{x:data.loss_time_s,color:'#a3324e',label:'v1 rejection'}],
+      cursorX:data.time_s[frame],
+      series:Object.keys(names).map(run=>({label:names[run],color:colors[run],
+        points:data.time_s.slice(lo,hi+1).map((t,j)=>{
+          const value=data.runs[run][key][lo+j];return [t,value===null?null:transform(value)];
+        })})),...extra});
+    $(id).dataset.frame=String(frame);
+  }
+  function charts() {
+    if(!data)return;
+    plot('valid','valid_rows',n=>100*n/data.calibrated_rows,{label:'Valid rows',unit:'%',range:[0,100]},
+      {referenceLines:[{y:75,label:'75% gate'}]});
+    const max=Math.max(...Object.values(data.runs).flatMap(r=>r.increment_l2_um.filter(v=>v!==null)));
+    plot('increment','increment_l2_um',v=>v,{label:'Increment L2',unit:'µm OPD',range:[0,Math.ceil(max/5)*5]});
+    const bound=Math.max(...Object.values(data.runs).flatMap(r=>r.held_boundary_actuators));
+    plot('boundary','held_boundary_actuators',v=>100*v/data.actuators,{label:'Held at bound',unit:'%',range:[0,Math.max(1,Math.ceil(100*bound/data.actuators))]});
+    plot('strehl','strehl',v=>v,{label:'Peak Strehl',range:[0,1]});
+  }
+  function show(k=frame) {
+    const [lo,hi]=limits();frame=Math.max(lo,Math.min(hi,k));
+    $('seek').min=lo;$('seek').max=hi;$('seek').value=frame;
+    $('seek').setAttribute('aria-valuetext',`Frame ${frame}, ${data.time_s[frame].toFixed(6)} seconds`);
+    $('previous').disabled=frame===lo;$('next').disabled=frame===hi;
+    $('focus').setAttribute('aria-pressed',String(view==='focus'));$('full').setAttribute('aria-pressed',String(view==='full'));
+    $('readout').textContent=`Telemetry frame ${frame} / 1499 · ${data.time_s[frame].toFixed(6)} s · ${view==='focus'?'failure detail':'whole recording'} · all four cursors aligned`;
+    $('readout').dataset.frame=String(frame);
+    const rows=[
+      ['Valid measurement rows',r=>`${r.valid_rows[frame]}/374 (${(100*r.valid_rows[frame]/374).toFixed(2)}%)`],
+      ['Reconstruction',r=>r.usable[frame]?'Usable':'REJECTED — no estimate'],
+      ['Reconstructed increment · vector L2',r=>r.increment_l2_um[frame]===null?'No usable estimate':`${r.increment_l2_um[frame].toFixed(3)} µm OPD`],
+      ['DM held at boundary during exposure',r=>`${r.held_boundary_actuators[frame]}/197 (${(100*r.held_boundary_actuators[frame]/197).toFixed(2)}%)`],
+      ['Newly clipped requests after this update',r=>`${(100*r.issued_clipped_fraction[frame]).toFixed(2)}% of actuators`],
+      ['Instantaneous H-band Strehl',r=>r.strehl[frame].toFixed(4)],
+    ];
+    $('values').replaceChildren(...rows.map(([label,value])=>{
+      const tr=document.createElement('tr');
+      for(const [i,text] of [label,value(data.runs.v1),value(data.runs.v2)].entries()){
+        const cell=document.createElement(i?'td':'th');if(!i)cell.scope='row';cell.textContent=text;tr.append(cell);
+      }return tr;
+    }));charts();
+  }
+  function download(label,name) {
+    const a=document.createElement('a');a.textContent=label;a.href=new URL(name,base);
+    a.addEventListener('click',async e=>{e.preventDefault();try{
+      const {buffer}=await fetchVerified(members(name),base);
+      const url=URL.createObjectURL(new Blob([buffer],{type:members(name).media_type}));
+      const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+    }catch(error){a.textContent=`${label} unavailable: ${error.message}`;}});$('downloads').append(a);
+  }
+  async function load() {
+    if(loading)return loading;
+    loading=(async()=>{
+      const e=entry.ngsControl;require(e?.schema==='ao-explorer.ngs-control-entry.v1','Missing control entry');
+      const m=await fetchVerifiedJson({href:e.manifest,bytes:e.manifest_bytes,sha256:e.manifest_sha256,media_type:'application/json'},entryUrl);
+      manifest=m.value;base=m.url;require(manifest.schema==='ao-explorer.ngs-control-manifest.v1'&&manifest.id===e.id,'Control identity mismatch');
+      data=(await fetchVerifiedJson(members('data.json'),base)).value;
+      require(data.schema==='ao-explorer.ngs-control-data.v1'&&data.frames===1500&&data.frame_rate_hz===750&&data.calibrated_rows===374&&data.actuators===197&&data.minimum_valid_fraction===.75,'Unexpected control contract');
+      require(data.time_s?.length===1500&&data.time_s.every((v,i)=>Number.isFinite(v)&&Math.abs(v-i/750)<1e-12),'Control time axis mismatch');
+      require(data.loss_frame===736&&data.loss_time_s===data.time_s[736]&&JSON.stringify(data.focus_interval_s)==='[0.92,1.04]'&&JSON.stringify(data.full_interval_s)==='[0,2]','Control interval mismatch');
+      for(const run of ['v1','v2']){
+        const r=data.runs[run];
+        for(const key of ['valid_rows','held_boundary_actuators','issued_clipped_fraction','strehl'])require(r[key]?.length===1500&&r[key].every(Number.isFinite),`Incomplete ${run} ${key}`);
+        require(r.usable?.length===1500&&r.usable.every((v,i)=>typeof v==='boolean'&&v===(r.valid_rows[i]/374>=.75)),`Invalid ${run} reconstruction mask`);
+        require(r.increment_l2_um?.length===1500&&r.increment_l2_um.every((v,i)=>r.usable[i]?Number.isFinite(v)&&v>=0:v===null),`Invalid ${run} rejected-increment gaps`);
+        require(r.valid_rows.every(v=>Number.isInteger(v)&&v>=0&&v<=374)&&r.held_boundary_actuators.every(v=>Number.isInteger(v)&&v>=0&&v<=197),`Invalid ${run} counts`);
+        require(r.issued_clipped_fraction.every(v=>v>=0&&v<=1)&&r.strehl.every(v=>v>=0&&v<=1+1e-12),`Invalid ${run} bounded metric`);
+      }
+      require(data.runs.v1.usable.findIndex(v=>!v)===736&&data.runs.v2.usable.every(v=>v)&&data.runs.v1.held_boundary_actuators.slice(736,739).join(',')==='8,11,8','Control event mismatch');
+      root.querySelectorAll('button,input').forEach(x=>x.disabled=false);show();
+      for(const id of ['valid','increment','boundary','strehl'])redrawWhenResized($(id),charts);
+      for(const [label,name] of [['All 3000 telemetry rows (CSV)','frames.csv'],['Native arrays (JSON)','data.json'],['Timing and definitions','README.md'],['Source identities and checks','provenance.json'],['Offline exporter','exporter.py']])download(label,name);
+      $('status').textContent='Both saved histories verified · all 1500 frames per run · DM occupancy aligned to exposure time';
+    })();return loading;
+  }
+  $('seek').addEventListener('input',e=>show(Number(e.target.value)));
+  $('previous').addEventListener('click',()=>show(frame-1));$('next').addEventListener('click',()=>show(frame+1));
+  for(const [id,k] of [['growth',732],['loss',736],['held',738]])$(id).addEventListener('click',()=>show(k));
+  for(const mode of ['focus','full'])$(mode).addEventListener('click',()=>{view=mode;const [lo,hi]=limits();show(frame<lo||frame>hi?736:frame);});
+  const open=()=>load().catch(fail);
+  if('IntersectionObserver' in window){const observer=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting)){observer.disconnect();open();}},{rootMargin:'200px'});observer.observe(root);}else open();
+  window.addEventListener('hashchange',()=>{if(location.hash==='#ngs22-control')open();});
+  if(location.hash==='#ngs22-control')open();
+}

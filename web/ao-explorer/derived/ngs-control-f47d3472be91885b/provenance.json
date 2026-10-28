@@ -1,0 +1,52 @@
+{
+  "schema": "ao-explorer.ngs-control-provenance.v1",
+  "inputs": {
+    "outputs/robo_ao2_ngs/20261024-first-trajectory/attempt-04/history.npz": {
+      "bytes": 5477394,
+      "sha256": "3c1c2435f0b925fa929ad05579dbb674a0faef3f31cd5ce6d64c715f00dfae77"
+    },
+    "outputs/robo_ao2_ngs/20261024-first-trajectory/attempt-04/frame-metrics.csv": {
+      "bytes": 159185,
+      "sha256": "3efc096ff5fbf5bee0b2ead0d6c4f5d91ffb8736b11de16b94e712a8173e31b6"
+    },
+    "outputs/robo_ao2_ngs/20261024-loss-of-lock-repair/trajectory-v2/history.npz": {
+      "bytes": 5477394,
+      "sha256": "cce2cd95ecf01219ca6e02735329b0da1a646ed48e477f7bb15efd8d0bb8dcc4"
+    },
+    "outputs/robo_ao2_ngs/20261024-loss-of-lock-repair/trajectory-v2/frame-metrics.csv": {
+      "bytes": 97058,
+      "sha256": "15b3882b4820c79ee1fce1afb8102c16ade4528762a03433cb8e3e4d3ea6e5a3"
+    }
+  },
+  "original_evidence_entry": {
+    "schema": "ao-explorer.ngs-entry.v1",
+    "id": "ngs-22m-53663e0742d1d106",
+    "manifest": "../derived/ngs-22m-53663e0742d1d106/manifest.json",
+    "manifest_bytes": 3302,
+    "manifest_sha256": "0030fbd65ee38ea98e364a3f94fd158794b49bfa215fe97f78ab0e5c0b860154"
+  },
+  "exporter_sha256": "ce1ccfca2748e118bce4817da8e0b9dd67e21df06cb0bdf7a05894f286274f6d",
+  "source_loop_sha256": "b4e645c22e677fbdce2a9562efb4f1e4d41a02ccba97711d6011fccd1820d27f",
+  "definitions": {
+    "valid_rows": "Count of true saved effective measurement-row mask entries, out of 374 calibrated rows.",
+    "increment_l2_um": "Saved projected reconstructed command-vector L2 norm before normal controller gain/queue, in micrometres OPD-equivalent. Not pupil RMS or individual actuator stroke. Null on rejected reconstruction; archived zero is a sentinel.",
+    "held_boundary_actuators": "Count of abs(applied[k-1]) >= effective stroke limit. Frame 0 is the recorded flat-DM start. Matches the pre-update exposure/PSF timing.",
+    "issued_clipped_fraction": "Saved fraction of new requests beyond the bound after update k. It can remain nonzero while the queue drains after reconstruction rejection.",
+    "strehl": "Unchanged saved H-band (1.65 um) pre-update instantaneous peak Strehl."
+  },
+  "checks": {
+    "input_hashes_match_archives": true,
+    "saved_time_arrays_checked": true,
+    "valid_row_counts_match_fractions": true,
+    "clipping_reconstructed_exactly": true,
+    "published_strehl_and_post_update_boundaries_match": true,
+    "first_rejected_frame": 736,
+    "held_boundary_counts_frames_736_to_738": [
+      8,
+      11,
+      8
+    ],
+    "revision_reconstructs_all_1500_frames": true,
+    "simulation_run": false
+  }
+}
