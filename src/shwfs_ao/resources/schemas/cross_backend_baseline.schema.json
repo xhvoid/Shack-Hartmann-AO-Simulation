@@ -1,54 +1,268 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://shwfs-ao.invalid/schemas/cross_backend_baseline.schema.json",
-  "title": "SHWFS-AO cross-backend physical comparison baseline",
+  "title": "SHWFS-AO accepted cross-backend physical comparison baseline",
+  "description": "Canonical shape of the accepted AO-REF-018 cross-backend baseline artifact. This is the version-1 runtime contract enforced by shwfs_ao.validation.regression and emitted by scripts/generate_cross_backend_candidate.py; the packaged reference_metrics/cross_backend/cross_backend_baseline.json instance validates against this schema byte-for-byte.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema_name",
-    "schema_version",
-    "artifact_kind",
-    "system_profile",
-    "backends",
-    "shared_input_hashes",
-    "estimator",
-    "sample_definition",
-    "bin_definition",
-    "metrics",
-    "tolerances",
-    "provenance",
-    "reproducibility",
-    "acceptance"
+    "acceptance",
+    "artifact_schema_name",
+    "artifact_schema_version",
+    "comparison_config",
+    "comparisons",
+    "component_hashes",
+    "conventions",
+    "environment",
+    "fixture_hashes",
+    "generator",
+    "root_seed"
   ],
   "properties": {
-    "schema_name": {"const": "shwfs_ao.cross_backend_baseline"},
-    "schema_version": {"const": 1},
-    "artifact_kind": {"const": "accepted_cross_backend_baseline"},
-    "system_profile": {"type": "string", "minLength": 1},
-    "backends": {
-      "type": "object",
-      "minProperties": 2,
-      "additionalProperties": {"type": "string", "minLength": 1}
-    },
-    "shared_input_hashes": {
-      "type": "object",
-      "minProperties": 1,
-      "additionalProperties": {"type": "string", "pattern": "^(sha256:)?[0-9a-f]{64}$"}
-    },
-    "estimator": {"type": "object", "minProperties": 1},
-    "sample_definition": {"type": "object", "minProperties": 1},
-    "bin_definition": {"type": "object", "minProperties": 1},
-    "metrics": {"type": "array", "minItems": 1, "items": {"type": "object", "minProperties": 1}},
-    "tolerances": {"type": "array", "minItems": 1, "items": {"type": "object", "minProperties": 1}},
-    "provenance": {"$ref": "provenance.schema.json"},
-    "reproducibility": {"type": "object", "minProperties": 1},
     "acceptance": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["reason", "review_reference"],
+      "required": ["accepted_at_utc", "reason", "review_reference"],
       "properties": {
-        "reason": {"type": "string", "minLength": 1},
-        "review_reference": {"type": "string", "minLength": 1}
+        "accepted_at_utc": {"$ref": "#/$defs/nonempty_string", "format": "date-time"},
+        "reason": {"$ref": "#/$defs/nonempty_string"},
+        "review_reference": {"$ref": "#/$defs/nonempty_string"}
+      }
+    },
+    "artifact_schema_name": {"const": "shwfs_ao.cross_backend_baseline"},
+    "artifact_schema_version": {"const": 1},
+    "comparison_config": {
+      "type": "object",
+      "minProperties": 2,
+      "required": ["config_hash"],
+      "properties": {
+        "config_hash": {"$ref": "#/$defs/content_hash"}
+      }
+    },
+    "comparisons": {
+      "type": "array",
+      "minItems": 13,
+      "maxItems": 13,
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/comparison",
+          "properties": {"comparison_kind": {"const": "pupil_mask_and_throughput"}}
+        },
+        {
+          "$ref": "#/$defs/comparison",
+          "properties": {"comparison_kind": {"const": "zernike_modes"}}
+        },
+        {
+          "$ref": "#/$defs/comparison",
+          "required": ["statistical_definition"],
+          "properties": {"comparison_kind": {"const": "atmosphere_statistics"}}
+        },
+        {
+          "$ref": "#/$defs/comparison",
+          "properties": {"comparison_kind": {"const": "wfs_tip_tilt_response"}}
+        },
+        {
+          "$ref": "#/$defs/comparison",
+          "properties": {"comparison_kind": {"const": "lenslet_spot_morphology"}}
+        },
+        {
+          "$ref": "#/$defs/comparison",
+          "properties": {"comparison_kind": {"const": "dm_single_actuator_influence"}}
+        },
+        {
+          "$ref": "#/$defs/comparison",
+          "properties": {"comparison_kind": {"const": "dm_static_fitting"}}
+        },
+        {
+          "$ref": "#/$defs/comparison",
+          "properties": {"comparison_kind": {"const": "interaction_matrix_identity"}}
+        },
+        {
+          "$ref": "#/$defs/comparison",
+          "properties": {"comparison_kind": {"const": "normalized_singular_spectrum"}}
+        },
+        {
+          "$ref": "#/$defs/comparison",
+          "properties": {"comparison_kind": {"const": "psf_normalization"}}
+        },
+        {
+          "$ref": "#/$defs/comparison",
+          "properties": {"comparison_kind": {"const": "strehl_ratio"}}
+        },
+        {
+          "$ref": "#/$defs/comparison",
+          "properties": {"comparison_kind": {"const": "closed_loop_residual"}}
+        },
+        {
+          "$ref": "#/$defs/comparison",
+          "properties": {"comparison_kind": {"const": "runtime_and_memory"}}
+        }
+      ],
+      "items": false
+    },
+    "component_hashes": {"$ref": "#/$defs/content_hash_map"},
+    "conventions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command_unit",
+        "detector_column_sign_convention",
+        "measurement_unit",
+        "residual_sign_convention"
+      ],
+      "properties": {
+        "command_unit": {"$ref": "#/$defs/nonempty_string"},
+        "detector_column_sign_convention": {"$ref": "#/$defs/nonempty_string"},
+        "measurement_unit": {"$ref": "#/$defs/nonempty_string"},
+        "residual_sign_convention": {"$ref": "#/$defs/nonempty_string"}
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dependency_constraint_file",
+        "dependency_constraint_sha256",
+        "hcipy_version",
+        "numpy_version",
+        "platform",
+        "python_version",
+        "shwfs_ao_version"
+      ],
+      "properties": {
+        "dependency_constraint_file": {"$ref": "#/$defs/nonempty_string"},
+        "dependency_constraint_sha256": {"$ref": "#/$defs/nonempty_string"},
+        "hcipy_version": {"$ref": "#/$defs/nonempty_string"},
+        "numpy_version": {"$ref": "#/$defs/nonempty_string"},
+        "platform": {"$ref": "#/$defs/nonempty_string"},
+        "python_version": {"$ref": "#/$defs/nonempty_string"},
+        "shwfs_ao_version": {"$ref": "#/$defs/nonempty_string"}
+      }
+    },
+    "fixture_hashes": {"$ref": "#/$defs/content_hash_map"},
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generator_name", "generator_version", "source_commit"],
+      "properties": {
+        "generator_name": {"$ref": "#/$defs/nonempty_string"},
+        "generator_version": {"$ref": "#/$defs/nonempty_string"},
+        "source_commit": {"$ref": "#/$defs/nonempty_string"}
+      }
+    },
+    "root_seed": {"type": "integer"}
+  },
+  "$defs": {
+    "nonempty_string": {"type": "string", "minLength": 1},
+    "content_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "content_hash_map": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"minLength": 1},
+      "additionalProperties": {"$ref": "#/$defs/content_hash"}
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attribution", "comparison_kind", "metrics"],
+      "properties": {
+        "attribution": {"$ref": "#/$defs/nonempty_string"},
+        "comparison_kind": {"$ref": "#/$defs/nonempty_string"},
+        "metrics": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/metric"}
+        },
+        "statistical_definition": {"$ref": "#/$defs/nonempty_string"}
+      }
+    },
+    "metric": {
+      "oneOf": [
+        {"$ref": "#/$defs/gating_metric"},
+        {"$ref": "#/$defs/informational_metric"}
+      ]
+    },
+    "gating_metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "name", "pass_criterion", "rationale", "units", "value"],
+      "properties": {
+        "level": {"enum": ["exact", "tight_numerical", "physical_tolerance"]},
+        "name": {"$ref": "#/$defs/nonempty_string"},
+        "pass_criterion": {
+          "oneOf": [
+            {"$ref": "#/$defs/equals_criterion"},
+            {"$ref": "#/$defs/abs_tolerance_criterion"},
+            {"$ref": "#/$defs/range_criterion"}
+          ]
+        },
+        "rationale": {"$ref": "#/$defs/nonempty_string"},
+        "units": {"$ref": "#/$defs/nonempty_string"},
+        "value": {"type": ["boolean", "number", "string"]}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "pass_criterion": {
+                "required": ["type"],
+                "properties": {
+                  "type": {"enum": ["abs_tolerance", "range"]}
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {"value": {"type": "number"}}
+          }
+        }
+      ]
+    },
+    "informational_metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "name", "pass_criterion", "rationale", "units", "value"],
+      "properties": {
+        "level": {"const": "informational"},
+        "name": {"$ref": "#/$defs/nonempty_string"},
+        "pass_criterion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {"type": {"const": "informational"}}
+        },
+        "rationale": {"$ref": "#/$defs/nonempty_string"},
+        "units": {"$ref": "#/$defs/nonempty_string"},
+        "value": {"type": "number"}
+      }
+    },
+    "equals_criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected", "type"],
+      "properties": {
+        "expected": {"type": ["boolean", "number", "string"]},
+        "type": {"const": "equals"}
+      }
+    },
+    "abs_tolerance_criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected", "tolerance", "type"],
+      "properties": {
+        "expected": {"type": "number"},
+        "tolerance": {"type": "number", "minimum": 0},
+        "type": {"const": "abs_tolerance"}
+      }
+    },
+    "range_criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["high", "low", "type"],
+      "properties": {
+        "high": {"type": "number"},
+        "low": {"type": "number"},
+        "type": {"const": "range"}
       }
     }
   }
