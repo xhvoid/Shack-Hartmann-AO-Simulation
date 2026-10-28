@@ -480,7 +480,16 @@ class SparseInteractionMatrix:
         return int(self.data.nbytes + self.indices.nbytes + self.indptr.nbytes)
 
     def csr(self) -> sp.csr_matrix:
-        """A CSR view over the immutable stored arrays."""
+        """An independent CSR copy of the stored response.
+
+        Changing the copy, including replacing its ``data`` or ``indices``,
+        cannot change this matrix, its reconstructions or its hash.
+        """
+
+        return self._operator().copy()
+
+    def _operator(self) -> sp.csr_matrix:
+        """The internal CSR operator; never handed out."""
 
         return cast(sp.csr_matrix, self.__dict__["_csr"])
 
@@ -489,7 +498,7 @@ class SparseInteractionMatrix:
         values = np.asarray(coordinates_opd_m, dtype=float)
         if values.shape != (self.shape[1],):
             raise SparseCalibrationError("coordinate vector has the wrong length.")
-        result = np.asarray(self.csr() @ values, dtype=float)
+        result = np.asarray(self._operator() @ values, dtype=float)
         result[~self.row_valid] = np.nan
         return result
 
@@ -500,7 +509,7 @@ class SparseInteractionMatrix:
         masked = np.where(self.row_valid, values, 0.0)
         if not np.all(np.isfinite(masked)):
             raise SparseCalibrationError("calibration-valid signal rows must be finite.")
-        return np.asarray(self.csr().T @ masked, dtype=float)
+        return np.asarray(self._operator().T @ masked, dtype=float)
 
     def to_dense(
         self,
@@ -515,7 +524,7 @@ class SparseInteractionMatrix:
                 f"dense response refused: {size} bytes exceeds the {max_bytes}-byte "
                 "compatibility limit."
             )
-        dense = np.asarray(self.csr().toarray(), dtype=float)
+        dense = np.asarray(self._operator().toarray(), dtype=float)
         dense[~self.row_valid] = np.nan
         return dense
 
@@ -1068,7 +1077,7 @@ class SparseLsmrReconstructor:
         if usable_count == 0 or usable_count / valid_count < self._min_valid_fraction:
             return None
         rows = np.flatnonzero(usable)
-        submatrix = matrix.csr()[rows]
+        submatrix = matrix._operator()[rows]
         target = signal[rows]
         output = lsmr(
             submatrix,
