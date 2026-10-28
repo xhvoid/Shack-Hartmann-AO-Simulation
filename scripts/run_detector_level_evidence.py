@@ -20,6 +20,12 @@ m_AB 10, 11 and 12 over root seeds 21-25 with one closed-loop recovery policy
 (``controller.recovery``) set in code, or with none (``off``).  Every arm
 appends to one record.  The protocol is predeclared in
 DETECTOR_LEVEL_DEVELOPMENT_STATUS.md ("Closed-loop recovery policy").
+
+``e3-excursion --arm NAME`` reruns the same E3 matrix with an arm that targets
+the trigger of the excursions the reset policy recovers from (reconstructor
+damping, acceptance threshold or leak, each with or without the reset).  Every
+arm appends to one record; the protocol is predeclared in the status file
+("Excursion trigger at m_AB = 11").
 """
 
 from __future__ import annotations
@@ -466,6 +472,63 @@ def e3_recovery(arguments: argparse.Namespace) -> None:
     )
 
 
+# Excursion-trigger arms: each names its controller.recovery policy and the
+# reconstructor / controller fields it changes from @2.  Fixed by the
+# predeclared protocol from development runs on root seeds 11 and 12 only.
+_RESET = {"rejected_frames_before_decay": 2, "decay_per_rejected_frame": 1.0}
+EXCURSION_ARMS: dict[str, dict[str, Any]] = {
+    "reset": {"recovery": _RESET, "reconstructor": {}, "controller": {}},
+    "damped_reset": {"recovery": _RESET, "reconstructor": {"alpha": 0.1}, "controller": {}},
+    "damped": {"recovery": None, "reconstructor": {"alpha": 0.1}, "controller": {}},
+    "strict_reset": {"recovery": _RESET, "reconstructor": {"min_valid_fraction": 0.7}, "controller": {}},
+    "strict": {"recovery": None, "reconstructor": {"min_valid_fraction": 0.7}, "controller": {}},
+    "leaky_reset": {"recovery": _RESET, "reconstructor": {}, "controller": {"leak": 0.01}},
+}
+
+
+def e3_excursion(arguments: argparse.Namespace) -> None:
+    from dataclasses import replace
+
+    from shwfs_ao.experiments.detector_level import with_magnitude
+    from shwfs_ao.io.configs import RecoveryPolicyConfig
+
+    arm = arguments.arm
+    fields = EXCURSION_ARMS[arm]
+    base = _medium(2)
+    controller = replace(base.controller, **fields["controller"])
+    if fields["recovery"] is not None:
+        policy = RecoveryPolicyConfig(
+            **{
+                "rejected_frames_before_decay": None,
+                "decay_per_rejected_frame": None,
+                "fallback_min_valid_fraction": None,
+                "fallback_min_actuator_coverage": None,
+                "gain_full_valid_fraction": None,
+                **fields["recovery"],
+            }
+        )
+        controller = replace(controller, recovery=policy)
+    base = replace(
+        base,
+        reconstructor=replace(base.reconstructor, **fields["reconstructor"]),
+        controller=controller,
+    )
+    plan = [
+        (f"{arm} m{magnitude:g}", with_magnitude(base, magnitude), seed)
+        for magnitude in (10.0, 11.0, 12.0)
+        for seed in (21, 22, 23, 24, 25)
+    ]
+    _gated_series(
+        "det_excursion_e3_12m_v2.json",
+        f"e3-excursion --arm {arm} (profile @2)",
+        plan,
+        n_steps=400,
+        burn_in=100,
+        execution=_summary_execution(),
+        enabled_by_user="2026-10-16: the user's go-ahead for the excursion-trigger task, which names these runs",
+    )
+
+
 def det08(arguments: argparse.Namespace) -> None:
     from shwfs_ao.experiments.detector_level import with_physics
 
@@ -508,6 +571,8 @@ def main() -> int:
             sub.add_parser(name)
     commands["e3-recovery"] = e3_recovery
     sub.add_parser("e3-recovery").add_argument("--arm", required=True, choices=sorted(RECOVERY_ARMS))
+    commands["e3-excursion"] = e3_excursion
+    sub.add_parser("e3-excursion").add_argument("--arm", required=True, choices=sorted(EXCURSION_ARMS))
     arguments = parser.parse_args()
     commands[arguments.command](arguments)
     return 0
