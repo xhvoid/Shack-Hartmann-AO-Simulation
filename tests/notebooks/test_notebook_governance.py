@@ -258,6 +258,37 @@ def test_canonical_notebook_does_not_write_files_or_shell_out(relative_path):
         assert forbidden not in source, f"{relative_path} contains {forbidden!r}"
 
 
+def test_slow_studies_carry_the_fast_smoke_parameters_contract(manifest):
+    # The manifest promises that a fast smoke parameterization guards CI:
+    # every slow study must expose exactly one `parameters`-tagged cell
+    # defaulting FAST_SMOKE to False (the committed full-study outputs), and
+    # the flag must actually derive at least one study size.
+    slow_paths = [
+        entry["path"]
+        for entry in manifest["canonical"]
+        if entry["execution_class"] == "slow"
+    ]
+    assert slow_paths, "the slow execution class must not silently vanish"
+    for path in slow_paths:
+        notebook = json.loads((ROOT / path).read_text(encoding="utf-8"))
+        code_cells = [
+            cell for cell in notebook["cells"] if cell["cell_type"] == "code"
+        ]
+        tagged = [
+            cell
+            for cell in code_cells
+            if "parameters" in cell.get("metadata", {}).get("tags", [])
+        ]
+        assert len(tagged) == 1, path
+        assert "FAST_SMOKE = False" in "".join(tagged[0]["source"]), path
+        derived = "".join(
+            "".join(cell["source"])
+            for cell in code_cells
+            if cell is not tagged[0]
+        )
+        assert "if FAST_SMOKE else" in derived, path
+
+
 def test_high_order_and_2m_studies_share_the_loop_engine():
     # Acceptance: notebook 09 and 11 use the same shared loop engine.
     for relative_path in ("studies/high_order_scao.ipynb", "studies/detector_level_2m.ipynb"):

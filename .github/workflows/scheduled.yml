@@ -37,11 +37,24 @@ jobs:
           find src/shwfs_ao/resources figures -type f -print0 | sort -z \
             | xargs -0 sha256sum > "$RUNNER_TEMP/baselines-before.sha256"
 
-      - name: Install dependencies
-        run: python -m pip install -c constraints/py314.txt -e ".[test,notebook-test]"
+      - name: Install build frontend
+        run: python -m pip install -c constraints/py314.txt build
 
-      - name: Check installed dependency consistency
-        run: python -m pip check
+      - name: Build distributions
+        run: |
+          mkdir "$RUNNER_TEMP/dist"
+          python -m build --outdir "$RUNNER_TEMP/dist"
+
+      - name: Install test and notebook-test dependencies
+        run: python -m pip install -c constraints/py314.txt ".[test,notebook-test]"
+
+      - name: Replace the source install with the built wheel
+        # AO-REF-019: notebooks execute against the installed wheel, never an
+        # editable source tree, in the scheduled lane exactly as in fast CI.
+        run: |
+          python -m pip uninstall -y shack-hartmann-ao-simulation
+          python -m pip install --no-deps "$RUNNER_TEMP"/dist/*.whl
+          python -m pip check
 
       - name: Run slow-marked native tests when any exist
         # The slow marker is registered but currently carried only by the
@@ -55,11 +68,16 @@ jobs:
             echo "No slow-marked native tests yet; the slow studies below are the slow selection."
           fi
 
+      - name: Prepare the portable wheel-smoke bundle
+        run: python scripts/prepare_wheel_smoke_bundle.py --output "$RUNNER_TEMP/wheel-smoke"
+
       - name: Register the kernel
         run: python -m ipykernel install --user --name python3
 
-      - name: Execute the slow study notebooks
-        run: python scripts/run_notebook_smoke.py --class slow --cell-timeout 600 --notebook-budget 1800
+      - name: Execute the full slow study notebooks from the bundle
+        run: |
+          cd "$RUNNER_TEMP/wheel-smoke"
+          PYTHONPATH= python scripts/run_notebook_smoke.py --class slow --cell-timeout 600 --notebook-budget 1800
 
       - name: Enforce accepted baselines and a clean worktree
         run: |
@@ -91,11 +109,24 @@ jobs:
           find src/shwfs_ao/resources figures -type f -print0 | sort -z \
             | xargs -0 sha256sum > "$RUNNER_TEMP/baselines-before.sha256"
 
-      - name: Install dependencies
-        run: python -m pip install -c constraints/hcipy-py311.txt -e ".[test,hcipy,notebook-test]"
+      - name: Install build frontend
+        run: python -m pip install -c constraints/hcipy-py311.txt build
 
-      - name: Check installed dependency consistency
-        run: python -m pip check
+      - name: Build distributions
+        run: |
+          mkdir "$RUNNER_TEMP/dist"
+          python -m build --outdir "$RUNNER_TEMP/dist"
+
+      - name: Install test, HCIPy, and notebook-test dependencies
+        run: python -m pip install -c constraints/hcipy-py311.txt ".[test,hcipy,notebook-test]"
+
+      - name: Replace the source install with the built wheel
+        # AO-REF-019: the full sweep runs against the installed wheel, never
+        # an editable source tree, in the scheduled lane exactly as in fast CI.
+        run: |
+          python -m pip uninstall -y shack-hartmann-ao-simulation
+          python -m pip install --no-deps "$RUNNER_TEMP"/dist/*.whl
+          python -m pip check
 
       - name: Run every HCIPy test including slow ones
         # The collection guard fails the job if the full hcipy selection
@@ -106,10 +137,14 @@ jobs:
           rm hcipy-full-collection.txt
           python -m pytest -q -m "hcipy"
 
-      - name: Register the kernel and smoke the HCIPy study notebook
+      - name: Prepare the portable wheel-smoke bundle
+        run: python scripts/prepare_wheel_smoke_bundle.py --include-hcipy --output "$RUNNER_TEMP/wheel-smoke"
+
+      - name: Register the kernel and smoke the HCIPy study notebook from the bundle
         run: |
           python -m ipykernel install --user --name python3
-          python scripts/run_notebook_smoke.py --class hcipy
+          cd "$RUNNER_TEMP/wheel-smoke"
+          PYTHONPATH= python scripts/run_notebook_smoke.py --class hcipy
 
       - name: Enforce accepted baselines and a clean worktree
         run: |
