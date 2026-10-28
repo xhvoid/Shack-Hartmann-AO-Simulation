@@ -1,18 +1,6 @@
-"""Detector-level SCAO with a physical camera, detector noise on (desktop safe).
+"""Run the synthetic 2 m EMCCD profile and save a JSON summary.
 
-Runs ``det_emccd_2m_synthetic@1`` (a 2 m, 5x5-lenslet native SCAO system with
-a synthetic EMCCD, photometric AB source and sky, estimated calibration
-products and RTC pixel processing) through the canonical
-``build_scao_system`` / ``run_closed_loop`` API, then prints and writes a
-summary: residual RMS, valid-measurement fraction, and the
-``detector_covariance_v2`` centroid sigma of the last frame.  It takes a few
-seconds and well under 300 MiB.
-
-Outputs go to ``$AO_DEMO_OUTPUT_DIR`` or, when that variable is unset,
-``./detector_level_demo_output``; nothing is written into tracked figures or
-packaged resources.
-
-    python examples/run_detector_level_demo.py
+Set AO_DEMO_OUTPUT_DIR to choose the output directory.
 """
 
 from __future__ import annotations
