@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 import json
+from numbers import Integral
 from pathlib import PurePosixPath
 import threading
 from types import MappingProxyType
@@ -56,6 +57,7 @@ from ..io.configs import AtmosphereLayerConfig, SystemConfig
 from ..io.resources import read_text_resource
 from ..science.propagation import PsfSampling
 from ._component_configs import (
+    ExposureOverride,
     centroid_config as _centroid_config,
     detector_config as _detector_config,
     dm_config as _dm_config,
@@ -69,6 +71,8 @@ from ._component_configs import (
 __all__ = (
     "ScaoConstructionError",
     "ScaoExecutionOptions",
+    "LayeredAtmosphereOptions",
+    "ExposureOverride",
     "ScaoBackendComponentFactory",
     "ScaoSystem",
     "register_scao_backend_factory",
@@ -114,6 +118,110 @@ class ScaoExecutionOptions:
             raise ScaoConstructionError(
                 "atmosphere_band_storage must be 'materialized' or 'regenerate'."
             )
+
+
+@dataclass(frozen=True)
+class LayeredAtmosphereOptions:
+    """Identity-bearing fixed-physics pairing options of the native layered atmosphere.
+
+    Unlike :class:`ScaoExecutionOptions`, these change the atmosphere's
+    realization and identity (ticket T2, G1, 2026-10-21).
+    ``band_draw_reference_screen_size`` draws the periodic band on a reference
+    grid that smaller screens read at their own signed FFT indices;
+    ``band_limit_screen_size`` keeps the common band of a pupil scan;
+    ``screen_period_rule`` selects the screen-size rule (``"pupil_array"``, the
+    default, or ``"pupil_diameter"``, whose period is the same physical length
+    on every grid).  Definitions and limits:
+    :mod:`shwfs_ao.backends.native.layered_atmosphere`.
+
+    :func:`build_scao_system` accepts them for ``atmosphere_model ==
+    "native_layered"`` only, forwards them to the backend factory, records
+    them on the :class:`ScaoSystem` and in its build attestation, and the
+    supplied-system verification rebuilds with the same options.  The
+    system's ``config_hash`` stays the profile's; the realization change is
+    carried by the atmosphere component hash and by the recorded options, so
+    a record must cite both.  All-default options are the same build as
+    ``None`` and are recorded as ``None``.
+    """
+
+    band_draw_reference_screen_size: int | None = None
+    band_limit_screen_size: int | None = None
+    screen_period_rule: str = "pupil_array"
+
+    def __post_init__(self) -> None:
+        # Imported here: the experiment layer stays backend-neutral at import time.
+        from ..backends.native.layered_atmosphere import SCREEN_PERIOD_RULES
+
+        for name in ("band_draw_reference_screen_size", "band_limit_screen_size"):
+            value = getattr(self, name)
+            if value is None:
+                continue
+            if (
+                isinstance(value, (bool, np.bool_))
+                or not isinstance(value, Integral)
+                or int(value) < 2
+            ):
+                raise ScaoConstructionError(f"{name} must be an integer >= 2 or None.")
+            object.__setattr__(self, name, int(value))
+        rule = self.screen_period_rule
+        if not isinstance(rule, str) or rule not in SCREEN_PERIOD_RULES:
+            raise ScaoConstructionError(
+                f"screen_period_rule must be one of {SCREEN_PERIOD_RULES}; got {rule!r}."
+            )
+        reference = self.band_draw_reference_screen_size
+        limit = self.band_limit_screen_size
+        if reference is not None and limit is not None and limit > reference:
+            raise ScaoConstructionError(
+                "band_limit_screen_size must not exceed band_draw_reference_screen_size."
+            )
+
+    @property
+    def is_default(self) -> bool:
+        return (
+            self.band_draw_reference_screen_size is None
+            and self.band_limit_screen_size is None
+            and self.screen_period_rule == "pupil_array"
+        )
+
+    def factory_keywords(self) -> dict[str, Any]:
+        """The non-default fields, as the native factory's ``build_atmosphere`` keywords."""
+
+        keywords: dict[str, Any] = {}
+        if self.band_draw_reference_screen_size is not None:
+            keywords["band_draw_reference_screen_size"] = self.band_draw_reference_screen_size
+        if self.band_limit_screen_size is not None:
+            keywords["band_limit_screen_size"] = self.band_limit_screen_size
+        if self.screen_period_rule != "pupil_array":
+            keywords["screen_period_rule"] = self.screen_period_rule
+        return keywords
+
+    def to_record(self) -> dict[str, Any]:
+        return {
+            "band_draw_reference_screen_size": self.band_draw_reference_screen_size,
+            "band_limit_screen_size": self.band_limit_screen_size,
+            "screen_period_rule": self.screen_period_rule,
+        }
+
+
+def _normalized_atmosphere_options(
+    config: SystemConfig, options: object
+) -> LayeredAtmosphereOptions | None:
+    """Validate pairing options against the configuration; all-default is ``None``."""
+
+    if options is None:
+        return None
+    if not isinstance(options, LayeredAtmosphereOptions):
+        raise ScaoConstructionError(
+            "atmosphere_options must be a LayeredAtmosphereOptions or None."
+        )
+    if options.is_default:
+        return None
+    if config.atmosphere_model != "native_layered":
+        raise ScaoConstructionError(
+            "atmosphere_options (fixed-physics pairing) apply to the native_layered "
+            f"atmosphere only; the configuration selects {config.atmosphere_model!r}."
+        )
+    return options
 
 
 @runtime_checkable
@@ -251,6 +359,10 @@ class _BuildAttestation:
     supplied_matrix_identity: tuple[str, str] | None
     component_hashes: Mapping[str, str]
     calibration_reused: bool = False
+    # The identity-bearing atmosphere options the build was given (T2, G1):
+    # an attestation describes a build of ``source_config`` *with* them, so a
+    # system presenting other options is verified by a rebuild instead.
+    atmosphere_options: LayeredAtmosphereOptions | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -279,6 +391,10 @@ class ScaoSystem:
     # The opt-in loop supervisor of ``controller.recovery``; None keeps the
     # freeze-on-rejection loop and leaves the component identities unchanged.
     recovery_policy: ClosedLoopRecoveryPolicy | None = None
+    # The fixed-physics pairing options the atmosphere was built with (T2,
+    # G1); None for every default build.  Part of what the system is: it
+    # names the realization the atmosphere component hash carries.
+    atmosphere_options: LayeredAtmosphereOptions | None = None
     # Set by :func:`build_scao_system` for the system it just built.  ``None``
     # means "not built here", which costs a rebuild at verification time and
     # never buys acceptance.  It is evidence about how this system came to be,
@@ -325,6 +441,12 @@ class ScaoSystem:
         ):
             raise ScaoConstructionError(
                 "recovery_policy must be a ClosedLoopRecoveryPolicy or None."
+            )
+        if self.atmosphere_options is not None and not isinstance(
+            self.atmosphere_options, LayeredAtmosphereOptions
+        ):
+            raise ScaoConstructionError(
+                "atmosphere_options must be a LayeredAtmosphereOptions or None."
             )
         expected = _expected_component_hashes(
             random_streams=self.random_streams,
@@ -492,6 +614,7 @@ def build_scao_system(
     *,
     interaction_matrix: InteractionMatrix | SparseInteractionMatrix | None = None,
     execution: ScaoExecutionOptions | None = None,
+    atmosphere_options: LayeredAtmosphereOptions | None = None,
 ) -> ScaoSystem:
     """Build one complete system from a reviewed, unit-explicit configuration.
 
@@ -505,6 +628,12 @@ def build_scao_system(
     and the LSMR reconstructor through the same factory and preflight.
     ``execution`` carries identity-neutral settings for that path (lenslet
     batch size, an explicit calibration cache).
+
+    ``atmosphere_options`` (:class:`LayeredAtmosphereOptions`, T2 G1) are the
+    identity-bearing fixed-physics pairing options of the native layered
+    atmosphere: refused for any other atmosphere model, forwarded to the
+    factory only when set, recorded on the returned system and in its
+    attestation.  Nothing else about the build changes.
     """
 
     if not isinstance(config, SystemConfig):
@@ -512,6 +641,7 @@ def build_scao_system(
     options = ScaoExecutionOptions() if execution is None else execution
     if not isinstance(options, ScaoExecutionOptions):
         raise ScaoConstructionError("execution must be a ScaoExecutionOptions.")
+    pairing = _normalized_atmosphere_options(config, atmosphere_options)
     scalable = config.scalable is not None
     # One observation, not two: an attestation must name the epoch the factory
     # it used stood at, so a replacement landing while this build runs retires
@@ -551,25 +681,38 @@ def build_scao_system(
                 "atmosphere_band_storage applies to the native_layered atmosphere only."
             )
         layer_keywords["band_coefficient_storage"] = options.atmosphere_band_storage
-    atmosphere = factory.build_atmosphere(
-        model=config.atmosphere_model,
-        geometry=geometry,
-        random_streams=streams,
-        r0_m=config.atmosphere.r0_m,
-        outer_scale_m=config.atmosphere.outer_scale_m,
-        phase_reference_wavelength_m=(
-            config.atmosphere.r0_reference_wavelength_m
-        ),
-        wind_m_per_s=config.atmosphere.wind_m_per_s,
-        target_rms_rad=_target_rms_rad(config),
-        normalize_rms=config.atmosphere.normalize_rms,
-        static_opd_rms_m=(
-            0.0
-            if config.atmosphere.target_rms_opd_m is None
-            else config.atmosphere.target_rms_opd_m
-        ),
-        **layer_keywords,
-    )
+    if pairing is not None:
+        # Only the set fields travel, so a factory written before they existed
+        # keeps building every default system; one that lacks them fails here
+        # rather than silently building an unpaired atmosphere.
+        layer_keywords.update(pairing.factory_keywords())
+    try:
+        atmosphere = factory.build_atmosphere(
+            model=config.atmosphere_model,
+            geometry=geometry,
+            random_streams=streams,
+            r0_m=config.atmosphere.r0_m,
+            outer_scale_m=config.atmosphere.outer_scale_m,
+            phase_reference_wavelength_m=(
+                config.atmosphere.r0_reference_wavelength_m
+            ),
+            wind_m_per_s=config.atmosphere.wind_m_per_s,
+            target_rms_rad=_target_rms_rad(config),
+            normalize_rms=config.atmosphere.normalize_rms,
+            static_opd_rms_m=(
+                0.0
+                if config.atmosphere.target_rms_opd_m is None
+                else config.atmosphere.target_rms_opd_m
+            ),
+            **layer_keywords,
+        )
+    except TypeError as exc:
+        if pairing is None:
+            raise
+        raise ScaoConstructionError(
+            f"the {config.backend!r} backend factory does not accept the fixed-physics "
+            f"pairing options {sorted(pairing.factory_keywords())}: {exc}"
+        ) from exc
     dm = factory.build_dm(
         geometry=geometry,
         config=_dm_config(config),
@@ -687,6 +830,7 @@ def build_scao_system(
         supplied_matrix_identity=_supplied_matrix_identity(interaction_matrix),
         component_hashes=component_hashes,
         calibration_reused=calibration_reused,
+        atmosphere_options=pairing,
     )
     _MINTED_ATTESTATIONS.add(attestation)
     return ScaoSystem(
@@ -703,6 +847,7 @@ def build_scao_system(
         config_hash=config.config_hash,
         source_config=config,
         recovery_policy=recovery_policy,
+        atmosphere_options=pairing,
         build_attestation=attestation,
     )
 
@@ -715,12 +860,21 @@ def run_closed_loop(
     realization_index: int = 0,
     observers: Sequence[FrameObserver] = (),
     execution: ScaoExecutionOptions | None = None,
+    atmosphere_options: LayeredAtmosphereOptions | None = None,
+    exposure: ExposureOverride | None = None,
 ):
     """Execute either detector-level or geometric profiles through one runner.
 
     ``observers`` are passive :class:`~shwfs_ao.control.FrameObserver`
     consumers forwarded unchanged to the canonical loop; they receive
     immutable per-frame OPD snapshots and cannot change the returned history.
+
+    ``atmosphere_options`` (T2, G1) are passed to :func:`build_scao_system`
+    when no system is supplied; a supplied system carries its own and may not
+    be given others.  ``exposure`` (T2, G2, an :class:`ExposureOverride`)
+    replaces the profile's WFS exposure count and/or selects the midpoint
+    sample rule for this run; without it the loop receives exactly the
+    profile's exposure keywords, as before.
     """
 
     if not isinstance(config, SystemConfig):
@@ -729,9 +883,17 @@ def run_closed_loop(
         raise ScaoConstructionError(
             "interaction_matrix cannot accompany an already-built system."
         )
+    if system is not None and atmosphere_options is not None:
+        raise ScaoConstructionError(
+            "atmosphere_options cannot accompany an already-built system; the system "
+            "records the options it was built with."
+        )
     resolved = (
         build_scao_system(
-            config, interaction_matrix=interaction_matrix, execution=execution
+            config,
+            interaction_matrix=interaction_matrix,
+            execution=execution,
+            atmosphere_options=atmosphere_options,
         )
         if system is None
         else system
@@ -758,7 +920,7 @@ def run_closed_loop(
         realization_index=realization_index,
         observers=observers,
         recovery=resolved.recovery_policy,
-        **_exposure_keywords(config),
+        **_exposure_keywords(config, exposure),
     )
 
 
@@ -824,9 +986,13 @@ def _verify_supplied_system(config: SystemConfig, system: ScaoSystem) -> None:
     )
     expected = _attested_build_identity(system, supplied)
     if expected is None:
+        # The rebuild uses the pairing options the system records: a system
+        # built with options is verified against a build with the same
+        # options, never against the unpaired default.
         rebuilt = build_scao_system(
             system.source_config,
             interaction_matrix=supplied,
+            atmosphere_options=system.atmosphere_options,
         )
         expected = dict(rebuilt.component_hashes)
         if expected == recorded:
@@ -891,6 +1057,8 @@ def _attested_build_identity(
     if attestation.source_config != system.source_config:
         return None
     if attestation.supplied_matrix_identity != _supplied_matrix_identity(supplied):
+        return None
+    if attestation.atmosphere_options != system.atmosphere_options:
         return None
     attested = dict(attestation.component_hashes)
     if attested != dict(system.component_hashes):

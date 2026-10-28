@@ -1052,3 +1052,16 @@ re-executed; the acceptance covers the instrument and its record contract,
 not the noise-law question. S4, AR-006 and LIM-18 keep their status; the C0
 record and its sidecars stay local under `outputs/t1_s4_telemetry/`; no 12 m
 or 42 m arm was run.
+
+## Fixed-physics convergence interfaces, oracles and driver: ticket T2 and roadmap AR-007 (2026-10-21)
+
+Ticket T2 of the next-stage plan was carried out from `e5918c1` on the
+worktree `claude/t2-convergence` and committed on that branch; its
+implementation record is in `outputs/t2_convergence/2026-10-21-fable-e5918c1/`
+(git-ignored; `IMPLEMENTATION_RECORD.md`, `REVIEWER_BRIEF.md`, `RECORD.json`,
+the pre-edit `DESIGN_NOTE.md`, the review under `review/`). Status: implementation
+complete; independently accepted 2026-10-21 in review round 2.
+
+| Unit | Finding | Change | Behaviour and identity |
+| --- | --- | --- | --- |
+| N | AR-007 and roadmap S3: the detector-level profiles had no fixed-physics convergence instrument; the S3 pairing was a script monkeypatch that equates FFT indices with physical frequencies; the exposure rule shifted the mean sample time with `n`; EE50 had no grid-independent reference | G1: three identity-bearing options on the native layered atmosphere (reference-grid band draw, common band, `pupil_diameter` screen-period rule; `canonical_identity_payload` keeps the legacy hash while they are unset) with the construction route `LayeredAtmosphereOptions` through `build_scao_system` and the attestation; G2: the midpoint exposure rule (`exposure_sample_rule`, `ExposureOverride`) with its own scheme and labelled metadata; G5: the validation-only Fourier encircled-energy reference with separate error budgets; the Richardson and atmosphere-pairing validation modules; the experiment core `experiments.convergence_study` (streaming reductions, disk-backed paired ΔV); the driver `scripts/detector_level_convergence_study.py` (plan, protocols with producer identity, atomic never-clobbering records, strict refusals, summary written once, `--plan`, governed `--enabled-by-user`); tests; technical reference 5.1, 5.4, 5.10, 5.11, 9.2, roadmap S3, LIM-05, LIM-07, the turbulence-model, architecture and validation pages | every default identity, draw, history and metadata unchanged (pre/post witnesses: 3862 common leaves, 0 scientific leaves changed; the pre-change identity formula is asserted by a test); the equal-index pairing is quantified as approximate (common-band fields differ by 5–12 % RMS; band-edge phase error `π(1 − N_c/N_f)`) and the matched rule pairs to rounding; the ci self-check ran in fresh child processes (11 paired runs, 86 s, at most 288 MiB per child) with an exact byte-and-mtime no-op rerun and an independent re-analysis; the resource guard refused the job on warn memory pressure at all three preflights, the user directed that the guard be ignored for this task, and the self-check ran as a bounded check (recorded); no 12 m or 42 m run, no profile, metric, model or S3-driver change; G3 deferred; AR-007, S4, AR-006, LIM-18 and LIM-01 keep their status |

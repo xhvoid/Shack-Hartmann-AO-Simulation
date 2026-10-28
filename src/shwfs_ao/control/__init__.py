@@ -18,6 +18,7 @@ from .observation import (
     FrameObserver,
 )
 from .loop import (
+    EXPOSURE_SAMPLE_RULES,
     ControlLoopError,
     ControlLoopWarning,
     run_closed_loop,
@@ -51,6 +52,7 @@ __all__ = (
     "FrameObservation",
     "FrameObservationError",
     "FrameObserver",
+    "EXPOSURE_SAMPLE_RULES",
     "ControlLoopError",
     "ControlLoopWarning",
     "validate_closed_loop_components",

@@ -256,6 +256,16 @@ and LIM-07.
   `config_hash`; a multi-sample run now records the count and duration in its
   `config_hash` and `wfs_exposure` metadata, and an override of the WFS's
   configured count is recorded. Single-sample identities are unchanged.
+- Updated 2026-10-21 (ticket T2, G2): `exposure_sample_rule = "midpoint"`
+  samples at `t + (j+½)τ/n` for every `n` (one sample at `t + τ/2` for
+  `n = 1`), keeps the frame-start sample for the residual metrics and the
+  observer maps, holds the DM and applies camera noise once, and carries its
+  own scheme in the run identity and `wfs_exposure`; the legacy left-point
+  rule and every existing identity are unchanged. Midpoint `n = 1, 2, 4, 8`
+  is the centred refinement family of the convergence study; the left-point
+  family moves the mean sample time with `n` and is compared apart. The
+  science observer still samples the frame start (G3 deferred), so refining
+  the WFS quadrature is not converged exposure-integrated science imaging.
 - **Consequence / next evidence:** Default runs omit WFS temporal averaging;
   frame RMS is not exposure-averaged RMS. Claims about exposure smearing need
   convergence versus exposure subsamples and explicitly labelled metrics.
@@ -305,6 +315,19 @@ and LIM-07.
   So the quoted Strehl values of the ESO tiers are converged in sampling, and
   EE50 values at the default science sampling are upper estimates. Not
   covered: the 12 m detector profiles and pupil sampling beyond 16 at 42 m.
+- Updated 2026-10-21 (ticket T2): `scripts/detector_level_convergence_study.py`
+  scans the detector-level profiles' numerical axes (pupil sampling with
+  exactly paired turbulence input under the `pupil_diameter` screen-period
+  rule, detector-plane oversampling, spectral nodes, midpoint exposure
+  sub-samples, science pad) with a Richardson analysis and a validation-only
+  Fourier encircled-energy reference beside the production estimator. Its
+  ci-scale self-check (the 5 m smoke geometry with the 12 m @3 detector
+  physics, 36 frames, one realization) is machinery evidence only; the 12 m
+  and 42 m scans are governed and have not run, so the status of this entry
+  is unchanged. The S3 equal-index pairing is now quantified as approximate
+  (the coarse band-edge mode's phase error at the pupil edge is
+  `π(1 − N_c/N_f)`; common-band fields differ by 5–12 % RMS), which the S3
+  records' meaning as stated above already allowed for.
 - **Consequence / next evidence:** Successful execution and solver convergence
   do not establish spatial accuracy. Refine pupil, WFS and science sampling
   separately, hold physical field of view fixed, and compare matched inputs
