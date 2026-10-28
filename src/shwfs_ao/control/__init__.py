@@ -11,6 +11,7 @@ from .controller import ControllerError, LeakyIntegratorController
 from .history import LoopHistory, LoopHistoryError
 from .loop import (
     ControlLoopError,
+    ControlLoopWarning,
     run_closed_loop,
     validate_closed_loop_components,
 )
@@ -36,6 +37,7 @@ __all__ = (
     "LoopHistoryError",
     "LoopHistory",
     "ControlLoopError",
+    "ControlLoopWarning",
     "validate_closed_loop_components",
     "run_closed_loop",
     "ControlSweepError",

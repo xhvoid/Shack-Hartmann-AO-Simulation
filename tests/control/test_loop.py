@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import replace
 from types import MappingProxyType
+import warnings
 
 import numpy as np
 import pytest
@@ -13,7 +14,11 @@ from shwfs_ao.calibration import InteractionMatrix, calibrate_interaction_matrix
 from shwfs_ao.control.command_mapping import IdentityCommandProjector
 from shwfs_ao.control.config import LoopConfig
 from shwfs_ao.control.controller import LeakyIntegratorController
-from shwfs_ao.control.loop import ControlLoopError, run_closed_loop
+from shwfs_ao.control.loop import (
+    ControlLoopError,
+    ControlLoopWarning,
+    run_closed_loop,
+)
 from shwfs_ao.core.protocols import (
     AtmosphereModel,
     CommandProjector,
@@ -566,6 +571,61 @@ def test_none_is_not_zero_filled_and_old_queue_entries_and_leak_continue(
         atol=1.0e-24,
     )
     np.testing.assert_allclose(history.valid_measurement_fraction, [1.0, 0.0, 0.0])
+
+
+def test_a_run_that_reconstructs_on_some_frames_records_them_without_warning(
+    interaction_matrix: InteractionMatrix,
+) -> None:
+    config = _config(n_steps=3, latency_frames=1, leak=0.25)
+    components = _components(
+        interaction_matrix,
+        config,
+        none_frames=frozenset({1, 2}),
+    )
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ControlLoopWarning)
+        history = _run(config, interaction_matrix, components)
+
+    assert history.metadata["reconstruction_usable_frames"] == 1
+    assert history.metadata["reconstruction_usable_fraction"] == 1 / 3
+
+
+def test_a_run_that_never_reconstructs_warns_that_it_stayed_open_loop(
+    interaction_matrix: InteractionMatrix,
+) -> None:
+    # Failing closed on every frame is legal, but the telemetry it leaves is
+    # open-loop and must not pass silently for closed-loop performance.
+    config = _config(n_steps=3, latency_frames=1, leak=0.25)
+    components = _components(
+        interaction_matrix,
+        config,
+        none_frames=frozenset({0, 1, 2}),
+    )
+    _, _, _, _, projector, _, _ = components
+
+    with pytest.warns(ControlLoopWarning) as caught:
+        history = _run(config, interaction_matrix, components)
+
+    messages = [
+        str(item.message)
+        for item in caught
+        if issubclass(item.category, ControlLoopWarning)
+    ]
+    assert len(messages) == 1
+    assert "No frame of this 3-frame run produced a usable reconstruction" in (
+        messages[0]
+    )
+    assert "valid measurement fraction ranged over [1.000, 1.000]" in messages[0]
+    assert projector.call_count == 0
+    assert not history.reconstruction_usable.any()
+    assert history.metadata["reconstruction_usable_frames"] == 0
+    assert history.metadata["reconstruction_usable_fraction"] == 0.0
+    np.testing.assert_array_equal(history.applied_command_history_opd_m, 0.0)
+    np.testing.assert_array_equal(
+        history.post_update_residual_opd_rms_m,
+        history.open_loop_opd_rms_m,
+    )
 
 
 def test_root_seed_mismatch_fails_before_any_component_side_effect(

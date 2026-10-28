@@ -167,6 +167,10 @@
       "sha256": "22ce39a7c2f3b783e75aef5ad01a49caececa64efcb88d660b42b1bbb7a1ba7c"
     },
     {
+      "logical_name": "synthetic_presets/fast_2m_detector.v4.json",
+      "sha256": "97d37efa5f0915736d9cba69c3b331ca7c0ed0a70b4aff27eb2763b230f1edc1"
+    },
+    {
       "logical_name": "synthetic_presets/high_order_10m_geometric.v1.json",
       "sha256": "c736d06195f2c293ddb8f1b06c95716181a8e06898e8b2b9da2f51d5655a239c"
     },

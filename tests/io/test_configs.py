@@ -43,6 +43,7 @@ EXPECTED_PROFILES = (
     ("fast_2m_detector", 1),
     ("fast_2m_detector", 2),
     ("fast_2m_detector", 3),
+    ("fast_2m_detector", 4),
     ("portfolio_2m_detector", 1),
     ("portfolio_2m_detector", 2),
     ("portfolio_2m_detector", 3),
@@ -313,6 +314,7 @@ def test_every_packaged_profile_identity_is_pinned() -> None:
         ("research_2m_detector", 3): "441b106f0eebc1574c4fcc62771087ca0d77e956cdacd25b86d9d44a5032b8dd",
         ("high_order_10m_geometric", 3): "4a7d80b09c861a78f45f5a3c472f63d1bff619bcaa891050b95487c6a8f9f0ca",
         ("high_order_10m_hcipy", 3): "bc73f30b8d37a1dcc5603f8d2007d9e69daf02e54ced8898eef53afb7153e65c",
+        ("fast_2m_detector", 4): "8c2c96a97b464fee1cd26d3eecd665f31d0df4b4a036198c6a03d8cd4b898f46",
     }
     observed = {
         key: load_system_profile(*key).config_hash for key in available_system_profiles()
@@ -354,6 +356,8 @@ def test_every_packaged_nested_wfs_identity_is_pinned() -> None:
         ("research_2m_detector", 3): "241f18d74988683fab9b4e8d748a86d11e5482bc6020d338a0d66b24c0b6c469",
         ("high_order_10m_geometric", 3): "0dca580f4af5fccdf3ba0126a697f1549fd11753c93c97d121faa148aa72584a",
         ("high_order_10m_hcipy", 3): "45b4f2e0544cdab27e89ef1e88caed8b86c9012270cdfd1e1a7e4a45e64b6078",
+        # v4 widens the fast detector window, so its WFS identity moves.
+        ("fast_2m_detector", 4): "beec50d4ead5615c7ff5d19c71b26ffbe07540eafdcb991e0422fdf1010f34b6",
     }
     observed = {
         key: load_system_profile(*key).component_config_hashes["wfs"]
@@ -361,6 +365,30 @@ def test_every_packaged_nested_wfs_identity_is_pinned() -> None:
     }
     assert set(observed) == set(expected)
     assert observed == expected
+
+
+def test_fast_2m_detector_v4_is_v3_with_only_a_wider_detector_window() -> None:
+    """@3 stays frozen as published; @4 changes exactly one reviewed value.
+
+    The 18 px window of @3 cannot hold its own unpinned open-loop spots, so
+    window clipping rejects a lenslet in every frame and the loop never closes
+    (``tests/experiments/test_scao_profile_closure.py``).  Fixing that in place
+    would relabel every result that cites @3, so the wider window is a new
+    version under otherwise identical physics.
+    """
+
+    v3 = load_system_profile("fast_2m_detector", 3)
+    v4 = load_system_profile("fast_2m_detector", 4)
+
+    assert (v3.wfs.detector_window_px, v4.wfs.detector_window_px) == (18, 24)
+    assert replace(v4.wfs, detector_window_px=18) == v3.wfs
+    assert replace(v4, profile=v3.profile, wfs=v3.wfs) == v3
+    assert v4.observing_conditions_hash == v3.observing_conditions_hash
+    assert {
+        key
+        for key, value in v4.component_config_hashes.items()
+        if value != v3.component_config_hashes[key]
+    } == {"profile", "wfs"}
 
 
 def test_a_bare_wfs_config_hashes_under_the_current_record_schema() -> None:

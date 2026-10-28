@@ -31,7 +31,7 @@ writing are outside this boundary.
 
 Every published profile version stays installed, because a result is labelled
 with the exact profile that produced it and must stay reproducible from it.
-The current family is version 2:
+The version-2 family is:
 
 - `fast_2m_detector@2`;
 - `portfolio_2m_detector@2`;
@@ -77,6 +77,34 @@ rather than reconciled.
 HCIPy backend factory; loading it needs no optional dependency, building it
 does.  Loading is always by an explicit `(name, version)` pair; there is no
 implicit “latest” selection.
+
+## Version 3 and `fast_2m_detector@4`
+
+Each profile has a `@3` version with physically conditioned observing
+conditions: the native v2 frozen-flow screen (HCIPy's screen for the HCIPy
+profile) without RMS pinning, so the disturbance amplitude follows r0 and the
+outer scale, plus a two-frame command latency.
+
+`fast_2m_detector@3` kept the 18 px detector window of v2, which was sized for
+the 260 nm RMS that v2 pinned.  Its 0.4 m lenslets see d/r0 = 2.1 at the 700 nm
+WFS wavelength, so the window spans only 2.7 λ/r0, against 4.1 λ/r0 for
+`portfolio_2m_detector@3` and 6.1 λ/r0 for `research_2m_detector@3`.  The
+unpinned open-loop spots overflow it.  In its run, window clipping exceeds the
+15 % limit in at least one lenslet of every frame, and no other validity
+criterion (flux, peak SNR, centroid uncertainty) ever rejects one.  With
+`min_valid_fraction = 1.0` the reconstructor correctly fails closed on every
+frame, so the DM never moves and the run's residual histories are open-loop.
+Restoring the 260 nm pin makes it close on every frame.  Removing the latency
+or shortening the run does not help.
+
+`@3` stays published unchanged, because results labelled with it must keep
+reproducing; it now reports itself through `ControlLoopWarning` (see
+AO-REF-009).  `fast_2m_detector@4` is the same record with a 24 px window
+(3.6 λ/r0) and nothing else changed.  Its observing-conditions hash equals
+`@3`'s, and only the `profile` and `wfs` component hashes move.  It
+reconstructs every frame of its run: the mean open-loop RMS is 384 nm and the
+mean closed-loop RMS is 310 nm.  Over 120 sampled open-loop screens, its
+worst-lenslet clipping stays below 0.12.  Start new fast-scale work from `@4`.
 
 Every numerical scale and observing input is serialized.  In particular,
 pupil pixels, lenslet count, actuator count, seeing strength, wind, photon

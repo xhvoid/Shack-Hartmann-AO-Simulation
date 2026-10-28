@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 import math
-from numbers import Integral
+from numbers import Integral, Real
 from typing import Any, Final, Protocol, cast, runtime_checkable
+import warnings
 
 import numpy as np
 
@@ -44,6 +45,7 @@ from .history import (
 
 __all__ = (
     "ControlLoopError",
+    "ControlLoopWarning",
     "validate_closed_loop_components",
     "run_closed_loop",
 )
@@ -54,6 +56,17 @@ _COMMAND_UNIT: Final = "m_opd_equivalent"
 
 class ControlLoopError(ValueError):
     """Raised when loop components or per-frame results disagree."""
+
+
+class ControlLoopWarning(RuntimeWarning):
+    """Emitted when a completed run never applied a reconstructed correction.
+
+    A reconstructor that fails closed on every frame leaves the DM at its
+    initial command, so every residual history of that run is open-loop even
+    though it was produced by the closed-loop engine.  The run still completes
+    and stays reproducible; the warning (and the ``reconstruction_usable_*``
+    metadata) keeps it from being read as closed-loop performance.
+    """
 
 
 @runtime_checkable
@@ -355,6 +368,7 @@ def run_closed_loop(
         current_correction = next_correction
 
     assert expected_subaperture_count is not None
+    usable_frames = int(np.count_nonzero(reconstruction_usable))
     wfs_backend_name = reported_wfs_backend_name or wfs_backend_fallback
     loop_hash = component_config_hash(
         "control.closed_loop_run",
@@ -394,6 +408,8 @@ def run_closed_loop(
         "realization_index": realization_index,
         "retained_subaperture_count": expected_subaperture_count,
         "rms_policy": "piston_removed_statistic_without_residual_map_mutation",
+        "reconstruction_usable_frames": usable_frames,
+        "reconstruction_usable_fraction": usable_frames / n_steps,
     }
     if retained_subaperture_ids is not None:
         metadata["subaperture_ids"] = retained_subaperture_ids
@@ -401,7 +417,7 @@ def run_closed_loop(
         metadata["atmosphere_realization_stream_id"] = (
             atmosphere_realization_stream_id
         )
-    return LoopHistory(
+    history = LoopHistory(
         time_s=time_s,
         open_loop_opd_rms_m=open_loop_rms,
         pre_update_residual_opd_rms_m=pre_update_rms,
@@ -419,6 +435,19 @@ def run_closed_loop(
         config_hash=loop_hash,
         metadata=metadata,
     )
+    if usable_frames == 0:
+        # Failing closed on every frame is a legitimate reconstructor outcome,
+        # but the result is an open-loop run wearing closed-loop telemetry.
+        warnings.warn(
+            _never_corrected_message(
+                n_steps=n_steps,
+                valid_measurement_fraction=valid_measurement_fraction,
+                reconstructor=reconstructor,
+            ),
+            ControlLoopWarning,
+            stacklevel=2,
+        )
+    return history
 
 
 def validate_closed_loop_components(
@@ -753,6 +782,30 @@ def _applied_command(value: DmSynthesisResult) -> DmCommandVector:
         values_opd_m=np.asarray(value.applied_commands_opd_m, dtype=float),
         actuator_ids=value.actuator_ids,
         command_unit=_COMMAND_UNIT,
+    )
+
+
+def _never_corrected_message(
+    *,
+    n_steps: int,
+    valid_measurement_fraction: np.ndarray,
+    reconstructor: Reconstructor,
+) -> str:
+    policy = getattr(reconstructor, "min_valid_fraction", None)
+    threshold = (
+        f" (reconstructor min_valid_fraction={float(policy)})"
+        if isinstance(policy, Real) and not isinstance(policy, bool)
+        else ""
+    )
+    return (
+        f"No frame of this {n_steps}-frame run produced a usable "
+        "reconstruction, so no reconstructed increment ever reached the DM "
+        "and the residual histories describe an open-loop run. The valid "
+        "measurement fraction "
+        f"ranged over [{float(np.min(valid_measurement_fraction)):.3f}, "
+        f"{float(np.max(valid_measurement_fraction)):.3f}]{threshold}; "
+        "inspect the WFS validity telemetry before reading these residuals "
+        "as closed-loop performance."
     )
 
 
