@@ -17,7 +17,7 @@ returns a `ScaoSystem`.  Both WFS fidelities use the same runner:
 from shwfs_ao.experiments.scao import build_scao_system, run_closed_loop
 from shwfs_ao.io.configs import load_system_profile
 
-config = load_system_profile("fast_2m_detector", 1)
+config = load_system_profile("fast_2m_detector", 2)
 system = build_scao_system(config)
 history = run_closed_loop(config, system=system)
 ```
@@ -31,13 +31,13 @@ writing are outside this boundary.
 
 The installed schema-v1 presets are:
 
-- `fast_2m_detector@1`;
-- `portfolio_2m_detector@1`;
-- `research_2m_detector@1`;
-- `high_order_10m_geometric@1`;
-- `high_order_10m_hcipy@1`.
+- `fast_2m_detector@2`;
+- `portfolio_2m_detector@2`;
+- `research_2m_detector@2`;
+- `high_order_10m_geometric@2`;
+- `high_order_10m_hcipy@2`.
 
-`high_order_10m_hcipy@1` pairs the geometric 10 m scale through the registered
+`high_order_10m_hcipy@2` pairs the geometric 10 m scale through the registered
 HCIPy backend factory; loading it needs no optional dependency, building it
 does.  Loading is always by an explicit `(name, version)` pair; there is no
 implicit “latest” selection.

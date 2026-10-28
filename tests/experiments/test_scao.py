@@ -239,6 +239,54 @@ def test_component_hashes_are_bound_to_the_live_components() -> None:
     assert dict(rebuilt.component_hashes) == dict(system.component_hashes)
 
 
+def test_supplied_system_components_must_match_its_source_configuration() -> None:
+    # Reproduces the review's 30 nm -> 90 nm swap: a valid stronger atmosphere
+    # carrying its own correct component hash is spliced into a system whose
+    # retained config_hash/source_config still name the weaker profile.  The
+    # frozen dataclass accepts the internally self-consistent record, but the
+    # run must refuse to execute components the recorded configuration did not
+    # build.
+    config = _tiny_system_config()
+    stronger_config = replace(
+        config,
+        atmosphere=replace(config.atmosphere, target_rms_opd_m=60.0e-9),
+    )
+    system = scao.build_scao_system(config)
+    stronger = scao.build_scao_system(stronger_config)
+    assert (
+        stronger.component_hashes["atmosphere"]
+        != system.component_hashes["atmosphere"]
+    )
+
+    forged_hashes = dict(system.component_hashes)
+    forged_hashes["atmosphere"] = stronger.component_hashes["atmosphere"]
+    # Internally self-consistent (live atmosphere matches its recorded hash),
+    # so the frozen dataclass still constructs, and the retained identity keeps
+    # naming the weaker profile.
+    forged = replace(
+        system,
+        atmosphere=stronger.atmosphere,
+        component_hashes=forged_hashes,
+    )
+    assert forged.config_hash == config.config_hash
+    assert forged.source_config == config
+
+    with pytest.raises(
+        scao.ScaoConstructionError,
+        match="do not match the components its source configuration rebuilds",
+    ):
+        scao.run_closed_loop(config, system=forged)
+
+    # The honest system still runs against the same configuration and matches a
+    # freshly built run.
+    history = scao.run_closed_loop(config, system=system)
+    fresh = scao.run_closed_loop(config)
+    np.testing.assert_array_equal(
+        history.post_update_residual_opd_rms_m,
+        fresh.post_update_residual_opd_rms_m,
+    )
+
+
 def test_calibration_sources_are_explicit_and_never_fall_back(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

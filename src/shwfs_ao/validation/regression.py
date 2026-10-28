@@ -206,6 +206,110 @@ REQUIRED_METRIC_NAMES: Mapping[str, frozenset[str]] = {
     ),
 }
 
+# Sentinel: this metric's criterion expectation is a reviewed physical value or
+# a configuration-derived count that legitimately differs between baselines, so
+# only its level, units, and criterion type are pinned; the numeric expectation
+# is checked against the accepted baseline itself, not against a universal.
+_BASELINE_SPECIFIC = object()
+
+# The canonical scientific meaning of every metric, pinned independently of any
+# single baseline document.  Enforcing (level, units, criterion type) forbids a
+# gate from being silently demoted (an exact identity recorded as a wide range,
+# a correctness gate recorded as informational, or a runtime measurement
+# promoted into a gate), and pinning the expectation of the universal-constant
+# equality metrics (booleans, +1 signs, backend identifiers, structural zeros)
+# forbids gating on the wrong side of an identity — e.g. accepting
+# ``both_loops_consumed_shared_opd_cube`` with expected ``False``.  The JSON
+# Schema mirrors these constraints for defence in depth.
+METRIC_CONTRACT: Mapping[str, Mapping[str, tuple[str, str, str, object]]] = {
+    'pupil_mask_and_throughput': {
+        'mask_round_trip_identical': ('exact', 'boolean', 'equals', True),
+        'illuminated_sample_count': ('exact', 'samples', 'equals', _BASELINE_SPECIFIC),
+        'native_mean_window_capture': ('tight_numerical', 'fraction', 'abs_tolerance', _BASELINE_SPECIFIC),
+        'hcipy_mean_window_capture': ('physical_tolerance', 'fraction', 'range', _BASELINE_SPECIFIC),
+    },
+    'zernike_modes': {
+        'tip_x_alignment_defect': ('tight_numerical', '1 - |correlation|', 'abs_tolerance', _BASELINE_SPECIFIC),
+        'tip_x_relative_sign': ('exact', 'sign', 'equals', 1),
+        'tip_y_alignment_defect': ('tight_numerical', '1 - |correlation|', 'abs_tolerance', _BASELINE_SPECIFIC),
+        'tip_y_relative_sign': ('exact', 'sign', 'equals', 1),
+        'defocus_alignment_defect': ('tight_numerical', '1 - |correlation|', 'abs_tolerance', _BASELINE_SPECIFIC),
+        'defocus_relative_sign': ('exact', 'sign', 'equals', 1),
+        'astig_45_alignment_defect': ('tight_numerical', '1 - |correlation|', 'abs_tolerance', _BASELINE_SPECIFIC),
+        'astig_45_relative_sign': ('exact', 'sign', 'equals', 1),
+        'astig_0_alignment_defect': ('tight_numerical', '1 - |correlation|', 'abs_tolerance', _BASELINE_SPECIFIC),
+        'astig_0_relative_sign': ('exact', 'sign', 'equals', 1),
+    },
+    'atmosphere_statistics': {
+        'rms_ratio_hcipy_over_native': ('physical_tolerance', 'ratio', 'range', _BASELINE_SPECIFIC),
+        'native_structure_function_lag_ratio': ('physical_tolerance', 'ratio', 'range', _BASELINE_SPECIFIC),
+        'hcipy_structure_function_lag_ratio': ('physical_tolerance', 'ratio', 'range', _BASELINE_SPECIFIC),
+        'rms_ratio_standard_error': ('informational', 'ratio', 'informational', _BASELINE_SPECIFIC),
+        'native_structure_function_ratio_standard_error': ('informational', 'ratio', 'informational', _BASELINE_SPECIFIC),
+        'hcipy_structure_function_ratio_standard_error': ('informational', 'ratio', 'informational', _BASELINE_SPECIFIC),
+    },
+    'wfs_tip_tilt_response': {
+        'native_x_response_sign': ('tight_numerical', 'sign', 'equals', 1),
+        'hcipy_x_response_sign': ('tight_numerical', 'sign', 'equals', 1),
+        'native_cross_axis_fraction': ('tight_numerical', 'fraction of applied tilt', 'abs_tolerance', _BASELINE_SPECIFIC),
+        'hcipy_cross_axis_fraction': ('tight_numerical', 'fraction of applied tilt', 'abs_tolerance', _BASELINE_SPECIFIC),
+        'native_tilt_gain': ('physical_tolerance', 'measured over applied angular displacement', 'range', _BASELINE_SPECIFIC),
+        'hcipy_tilt_gain': ('physical_tolerance', 'measured over applied angular displacement', 'range', _BASELINE_SPECIFIC),
+        'tilt_gain_ratio_hcipy_over_native': ('physical_tolerance', 'ratio', 'range', _BASELINE_SPECIFIC),
+        'y_gain_ratio_hcipy_over_native': ('physical_tolerance', 'ratio', 'range', _BASELINE_SPECIFIC),
+    },
+    'lenslet_spot_morphology': {
+        'native_ee50_over_diffraction': ('physical_tolerance', 'ratio of lambda/d', 'range', _BASELINE_SPECIFIC),
+        'hcipy_ee50_over_diffraction': ('physical_tolerance', 'ratio of lambda/d', 'range', _BASELINE_SPECIFIC),
+        'ee50_ratio_hcipy_over_native': ('physical_tolerance', 'ratio', 'range', _BASELINE_SPECIFIC),
+        'centroid_gain_ratio_hcipy_over_native': ('physical_tolerance', 'ratio', 'range', _BASELINE_SPECIFIC),
+    },
+    'dm_single_actuator_influence': {
+        'actuator_ids_identical': ('exact', 'boolean', 'equals', True),
+        'max_in_pupil_influence_abs_diff': ('tight_numerical', 'unit-peak influence', 'abs_tolerance', _BASELINE_SPECIFIC),
+        'max_in_pupil_command_surface_abs_diff_m': ('tight_numerical', 'm_opd', 'abs_tolerance', _BASELINE_SPECIFIC),
+    },
+    'dm_static_fitting': {
+        'native_fitting_residual_fraction': ('physical_tolerance', 'residual rms / target rms', 'range', _BASELINE_SPECIFIC),
+        'fitting_residual_relative_difference': ('tight_numerical', 'relative difference', 'abs_tolerance', _BASELINE_SPECIFIC),
+    },
+    'interaction_matrix_identity': {
+        'matrix_shapes_identical': ('exact', 'boolean', 'equals', True),
+        'row_ids_identical': ('exact', 'boolean', 'equals', True),
+        'coordinate_ids_identical': ('exact', 'boolean', 'equals', True),
+        'rank_difference': ('exact', 'rank', 'equals', 0),
+    },
+    'normalized_singular_spectrum': {
+        'spectrum_length_difference': ('exact', 'count', 'equals', 0),
+        'max_normalized_sigma_abs_diff': ('physical_tolerance', 'normalized sigma', 'abs_tolerance', _BASELINE_SPECIFIC),
+    },
+    'psf_normalization': {
+        'native_total_flux_error': ('tight_numerical', 'flux', 'abs_tolerance', _BASELINE_SPECIFIC),
+        'hcipy_total_flux_error': ('tight_numerical', 'flux', 'abs_tolerance', _BASELINE_SPECIFIC),
+    },
+    'strehl_ratio': {
+        'native_strehl': ('physical_tolerance', 'Strehl', 'abs_tolerance', _BASELINE_SPECIFIC),
+        'hcipy_strehl': ('physical_tolerance', 'Strehl', 'abs_tolerance', _BASELINE_SPECIFIC),
+        'strehl_abs_difference': ('physical_tolerance', 'Strehl', 'abs_tolerance', _BASELINE_SPECIFIC),
+    },
+    'closed_loop_residual': {
+        'executed_time_grid_matches_shared_fixture': ('exact', 'boolean', 'equals', True),
+        'both_loops_consumed_shared_opd_cube': ('exact', 'boolean', 'equals', True),
+        'native_backend_name': ('exact', 'identifier', 'equals', 'native'),
+        'hcipy_backend_name': ('exact', 'identifier', 'equals', 'hcipy'),
+        'native_correction_effect': ('physical_tolerance', 'mean corrected over uncorrected rms', 'range', _BASELINE_SPECIFIC),
+        'hcipy_correction_effect': ('physical_tolerance', 'mean corrected over uncorrected rms', 'range', _BASELINE_SPECIFIC),
+        'mean_residual_ratio_hcipy_over_native': ('physical_tolerance', 'ratio', 'range', _BASELINE_SPECIFIC),
+    },
+    'runtime_and_memory': {
+        'native_wfs_propagation_s': ('informational', 'seconds', 'informational', _BASELINE_SPECIFIC),
+        'hcipy_wfs_propagation_s': ('informational', 'seconds', 'informational', _BASELINE_SPECIFIC),
+        'native_psf_propagation_s': ('informational', 'seconds', 'informational', _BASELINE_SPECIFIC),
+        'hcipy_psf_propagation_s': ('informational', 'seconds', 'informational', _BASELINE_SPECIFIC),
+        'comparison_peak_traced_memory_mb': ('informational', 'mebibytes', 'informational', _BASELINE_SPECIFIC),
+    },
+}
+
 _REQUIRED_ENVIRONMENT_FIELDS = (
     "python_version",
     "numpy_version",
@@ -235,6 +339,7 @@ __all__ = (
     "REQUIRED_COMPONENT_HASH_KEYS",
     "REQUIRED_FIXTURE_HASH_KEYS",
     "REQUIRED_METRIC_NAMES",
+    "METRIC_CONTRACT",
     "BaselineContractError",
     "validate_cross_backend_report",
     "validate_cross_backend_baseline",
@@ -250,16 +355,22 @@ class BaselineContractError(ValueError):
     """Raised when a report or baseline document violates the contract."""
 
 
-def validate_cross_backend_report(document: Mapping[str, Any]) -> Mapping[str, Any]:
-    """Validate the shared report body: identity, hashes, and metrics.
+def _validate_report_structure(
+    document: Mapping[str, Any],
+) -> tuple[list[Any], list[str]]:
+    """Validate the shared report body: identity, hashes, and metric shape.
 
-    A valid document covers every kind in :data:`REQUIRED_COMPARISON_KINDS`
-    exactly once, in canonical order: one run of the comparison suite always
-    produces the complete AO-REF-018 inventory, and an accepted baseline that
-    silently dropped a comparison would stop gating it.  Every gating
-    criterion must carry finite numerics — a non-negative absolute tolerance
-    or an ordered range — so a malformed tolerance can never widen into an
-    always-passing gate.
+    This enforces everything except inventory completeness (which comparison
+    kinds and metric names appear).  Every present metric must satisfy its
+    structural contract and its pinned scientific meaning
+    (:data:`METRIC_CONTRACT`), every gating criterion must carry finite numerics
+    — a non-negative absolute tolerance or an ordered range — so a malformed
+    tolerance can never widen into an always-passing gate, and every hash and
+    convention field must be well formed.  It is shared by
+    :func:`validate_cross_backend_report`, which additionally requires the
+    complete inventory, and by :func:`evaluate_report_against_baseline`, which
+    must surface a report missing a gate as a rich per-metric failure rather
+    than a terse inventory rejection.  Returns ``(comparisons, kinds)``.
     """
 
     if not isinstance(document, Mapping):
@@ -342,8 +453,23 @@ def validate_cross_backend_report(document: Mapping[str, Any]) -> Mapping[str, A
             )
         seen_kinds.add(kind)
         kinds.append(kind)
+    return comparisons, kinds
+
+
+def validate_cross_backend_report(document: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Validate the shared report body and require the complete inventory.
+
+    In addition to the structural contract enforced by
+    :func:`_validate_report_structure`, a full report must cover every kind in
+    :data:`REQUIRED_COMPARISON_KINDS` exactly once, in canonical order, and each
+    comparison must record exactly its complete metric inventory: one run of the
+    suite always produces the full AO-REF-018 inventory, and an accepted
+    baseline that silently dropped a comparison would stop gating it.
+    """
+
+    comparisons, kinds = _validate_report_structure(document)
     if tuple(kinds) != REQUIRED_COMPARISON_KINDS:
-        missing = [kind for kind in REQUIRED_COMPARISON_KINDS if kind not in seen_kinds]
+        missing = [kind for kind in REQUIRED_COMPARISON_KINDS if kind not in kinds]
         unexpected = [kind for kind in kinds if kind not in REQUIRED_COMPARISON_KINDS]
         raise BaselineContractError(
             "comparisons must cover the required comparison kinds in "
@@ -392,9 +518,14 @@ def validate_cross_backend_baseline(document: Mapping[str, Any]) -> Mapping[str,
         _REQUIRED_ACCEPTANCE_FIELDS,
         label="acceptance",
     )
-    # Provenance must be verifiable, not forgeable: a failed or "unknown"
-    # commit lookup is rejected, and the clean-state field must be present so
-    # a dirty-tree baseline cannot masquerade as a reproducible one.
+    # Provenance must be verifiable, not forgeable.  The commit must be a real
+    # 40-character hash — its existence is verified at generation time, which is
+    # the only place the source repository is available; the installed package
+    # that runs this validator has no repository to re-check against.  The
+    # clean-state flag must be present, and — closing the dirty-tree hole — a
+    # tree recorded as dirty must carry the source_patch_sha256 evidence hash of
+    # exactly what diverged from the commit (tracked diff plus sorted untracked
+    # scientific inputs), so a dirty baseline cannot masquerade as reproducible.
     source_commit = document["generator"]["source_commit"]
     if not _SOURCE_COMMIT_40.fullmatch(str(source_commit)):
         raise BaselineContractError(
@@ -404,6 +535,24 @@ def validate_cross_backend_baseline(document: Mapping[str, Any]) -> Mapping[str,
     if not isinstance(document["generator"].get("source_tree_clean"), bool):
         raise BaselineContractError(
             "generator.source_tree_clean must be recorded as a boolean."
+        )
+    source_patch = document["generator"].get("source_patch_sha256")
+    if document["generator"]["source_tree_clean"] is False:
+        if not isinstance(source_patch, str) or not _CONTENT_HASH_64.fullmatch(
+            source_patch
+        ):
+            raise BaselineContractError(
+                "generator.source_patch_sha256 must be the 64-character content "
+                "hash of the working-tree divergence when source_tree_clean is "
+                "false; a dirty baseline requires patch evidence."
+            )
+    elif source_patch is not None and (
+        not isinstance(source_patch, str)
+        or not _CONTENT_HASH_64.fullmatch(source_patch)
+    ):
+        raise BaselineContractError(
+            "generator.source_patch_sha256 must be null or a 64-character "
+            "content hash when source_tree_clean is true."
         )
     for comparison in document["comparisons"]:
         for metric in comparison["metrics"]:
@@ -520,7 +669,13 @@ def evaluate_report_against_baseline(
     units, and the compared configuration/fixture hashes.
     """
 
-    validate_cross_backend_report(report)
+    # The baseline is fully validated (it is the authority), but the report is
+    # only validated structurally: a fresh run that is missing a gated metric
+    # must surface as a rich per-metric failure below, not as a terse inventory
+    # rejection here.  Every present report metric still has to satisfy its
+    # pinned structural contract, so a mutated level/units/criterion is still
+    # rejected.
+    _validate_report_structure(report)
     validate_cross_backend_baseline(baseline)
     failures: list[str] = []
 
@@ -543,6 +698,30 @@ def evaluate_report_against_baseline(
                     f"expected={expected}; shared inputs drifted, so metric "
                     "tolerances do not apply."
                 )
+    # The measurement conventions and the root seed are part of the comparison
+    # basis just as much as the hashes: a report measured under a different
+    # command/residual/detector-sign convention, or from a different seed, is
+    # not comparable to the baseline even when its config_hash and metric values
+    # coincide, so its tolerances do not apply.
+    baseline_conventions = baseline["conventions"]
+    report_conventions = report.get("conventions")
+    if not isinstance(report_conventions, Mapping):
+        report_conventions = {}
+    for field in sorted(baseline_conventions):
+        observed = report_conventions.get(field)
+        expected = baseline_conventions[field]
+        if observed != expected:
+            failures.append(
+                f"conventions[{field!r}] mismatch: observed={observed!r} "
+                f"expected={expected!r}; the comparison basis differs, so "
+                "metric tolerances do not apply."
+            )
+    if report.get("root_seed") != baseline.get("root_seed"):
+        failures.append(
+            f"root_seed mismatch: observed={report.get('root_seed')!r} "
+            f"expected={baseline.get('root_seed')!r}; a different seed yields a "
+            "different realization, so metric tolerances do not apply."
+        )
     if failures:
         return tuple(failures)
 
@@ -757,6 +936,48 @@ def _validate_comparison(comparison: object) -> None:
                 f"{comparison['comparison_kind']!r}."
             )
         seen_names.add(metric["name"])
+        _enforce_metric_contract(comparison["comparison_kind"], metric)
+
+
+def _enforce_metric_contract(kind: str, metric: Mapping[str, Any]) -> None:
+    """Pin a present metric's scientific meaning to :data:`METRIC_CONTRACT`.
+
+    Unknown ``(kind, name)`` pairs are left to the inventory check in
+    :func:`validate_cross_backend_report`; this guards only the meaning of the
+    metrics the contract knows about, so no gate can be silently demoted, no
+    runtime measurement promoted, and no identity gated on the wrong value.
+    """
+
+    contract = METRIC_CONTRACT.get(kind, {}).get(metric["name"])
+    if contract is None:
+        return
+    level, units, criterion_type, expected = contract
+    name = metric["name"]
+    if metric["level"] != level:
+        raise BaselineContractError(
+            f"metric {name!r} in comparison {kind!r} must be recorded at its "
+            f"pinned level {level!r}, not {metric['level']!r}."
+        )
+    if metric.get("units") != units:
+        raise BaselineContractError(
+            f"metric {name!r} in comparison {kind!r} must record its pinned "
+            f"units {units!r}, not {metric.get('units')!r}."
+        )
+    criterion = metric["pass_criterion"]
+    if criterion.get("type") != criterion_type:
+        raise BaselineContractError(
+            f"metric {name!r} in comparison {kind!r} must gate with its pinned "
+            f"{criterion_type!r} criterion, not {criterion.get('type')!r}."
+        )
+    if expected is not _BASELINE_SPECIFIC:
+        actual = criterion.get("expected")
+        # ``type`` distinguishes True from 1 and False from 0 so a boolean gate
+        # cannot be silently satisfied by an integer expectation or vice versa.
+        if type(actual) is not type(expected) or actual != expected:
+            raise BaselineContractError(
+                f"metric {name!r} in comparison {kind!r} must gate on its "
+                f"canonical expectation {expected!r}, not {actual!r}."
+            )
 
 
 def _finite_number(value: object) -> bool:

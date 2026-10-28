@@ -81,11 +81,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "hcipy_mean_window_capture"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "fraction"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -94,11 +114,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "illuminated_sample_count"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "samples"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          }
+                        }
                       }
                     }
                   }
@@ -107,11 +147,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "mask_round_trip_identical"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "boolean"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": true
+                          }
+                        }
                       }
                     }
                   }
@@ -120,11 +184,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "native_mean_window_capture"
+                      },
+                      "level": {
+                        "const": "tight_numerical"
+                      },
+                      "units": {
+                        "const": "fraction"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -151,11 +235,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "astig_0_alignment_defect"
+                      },
+                      "level": {
+                        "const": "tight_numerical"
+                      },
+                      "units": {
+                        "const": "1 - |correlation|"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -164,11 +268,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "astig_0_relative_sign"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "sign"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": 1
+                          }
+                        }
                       }
                     }
                   }
@@ -177,11 +305,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "astig_45_alignment_defect"
+                      },
+                      "level": {
+                        "const": "tight_numerical"
+                      },
+                      "units": {
+                        "const": "1 - |correlation|"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -190,11 +338,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "astig_45_relative_sign"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "sign"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": 1
+                          }
+                        }
                       }
                     }
                   }
@@ -203,11 +375,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "defocus_alignment_defect"
+                      },
+                      "level": {
+                        "const": "tight_numerical"
+                      },
+                      "units": {
+                        "const": "1 - |correlation|"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -216,11 +408,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "defocus_relative_sign"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "sign"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": 1
+                          }
+                        }
                       }
                     }
                   }
@@ -229,11 +445,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "tip_x_alignment_defect"
+                      },
+                      "level": {
+                        "const": "tight_numerical"
+                      },
+                      "units": {
+                        "const": "1 - |correlation|"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -242,11 +478,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "tip_x_relative_sign"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "sign"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": 1
+                          }
+                        }
                       }
                     }
                   }
@@ -255,11 +515,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "tip_y_alignment_defect"
+                      },
+                      "level": {
+                        "const": "tight_numerical"
+                      },
+                      "units": {
+                        "const": "1 - |correlation|"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -268,11 +548,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "tip_y_relative_sign"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "sign"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": 1
+                          }
+                        }
                       }
                     }
                   }
@@ -302,11 +606,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "hcipy_structure_function_lag_ratio"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "ratio"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -315,11 +639,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "hcipy_structure_function_ratio_standard_error"
+                      },
+                      "level": {
+                        "const": "informational"
+                      },
+                      "units": {
+                        "const": "ratio"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "informational"
+                          }
+                        }
                       }
                     }
                   }
@@ -328,11 +672,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "native_structure_function_lag_ratio"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "ratio"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -341,11 +705,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "native_structure_function_ratio_standard_error"
+                      },
+                      "level": {
+                        "const": "informational"
+                      },
+                      "units": {
+                        "const": "ratio"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "informational"
+                          }
+                        }
                       }
                     }
                   }
@@ -354,11 +738,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "rms_ratio_hcipy_over_native"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "ratio"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -367,11 +771,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "rms_ratio_standard_error"
+                      },
+                      "level": {
+                        "const": "informational"
+                      },
+                      "units": {
+                        "const": "ratio"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "informational"
+                          }
+                        }
                       }
                     }
                   }
@@ -398,11 +822,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "hcipy_cross_axis_fraction"
+                      },
+                      "level": {
+                        "const": "tight_numerical"
+                      },
+                      "units": {
+                        "const": "fraction of applied tilt"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -411,11 +855,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "hcipy_tilt_gain"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "measured over applied angular displacement"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -424,11 +888,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "hcipy_x_response_sign"
+                      },
+                      "level": {
+                        "const": "tight_numerical"
+                      },
+                      "units": {
+                        "const": "sign"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": 1
+                          }
+                        }
                       }
                     }
                   }
@@ -437,11 +925,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "native_cross_axis_fraction"
+                      },
+                      "level": {
+                        "const": "tight_numerical"
+                      },
+                      "units": {
+                        "const": "fraction of applied tilt"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -450,11 +958,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "native_tilt_gain"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "measured over applied angular displacement"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -463,11 +991,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "native_x_response_sign"
+                      },
+                      "level": {
+                        "const": "tight_numerical"
+                      },
+                      "units": {
+                        "const": "sign"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": 1
+                          }
+                        }
                       }
                     }
                   }
@@ -476,11 +1028,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "tilt_gain_ratio_hcipy_over_native"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "ratio"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -489,11 +1061,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "y_gain_ratio_hcipy_over_native"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "ratio"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -520,11 +1112,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "centroid_gain_ratio_hcipy_over_native"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "ratio"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -533,11 +1145,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "ee50_ratio_hcipy_over_native"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "ratio"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -546,11 +1178,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "hcipy_ee50_over_diffraction"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "ratio of lambda/d"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -559,11 +1211,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "native_ee50_over_diffraction"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "ratio of lambda/d"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -590,11 +1262,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "actuator_ids_identical"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "boolean"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": true
+                          }
+                        }
                       }
                     }
                   }
@@ -603,11 +1299,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "max_in_pupil_command_surface_abs_diff_m"
+                      },
+                      "level": {
+                        "const": "tight_numerical"
+                      },
+                      "units": {
+                        "const": "m_opd"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -616,11 +1332,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "max_in_pupil_influence_abs_diff"
+                      },
+                      "level": {
+                        "const": "tight_numerical"
+                      },
+                      "units": {
+                        "const": "unit-peak influence"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -647,11 +1383,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "fitting_residual_relative_difference"
+                      },
+                      "level": {
+                        "const": "tight_numerical"
+                      },
+                      "units": {
+                        "const": "relative difference"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -660,11 +1416,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "native_fitting_residual_fraction"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "residual rms / target rms"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -691,11 +1467,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "coordinate_ids_identical"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "boolean"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": true
+                          }
+                        }
                       }
                     }
                   }
@@ -704,11 +1504,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "matrix_shapes_identical"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "boolean"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": true
+                          }
+                        }
                       }
                     }
                   }
@@ -717,11 +1541,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "rank_difference"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "rank"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": 0
+                          }
+                        }
                       }
                     }
                   }
@@ -730,11 +1578,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "row_ids_identical"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "boolean"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": true
+                          }
+                        }
                       }
                     }
                   }
@@ -761,11 +1633,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "max_normalized_sigma_abs_diff"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "normalized sigma"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -774,11 +1666,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "spectrum_length_difference"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "count"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": 0
+                          }
+                        }
                       }
                     }
                   }
@@ -805,11 +1721,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "hcipy_total_flux_error"
+                      },
+                      "level": {
+                        "const": "tight_numerical"
+                      },
+                      "units": {
+                        "const": "flux"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -818,11 +1754,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "native_total_flux_error"
+                      },
+                      "level": {
+                        "const": "tight_numerical"
+                      },
+                      "units": {
+                        "const": "flux"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -849,11 +1805,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "hcipy_strehl"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "Strehl"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -862,11 +1838,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "native_strehl"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "Strehl"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -875,11 +1871,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "strehl_abs_difference"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "Strehl"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "abs_tolerance"
+                          }
+                        }
                       }
                     }
                   }
@@ -906,11 +1922,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "both_loops_consumed_shared_opd_cube"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "boolean"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": true
+                          }
+                        }
                       }
                     }
                   }
@@ -919,11 +1959,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "executed_time_grid_matches_shared_fixture"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "boolean"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": true
+                          }
+                        }
                       }
                     }
                   }
@@ -932,11 +1996,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "hcipy_backend_name"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "identifier"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": "hcipy"
+                          }
+                        }
                       }
                     }
                   }
@@ -945,11 +2033,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "hcipy_correction_effect"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "mean corrected over uncorrected rms"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -958,11 +2066,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "mean_residual_ratio_hcipy_over_native"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "ratio"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -971,11 +2099,35 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "native_backend_name"
+                      },
+                      "level": {
+                        "const": "exact"
+                      },
+                      "units": {
+                        "const": "identifier"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "expected"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "equals"
+                          },
+                          "expected": {
+                            "const": "native"
+                          }
+                        }
                       }
                     }
                   }
@@ -984,11 +2136,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "native_correction_effect"
+                      },
+                      "level": {
+                        "const": "physical_tolerance"
+                      },
+                      "units": {
+                        "const": "mean corrected over uncorrected rms"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "range"
+                          }
+                        }
                       }
                     }
                   }
@@ -1015,11 +2187,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "comparison_peak_traced_memory_mb"
+                      },
+                      "level": {
+                        "const": "informational"
+                      },
+                      "units": {
+                        "const": "mebibytes"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "informational"
+                          }
+                        }
                       }
                     }
                   }
@@ -1028,11 +2220,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "hcipy_psf_propagation_s"
+                      },
+                      "level": {
+                        "const": "informational"
+                      },
+                      "units": {
+                        "const": "seconds"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "informational"
+                          }
+                        }
                       }
                     }
                   }
@@ -1041,11 +2253,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "hcipy_wfs_propagation_s"
+                      },
+                      "level": {
+                        "const": "informational"
+                      },
+                      "units": {
+                        "const": "seconds"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "informational"
+                          }
+                        }
                       }
                     }
                   }
@@ -1054,11 +2286,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "native_psf_propagation_s"
+                      },
+                      "level": {
+                        "const": "informational"
+                      },
+                      "units": {
+                        "const": "seconds"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "informational"
+                          }
+                        }
                       }
                     }
                   }
@@ -1067,11 +2319,31 @@
                   "contains": {
                     "type": "object",
                     "required": [
-                      "name"
+                      "name",
+                      "level",
+                      "units",
+                      "pass_criterion"
                     ],
                     "properties": {
                       "name": {
                         "const": "native_wfs_propagation_s"
+                      },
+                      "level": {
+                        "const": "informational"
+                      },
+                      "units": {
+                        "const": "seconds"
+                      },
+                      "pass_criterion": {
+                        "type": "object",
+                        "required": [
+                          "type"
+                        ],
+                        "properties": {
+                          "type": {
+                            "const": "informational"
+                          }
+                        }
                       }
                     }
                   }
@@ -1172,7 +2444,7 @@
           "$ref": "#/$defs/nonempty_string"
         },
         "dependency_constraint_sha256": {
-          "$ref": "#/$defs/nonempty_string"
+          "$ref": "#/$defs/content_hash"
         },
         "hcipy_version": {
           "$ref": "#/$defs/nonempty_string"
@@ -1243,6 +2515,16 @@
         },
         "source_tree_clean": {
           "type": "boolean"
+        },
+        "source_patch_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/content_hash"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       }
     },

@@ -1,21 +1,21 @@
 {
   "schema_name": "shwfs_ao.system_profile",
-  "schema_version": 1,
-  "profile_name": "fast_2m_detector",
-  "profile_version": 1,
-  "baseline_rationale": "Canonical version of the frozen fast 2 m detector-level numerical scale: 52 pupil pixels, 5 lenslets, 5 actuators across, and 12 loop frames. Observing conditions are held equal to the portfolio and research v1 profiles.",
+  "schema_version": 2,
+  "profile_name": "research_2m_detector",
+  "profile_version": 2,
+  "baseline_rationale": "Canonical version of the research 2 m detector-level numerical scale: 96 pupil pixels, 9 lenslets, 9 actuators across, and 30 loop frames. It changes numerical scale only relative to fast v1.",
   "provenance": {
     "schema_name": "shwfs_ao.provenance",
     "schema_version": 2,
     "source_class": "synthetic_assumed",
-    "note": "Reviewed AO-REF-011 fast detector-level SCAO system profile; synthetic engineering configuration, not measured observatory telemetry.",
-    "source_id": "shwfs_ao.system_profile.fast_2m_detector.v1",
+    "note": "Reviewed AO-REF-011 research detector-level SCAO system profile; synthetic engineering configuration, not measured observatory telemetry.",
+    "source_id": "shwfs_ao.system_profile.research_2m_detector.v2",
     "url": null,
     "access_time": null,
     "fallback_used": false,
     "references": [
       "AO-REF-011",
-      "IntegrationConfig.from_mode('fast')",
+      "IntegrationConfig.from_mode('research')",
       "notebooks/legacy/original_notebooks/11_full_detector_level_2m_scao_demo.ipynb"
     ]
   },
@@ -24,17 +24,24 @@
     "wfs_model": "detector_level",
     "atmosphere_model": "native_frozen_flow",
     "telescope_diameter_m": 2.0,
-    "pupil_pixels": 52,
-    "lenslets_across": 5,
-    "actuators_across": 5,
-    "wfs_wavelength_m": 7e-7,
-    "science_wavelengths_m": [1.25e-6, 1.65e-6, 2.2e-6],
+    "pupil_pixels": 96,
+    "lenslets_across": 9,
+    "actuators_across": 9,
+    "wfs_wavelength_m": 7e-07,
+    "science_wavelengths_m": [
+      1.25e-06,
+      1.65e-06,
+      2.2e-06
+    ],
     "atmosphere": {
       "r0_m": 0.1263371938263465,
-      "r0_reference_wavelength_m": 5e-7,
+      "r0_reference_wavelength_m": 5e-07,
       "outer_scale_m": 25.0,
-      "wind_m_per_s": [10.0, 0.0],
-      "target_rms_opd_m": 2.6e-7,
+      "wind_m_per_s": [
+        10.0,
+        0.0
+      ],
+      "target_rms_opd_m": 2.6e-07,
       "normalize_rms": true
     },
     "detector": {
@@ -53,7 +60,7 @@
     "wfs": {
       "min_fill_fraction": 0.35,
       "pad_factor": 3,
-      "detector_window_px": 18,
+      "detector_window_px": 22,
       "centroid_estimator": "center_of_gravity",
       "threshold_fraction": 0.0,
       "subtract_minimum": false,
@@ -62,12 +69,13 @@
       "max_centroid_sigma_px": 0.5,
       "max_window_clipping_fraction": 0.15,
       "central_obstruction_ratio": 0.0,
-      "spider_width_m": 0.0
+      "spider_width_m": 0.0,
+      "photon_allocation": "throughput_scaled"
     },
     "dm": {
       "influence_model": "gaussian",
       "coupling_width_pitch": 0.4,
-      "stroke_limit_opd_m": 1e-6,
+      "stroke_limit_opd_m": 1e-06,
       "include_edge_actuators": true,
       "actuator_margin_fraction": 0.0,
       "dead_actuator_indices": [],
@@ -78,14 +86,14 @@
       "source": "build",
       "method": "central",
       "probe_kind": "dm_actuator",
-      "amplitude_m": 1e-8,
+      "amplitude_m": 1e-08,
       "include_noise": false,
       "repeats": 1,
       "resource_name": null
     },
     "reconstructor": {
       "kind": "tsvd",
-      "rcond": 1e-8,
+      "rcond": 1e-08,
       "alpha": null,
       "min_valid_fraction": 1.0,
       "min_rank": 1,
@@ -96,7 +104,7 @@
       "mapping_resource": null
     },
     "controller": {
-      "n_steps": 12,
+      "n_steps": 30,
       "gain": 0.32,
       "leak": 0.02,
       "latency_frames": 0,

@@ -156,6 +156,7 @@ class ScaoSystem:
     science_propagator: SciencePropagator
     component_hashes: Mapping[str, str]
     config_hash: str
+    source_config: SystemConfig
 
     def __post_init__(self) -> None:
         if not isinstance(self.component_hashes, Mapping):
@@ -173,6 +174,16 @@ class ScaoSystem:
             normalized[key] = value
         if not isinstance(self.config_hash, str) or not self.config_hash:
             raise ScaoConstructionError("config_hash must be a non-empty string.")
+        # Bind the recorded config identity to a concrete, inspectable source
+        # configuration: a system can no longer carry a config_hash that belongs
+        # to a different configuration than the one it stores as evidence.
+        if not isinstance(self.source_config, SystemConfig):
+            raise ScaoConstructionError("source_config must be a SystemConfig.")
+        if self.config_hash != self.source_config.config_hash:
+            raise ScaoConstructionError(
+                "config_hash must equal source_config.config_hash so the recorded "
+                "identity is bound to the configuration that built the components."
+            )
         # The recorded identity must be the identity of the components this
         # system actually holds.  Recomputing here makes the frozen dataclass
         # self-validating: dataclasses.replace() with a swapped component and
@@ -393,6 +404,7 @@ def build_scao_system(
         science_propagator=science_propagator,
         component_hashes=component_hashes,
         config_hash=config.config_hash,
+        source_config=config,
     )
 
 
@@ -422,6 +434,8 @@ def run_closed_loop(
         raise ScaoConstructionError(
             "system.config_hash must match the supplied serialized config."
         )
+    if system is not None:
+        _verify_supplied_system(config, system)
     return _run_component_loop(
         _loop_config(config),
         random_streams=resolved.random_streams,
@@ -435,6 +449,45 @@ def run_closed_loop(
         include_noise=config.controller.include_noise,
         realization_index=realization_index,
     )
+
+
+def _verify_supplied_system(config: SystemConfig, system: ScaoSystem) -> None:
+    """Reject a supplied system whose components do not match its own source.
+
+    ``ScaoSystem.__post_init__`` already binds ``component_hashes`` to the live
+    components and ``config_hash`` to ``source_config``.  The remaining trust
+    gap is that a caller can construct a system whose components were replaced
+    with a different but internally self-consistent set after build time (for
+    example a 90 nm atmosphere carrying its own valid component hash while the
+    retained ``config_hash`` still names a 30 nm profile).  Rebuilding from the
+    system's own recorded ``source_config`` and requiring identical component
+    identities closes it: results can never be labelled with a configuration
+    that did not build the components that ran.
+    """
+
+    if system.source_config != config:
+        raise ScaoConstructionError(
+            "system.source_config must equal the supplied configuration."
+        )
+    reference = build_scao_system(
+        system.source_config,
+        interaction_matrix=(
+            system.interaction_matrix
+            if system.source_config.calibration.source == "supplied"
+            else None
+        ),
+    )
+    if dict(reference.component_hashes) != dict(system.component_hashes):
+        drifted = sorted(
+            key
+            for key in set(reference.component_hashes) | set(system.component_hashes)
+            if reference.component_hashes.get(key)
+            != system.component_hashes.get(key)
+        )
+        raise ScaoConstructionError(
+            "supplied system component identities do not match the components its "
+            f"source configuration rebuilds; mismatched keys: {drifted}."
+        )
 
 
 def _factory_for(name: str) -> ScaoBackendComponentFactory:
@@ -822,12 +875,10 @@ def _expected_component_hashes(
             {
                 "root_seed": random_streams.root_seed,
                 "derivation_scheme_id": random_streams.derivation_scheme_id,
-                # The registered-domain tuple is part of the concrete stream
-                # provider's identity; the minimal protocol does not surface
-                # it, and every SCAO system is built on NamedRandomStreams.
-                "registered_domains": cast(
-                    "NamedRandomStreams", random_streams
-                ).registered_domains,
+                # The registered-domain tuple is part of the stream provider's
+                # identity; the RandomStreams protocol now surfaces it, so any
+                # conforming provider records the same identity.
+                "registered_domains": random_streams.registered_domains,
             },
         ),
         "pupil_geometry": interaction_matrix.geometry_hash,

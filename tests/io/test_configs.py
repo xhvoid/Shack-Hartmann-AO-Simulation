@@ -34,11 +34,11 @@ from shwfs_ao.io.configs import (
 
 
 EXPECTED_PROFILES = (
-    ("fast_2m_detector", 1),
-    ("portfolio_2m_detector", 1),
-    ("research_2m_detector", 1),
-    ("high_order_10m_geometric", 1),
-    ("high_order_10m_hcipy", 1),
+    ("fast_2m_detector", 2),
+    ("portfolio_2m_detector", 2),
+    ("research_2m_detector", 2),
+    ("high_order_10m_geometric", 2),
+    ("high_order_10m_hcipy", 2),
 )
 
 
@@ -64,15 +64,17 @@ def test_required_profiles_are_explicit_versions_and_load_outside_checkout(
 def test_profile_loader_has_no_latest_alias() -> None:
     with pytest.raises(TypeError):
         load_system_profile("fast_2m_detector")  # type: ignore[call-arg]
+    # The retired v1 and a never-published v3 are both unknown: there is no
+    # implicit "latest" and no silent fall-through to an adjacent version.
     with pytest.raises(SystemConfigError, match="unknown system profile"):
-        load_system_profile("fast_2m_detector", 2)
+        load_system_profile("fast_2m_detector", 1)
     with pytest.raises(SystemConfigError, match="unknown system profile"):
-        load_system_profile("high_order_10m_hcipy", 2)
+        load_system_profile("high_order_10m_hcipy", 3)
 
 
 def test_profile_round_trip_is_exact_and_deterministic() -> None:
-    first = load_system_profile("fast_2m_detector", 1)
-    second = load_system_profile("fast_2m_detector", 1)
+    first = load_system_profile("fast_2m_detector", 2)
+    second = load_system_profile("fast_2m_detector", 2)
     record = system_config_to_mapping(first)
 
     assert record["schema_name"] == PROFILE_SCHEMA_NAME
@@ -85,10 +87,9 @@ def test_profile_round_trip_is_exact_and_deterministic() -> None:
         first.pupil_pixels = 64  # type: ignore[misc]
 
 
-def test_wfs_photon_allocation_is_serialized_defaulted_and_hashed() -> None:
-    profile = load_system_profile("fast_2m_detector", 1)
-    # Compatibility default: profiles written before the field existed load as
-    # the historical throughput-scaled allocation policy.
+def test_wfs_photon_allocation_is_required_serialized_and_hashed() -> None:
+    profile = load_system_profile("fast_2m_detector", 2)
+    # The reviewed v2 profiles record the allocation policy explicitly.
     assert profile.wfs.photon_allocation == "throughput_scaled"
 
     # The choice is a serialized, round-tripping part of the WFS block.
@@ -96,11 +97,12 @@ def test_wfs_photon_allocation_is_serialized_defaulted_and_hashed() -> None:
     assert record["config"]["wfs"]["photon_allocation"] == "throughput_scaled"
     assert system_config_from_mapping(record) == profile
 
-    # A legacy record that predates the field still loads, defaulting the value
-    # rather than failing the strict field check.
-    legacy = copy.deepcopy(record)
-    del legacy["config"]["wfs"]["photon_allocation"]
-    assert system_config_from_mapping(legacy) == profile
+    # Schema v2 requires the field: a record that omits it is rejected rather
+    # than silently defaulted, so a profile's identity is never ambiguous.
+    missing = copy.deepcopy(record)
+    del missing["config"]["wfs"]["photon_allocation"]
+    with pytest.raises(SystemConfigError, match="wfs"):
+        system_config_from_mapping(missing)
 
     # Switching the policy is a real configuration change: it round-trips and
     # moves the WFS component hash (which keys the seeded RNG scope).
@@ -120,7 +122,7 @@ def test_wfs_photon_allocation_is_serialized_defaulted_and_hashed() -> None:
 
 
 def test_2m_profiles_change_scale_without_changing_observing_conditions() -> None:
-    profiles = [load_system_profile(name, 1) for name, _ in EXPECTED_PROFILES[:3]]
+    profiles = [load_system_profile(name, version) for name, version in EXPECTED_PROFILES[:3]]
     assert [(p.pupil_pixels, p.lenslets_across, p.actuators_across) for p in profiles] == [
         (52, 5, 5),
         (72, 7, 7),
@@ -135,7 +137,7 @@ def test_2m_profiles_change_scale_without_changing_observing_conditions() -> Non
 
 
 def test_high_order_profile_matches_notebook_09_extreme_mode_in_si_units() -> None:
-    config = load_system_profile("high_order_10m_geometric", 1)
+    config = load_system_profile("high_order_10m_geometric", 2)
     assert config.backend == "native"
     assert config.wfs_model == "geometric"
     assert config.telescope_diameter_m == 10.0
@@ -163,8 +165,8 @@ def test_high_order_profile_matches_notebook_09_extreme_mode_in_si_units() -> No
 
 
 def test_high_order_hcipy_profile_pairs_the_geometric_scale_through_hcipy() -> None:
-    config = load_system_profile("high_order_10m_hcipy", 1)
-    geometric = load_system_profile("high_order_10m_geometric", 1)
+    config = load_system_profile("high_order_10m_hcipy", 2)
+    geometric = load_system_profile("high_order_10m_geometric", 2)
 
     assert config.backend == "hcipy"
     assert config.wfs_model == "detector_level"
@@ -243,7 +245,7 @@ def test_high_order_hcipy_profile_pairs_the_geometric_scale_through_hcipy() -> N
 )
 def test_mapping_parser_rejects_unknown_or_inconsistent_records(mutation, message) -> None:
     record = copy.deepcopy(
-        system_config_to_mapping(load_system_profile("fast_2m_detector", 1))
+        system_config_to_mapping(load_system_profile("fast_2m_detector", 2))
     )
     mutation(record)
     with pytest.raises(SystemConfigError, match=message):
@@ -251,27 +253,27 @@ def test_mapping_parser_rejects_unknown_or_inconsistent_records(mutation, messag
 
 
 def test_profile_identity_and_numerical_content_both_affect_config_hash() -> None:
-    original = load_system_profile("fast_2m_detector", 1)
+    original = load_system_profile("fast_2m_detector", 2)
     changed = replace(original, pupil_pixels=54)
     assert changed.config_hash != original.config_hash
 
     source = original.profile.provenance
-    v2_source = replace(
+    v3_source = replace(
         source,
-        source_id="shwfs_ao.system_profile.fast_2m_detector.v2",
+        source_id="shwfs_ao.system_profile.fast_2m_detector.v3",
     )
-    v2_profile = replace(
+    v3_profile = replace(
         original.profile,
-        profile_version=2,
-        provenance=v2_source,
-        baseline_rationale="Reviewed numerical change for a hypothetical v2.",
+        profile_version=3,
+        provenance=v3_source,
+        baseline_rationale="Reviewed numerical change for a hypothetical v3.",
     )
-    versioned = replace(original, profile=v2_profile)
+    versioned = replace(original, profile=v3_profile)
     assert versioned.config_hash != original.config_hash
 
 
 def test_nested_public_configuration_types_and_source_policies() -> None:
-    config = load_system_profile("fast_2m_detector", 1)
+    config = load_system_profile("fast_2m_detector", 2)
     assert isinstance(config.profile, ProfileProvenance)
     assert isinstance(config.atmosphere, AtmosphereConfig)
     assert isinstance(config.detector, DetectorSystemConfig)
@@ -291,7 +293,7 @@ def test_nested_public_configuration_types_and_source_policies() -> None:
 
 
 def test_static_model_has_no_implicit_file_or_generated_profile_lookup() -> None:
-    config = load_system_profile("fast_2m_detector", 1)
+    config = load_system_profile("fast_2m_detector", 2)
     static = replace(config, atmosphere_model="static")
     record = system_config_to_mapping(static)
     atmosphere = record["config"]["atmosphere"]
