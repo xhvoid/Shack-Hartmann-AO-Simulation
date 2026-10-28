@@ -1,0 +1,20 @@
+{
+  "source": "/tmp/claude-0/-home-user-Shack-Hartmann-AO-Simulation/f1f3bff0-5382-5b19-9652-6c00a445942e/scratchpad/round2/ci_m7_alpha0p1/trace.npz",
+  "configuration": "ci derivation of scripts/detector_level_convergence_study.py (eso_scao_smoke_5m_software@2 geometry with det_emccd_12m_medium_derived@3 physics), m_AB 7, DIAGNOSTIC reconstructor alpha 0.1",
+  "root_seed": 71,
+  "kick_frames": [
+    95,
+    96,
+    97,
+    98,
+    99
+  ],
+  "kick_amplitude_px_peak": 0.08962421464138132,
+  "mode_eigenvalue_of_RM": [
+    0.11958644002508863,
+    0.0
+  ],
+  "window_mean_increase_over_source_mean": 0.24999999999999997,
+  "first_block_increase_over_source_mean": 3.028346755548492,
+  "operators_probed": 2
+}

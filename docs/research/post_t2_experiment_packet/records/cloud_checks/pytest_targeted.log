@@ -1,0 +1,63 @@
+.........................s.s............................................ [ 22%]
+........................................................................ [ 44%]
+........................................................................ [ 67%]
+..................F..................................................... [ 89%]
+.................................                                        [100%]
+=================================== FAILURES ===================================
+___________ test_the_bytecode_cache_is_checked_where_python_reads_it ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_the_bytecode_cache_is_che0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f22268f1fd0>
+
+    def test_the_bytecode_cache_is_checked_where_python_reads_it(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Review RV-07, RV-08: a symlinked __pycache__, a PYTHONPYCACHEPREFIX cache,
+        # --check-hash-based-pycs never, and an unreadable cache.
+        _, package = tracked_package(tmp_path)
+        tracked = REAL_CODE_IDENTITY(package)
+        source = package / "__init__.py"
+    
+        def cached(mode: py_compile.PycInvalidationMode) -> Path:
+            cache = Path(importlib.util.cache_from_source(str(source)))
+            py_compile.compile(str(source), cfile=str(cache), invalidation_mode=mode, doraise=True)
+            return cache
+    
+        def unknown() -> bool:
+            identity = REAL_CODE_IDENTITY(package)
+            return {key: identity[key] for key in UNKNOWN_CODE} == UNKNOWN_CODE
+    
+        elsewhere = tmp_path / "cache_elsewhere"
+        elsewhere.mkdir()
+        (package / "__pycache__").symlink_to(elsewhere, target_is_directory=True)
+        cached(py_compile.PycInvalidationMode.UNCHECKED_HASH)
+        assert unknown()
+        (package / "__pycache__").unlink()
+        monkeypatch.setattr(sys, "pycache_prefix", str(tmp_path / "prefix"))
+        assert cached(py_compile.PycInvalidationMode.UNCHECKED_HASH).is_relative_to(tmp_path / "prefix")
+        assert unknown()
+        cached(py_compile.PycInvalidationMode.CHECKED_HASH)
+        assert REAL_CODE_IDENTITY(package) == tracked
+        monkeypatch.setattr(runner._imp, "check_hash_based_pycs", "never")
+        assert unknown()  # no hash-based cache is checked then
+        monkeypatch.setattr(runner._imp, "check_hash_based_pycs", "default")
+        cache = cached(py_compile.PycInvalidationMode.UNCHECKED_HASH)
+        cache.chmod(0)
+        try:
+>           assert REAL_CODE_IDENTITY(package) == tracked  # Python cannot read it either and compiles the source
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: assert {'package_dir...d': None, ...} == {'package_dir...1e377b4', ...}
+E             
+E             Omitting 2 identical items, use -vv to show
+E             Differing items:
+E             {'git_head': None} != {'git_head': '307a70273fa349af537b4b462f4f6de6c1e377b4'}
+E             {'package_sha256': None} != {'package_sha256': 'c11d6ea57479c9c7c88033c8a9b7772f1be1b8978ecacbce08868945ffecf2c0'}
+E             {'source_changes_sha256': None} != {'source_changes_sha256': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}
+E             Use -v to get more diff
+
+tests/experiments/test_detector_evidence_runner.py:987: AssertionError
+=========================== short test summary info ============================
+FAILED tests/experiments/test_detector_evidence_runner.py::test_the_bytecode_cache_is_checked_where_python_reads_it
+1 failed, 318 passed, 2 skipped, 1 deselected in 59.71s
+
+real	1m0.221s
+user	1m5.879s
+sys	0m2.600s

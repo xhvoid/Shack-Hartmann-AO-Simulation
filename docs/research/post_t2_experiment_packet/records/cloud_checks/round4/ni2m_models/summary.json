@@ -1,0 +1,1991 @@
+{
+ "rows": [
+  {
+   "label": "m5",
+   "seed": 61,
+   "noisy_match": 0.9933333333333333,
+   "twin_match": 0.9933333333333333,
+   "distinct_all": 2,
+   "validated": true,
+   "arrays": 64,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.1528205128205128,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.09384615384615387,
+     "operating_expectation": 0.09384615384615387
+    },
+    "frames_with_saturation": 41,
+    "unmodelled_frames": 41,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.00019005666573414107,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 0.02441563984208325,
+   "inherited": 0.02441563984208325,
+   "last_unmodelled": 49,
+   "ratio": 0.8784792944445294,
+   "by": {
+    "effective": 0.8784792944445294,
+    "available": 0.8799385909834905,
+    "strict": 0.8555503026016654
+   },
+   "within": true,
+   "radius": 0.7225795558226942,
+   "dev": 1.1102230246251565e-15
+  },
+  {
+   "label": "m5",
+   "seed": 62,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.014871794871794873,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.09538461538461539,
+     "operating_expectation": 0.09384615384615386
+    },
+    "frames_with_saturation": 30,
+    "unmodelled_frames": 30,
+    "last_unmodelled_frame": 34,
+    "quiet": false
+   },
+   "classification": "operator-consistent",
+   "consistent": true,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 1.3473009078060622e-06,
+   "inherited": 0.02441563984208332,
+   "last_unmodelled": 34,
+   "ratio": 1.0599066021908696,
+   "by": {
+    "effective": 1.0599066021908696,
+    "available": 1.0599066021908696,
+    "strict": 1.0599066021908696
+   },
+   "within": true,
+   "radius": 0.7225795558226937,
+   "dev": 8.881784197001252e-16
+  },
+  {
+   "label": "m5",
+   "seed": 63,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.1317948717948718,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.11230769230769233,
+     "operating_expectation": 0.11076923076923079
+    },
+    "frames_with_saturation": 42,
+    "unmodelled_frames": 42,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 0.024415639842083472,
+   "inherited": 0.024415639842083472,
+   "last_unmodelled": 49,
+   "ratio": 0.839508245086488,
+   "by": {
+    "effective": 0.839508245086488,
+    "available": 0.839508245086488,
+    "strict": 0.839508245086488
+   },
+   "within": false,
+   "radius": 0.722579555822694,
+   "dev": 1.1815003472169397e-15
+  },
+  {
+   "label": "m5",
+   "seed": 64,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.02512820512820513,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.013846153846153847,
+     "operating_expectation": 0.013846153846153847
+    },
+    "frames_with_saturation": 10,
+    "unmodelled_frames": 10,
+    "last_unmodelled_frame": 18,
+    "quiet": false
+   },
+   "classification": "operator-consistent",
+   "consistent": true,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 7.587806200078603e-11,
+   "inherited": 0.024415639842083624,
+   "last_unmodelled": 18,
+   "ratio": 0.9076985052170718,
+   "by": {
+    "effective": 0.9076985052170718,
+    "available": 0.9076985052170718,
+    "strict": 0.9076985052170718
+   },
+   "within": true,
+   "radius": 0.7225795558226946,
+   "dev": 8.881784197001252e-16
+  },
+  {
+   "label": "m5",
+   "seed": 65,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.03897435897435898,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.04461538461538462,
+     "operating_expectation": 0.04461538461538462
+    },
+    "frames_with_saturation": 29,
+    "unmodelled_frames": 29,
+    "last_unmodelled_frame": 37,
+    "quiet": false
+   },
+   "classification": "operator-consistent",
+   "consistent": true,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 1.7652071599017788e-05,
+   "inherited": 0.024415639842082913,
+   "last_unmodelled": 37,
+   "ratio": 1.010217630379261,
+   "by": {
+    "effective": 1.010217630379261,
+    "available": 1.010217630379261,
+    "strict": 1.010217630379261
+   },
+   "within": true,
+   "radius": 0.722579555822694,
+   "dev": 2.9864453615407687e-15
+  },
+  {
+   "label": "m5",
+   "seed": 66,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.09743589743589744,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.13692307692307695,
+     "operating_expectation": 0.1384615384615385
+    },
+    "frames_with_saturation": 46,
+    "unmodelled_frames": 46,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 0.024415639842083087,
+   "inherited": 0.024415639842083087,
+   "last_unmodelled": 49,
+   "ratio": 0.9334684252289881,
+   "by": {
+    "effective": 0.9334684252289881,
+    "available": 0.9334684252289881,
+    "strict": 0.9334684252289881
+   },
+   "within": false,
+   "radius": 0.7225795558226934,
+   "dev": 8.881784197001252e-16
+  },
+  {
+   "label": "m5",
+   "seed": 67,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.060512820512820524,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.049230769230769245,
+     "operating_expectation": 0.049230769230769245
+    },
+    "frames_with_saturation": 33,
+    "unmodelled_frames": 33,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 0.024415639842083316,
+   "inherited": 0.024415639842083316,
+   "last_unmodelled": 49,
+   "ratio": 0.9594473614099639,
+   "by": {
+    "effective": 0.9594473614099639,
+    "available": 0.9594473614099639,
+    "strict": 0.9594473614099639
+   },
+   "within": true,
+   "radius": 0.7225795558226938,
+   "dev": 1.5543122344752192e-15
+  },
+  {
+   "label": "m5",
+   "seed": 68,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.07999999999999997,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.0,
+     "operating_expectation": 0.0
+    },
+    "frames_with_saturation": 0,
+    "unmodelled_frames": 0,
+    "last_unmodelled_frame": null,
+    "quiet": true
+   },
+   "classification": "operator-consistent",
+   "consistent": true,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": null,
+   "inherited": 0.02441563984208331,
+   "last_unmodelled": null,
+   "ratio": 0.8981996484819749,
+   "by": {
+    "effective": 0.8981996484819749,
+    "available": 0.8981996484819749,
+    "strict": 0.8981996484819749
+   },
+   "within": false,
+   "radius": 0.7225795558226937,
+   "dev": 9.992007221626409e-16
+  },
+  {
+   "label": "m6",
+   "seed": 61,
+   "noisy_match": 0.9933333333333333,
+   "twin_match": 0.9933333333333333,
+   "distinct_all": 2,
+   "validated": true,
+   "arrays": 64,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.15384615384615383,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.09230769230769234,
+     "operating_expectation": 0.09384615384615387
+    },
+    "frames_with_saturation": 41,
+    "unmodelled_frames": 41,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.00013941937520497134,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 0.024415639842083187,
+   "inherited": 0.024415639842083187,
+   "last_unmodelled": 49,
+   "ratio": 0.848447180106029,
+   "by": {
+    "effective": 0.848447180106029,
+    "available": 0.8500962814163637,
+    "strict": 0.8327893565590944
+   },
+   "within": true,
+   "radius": 0.7225795558226942,
+   "dev": 8.088986447382444e-16
+  },
+  {
+   "label": "m6",
+   "seed": 62,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.01641025641025641,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.09384615384615386,
+     "operating_expectation": 0.09384615384615386
+    },
+    "frames_with_saturation": 30,
+    "unmodelled_frames": 30,
+    "last_unmodelled_frame": 34,
+    "quiet": false
+   },
+   "classification": "operator-consistent",
+   "consistent": true,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 1.3473009074101742e-06,
+   "inherited": 0.024415639842082934,
+   "last_unmodelled": 34,
+   "ratio": 0.9178202128453652,
+   "by": {
+    "effective": 0.9178202128453652,
+    "available": 0.9178202128453652,
+    "strict": 0.9178202128453652
+   },
+   "within": true,
+   "radius": 0.7225795558226938,
+   "dev": 1.1102230246251565e-15
+  },
+  {
+   "label": "m6",
+   "seed": 63,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.13076923076923075,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.11230769230769232,
+     "operating_expectation": 0.11076923076923079
+    },
+    "frames_with_saturation": 42,
+    "unmodelled_frames": 42,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 0.024415639842083392,
+   "inherited": 0.024415639842083392,
+   "last_unmodelled": 49,
+   "ratio": 0.8082379070526714,
+   "by": {
+    "effective": 0.8082379070526714,
+    "available": 0.8082379070526714,
+    "strict": 0.8082379070526714
+   },
+   "within": false,
+   "radius": 0.722579555822694,
+   "dev": 1.0552258686145884e-15
+  },
+  {
+   "label": "m6",
+   "seed": 64,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.02461538461538462,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.012307692307692308,
+     "operating_expectation": 0.013846153846153847
+    },
+    "frames_with_saturation": 9,
+    "unmodelled_frames": 9,
+    "last_unmodelled_frame": 18,
+    "quiet": false
+   },
+   "classification": "operator-consistent",
+   "consistent": true,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 7.587758738006793e-11,
+   "inherited": 0.02441563984208294,
+   "last_unmodelled": 18,
+   "ratio": 1.0408225549314123,
+   "by": {
+    "effective": 1.0408225549314123,
+    "available": 1.0408225549314123,
+    "strict": 1.0408225549314123
+   },
+   "within": true,
+   "radius": 0.7225795558226935,
+   "dev": 8.881784197001252e-16
+  },
+  {
+   "label": "m6",
+   "seed": 65,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.038461538461538464,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.046153846153846156,
+     "operating_expectation": 0.04461538461538462
+    },
+    "frames_with_saturation": 30,
+    "unmodelled_frames": 30,
+    "last_unmodelled_frame": 37,
+    "quiet": false
+   },
+   "classification": "operator-consistent",
+   "consistent": true,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 1.765207159936558e-05,
+   "inherited": 0.024415639842082983,
+   "last_unmodelled": 37,
+   "ratio": 0.9602783818637932,
+   "by": {
+    "effective": 0.9602783818637932,
+    "available": 0.9602783818637932,
+    "strict": 0.9602783818637932
+   },
+   "within": true,
+   "radius": 0.7225795558226943,
+   "dev": 3.0957289600071614e-15
+  },
+  {
+   "label": "m6",
+   "seed": 66,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.09846153846153846,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.1384615384615385,
+     "operating_expectation": 0.1384615384615385
+    },
+    "frames_with_saturation": 46,
+    "unmodelled_frames": 46,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 0.024415639842083624,
+   "inherited": 0.024415639842083624,
+   "last_unmodelled": 49,
+   "ratio": 0.7806563619827568,
+   "by": {
+    "effective": 0.7806563619827568,
+    "available": 0.7806563619827568,
+    "strict": 0.7806563619827568
+   },
+   "within": false,
+   "radius": 0.7225795558226938,
+   "dev": 8.881784197001252e-16
+  },
+  {
+   "label": "m6",
+   "seed": 67,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.05948717948717949,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.049230769230769245,
+     "operating_expectation": 0.049230769230769245
+    },
+    "frames_with_saturation": 33,
+    "unmodelled_frames": 33,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 0.024415639842083305,
+   "inherited": 0.024415639842083305,
+   "last_unmodelled": 49,
+   "ratio": 0.8217138850817401,
+   "by": {
+    "effective": 0.8217138850817401,
+    "available": 0.8217138850817401,
+    "strict": 0.8217138850817401
+   },
+   "within": false,
+   "radius": 0.7225795558226937,
+   "dev": 1.2212453270876722e-15
+  },
+  {
+   "label": "m6",
+   "seed": 68,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.07948717948717947,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.0,
+     "operating_expectation": 0.0
+    },
+    "frames_with_saturation": 0,
+    "unmodelled_frames": 0,
+    "last_unmodelled_frame": null,
+    "quiet": true
+   },
+   "classification": "operator-consistent",
+   "consistent": true,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": null,
+   "inherited": 0.024415639842083,
+   "last_unmodelled": null,
+   "ratio": 0.9580265941146059,
+   "by": {
+    "effective": 0.9580265941146059,
+    "available": 0.9580265941146059,
+    "strict": 0.9580265941146059
+   },
+   "within": true,
+   "radius": 0.7225795558226937,
+   "dev": 1.9984014443252818e-15
+  },
+  {
+   "label": "m7",
+   "seed": 61,
+   "noisy_match": 0.9933333333333333,
+   "twin_match": 0.9933333333333333,
+   "distinct_all": 2,
+   "validated": true,
+   "arrays": 64,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.1528205128205128,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.09384615384615387,
+     "operating_expectation": 0.09384615384615387
+    },
+    "frames_with_saturation": 41,
+    "unmodelled_frames": 41,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.00014455385901478046,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 0.024415639842083378,
+   "inherited": 0.024415639842083378,
+   "last_unmodelled": 49,
+   "ratio": 0.8094440729469778,
+   "by": {
+    "effective": 0.8094440729469778,
+    "available": 0.8069953546677041,
+    "strict": 0.7898054675857392
+   },
+   "within": false,
+   "radius": 0.7225795558226953,
+   "dev": 1.2212453270876722e-15
+  },
+  {
+   "label": "m7",
+   "seed": 62,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.0158974358974359,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.0953846153846154,
+     "operating_expectation": 0.09384615384615386
+    },
+    "frames_with_saturation": 30,
+    "unmodelled_frames": 30,
+    "last_unmodelled_frame": 34,
+    "quiet": false
+   },
+   "classification": "operator-consistent",
+   "consistent": true,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 1.347300907501806e-06,
+   "inherited": 0.024415639842083774,
+   "last_unmodelled": 34,
+   "ratio": 0.8918358271911618,
+   "by": {
+    "effective": 0.8918358271911618,
+    "available": 0.8918358271911618,
+    "strict": 0.8918358271911618
+   },
+   "within": false,
+   "radius": 0.7225795558226934,
+   "dev": 1.1102230246251565e-15
+  },
+  {
+   "label": "m7",
+   "seed": 63,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.13128205128205125,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.11384615384615387,
+     "operating_expectation": 0.11076923076923079
+    },
+    "frames_with_saturation": 42,
+    "unmodelled_frames": 42,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 0.024415639842083406,
+   "inherited": 0.024415639842083406,
+   "last_unmodelled": 49,
+   "ratio": 0.7990753245082156,
+   "by": {
+    "effective": 0.7990753245082156,
+    "available": 0.7990753245082156,
+    "strict": 0.7990753245082156
+   },
+   "within": false,
+   "radius": 0.7225795558226937,
+   "dev": 9.43485069133432e-16
+  },
+  {
+   "label": "m7",
+   "seed": 64,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.025128205128205135,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.009230769230769232,
+     "operating_expectation": 0.013846153846153847
+    },
+    "frames_with_saturation": 9,
+    "unmodelled_frames": 9,
+    "last_unmodelled_frame": 18,
+    "quiet": false
+   },
+   "classification": "operator-consistent",
+   "consistent": true,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 7.587770921274905e-11,
+   "inherited": 0.0244156398420832,
+   "last_unmodelled": 18,
+   "ratio": 0.9579899724155015,
+   "by": {
+    "effective": 0.9579899724155015,
+    "available": 0.9579899724155015,
+    "strict": 0.9579899724155015
+   },
+   "within": true,
+   "radius": 0.7225795558226941,
+   "dev": 6.661338147750939e-16
+  },
+  {
+   "label": "m7",
+   "seed": 65,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.038974358974358976,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.04461538461538462,
+     "operating_expectation": 0.04461538461538462
+    },
+    "frames_with_saturation": 30,
+    "unmodelled_frames": 30,
+    "last_unmodelled_frame": 37,
+    "quiet": false
+   },
+   "classification": "operator-consistent",
+   "consistent": true,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 1.7652071599476547e-05,
+   "inherited": 0.024415639842083364,
+   "last_unmodelled": 37,
+   "ratio": 0.8660886941549033,
+   "by": {
+    "effective": 0.8660886941549033,
+    "available": 0.8660886941549033,
+    "strict": 0.8660886941549033
+   },
+   "within": true,
+   "radius": 0.7225795558226942,
+   "dev": 3.564116767368531e-15
+  },
+  {
+   "label": "m7",
+   "seed": 66,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.09794871794871794,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.13692307692307695,
+     "operating_expectation": 0.1384615384615385
+    },
+    "frames_with_saturation": 46,
+    "unmodelled_frames": 46,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 0.024415639842083208,
+   "inherited": 0.024415639842083208,
+   "last_unmodelled": 49,
+   "ratio": 0.798383088867522,
+   "by": {
+    "effective": 0.798383088867522,
+    "available": 0.798383088867522,
+    "strict": 0.798383088867522
+   },
+   "within": false,
+   "radius": 0.7225795558226934,
+   "dev": 6.09879873574508e-16
+  },
+  {
+   "label": "m7",
+   "seed": 67,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.06000000000000001,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.049230769230769245,
+     "operating_expectation": 0.049230769230769245
+    },
+    "frames_with_saturation": 32,
+    "unmodelled_frames": 32,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": 0.02441563984208293,
+   "inherited": 0.02441563984208293,
+   "last_unmodelled": 49,
+   "ratio": 0.9190368724995758,
+   "by": {
+    "effective": 0.9190368724995758,
+    "available": 0.9190368724995758,
+    "strict": 0.9190368724995758
+   },
+   "within": true,
+   "radius": 0.7225795558226943,
+   "dev": 3.5713218513538576e-15
+  },
+  {
+   "label": "m7",
+   "seed": 68,
+   "noisy_match": 1.0,
+   "twin_match": 1.0,
+   "distinct_all": 1,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": true,
+   "defined": true,
+   "saturation": 0.07846153846153844,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0,
+    "frames_with_mask_disagreement": 0,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.0,
+     "operating_expectation": 0.0
+    },
+    "frames_with_saturation": 0,
+    "unmodelled_frames": 0,
+    "last_unmodelled_frame": null,
+    "quiet": true
+   },
+   "classification": "operator-consistent",
+   "consistent": true,
+   "operator_error": 0.0,
+   "burn_in_part": 0.0,
+   "tv_status": "computed",
+   "carried_bound": null,
+   "inherited": 0.024415639842083527,
+   "last_unmodelled": null,
+   "ratio": 0.8365803878161638,
+   "by": {
+    "effective": 0.8365803878161638,
+    "available": 0.8365803878161638,
+    "strict": 0.8365803878161638
+   },
+   "within": false,
+   "radius": 0.7225795558226946,
+   "dev": 1.3322676295501878e-15
+  },
+  {
+   "label": "m8",
+   "seed": 61,
+   "noisy_match": 0.36666666666666664,
+   "twin_match": 0.36,
+   "distinct_all": 24,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": false,
+   "defined": true,
+   "saturation": 0.1523076923076923,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0019047619047619048,
+    "frames_with_mask_disagreement": 2,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.0953846153846154,
+     "operating_expectation": 0.09384615384615387
+    },
+    "frames_with_saturation": 42,
+    "unmodelled_frames": 42,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "mask-variable, carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.11473541739198785,
+   "burn_in_part": 0.0012750628895677881,
+   "tv_status": "computed",
+   "carried_bound": 0.02441563984208309,
+   "inherited": 0.02441563984208309,
+   "last_unmodelled": 49,
+   "ratio": 1.1627493273904448,
+   "by": {
+    "effective": 1.1627493273904448,
+    "available": 0.9129927328883473,
+    "strict": null
+   },
+   "within": true,
+   "radius": 0.7225795558226938,
+   "dev": 9.990010609140226e-16
+  },
+  {
+   "label": "m8",
+   "seed": 62,
+   "noisy_match": 0.9266666666666666,
+   "twin_match": 0.92,
+   "distinct_all": 16,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": false,
+   "defined": true,
+   "saturation": 0.020512820512820513,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.004761904761904762,
+    "frames_with_mask_disagreement": 5,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.10615384615384617,
+     "operating_expectation": 0.11384615384615387
+    },
+    "frames_with_saturation": 29,
+    "unmodelled_frames": 30,
+    "last_unmodelled_frame": 47,
+    "quiet": false
+   },
+   "classification": "operator-consistent",
+   "consistent": true,
+   "operator_error": 0.017108246241019292,
+   "burn_in_part": 0.0019862303207896013,
+   "tv_status": "computed",
+   "carried_bound": 0.011082306508750013,
+   "inherited": 0.024415639842083395,
+   "last_unmodelled": 47,
+   "ratio": 1.2297232651751295,
+   "by": {
+    "effective": 1.2297232651751295,
+    "available": 1.2321404706261094,
+    "strict": 0.6348318403439888
+   },
+   "within": false,
+   "radius": 0.7225795558226937,
+   "dev": 9.97096215063846e-16
+  },
+  {
+   "label": "m8",
+   "seed": 63,
+   "noisy_match": 0.22666666666666666,
+   "twin_match": 0.21333333333333335,
+   "distinct_all": 35,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": false,
+   "defined": true,
+   "saturation": 0.14307692307692307,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.006666666666666667,
+    "frames_with_mask_disagreement": 6,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.10153846153846154,
+     "operating_expectation": 0.09846153846153846
+    },
+    "frames_with_saturation": 43,
+    "unmodelled_frames": 43,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "mask-variable, carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.14591827510695457,
+   "burn_in_part": 0.0032344492461452686,
+   "tv_status": "computed",
+   "carried_bound": 0.024415639842083572,
+   "inherited": 0.024415639842083572,
+   "last_unmodelled": 49,
+   "ratio": 1.0007965640750813,
+   "by": {
+    "effective": 1.0007965640750813,
+    "available": 0.7871374619727144,
+    "strict": null
+   },
+   "within": true,
+   "radius": 0.7225795558226947,
+   "dev": 8.881784197001252e-16
+  },
+  {
+   "label": "m8",
+   "seed": 64,
+   "noisy_match": 0.72,
+   "twin_match": 0.7333333333333333,
+   "distinct_all": 9,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": false,
+   "defined": true,
+   "saturation": 0.025128205128205135,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0038095238095238095,
+    "frames_with_mask_disagreement": 3,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.03230769230769231,
+     "operating_expectation": 0.03076923076923077
+    },
+    "frames_with_saturation": 21,
+    "unmodelled_frames": 23,
+    "last_unmodelled_frame": 41,
+    "quiet": false
+   },
+   "classification": "mask-variable",
+   "consistent": false,
+   "operator_error": 0.02677065136400849,
+   "burn_in_part": 0.0019363172202219558,
+   "tv_status": "computed",
+   "carried_bound": 8.527069396742259e-05,
+   "inherited": 0.024415639842083208,
+   "last_unmodelled": 41,
+   "ratio": 0.9030823730069616,
+   "by": {
+    "effective": 0.9030823730069616,
+    "available": 0.8587107528706963,
+    "strict": 0.7189313550775563
+   },
+   "within": true,
+   "radius": 0.7225795558226945,
+   "dev": 1.3322676295501878e-15
+  },
+  {
+   "label": "m8",
+   "seed": 65,
+   "noisy_match": 0.15333333333333332,
+   "twin_match": 0.13333333333333333,
+   "distinct_all": 27,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": false,
+   "defined": true,
+   "saturation": 0.07025641025641027,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0019047619047619048,
+    "frames_with_mask_disagreement": 2,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.07846153846153847,
+     "operating_expectation": 0.08615384615384616
+    },
+    "frames_with_saturation": 42,
+    "unmodelled_frames": 42,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "not computed, carried-state-sensitive",
+   "consistent": false,
+   "operator_error": null,
+   "burn_in_part": null,
+   "tv_status": "not computed",
+   "carried_bound": 0.024415639842083305,
+   "inherited": 0.024415639842083305,
+   "last_unmodelled": 49,
+   "ratio": 1.803542702832847,
+   "by": {
+    "effective": 1.803542702832847,
+    "available": 0.1008781508427811,
+    "strict": null
+   },
+   "within": true,
+   "radius": 0.7225795558226941,
+   "dev": 1.1358909486132614e-15
+  },
+  {
+   "label": "m8",
+   "seed": 66,
+   "noisy_match": 0.30666666666666664,
+   "twin_match": 0.31333333333333335,
+   "distinct_all": 40,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": false,
+   "defined": true,
+   "saturation": 0.10666666666666667,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.002857142857142857,
+    "frames_with_mask_disagreement": 3,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.14153846153846156,
+     "operating_expectation": 0.1430769230769231
+    },
+    "frames_with_saturation": 46,
+    "unmodelled_frames": 46,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "mask-variable, carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.31997395541398777,
+   "burn_in_part": 0.10413425639180932,
+   "tv_status": "computed",
+   "carried_bound": 0.024415639842083173,
+   "inherited": 0.024415639842083173,
+   "last_unmodelled": 49,
+   "ratio": 1.5340947883129856,
+   "by": {
+    "effective": 1.5340947883129856,
+    "available": 0.7342213123314659,
+    "strict": null
+   },
+   "within": true,
+   "radius": 0.722579555822694,
+   "dev": 8.273629281773204e-16
+  },
+  {
+   "label": "m8",
+   "seed": 67,
+   "noisy_match": 0.46,
+   "twin_match": 0.46,
+   "distinct_all": 19,
+   "validated": true,
+   "arrays": 61,
+   "gate_quiet": false,
+   "defined": true,
+   "saturation": 0.06153846153846154,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0038095238095238095,
+    "frames_with_mask_disagreement": 4,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.046153846153846156,
+     "operating_expectation": 0.049230769230769245
+    },
+    "frames_with_saturation": 34,
+    "unmodelled_frames": 34,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "mask-variable, carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.08690165429575747,
+   "burn_in_part": 1.1879302428424777e-08,
+   "tv_status": "computed",
+   "carried_bound": 0.024415639842083225,
+   "inherited": 0.024415639842083225,
+   "last_unmodelled": 49,
+   "ratio": 0.9097761776725352,
+   "by": {
+    "effective": 0.9097761776725352,
+    "available": 0.6800758102028608,
+    "strict": null
+   },
+   "within": true,
+   "radius": 0.7225795558226936,
+   "dev": 1.7091302476276525e-15
+  },
+  {
+   "label": "m8",
+   "seed": 68,
+   "noisy_match": 0.16666666666666666,
+   "twin_match": 0.17333333333333334,
+   "distinct_all": 29,
+   "validated": true,
+   "arrays": 64,
+   "gate_quiet": false,
+   "defined": true,
+   "saturation": 0.07999999999999997,
+   "burn_in": {
+    "definition": "burn-in frames the linear model does not carry into the analysed window: a frame with gate activity (a row on which the two arms' masks differ, a rejected reconstruction in either arm, or a recovery action, which the counters give only run-wide and then mark every burn-in frame) or with command saturation above 1e-3 in either arm; a burn-in without such a frame is quiet and carries the modelled state",
+    "frames": 50,
+    "mask_disagreement_row_frames_fraction": 0.0019047619047619048,
+    "frames_with_mask_disagreement": 2,
+    "rejected_frames": {
+     "noise_on": 0,
+     "operating_expectation": 0
+    },
+    "recovery_acted": {
+     "noise_on": false,
+     "operating_expectation": false
+    },
+    "saturation_fraction_mean": {
+     "noise_on": 0.016923076923076926,
+     "operating_expectation": 0.018461538461538463
+    },
+    "frames_with_saturation": 9,
+    "unmodelled_frames": 11,
+    "last_unmodelled_frame": 49,
+    "quiet": false
+   },
+   "classification": "mask-variable, carried-state-sensitive",
+   "consistent": false,
+   "operator_error": 0.2596523025688715,
+   "burn_in_part": 0.000249774292853295,
+   "tv_status": "computed",
+   "carried_bound": 0.024415639842083413,
+   "inherited": 0.024415639842083413,
+   "last_unmodelled": 49,
+   "ratio": 11.877915309174952,
+   "by": {
+    "effective": 11.877915309174952,
+    "available": null,
+    "strict": null
+   },
+   "within": true,
+   "radius": 0.722579555822694,
+   "dev": 1.3322676295501878e-15
+  }
+ ],
+ "per_magnitude": {
+  "m5": {
+   "n": 8,
+   "defined": 8,
+   "operator_consistent": 4,
+   "classifications": [
+    "carried-state-sensitive",
+    "operator-consistent"
+   ],
+   "validated": 8,
+   "gate_quiet": 8,
+   "saturation_excluded": 8,
+   "effective": {
+    "n": 8,
+    "mean": 0.9358657140548934,
+    "t_halfwidth_7dof": 0.060185049545321445,
+    "per_seed": [
+     0.878,
+     1.06,
+     0.84,
+     0.908,
+     1.01,
+     0.933,
+     0.959,
+     0.898
+    ]
+   },
+   "available": {
+    "n": 8,
+    "mean": 0.9360481261222635,
+    "t_halfwidth_7dof": 0.06004746290189785,
+    "per_seed": [
+     0.88,
+     1.06,
+     0.84,
+     0.908,
+     1.01,
+     0.933,
+     0.959,
+     0.898
+    ]
+   },
+   "strict": {
+    "n": 8,
+    "mean": 0.9329995900745354,
+    "t_halfwidth_7dof": 0.06269793327932296,
+    "per_seed": [
+     0.856,
+     1.06,
+     0.84,
+     0.908,
+     1.01,
+     0.933,
+     0.959,
+     0.898
+    ]
+   },
+   "operator_error_range": [
+    0.0,
+    0.00019005666573414107
+   ],
+   "operator_error_not_computed": 0,
+   "burn_in_part_max_abs": 0.0,
+   "carried_bound_range": [
+    7.587806200078603e-11,
+    0.024415639842083472
+   ],
+   "inherited_range": [
+    0.024415639842082913,
+    0.024415639842083624
+   ],
+   "last_unmodelled": [
+    18,
+    34,
+    37,
+    49,
+    null
+   ],
+   "distinct_all_range": [
+    1,
+    2
+   ],
+   "noisy_match_range": [
+    0.9933333333333333,
+    1.0
+   ],
+   "twin_match_range": [
+    0.9933333333333333,
+    1.0
+   ],
+   "within_2se": 5
+  },
+  "m6": {
+   "n": 8,
+   "defined": 8,
+   "operator_consistent": 4,
+   "classifications": [
+    "carried-state-sensitive",
+    "operator-consistent"
+   ],
+   "validated": 8,
+   "gate_quiet": 8,
+   "saturation_excluded": 8,
+   "effective": {
+    "n": 8,
+    "mean": 0.8920003847472967,
+    "t_halfwidth_7dof": 0.07616855664043917,
+    "per_seed": [
+     0.848,
+     0.918,
+     0.808,
+     1.041,
+     0.96,
+     0.781,
+     0.822,
+     0.958
+    ]
+   },
+   "available": {
+    "n": 8,
+    "mean": 0.8922065224110886,
+    "t_halfwidth_7dof": 0.07607587884153752,
+    "per_seed": [
+     0.85,
+     0.918,
+     0.808,
+     1.041,
+     0.96,
+     0.781,
+     0.822,
+     0.958
+    ]
+   },
+   "strict": {
+    "n": 8,
+    "mean": 0.8900431568039299,
+    "t_halfwidth_7dof": 0.07719650179729855,
+    "per_seed": [
+     0.833,
+     0.918,
+     0.808,
+     1.041,
+     0.96,
+     0.781,
+     0.822,
+     0.958
+    ]
+   },
+   "operator_error_range": [
+    0.0,
+    0.00013941937520497134
+   ],
+   "operator_error_not_computed": 0,
+   "burn_in_part_max_abs": 0.0,
+   "carried_bound_range": [
+    7.587758738006793e-11,
+    0.024415639842083624
+   ],
+   "inherited_range": [
+    0.024415639842082934,
+    0.024415639842083624
+   ],
+   "last_unmodelled": [
+    18,
+    34,
+    37,
+    49,
+    null
+   ],
+   "distinct_all_range": [
+    1,
+    2
+   ],
+   "noisy_match_range": [
+    0.9933333333333333,
+    1.0
+   ],
+   "twin_match_range": [
+    0.9933333333333333,
+    1.0
+   ],
+   "within_2se": 5
+  },
+  "m7": {
+   "n": 8,
+   "defined": 8,
+   "operator_consistent": 4,
+   "classifications": [
+    "carried-state-sensitive",
+    "operator-consistent"
+   ],
+   "validated": 8,
+   "gate_quiet": 8,
+   "saturation_excluded": 8,
+   "effective": {
+    "n": 8,
+    "mean": 0.8598042800500028,
+    "t_halfwidth_7dof": 0.0497197835509775,
+    "per_seed": [
+     0.809,
+     0.892,
+     0.799,
+     0.958,
+     0.866,
+     0.798,
+     0.919,
+     0.837
+    ]
+   },
+   "available": {
+    "n": 8,
+    "mean": 0.8594981902650936,
+    "t_halfwidth_7dof": 0.04997213888108068,
+    "per_seed": [
+     0.807,
+     0.892,
+     0.799,
+     0.958,
+     0.866,
+     0.798,
+     0.919,
+     0.837
+    ]
+   },
+   "strict": {
+    "n": 8,
+    "mean": 0.8573494543798479,
+    "t_halfwidth_7dof": 0.05199350092844123,
+    "per_seed": [
+     0.79,
+     0.892,
+     0.799,
+     0.958,
+     0.866,
+     0.798,
+     0.919,
+     0.837
+    ]
+   },
+   "operator_error_range": [
+    0.0,
+    0.00014455385901478046
+   ],
+   "operator_error_not_computed": 0,
+   "burn_in_part_max_abs": 0.0,
+   "carried_bound_range": [
+    7.587770921274905e-11,
+    0.024415639842083406
+   ],
+   "inherited_range": [
+    0.02441563984208293,
+    0.024415639842083774
+   ],
+   "last_unmodelled": [
+    18,
+    34,
+    37,
+    49,
+    null
+   ],
+   "distinct_all_range": [
+    1,
+    2
+   ],
+   "noisy_match_range": [
+    0.9933333333333333,
+    1.0
+   ],
+   "twin_match_range": [
+    0.9933333333333333,
+    1.0
+   ],
+   "within_2se": 3
+  },
+  "m8": {
+   "n": 8,
+   "defined": 8,
+   "operator_consistent": 1,
+   "classifications": [
+    "mask-variable",
+    "mask-variable, carried-state-sensitive",
+    "not computed, carried-state-sensitive",
+    "operator-consistent"
+   ],
+   "validated": 8,
+   "gate_quiet": 0,
+   "saturation_excluded": 8,
+   "effective": {
+    "n": 8,
+    "mean": 2.552710063455117,
+    "t_halfwidth_7dof": 3.1614623064611123,
+    "per_seed": [
+     1.163,
+     1.23,
+     1.001,
+     0.903,
+     1.804,
+     1.534,
+     0.91,
+     11.878
+    ]
+   },
+   "available": {
+    "n": 7,
+    "per_seed": [
+     0.913,
+     1.232,
+     0.787,
+     0.859,
+     0.101,
+     0.734,
+     0.68
+    ]
+   },
+   "strict": {
+    "n": 2,
+    "per_seed": [
+     0.635,
+     0.719
+    ]
+   },
+   "operator_error_range": [
+    0.017108246241019292,
+    0.31997395541398777
+   ],
+   "operator_error_not_computed": 1,
+   "burn_in_part_max_abs": 0.10413425639180932,
+   "carried_bound_range": [
+    8.527069396742259e-05,
+    0.024415639842083572
+   ],
+   "inherited_range": [
+    0.02441563984208309,
+    0.024415639842083572
+   ],
+   "last_unmodelled": [
+    41,
+    47,
+    49
+   ],
+   "distinct_all_range": [
+    9,
+    40
+   ],
+   "noisy_match_range": [
+    0.15333333333333332,
+    0.9266666666666666
+   ],
+   "twin_match_range": [
+    0.13333333333333333,
+    0.92
+   ],
+   "within_2se": 7
+  }
+ }
+}

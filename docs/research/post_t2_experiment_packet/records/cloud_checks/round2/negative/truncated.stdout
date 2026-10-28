@@ -1,0 +1,1 @@
+truncated.npz: array delta_v_m2 has dtype float64 and shape (149,), declared 'float64' [150]; the sidecar is not read as data.

@@ -1,0 +1,1 @@
+wrong_units.npz: array delta_v_m2 is declared with units 'nm2', axes ['analysed_frame'] and meaning 'DeltaV_t: piston-removed pupil mean square of the residual-m'; the canonical layout is 'm2', ['analysed_frame'], 'DeltaV_t: piston-removed pupil mean square of the residual-m'; the sidecar is not read as data.

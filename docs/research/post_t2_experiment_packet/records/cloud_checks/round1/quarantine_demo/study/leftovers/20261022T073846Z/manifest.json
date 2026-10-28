@@ -1,0 +1,24 @@
+{
+ "schema": "post_t2_quarantine_manifest.v1",
+ "base": "/tmp/claude-0/-home-user-Shack-Hartmann-AO-Simulation/f1f3bff0-5382-5b19-9652-6c00a445942e/scratchpad/round1/quarantine_demo/study",
+ "moved_utc": "20261022T073846Z",
+ "moved": [
+  {
+   "path": "/tmp/claude-0/-home-user-Shack-Hartmann-AO-Simulation/f1f3bff0-5382-5b19-9652-6c00a445942e/scratchpad/round1/quarantine_demo/study/runs/ci_detector_k8_r0.json.tmp-4242-9f3a1c2b",
+   "relative": "runs/ci_detector_k8_r0.json.tmp-4242-9f3a1c2b",
+   "bytes": 17,
+   "sha256": "850e3ad8ec7df307659b43007fc23fae3f30685c7a73d97d9774380e73f19562",
+   "reason": "temporary file of an interrupted run publication in runs/",
+   "moved_to": "/tmp/claude-0/-home-user-Shack-Hartmann-AO-Simulation/f1f3bff0-5382-5b19-9652-6c00a445942e/scratchpad/round1/quarantine_demo/study/leftovers/20261022T073846Z/runs/ci_detector_k8_r0.json.tmp-4242-9f3a1c2b"
+  },
+  {
+   "path": "/tmp/claude-0/-home-user-Shack-Hartmann-AO-Simulation/f1f3bff0-5382-5b19-9652-6c00a445942e/scratchpad/round1/quarantine_demo/study/scratch/twin_pupil_samples_deadbeef.npy",
+   "relative": "scratch/twin_pupil_samples_deadbeef.npy",
+   "bytes": 4096,
+   "sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
+   "reason": "twin arm disk record left by an interrupted paired run",
+   "moved_to": "/tmp/claude-0/-home-user-Shack-Hartmann-AO-Simulation/f1f3bff0-5382-5b19-9652-6c00a445942e/scratchpad/round1/quarantine_demo/study/leftovers/20261022T073846Z/scratch/twin_pupil_samples_deadbeef.npy"
+  }
+ ],
+ "deleted": []
+}

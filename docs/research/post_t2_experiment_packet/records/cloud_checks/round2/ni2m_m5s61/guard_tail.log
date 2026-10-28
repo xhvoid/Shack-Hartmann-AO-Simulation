@@ -1,0 +1,1 @@
+{"configuration": "det_emccd_2m_synthetic@1, m_AB 5", "label": "m5", "root_seed": 61, "wall_s": 37.04812442400009, "ru_maxrss_bytes": 108507136, "trace_uncompressed_bytes": 1035978, "sidecar_bytes": 776527, "historical_max_abs_relative_difference": 8.288175013344742e-10, "delta_v_mean_nm2": 4.165567128001401}

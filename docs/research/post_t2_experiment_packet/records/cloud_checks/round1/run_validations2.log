@@ -1,0 +1,18 @@
+[2026-10-22T07:49:29Z] models: rerun with the window tool (old outputs moved to *.v1)
+exit=0
+exit=0
+exit=0
+exit=0
+exit=0
+exit=0
+[2026-10-22T07:50:13Z] models: 32 series sidecars
+[2026-10-22T07:52:03Z] ci-geometry pilots at m7 (default and alpha 0.1)
+exit=0
+exit=0
+exit=0
+exit=0
+exit=0
+exit=0
+[2026-10-22T07:57:05Z] P1 ci pilot rerun alone (clean timing)
+exit=0
+[2026-10-22T07:57:33Z] all done

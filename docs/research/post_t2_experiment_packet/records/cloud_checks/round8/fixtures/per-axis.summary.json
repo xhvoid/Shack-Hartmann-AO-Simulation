@@ -1,0 +1,22 @@
+{
+  "variant": "per-axis",
+  "source": "/tmp/claude-0/-home-user-Shack-Hartmann-AO-Simulation/f1f3bff0-5382-5b19-9652-6c00a445942e/scratchpad/round2/ci_m7_alpha0p1/trace.npz",
+  "configuration": "ci derivation of scripts/detector_level_convergence_study.py (eso_scao_smoke_5m_software@2 geometry with det_emccd_12m_medium_derived@3 physics), m_AB 7, DIAGNOSTIC reconstructor alpha 0.1",
+  "root_seed": 71,
+  "lenslets_dropped_by_both_arms": [
+    "lenslet-r0003-c0004"
+  ],
+  "frames_dropped": "every frame, x row only",
+  "noisy_only_dropped": {
+    "lenslets": [],
+    "frames": []
+  },
+  "noise_scale": 1.0,
+  "kick": null,
+  "window_mean_m2": 9.699321236076998e-17,
+  "window_mean_without_kick_m2": 9.699321236076998e-17,
+  "kick_share_of_window_mean": 0.0,
+  "kick_state_window_mean_m2": 0.0,
+  "mask_disagreement_frames": 0,
+  "operators_probed": 4
+}

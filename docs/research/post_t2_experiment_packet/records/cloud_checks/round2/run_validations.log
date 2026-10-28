@@ -1,0 +1,35 @@
+[2026-10-22T09:05:06Z] self-test
+exit=0
+[2026-10-22T09:05:07Z] 2 m traced pilot m5 seed 61
+exit=0
+exit=0
+exit=0
+[2026-10-22T09:05:54Z] ci-geometry traced pilots (m7, m9; ci damping and 12 m damping) and models
+exit=0 (7 default pilot)
+the linear loop is not stationary (spectral radius 1.0000); no stationary covariance exists.
+exit=1
+exit=0
+exit=0 (7 alpha0p1 pilot)
+exit=0
+exit=0
+exit=0 (9 default pilot)
+exit=0
+exit=0
+exit=0 (9 alpha0p1 pilot)
+exit=0
+exit=0
+[2026-10-22T09:15:31Z] 32 series sidecars with --record
+FAILED m8__seed61: the reconstructor refused the support mask (20 of 42 rows valid); the model is not defined for it.
+FAILED m8__seed63: the reconstructor refused the support mask (16 of 42 rows valid); the model is not defined for it.
+FAILED m8__seed65: the reconstructor refused the support mask (18 of 42 rows valid); the model is not defined for it.
+FAILED m8__seed66: the reconstructor refused the support mask (16 of 42 rows valid); the model is not defined for it.
+FAILED m8__seed67: the reconstructor refused the support mask (20 of 42 rows valid); the model is not defined for it.
+FAILED m8__seed68: the reconstructor refused the support mask (18 of 42 rows valid); the model is not defined for it.
+[2026-10-22T09:17:21Z] negative checks: the validation must refuse
+exit=1 (wrong magnitude; expected non-zero)
+the built configuration b426338cef918628 is not the sidecar's 594bbeb045acb88a: the sidecar was traced on another configuration; it is not read as data.
+exit=1 (renamed sidecar against the record; expected non-zero)
+det09_noise_isolation_2m_traced__m5__seed61.npz: the record's sidecar reference ('det09_noise_isolation_2m_traced__m5__seed62.npz', b2553279117f..., 776516 B) does not match this file (det09_noise_isolation_2m_traced__m5__seed61.npz, b2553279117f..., 776516 B); the sidecar is not read as data.
+exit=1 (truncated series; expected non-zero)
+truncated.npz: array delta_v_m2 has dtype float64 and shape (149,), declared 'float64' [150]; the sidecar is not read as data.
+[2026-10-22T09:17:25Z] all done

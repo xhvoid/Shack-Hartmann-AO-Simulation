@@ -1,0 +1,39 @@
+[2026-10-22T19:05:15Z] self-test
+exit=0
+[2026-10-22T19:05:17Z] pilot sidecars (round-2 pilots, unchanged) with --pilot-record
+exit=0
+exit=0
+exit=0
+exit=0
+exit=0
+[2026-10-22T19:06:32Z] ci pilots with retained maps (round-6 pilots, unchanged)
+exit=0
+exit=0
+exit=0
+[2026-10-22T19:07:41Z] 32 series sidecars with --record
+[2026-10-22T19:09:40Z] fixtures: linear re-synthesis (operator change, operator change quiet, sparse lenslets, per-axis), each with the v9 and the round-7 (v8) tool; the round-6 carried-state and scaled-series fixtures; the round-5 bracket fixture
+exit=0 (built operator-change)
+exit=0 (operator-change v9)
+exit=0 (operator-change v8)
+exit=0 (built operator-change-quiet)
+exit=0 (operator-change-quiet v9)
+exit=0 (operator-change-quiet v8)
+exit=0 (built sparse-lenslets)
+exit=0 (sparse-lenslets v9)
+exit=0 (sparse-lenslets v8)
+exit=0 (built per-axis)
+exit=0 (per-axis v9)
+exit=0 (per-axis v8)
+exit=0 (round-6 carried fixture built)
+exit=0 (carried v9)
+exit=0 (carried v8)
+exit=0 (series-scaled)
+exit=0 (round-5 bracket fixture)
+[2026-10-22T19:16:32Z] negative checks: units, axes, dtype
+exit=1 (wrong_units; expected non-zero)
+wrong_units.npz: array delta_v_m2 is declared with units 'nm2', axes ['analysed_frame'] and meaning 'DeltaV_t: piston-removed pupil mean square of the residual-m'; the canonical layout is 'm2', ['anal
+exit=1 (wrong_axes; expected non-zero)
+wrong_axes.npz: array noise_on__telemetry__centroids_xy_px is declared with units 'px', axes ['frame', 'xy', 'lenslet'] and meaning 'noisy processed centroid in window pixel coordinates (x = co'; the 
+exit=1 (wrong_dtype; expected non-zero)
+wrong_dtype.npz: array noise_on__saturation_fraction has dtype float32, the canonical layout requires float64; the sidecar is not read as data.
+[2026-10-22T19:16:36Z] all done

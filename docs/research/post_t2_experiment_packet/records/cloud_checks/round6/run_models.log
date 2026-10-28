@@ -1,0 +1,31 @@
+[2026-10-22T17:27:50Z] self-test
+exit=0
+[2026-10-22T17:27:51Z] pilot sidecars (round-2 pilots, unchanged) with --pilot-record
+exit=0
+exit=0
+exit=0
+exit=0
+exit=0
+[2026-10-22T17:28:35Z] ci pilots with retained maps (round-6 pilots)
+exit=0
+exit=0
+exit=0
+[2026-10-22T17:29:12Z] 32 series sidecars with --record
+[2026-10-22T17:30:20Z] fixtures: covariance bracket (round-5 fixture), carried state (+25 % window variance through the loop), series scaled by 1.25 without telemetry support
+exit=0 (bracket fixture)
+exit=0 (carried fixture built)
+exit=0 (carried fixture)
+series-scaled fixture written (delta_v_m2 x 1.25, mean_square_difference_m2 = cross_term_m2 + delta_v_m2; centroids, masks and maps unchanged)
+exit=0 (series-scaled fixture)
+[2026-10-22T17:30:48Z] replays with logged reconstructor and controller calls (ci m9 with the 12 m damping, ci m7 with the ci damping), then the replay check
+exit=0 (replay ci m9 alpha 0.1)
+exit=0 (replay ci m7 ci damping)
+exit=0 (replay check)
+[2026-10-22T17:33:09Z] negative checks: units, axes, dtype
+exit=1 (wrong_units; expected non-zero)
+wrong_units.npz: array delta_v_m2 is declared with units 'nm2', axes ['analysed_frame'] and meaning 'DeltaV_t: piston-removed pupil mean square of the residual-m'; the canonical layout is 'm2', ['anal
+exit=1 (wrong_axes; expected non-zero)
+wrong_axes.npz: array noise_on__telemetry__centroids_xy_px is declared with units 'px', axes ['frame', 'xy', 'lenslet'] and meaning 'noisy processed centroid in window pixel coordinates (x = co'; the 
+exit=1 (wrong_dtype; expected non-zero)
+wrong_dtype.npz: array noise_on__saturation_fraction has dtype float32, the canonical layout requires float64; the sidecar is not read as data.
+[2026-10-22T17:33:11Z] all done

@@ -1,0 +1,166 @@
+{
+ "schema": "post_t2_timing_pilot.traced_run.v3",
+ "purpose": "timing pilot of one traced paired run; not a series run; no scientific claim",
+ "configuration": "ci derivation of scripts/detector_level_convergence_study.py (eso_scao_smoke_5m_software@2 geometry with det_emccd_12m_medium_derived@3 physics), m_AB 9, DIAGNOSTIC reconstructor alpha 0.1",
+ "diagnostic_alpha_override": 0.1,
+ "label": "m9",
+ "magnitude": 9.0,
+ "root_seed": 71,
+ "n_steps": 400,
+ "burn_in_frames": 100,
+ "retain_residual_maps": true,
+ "enabled_by_user": null,
+ "host": {
+  "platform": "linux",
+  "machine": "x86_64",
+  "node": "vm",
+  "python": "3.11.17 (main, Oct  1 2026, 15:41:07) [GCC 13.3.0]",
+  "numpy": "2.4.6"
+ },
+ "wall_s": 62.4645150450001,
+ "ru_maxrss_bytes": 249479168,
+ "ru_maxrss_semantics": "this process's own lifetime peak resident set (includes the in-memory sidecar archive when one was written)",
+ "config_hash": "6bd4819f81700e859364224484fc6b66c606a942946f43b8e956d822a8a0040f",
+ "seven_recorded_quantities": {
+  "noise_variance_m2": 6.145710687266444e-16,
+  "noise_variance_standard_error_m2": 1.5857641957289017e-17,
+  "mean_square_difference_m2": 4.4158924866140094e-16,
+  "mean_square_difference_standard_error_m2": 1.0610919110187476e-16,
+  "arms/noise_on/post_update_rms_m": 1.6442834157045632e-07,
+  "arms/operating_expectation/post_update_rms_m": 1.630883323723191e-07,
+  "predicted_centroid_variance_px2": 0.009688689424311819
+ },
+ "historical_comparison": null,
+ "arms": {
+  "noise_on": {
+   "post_update_rms_m": 1.6442834157045632e-07,
+   "post_update_mean_square_m2": 2.7172333893985275e-14,
+   "open_loop_rms_m": 1.0246410517435923e-06,
+   "valid_measurement_fraction": 0.9996759259259259,
+   "reconstruction_usable_fraction": 1.0,
+   "lost_lock": false
+  },
+  "operating_expectation": {
+   "post_update_rms_m": 1.630883323723191e-07,
+   "post_update_mean_square_m2": 2.6730744645323863e-14,
+   "open_loop_rms_m": 1.0246410517435923e-06,
+   "valid_measurement_fraction": 0.9997222222222221,
+   "reconstruction_usable_fraction": 1.0,
+   "lost_lock": false
+  }
+ },
+ "arm_telemetry": {
+  "noise_on": {
+   "rejected_frames_after_burn_in": 0,
+   "recovery_acted": false,
+   "recovery": null,
+   "min_valid_measurement_fraction_after_burn_in": 0.9722222222222222,
+   "max_saturation_fraction_after_burn_in": 0.0,
+   "mean_saturation_fraction_after_burn_in": 0.0,
+   "frames_with_saturation_after_burn_in": 0,
+   "telemetry_frames": 400,
+   "telemetry_unavailable": [],
+   "history_config_hash": "f71c5787d3e907738950fe31a897d022498a74b44518b3a94f04481898cd4090",
+   "source": "trace_summary.arms (experiment core) except frames_with_saturation_after_burn_in (this tool, from the trace arrays)"
+  },
+  "operating_expectation": {
+   "rejected_frames_after_burn_in": 0,
+   "recovery_acted": false,
+   "recovery": null,
+   "min_valid_measurement_fraction_after_burn_in": 0.9722222222222222,
+   "max_saturation_fraction_after_burn_in": 0.0,
+   "mean_saturation_fraction_after_burn_in": 0.0,
+   "frames_with_saturation_after_burn_in": 0,
+   "telemetry_frames": 400,
+   "telemetry_unavailable": [],
+   "history_config_hash": "d5251892053b6e1445ec6bc4dbbfe9b45e65f7083cfec7314c91e78f0b241e93",
+   "source": "trace_summary.arms (experiment core) except frames_with_saturation_after_burn_in (this tool, from the trace arrays)"
+  }
+ },
+ "mask_disagreement": {
+  "row_frames_fraction_after_burn_in": 4.6296296296296294e-05,
+  "frames_with_disagreement_after_burn_in": 1
+ },
+ "delta_v_series": {
+  "mean_m2": 6.145710687266444e-16,
+  "block25_standard_error_m2": 1.5857641957289017e-17,
+  "mean_square_difference_mean_m2": 4.4158924866140094e-16,
+  "cross_term_mean_m2": -1.7298182006524353e-16,
+  "analysed_frames": 300
+ },
+ "operating_state": {
+  "schema": "shwfs_ao.experiments.detector_level.operating_state_summary.v1",
+  "definition": "n = c_noisy - c_expected on the noisy arm's own operating state; model = mean_t(sigma_xy**2)",
+  "analysed_frames": 300,
+  "centering": "ddof=1 variance about the per-lenslet, per-axis temporal mean; second moment uncentred",
+  "support_rule": "valid and model-supported with finite measured and expected centroids in every analysed frame (noisy arm)",
+  "axis_combination": "x and y summed per lenslet (as predicted_centroid_variance_px2)",
+  "support_lenslets": 69,
+  "support_fraction": 0.9583333333333334,
+  "available": true,
+  "equal_weight": {
+   "mean_residual_px": [
+    -0.0009315705864961145,
+    0.000540415886873808
+   ],
+   "realized_variance_px2": 0.023316419767308593,
+   "realized_second_moment_px2": 0.023311628248152735,
+   "operating_state_model_variance_px2": 0.023144130018276886,
+   "twin_state_model_variance_px2": 0.02315707393627489,
+   "ratio_variance_over_model": 1.0074442093479274,
+   "ratio_second_moment_over_model": 1.007237179783538
+  },
+  "propagation_weighted": {
+   "domain": "support lenslets, both axes, weights = fixed-reconstructor pupil response per row",
+   "weight_total_m2_per_px2": 7.522800273002944e-14,
+   "realized_variance_px2": 0.011365288647363959,
+   "realized_second_moment_px2": 0.011361120843967192,
+   "operating_state_model_variance_px2": 0.011293610449769306,
+   "ratio_variance_over_model": 1.0063467921010254,
+   "ratio_second_moment_over_model": 1.0059777512690165,
+   "propagated_realized_variance_m2": 8.549879653914686e-16,
+   "propagated_model_variance_m2": 8.495957577471344e-16
+  }
+ },
+ "trace_summary": {
+  "schema": "shwfs_ao.experiments.detector_level.trace_summary.v1",
+  "arms": {
+   "noise_on": {
+    "rejected_frames_after_burn_in": 0,
+    "min_valid_measurement_fraction_after_burn_in": 0.9722222222222222,
+    "max_saturation_fraction_after_burn_in": 0.0,
+    "mean_saturation_fraction_after_burn_in": 0.0,
+    "recovery": null,
+    "recovery_acted": false,
+    "telemetry_frames": 400,
+    "telemetry_unavailable": [],
+    "history_config_hash": "f71c5787d3e907738950fe31a897d022498a74b44518b3a94f04481898cd4090"
+   },
+   "operating_expectation": {
+    "rejected_frames_after_burn_in": 0,
+    "min_valid_measurement_fraction_after_burn_in": 0.9722222222222222,
+    "max_saturation_fraction_after_burn_in": 0.0,
+    "mean_saturation_fraction_after_burn_in": 0.0,
+    "recovery": null,
+    "recovery_acted": false,
+    "telemetry_frames": 400,
+    "telemetry_unavailable": [],
+    "history_config_hash": "d5251892053b6e1445ec6bc4dbbfe9b45e65f7083cfec7314c91e78f0b241e93"
+   }
+  },
+  "mask_disagreement_row_frame_fraction": 4.6296296296296294e-05,
+  "mask_disagreement_frames": 1,
+  "gate_quiet": true,
+  "gate_quiet_rule": "mask disagreement < 1e-3 of row-frames, no rejected reconstruction, no recovery action, after burn-in",
+  "cross_term_mean_m2": -1.7298182006524353e-16,
+  "residual_maps_retained": true
+ },
+ "trace_uncompressed_bytes": 31520496,
+ "trace_schema": "shwfs_ao.experiments.detector_level.noise_isolation_trace.v1",
+ "trace_sidecar": {
+  "file": "trace.npz",
+  "sha256": "7455511207317f99d28c33c222ba8dcffbd84eede787db5d03a0865e17e23157",
+  "bytes": 27857727,
+  "schema": "post_t2_pilot_trace_sidecar.v1"
+ }
+}
