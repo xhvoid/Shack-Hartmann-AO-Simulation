@@ -139,9 +139,11 @@ calibration identities. When both the runtime WFS and the interaction matrix
 declare a sensor response identity they must be equal, so a change of WFS
 wavelength, sampling, detector pedestal, saturation, or pixel maps, or of the
 centroid estimator, cannot reuse a stale calibration. With a background a
-photon change alters the source-to-pedestal ratio, so it is rejected too. The
-AO-REF-011 system factory owns construction of a fully coherent component
-bundle. Actuator-space matrices are already bound to
+photon change alters the source-to-pedestal ratio, so it is rejected too.
+For a matrix calibrated with noise, the WFS and the matrix must also share a
+noisy response identity, because the noise settings and clipping move an
+average of noisy centroids. The AO-REF-011 system factory owns construction
+of a fully coherent component bundle. Actuator-space matrices are already bound to
 the exact DM hash, and modal projectors carry their target DM hash explicitly.
 
 ## Replay-safe sweeps

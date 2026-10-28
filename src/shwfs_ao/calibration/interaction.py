@@ -442,6 +442,13 @@ class InteractionMatrix:
     matrix whose sensor declared no ``response_hash`` and for records written
     before the field existed; such a matrix keeps its historical content hash
     but cannot be verified against a different sensor's response.
+
+    ``sensor_noisy_response_hash`` is recorded only by a calibration with
+    ``include_noise=True``.  Averaging noisy centroids makes the calibrated
+    response depend on the absolute noise settings, the photon allocation,
+    and negative-pixel clipping as well, which the sensor's
+    ``noisy_response_hash`` adds to its noiseless identity.  It is ``None``
+    for a noiseless calibration, whose response those settings cannot move.
     """
 
     __hash_schema_id__ = INTERACTION_MATRIX_SCHEMA_ID
@@ -469,6 +476,7 @@ class InteractionMatrix:
     calibration_hash: str
     provenance: Provenance
     sensor_response_hash: str | None = None
+    sensor_noisy_response_hash: str | None = None
 
     def __post_init__(self) -> None:
         row_ids = _validated_ids(self.row_ids, label="row_ids")
@@ -645,6 +653,15 @@ class InteractionMatrix:
             self.sensor_response_hash,
             label="sensor_response_hash",
         )
+        noisy_response_hash = _optional_hash(
+            self.sensor_noisy_response_hash,
+            label="sensor_noisy_response_hash",
+        )
+        if noisy_response_hash is not None and not include_noise:
+            raise InteractionMatrixError(
+                "sensor_noisy_response_hash is recorded only by a calibration "
+                "with include_noise=True."
+            )
         if coordinate_kind == "dm_command_opd" and dm_hash is None:
             raise InteractionMatrixError(
                 "dm_command_opd interaction matrices require dm_hash."
@@ -677,6 +694,7 @@ class InteractionMatrix:
             detector_hash=detector_hash,
             dm_hash=dm_hash,
             sensor_response_hash=response_hash,
+            sensor_noisy_response_hash=noisy_response_hash,
             provenance=self.provenance,
         )
         if calibration_hash != expected_hash:
@@ -705,6 +723,7 @@ class InteractionMatrix:
         object.__setattr__(self, "detector_hash", detector_hash)
         object.__setattr__(self, "dm_hash", dm_hash)
         object.__setattr__(self, "sensor_response_hash", response_hash)
+        object.__setattr__(self, "sensor_noisy_response_hash", noisy_response_hash)
         object.__setattr__(self, "calibration_hash", calibration_hash)
 
     @property
@@ -745,6 +764,7 @@ class InteractionMatrix:
             "detector_hash": self.detector_hash,
             "dm_hash": self.dm_hash,
             "sensor_response_hash": self.sensor_response_hash,
+            "sensor_noisy_response_hash": self.sensor_noisy_response_hash,
             "calibration_hash": self.calibration_hash,
             "provenance": self.provenance.to_record(),
         }
@@ -753,8 +773,9 @@ class InteractionMatrix:
     def from_record(cls, record: Mapping[str, object]) -> InteractionMatrix:
         """Deserialize a record and revalidate all identities and diagnostics.
 
-        A record without ``sensor_response_hash`` predates that field and is
-        read as ``None``; its stored content hash still verifies.
+        A record without ``sensor_response_hash`` or
+        ``sensor_noisy_response_hash`` predates that field and reads it as
+        ``None``; its stored content hash still verifies.
         """
 
         if not isinstance(record, Mapping):
@@ -784,7 +805,7 @@ class InteractionMatrix:
             "calibration_hash",
             "provenance",
         }
-        optional_fields = {"sensor_response_hash"}
+        optional_fields = {"sensor_response_hash", "sensor_noisy_response_hash"}
         if not expected_fields <= set(record) <= expected_fields | optional_fields:
             missing = sorted(expected_fields - set(record))
             extra = sorted(set(record) - expected_fields - optional_fields)
@@ -836,6 +857,10 @@ class InteractionMatrix:
                 sensor_response_hash=cast(
                     str | None,
                     record.get("sensor_response_hash"),
+                ),
+                sensor_noisy_response_hash=cast(
+                    str | None,
+                    record.get("sensor_noisy_response_hash"),
                 ),
             )
         except (TypeError, ValueError) as exc:
@@ -941,6 +966,8 @@ def calibrate_interaction_matrix(
     )
     detector_hash = _sensor_detector_hash(sensor)
     response_hash = _sensor_response_hash(sensor)
+    # Only an average over noisy frames depends on the noise settings.
+    noisy_response_hash = _sensor_noisy_response_hash(sensor) if noisy else None
     dm_hash = _basis_dm_hash(
         probe_basis,
         basis_contract.coordinate_kind,
@@ -1163,6 +1190,7 @@ def calibrate_interaction_matrix(
         detector_hash=detector_hash,
         dm_hash=dm_hash,
         sensor_response_hash=response_hash,
+        sensor_noisy_response_hash=noisy_response_hash,
         provenance=provenance,
     )
     return InteractionMatrix(
@@ -1189,6 +1217,7 @@ def calibrate_interaction_matrix(
         calibration_hash=calibration_hash,
         provenance=provenance,
         sensor_response_hash=response_hash,
+        sensor_noisy_response_hash=noisy_response_hash,
     )
 
 
@@ -1221,6 +1250,7 @@ def interaction_matrix_hash(interaction_matrix: InteractionMatrix) -> str:
         detector_hash=interaction_matrix.detector_hash,
         dm_hash=interaction_matrix.dm_hash,
         sensor_response_hash=interaction_matrix.sensor_response_hash,
+        sensor_noisy_response_hash=interaction_matrix.sensor_noisy_response_hash,
         provenance=interaction_matrix.provenance,
     )
 
@@ -1552,6 +1582,13 @@ def _sensor_response_hash(sensor: object) -> str | None:
     return _nonempty_string(value, label="sensor.response_hash")
 
 
+def _sensor_noisy_response_hash(sensor: object) -> str | None:
+    value = getattr(sensor, "noisy_response_hash", None)
+    if value is None:
+        return None
+    return _nonempty_string(value, label="sensor.noisy_response_hash")
+
+
 def _looks_detector_calibration(calibration: object) -> bool:
     if calibration is None:
         return False
@@ -1614,6 +1651,7 @@ def _interaction_matrix_hash_from_values(
     dm_hash: str | None,
     provenance: Provenance,
     sensor_response_hash: str | None = None,
+    sensor_noisy_response_hash: str | None = None,
 ) -> str:
     payload: dict[str, object] = {
         "schema_id": INTERACTION_MATRIX_SCHEMA_ID,
@@ -1653,6 +1691,8 @@ def _interaction_matrix_hash_from_values(
     # identity keep the content hash they were written with.
     if sensor_response_hash is not None:
         payload["sensor_response_hash"] = sensor_response_hash
+    if sensor_noisy_response_hash is not None:
+        payload["sensor_noisy_response_hash"] = sensor_noisy_response_hash
     return component_config_hash("interaction_matrix_calibration", payload)
 
 

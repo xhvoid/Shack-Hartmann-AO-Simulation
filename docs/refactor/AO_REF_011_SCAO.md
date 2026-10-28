@@ -178,8 +178,11 @@ pedestal and full well relative to the source, PRNU and bad-pixel maps or
 legacy PRNU seeds, photon allocation where a pedestal or full well makes it
 matter, centroid estimator and threshold).  Read noise is outside that
 identity, as is the photon budget of a detector without pedestal or full
-well, except under `per_frame_legacy` PRNU.  A matrix
-that records none is rejected rather than trusted.  An unavailable optional backend such as
+well, except under `per_frame_legacy` PRNU.  Those freedoms hold for a
+noiseless calibration only: a matrix calibrated with noise must also record
+a `sensor_noisy_response_hash` equal to the WFS `noisy_response_hash`, which
+adds the absolute noise settings, photon allocation, and negative-pixel
+clipping.  A matrix that records none is rejected rather than trusted.  An unavailable optional backend such as
 `hcipy` also raises a construction error; it never substitutes the native
 backend.
 

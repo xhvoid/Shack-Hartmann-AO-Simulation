@@ -186,6 +186,31 @@ class DetectorShackHartmannSensor:
                 "measurement_unit": calibration.measurement_unit,
             },
         )
+        # A calibration with noise averages noisy centroids, whose mean also
+        # depends on the absolute noise level, the per-lenslet photon budget,
+        # and clipping: rectified read noise pulls a clipped center of gravity
+        # by an amount set by the signal-to-noise ratio.  This identity adds
+        # those settings to the noiseless response; only the random draws, and
+        # validity settings that select rows without changing their values,
+        # stay outside it.
+        detector = calibration.detector_config
+        self._noisy_response_hash = component_config_hash(
+            "detector_shack_hartmann_noisy_response",
+            {
+                "response_hash": self._response_hash,
+                "photons_per_subap_frame": detector.photons_per_subap_frame,
+                "qe": detector.qe,
+                "read_noise_e": detector.read_noise_e,
+                "dark_e_per_s": detector.dark_e_per_s,
+                "exposure_s": detector.exposure_s,
+                "background_e_per_pixel_frame": detector.background_e_per_pixel_frame,
+                "full_well_e": detector.full_well_e,
+                "prnu_rms": detector.prnu_rms,
+                "prnu_mode": detector.prnu_mode,
+                "photon_allocation": calibration.photon_allocation,
+                "clip_negative_pixels": calibration.clip_negative_pixels,
+            },
+        )
 
     @classmethod
     def calibrate(
@@ -298,6 +323,17 @@ class DetectorShackHartmannSensor:
         """
 
         return self._response_hash
+
+    @property
+    def noisy_response_hash(self) -> str:
+        """Identity of the mean response a calibration with noise measures.
+
+        It extends :attr:`response_hash` with the absolute noise settings, the
+        photon allocation, and negative-pixel clipping, which shape the mean of
+        noisy centroids but not the noiseless response.
+        """
+
+        return self._noisy_response_hash
 
     @property
     def row_ids(self) -> tuple[str, ...]:
