@@ -182,7 +182,7 @@ def build_inventory() -> dict[str, object]:
                 ),
                 "input": f"{photon_rows[0]['target_id']} m700={float(photon_rows[0]['m_wfs_700nm_interp_mag']):.6f}",
                 "output": f"{float(photon_rows[0]['photons_per_subap_frame_est']):.9f} photons/subap/frame",
-                "source": "MAST Pan-STARRS DR2 cache; AB magnitude convention from Oke & Gunn DOI 10.1086/113325; engineering estimate, not WFS telemetry",
+                "source": "MAST Pan-STARRS DR2 cache; AB magnitude convention from Oke & Gunn DOI 10.1086/160817; engineering estimate, not WFS telemetry",
             },
             {
                 "calculation": "Public-data-informed phase amplitude",
@@ -403,7 +403,7 @@ def build_inventory() -> dict[str, object]:
             ("SVO FPS", "SVO Filter Profile Service", "https://svo2.cab.inta-csic.es/theory/fps/", "direct public 2MASS J/H/Ks filter curves"),
             ("2MASS", "IRSA 2MASS PSC", "https://irsa.ipac.caltech.edu/Missions/2mass.html ; DOI 10.1086/498708", "direct public J/H/Ks catalog photometry and filter identity"),
             ("Pan-STARRS", "MAST Pan-STARRS DR2 mean catalog", "arXiv:1612.05560 and arXiv:1612.05243", "direct public optical photometry substitute for Gaia"),
-            ("AB magnitude", "AB photon-budget convention", "Oke & Gunn DOI 10.1086/113325", "700 nm WFS photon estimate from Pan-STARRS magnitudes"),
+            ("AB magnitude", "AB photon-budget convention", "Oke & Gunn DOI 10.1086/160817", "700 nm WFS photon estimate from Pan-STARRS magnitudes"),
             ("Fried r0", "Fried parameter conversion", "DOI 10.1364/JOSA.56.001372", "r0 derived from ESO ASM seeing"),
             ("DM influence", "Gaussian synthetic DM influence functions", "arXiv:2306.10803", "literature-inspired DM shape choice"),
             ("Noll", "Zernike/statistical aberration background", "DOI 10.1364/JOSA.66.000207", "background reference for modal aberration vocabulary"),

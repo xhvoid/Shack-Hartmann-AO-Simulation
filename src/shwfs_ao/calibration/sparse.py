@@ -41,7 +41,7 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import math
 from numbers import Integral, Real
 from types import MappingProxyType

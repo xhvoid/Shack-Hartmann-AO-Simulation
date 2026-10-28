@@ -2,6 +2,10 @@
 
 # Error-Budget Notes
 
+> **Historical component note (2026-10-18).** Written during an earlier stage
+> of the repository and kept as implementation history. The current
+> implementation is explained in the [technical reference](technical_reference.md).
+
 The installed `ao_error_budget` API and its historical `ScenarioResult` table
 remain compatibility contracts. Its behavior-compatible control execution is
 adapted to the canonical `shwfs_ao.control` runner, command projector, and

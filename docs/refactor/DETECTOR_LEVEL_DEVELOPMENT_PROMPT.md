@@ -1,5 +1,10 @@
 # Development prompt: raise the Shack–Hartmann SCAO simulation to the detector level
 
+> **Historical assignment (2026-10-18).** This prompt was carried out; its
+> outcome is recorded in [`DETECTOR_LEVEL_DEVELOPMENT_STATUS.md`](DETECTOR_LEVEL_DEVELOPMENT_STATUS.md). It is not the current plan:
+> the implementation is explained in the [technical reference](../technical_reference.md)
+> and open work is in the [roadmap](../roadmap.md).
+
 Prepared: 2026-10-15 (Europe/Berlin)  
 Repository: https://github.com/xhvoid/Shack-Hartmann-AO-Simulation  
 Planning snapshot, refreshed after review: 37b5bd9 on `public-clean-main` (profile schema 6). AO-REF-016A lenslet-axis work, its revised tests, and the lower-memory HCIPy build are committed in 9352f6c, 394d175, and da189f3 respectively. This revision changes the planning document only.  

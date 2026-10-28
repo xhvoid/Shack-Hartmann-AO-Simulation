@@ -7,7 +7,7 @@ from typing import Literal
 
 import numpy as np
 
-from ...core.hashing import component_config_hash, stable_hash
+from ...core.hashing import component_config_hash
 from ...core.protocols import RandomStreams, ShackHartmannOpticsBackend
 from ...core.provenance import Provenance
 from ...core.types import (

@@ -1,5 +1,12 @@
 # AO-REF-001 Package Migration
 
+> **Status of this page (2026-10-18).** This is a ticket record of the refactor
+> that produced the `shwfs_ao` package. Its contract statements (units,
+> identities, protocols, tolerances) still describe the code unless the
+> [technical reference](../technical_reference.md) says otherwise; its status
+> lines, dates and next steps are historical. Open work is in the
+> [roadmap](../roadmap.md).
+
 AO-REF-001 is a structural packaging migration. It introduces the installed
 `shwfs_ao` namespace without changing the numerical models, public call
 signatures, seeded behavior, resource payloads, or accepted baselines frozen by

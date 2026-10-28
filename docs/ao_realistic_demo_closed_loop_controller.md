@@ -2,6 +2,10 @@
 
 # Closed-Loop Controller Notes
 
+> **Historical component note (2026-10-18).** Written during an earlier stage
+> of the repository and kept as implementation history. The current
+> implementation is explained in the [technical reference](technical_reference.md).
+
 The canonical controller and frame runner live in `shwfs_ao.control`. The
 installed `ao_closed_loop` module remains a frozen compatibility facade for the
 historical nanometre-facing functions and result format; behavior-compatible

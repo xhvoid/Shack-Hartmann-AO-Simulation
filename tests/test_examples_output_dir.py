@@ -1,9 +1,12 @@
-"""Examples that default to ``figures/detector_level_SCAO`` honour ``AO_DEMO_OUTPUT_DIR``.
+"""Examples write under ``AO_DEMO_OUTPUT_DIR`` and never into ``figures/`` by default.
 
-That tracked directory's files are not bit-portable across platforms, so CI
-redirects the demos it runs.  A static check requires every
+The tracked figure directories' files are not bit-portable across platforms,
+so no example's default output lies under ``figures/``: they default to the
+git-ignored ``outputs/examples/``, and refreshing a tracked figure takes an
+explicit ``AO_DEMO_OUTPUT_DIR``.  A static check requires every
 ``detector_level_SCAO`` literal under ``examples/`` to be the default of an
-``os.environ.get("AO_DEMO_OUTPUT_DIR", ...)`` lookup.  The two CI-smoked demos
+``os.environ.get("AO_DEMO_OUTPUT_DIR", ...)`` lookup, and no such default to
+point under ``figures/``.  The two CI-smoked demos
 and the interaction-matrix demo also run here as subprocesses from the
 repository root, as CI runs them but by absolute script path, with the override
 pointing at a directory that does not exist yet.  Every output must land there,
@@ -106,6 +109,23 @@ def test_every_example_path_into_tracked_figures_honours_the_override():
         if (lines := _unredirected_output_literals(sources[name]))
     }
     assert unredirected == {}, "hard-coded figures/detector_level_SCAO path"
+
+
+def test_no_example_defaults_into_tracked_figures():
+    defaults = {}
+    for path in sorted((ROOT / "examples").glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if (
+                isinstance(node, ast.Call)
+                and ast.unparse(node.func) == "os.environ.get"
+                and len(node.args) == 2
+                and isinstance(node.args[0], ast.Constant)
+                and node.args[0].value == "AO_DEMO_OUTPUT_DIR"
+            ):
+                defaults[path.name] = ast.unparse(node.args[1])
+    # Every figure-writing example has an override default (not vacuous).
+    assert set(_DEMO_OUTPUTS) <= set(defaults)
+    assert {name for name, default in defaults.items() if "figures" in default} == set()
 
 
 @pytest.mark.parametrize("script", sorted(_DEMO_OUTPUTS))

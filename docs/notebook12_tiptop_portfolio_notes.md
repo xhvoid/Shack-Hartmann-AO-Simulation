@@ -43,7 +43,7 @@ Longer form:
 >
 > The final run records 15 model evaluations and 105 completed science-direction
 > PSFs, including a repeated baseline. Their timed model-plus-completion calls
-> sum to 84.1 s on the recorded machine; this is not a portable runtime promise
+> sum to 84.0 s on the recorded machine; this is not a portable runtime promise
 > or the whole notebook's wall-clock time. Analytical sensitivity modelling
 > complements explicit time-domain studies of controller behavior, transients
 > and nonlinear sensing.

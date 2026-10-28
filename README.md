@@ -45,6 +45,10 @@ needed to assess sustained performance. [Executed notebook](notebooks/tutorials/
 [HCIPy lenslet-axis correction](#hcipy-lenslet-axis-correction) →
 [validation evidence](#validation-evidence).
 For execution, see [Run the project](#run-the-project).
+The [technical reference](docs/technical_reference.md) explains the whole
+implementation in one document: models, modes, selection, evidence and
+costs. Open questions are in the [roadmap](docs/roadmap.md), and known
+boundaries in the [limitations register](docs/current_limitations.md).
 
 ## What the project demonstrates
 
@@ -428,8 +432,9 @@ the model is defined in the [detector model notes](docs/detector_model.md):
 
 - **Model versus Monte Carlo.** Across all three cameras, with and without
   background, centroid scatter at 10⁴ trials per point stays within
-  **2.1 %** of the model throughout its supported domain. The calibration
-  ensembles over 200 regenerated masters agree within 4.4 %.
+  **2.4 %** of the model (`detector_covariance_v2`, the review rerun)
+  throughout its supported domain. The calibration ensembles over 200
+  regenerated masters agree within 4.4 %.
 - **Open-loop noise propagation.** On the 2 m systems the measured
   slope-noise covariance averages 0.996–1.004× the independent prediction.
   The reconstruction covariance is 0.984–0.998× R·Σ·Rᵀ.
@@ -499,9 +504,11 @@ Further results:
   replaced by its mean. The difference isolates the detector-noise
   contribution to the residual variance.
   - At 2 m it scales as N_e^(−0.978 ± 0.014), consistent with 1/N_e.
-  - At 12 m it scales as N_e^(−1.028 ± 0.010). That fails a strict 1/N_e
-    test, because read noise and charge over the 15 × 15 window steepen the
-    faint end, as the noise model predicts.
+  - At 12 m it scales as N_e^(−1.028 ± 0.010), 2.7 standard errors from −1
+    with the unscaled fit error (1.7 with the error scaled for the fit's
+    χ²/dof of 2.5). That fails the strict 1/N_e test as predeclared,
+    because read noise and charge over the 15 × 15 window steepen the faint
+    end, as the noise model predicts.
   - Over a factor of 16 in flux it follows the model's prediction, but not
     exactly:
     - it grows as the model's variance to the power 0.95–0.96;
@@ -528,8 +535,10 @@ Further results:
     varies by ±30 nm with no consistent sign.
   - **E6 control:** a photometry-matched rerun shows that the chromatic
     optics effect is about 0.6 nm.
-  - **42 m:** the result above comes from the reviewed code; its rerun has
-    not been run.
+  - **42 m:** the result above was first produced on 2026-10-16 by an
+    uncommitted development tree that predates these fixes. Its rerun on
+    2026-10-18 at revision `2312502`, which contains them, reproduced every
+    recorded value bit for bit. It is still one realization.
 
 Both 12 m versions, the 42 m run and the diagnoses are recorded in the
 execution record.

@@ -2,6 +2,10 @@
 
 # Integration, documentation, and presentation
 
+> **Historical component note (2026-10-18).** Written during an earlier stage
+> of the repository and kept as implementation history. The current
+> implementation is explained in the [technical reference](technical_reference.md).
+
 The integration module provides a reproducible fast end-to-end run for notebook `11_full_detector_level_2m_scao_demo.ipynb`.
 
 The notebook-11 story is intentionally separate from notebook 09:

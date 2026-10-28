@@ -1,5 +1,12 @@
 # AO-REF-011 Shared SCAO Construction
 
+> **Status of this page (2026-10-18).** This is a ticket record of the refactor
+> that produced the `shwfs_ao` package. Its contract statements (units,
+> identities, protocols, tolerances) still describe the code unless the
+> [technical reference](../technical_reference.md) says otherwise; its status
+> lines, dates and next steps are historical. Open work is in the
+> [roadmap](../roadmap.md).
+
 AO-REF-011 turns the high-order geometric study and the 2 m detector-level
 study into profiles of one experiment engine.  A profile is an immutable,
 versioned `shwfs_ao.io.configs.SystemConfig`; it is not a second control-loop

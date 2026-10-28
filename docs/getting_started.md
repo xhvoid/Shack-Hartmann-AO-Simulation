@@ -110,11 +110,14 @@ packaged resources and do not need a network connection after installation.
 Long physical regressions and full studies are separate from fast smoke tests.
 
 Write new experiment outputs under `outputs/`, `results/` or another disposable
-location. Every example that writes figures or tables defaults to a tracked
-directory under `figures/` (`figures/detector_level_SCAO/`, or
-`figures/eso_elt_turbulence/` for the ESO turbulence demo), and its outputs are
-not bit-identical across platforms; set `AO_DEMO_OUTPUT_DIR` to redirect them,
-as the README quick start and CI do:
+location. Every example that writes figures or tables defaults to the
+git-ignored `outputs/examples/detector_level_SCAO/` (or
+`outputs/examples/eso_elt_turbulence/` for the ESO turbulence demo); set
+`AO_DEMO_OUTPUT_DIR` to choose another directory, as the README quick start
+and CI do. The tracked figures under `figures/` change only when you ask for
+it: point `AO_DEMO_OUTPUT_DIR` at `figures/detector_level_SCAO` or
+`figures/eso_elt_turbulence` explicitly, and expect bytes that differ across
+platforms.
 
 ```bash
 AO_DEMO_OUTPUT_DIR=outputs/examples python examples/run_psf_strehl_demo.py

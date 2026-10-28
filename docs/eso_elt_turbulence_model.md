@@ -267,7 +267,9 @@ config = replace(
 ```
 
 The demo script runs the profile study and writes the figure and tables to
-`figures/eso_elt_turbulence/`:
+the disposable `outputs/examples/eso_elt_turbulence/` (or to
+`$AO_DEMO_OUTPUT_DIR`); to refresh the tracked README figure, set
+`AO_DEMO_OUTPUT_DIR=figures/eso_elt_turbulence` explicitly:
 
 ```bash
 python examples/run_eso_elt_turbulence_demo.py

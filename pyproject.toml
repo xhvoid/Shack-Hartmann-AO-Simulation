@@ -93,6 +93,9 @@ build_py = "build_support.resource_alias.BuildPyWithResourceAlias"
 editable_wheel = "build_support.resource_alias.EditableWheelWithResourceAlias"
 
 [tool.setuptools.package-data]
+# A byte-identical copy of the repository's DATA_LICENSES.md, where the
+# relocated resource READMEs' relative links (frozen by AO-REF-001) resolve.
+"shwfs_ao" = ["DATA_LICENSES.md"]
 "shwfs_ao.resources" = [
     "README.md",
     "deprecation_clock.json",
@@ -135,7 +138,27 @@ select = ["E4", "E7", "E9", "F"]
 # Compatibility facades and installed top-level shims import names purely to
 # re-export them; unused-import findings there are the mechanism, not a bug.
 "src/shwfs_ao/legacy/**" = ["F401"]
-"src/*.py" = ["F401"]
+# The 19 root shims are listed by name: in ruff's globs `*` also matches `/`,
+# so "src/*.py" would exempt the whole package from the unused-import check.
+"src/ao_closed_loop.py" = ["F401"]
+"src/ao_conditions.py" = ["F401"]
+"src/ao_diagnostics.py" = ["F401"]
+"src/ao_error_budget.py" = ["F401"]
+"src/ao_integration.py" = ["F401"]
+"src/ao_validation.py" = ["F401"]
+"src/atmosphere_profiles.py" = ["F401"]
+"src/config_hashing.py" = ["F401"]
+"src/data_sources.py" = ["F401"]
+"src/dm_model.py" = ["F401"]
+"src/interaction_matrix.py" = ["F401"]
+"src/phase_screen.py" = ["F401"]
+"src/psf_tools.py" = ["F401"]
+"src/pwfs_forward.py" = ["F401"]
+"src/reconstruction.py" = ["F401"]
+"src/runtime_resources.py" = ["F401"]
+"src/shwfs_detector.py" = ["F401"]
+"src/synthetic_instrument_data.py" = ["F401"]
+"src/zernike.py" = ["F401"]
 # Examples select the Agg backend, and tests/scripts probe optional
 # dependencies, before the remaining imports; E402 is intentional there.
 "examples/**" = ["E402"]

@@ -89,7 +89,7 @@ def _display_path(path: Path) -> str:
 
 def main() -> None:
     output_dir = Path(
-        os.environ.get("AO_DEMO_OUTPUT_DIR", ROOT / "figures" / "detector_level_SCAO")
+        os.environ.get("AO_DEMO_OUTPUT_DIR", ROOT / "outputs" / "examples" / "detector_level_SCAO")
     )
     output_dir.mkdir(parents=True, exist_ok=True)
 
