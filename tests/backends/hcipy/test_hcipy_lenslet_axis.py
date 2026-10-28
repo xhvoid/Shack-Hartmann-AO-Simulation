@@ -11,14 +11,25 @@ and spot broadening turns that into a focus-shaped slope bias that the
 zero-phase reference cannot absorb
 (``docs/refactor/AO_REF_016A_HCIPY_LENSLET_AXIS.md``).
 
-These checks use a WFS-only analogue of the published sensor that fits the
-desktop-safe fixture limits: 80 pupil pixels and 10 lenslets across at the
+The default checks use a WFS-only analogue of the published sensor that fits
+the desktop-safe fixture limits: 80 pupil pixels and 10 lenslets across at the
 published 0.2083 m pitch, pad 4 (4 detector pixels per lambda/d), 8-pixel
 block windows and the published 750 nm sensing wavelength, built through the
 registered HCIPy factory.  No atmosphere model, DM, interaction matrix or loop
 is constructed.  The published convention is kept as a strict expected failure
 of each check, which shows that each check detects the defect and pins the
 @1-@3 behaviour as published.
+
+HCIPy propagates all lenslets together, and an 8-pixel window is only
+2 lambda/d wide, so a broadened spot spills into its neighbours' windows.  An
+interior window gets that spill from both sides; a window on the pupil
+boundary gets it from one side only, which leaves an inward slope that is
+independent of the lenslet axis.  In a 10-lenslet pupil the boundary is most
+of the pupil and even the interior lenslets are only one ring deep.  So the
+analogue's even-part check uses a deterministic defocus on interior lenslets,
+with a threshold set between that shared spill floor and the published defect.
+The clean comparison runs at the published 48-lenslet geometry, behind the
+``elt_scale`` gate, because it needs about 0.7 GiB.
 
 Every test requires the optional HCIPy dependency and carries the ``hcipy``
 marker.  The module imports only the installed package.
@@ -71,10 +82,27 @@ CONVENTIONS = (
     pytest.param(BLOCK_AXIS, id="block_center"),
 )
 
-# Thresholds, calibrated on this analogue (AO-REF-016A, section 3).  The
-# published convention misses each by a factor of 10 or more.
+# Flat-reference spread of the 32 interior lenslets (measured 2026-10-15):
+# block_center 0.0096 px with a 0.00074 px/index column trend (2.1x and 2.7x
+# under the limits below), published 0.52 px and -0.104 px/index (26x and
+# 52x over).
 FLAT_REFERENCE_COLUMN_SPREAD_TOL_PX = 0.02
-EVEN_FOCUS_GRADIENT_TOL_PX_PER_M = 0.004
+# Even-part focus gradients below were measured with both conventions on
+# 2026-10-15 (Linux cloud VM, hcipy 0.7.0, numpy 2.5.0).  Each threshold is
+# the geometric mean of the block-centre value and the published value, so
+# both sides keep the same margin.
+#
+# 10-lenslet analogue, 100 nm block-centred defocus, interior lenslets:
+# block_center 0.0078 px/m (neighbour-spill floor), published 0.0514 px/m.
+# Margin 2.6x each side.
+DEFOCUS_EDGE_OPD_M = 100.0e-9
+ANALOGUE_EVEN_FOCUS_GRADIENT_TOL_PX_PER_M = 0.02
+# Published 48-lenslet geometry, interior lenslets.  Defocus as above:
+# block_center 0.00024 px/m, published 0.0081 px/m (margin 5.8x each side).
+# Tilt-removed residual screens 0 and 1: block_center at most 0.00053 px/m,
+# published at least 0.0185 px/m (margin about 6x each side).
+PUBLISHED_EVEN_FOCUS_GRADIENT_TOL_PX_PER_M = 0.0014
+PUBLISHED_RESIDUAL_FOCUS_GRADIENT_TOL_PX_PER_M = 0.003
 RESIDUAL_SEED = 20261015
 RESIDUAL_SCREENS = 2
 
@@ -91,6 +119,23 @@ def analogue():
         lenslets_across=ANALOGUE_LENSLETS_ACROSS,
         telescope_diameter_m=pitch_m * ANALOGUE_LENSLETS_ACROSS,
     )
+    return _hcipy_sensors(config)
+
+
+@pytest.fixture(scope="module")
+def published_scale():
+    """The published @3 sensor at its own 384-pixel, 48-lenslet geometry.
+
+    Only ``elt_scale`` tests request it, and ``tests/conftest.py`` skips those
+    before any fixture is set up unless ``--enable-elt-scale`` is passed.
+    """
+
+    return _hcipy_sensors(load_system_profile("high_order_10m_hcipy", 3))
+
+
+def _hcipy_sensors(config):
+    """Build ``config``'s geometry and a per-convention sensor builder."""
+
     factory = scao._factory_for("hcipy")
     geometry = factory.build_geometry(
         telescope_diameter_m=config.telescope_diameter_m,
@@ -204,6 +249,42 @@ def _tilt_removed(opd_m: np.ndarray, geometry) -> np.ndarray:
     return residual
 
 
+def _block_defocus_opd_m(config, geometry, edge_opd_m: float) -> np.ndarray:
+    """The same defocus in every lenslet, centred on its pixel block.
+
+    ``edge_opd_m`` is the OPD at the middle of a block edge.  Each lenslet's
+    phase is then symmetric about its aperture centre, so it has no true slope
+    and its spot is symmetric about the lens axis.
+    """
+
+    block = geometry.pupil_shape[0] // geometry.n_lenslets_across
+    half_pitch_m = 0.5 * config.telescope_diameter_m / config.lenslets_across
+    opd_m = np.zeros(geometry.pupil_shape)
+    for identifier, mask in zip(geometry.subaperture_ids, geometry.subaperture_masks):
+        row, column = lenslet_indices_from_id(identifier)
+        x0_m = float(np.mean(geometry.x_m[0, column * block:(column + 1) * block]))
+        y0_m = float(np.mean(geometry.y_m[row * block:(row + 1) * block, 0]))
+        inside = np.asarray(mask, dtype=bool)
+        dx_m = geometry.x_m[inside] - x0_m
+        dy_m = geometry.y_m[inside] - y0_m
+        opd_m[inside] = edge_opd_m * (dx_m * dx_m + dy_m * dy_m) / half_pitch_m**2
+    return opd_m
+
+
+def _even_part_px(sensor, opd_m: np.ndarray, root_seed: int) -> tuple[np.ndarray, np.ndarray]:
+    """``[s(phi) + s(-phi)]/2`` and the lenslets valid for both signs.
+
+    ``phi -> -phi`` point-reflects each lenslet's own spot about its axis, so
+    for a window symmetric about the axis the even part keeps only neighbour
+    crosstalk.  For the published axes it also holds the window asymmetry,
+    an outward slope pattern that a closed loop cancels with a static focus.
+    """
+
+    plus, plus_valid = _slopes_px(sensor, opd_m, root_seed)
+    minus, minus_valid = _slopes_px(sensor, -opd_m, root_seed)
+    return 0.5 * (plus + minus), plus_valid & minus_valid
+
+
 def _slopes_px(sensor, opd_m: np.ndarray, root_seed: int) -> tuple[np.ndarray, np.ndarray]:
     measurement = sensor.measure(
         opd_m,
@@ -280,30 +361,67 @@ def test_flat_reference_centroids_are_independent_of_lenslet_column(
 
 
 @pytest.mark.parametrize("lenslet_axis", CONVENTIONS)
-def test_even_part_of_a_tilt_removed_residual_has_no_focus_gradient(
+def test_even_part_of_a_block_centred_defocus_has_no_interior_focus_gradient(
     analogue, lenslet_axis
 ) -> None:
-    """``[s(phi) + s(-phi)]/2`` must not carry a defocus slope pattern.
+    """Deterministic analogue check on interior lenslets.
 
-    ``phi -> -phi`` point-reflects each lenslet's spot about its axis, so for
-    a window symmetric about the axis the even part keeps only neighbour
-    crosstalk, with no systematic pattern.  For the published axes it holds
-    the outward edge-lenslet slope that a closed loop cancels with a static
-    focus.
+    The fit leaves out boundary lenslets, whose one-sided neighbour spill is
+    shared by both conventions.  The 0.0078 px/m that remains for
+    block_center is spill from the lopsided second ring of a 10-lenslet pupil;
+    it falls to 0.00024 px/m at the published geometry (see the elt_scale
+    checks below).  Random screens are not used here: their interior
+    gradients overlap between the two conventions at this size.
     """
 
     config, geometry, sensor = analogue
+    centers_m = np.asarray(geometry.subaperture_centers_m, dtype=float)
+    even, usable = _even_part_px(
+        sensor(lenslet_axis),
+        _block_defocus_opd_m(config, geometry, DEFOCUS_EDGE_OPD_M),
+        config.random.root_seed,
+    )
+    assert bool(np.all(usable))
+    gradient = _focus_gradient_px_per_m(even, centers_m, usable & _interior(geometry))
+    assert abs(gradient) < ANALOGUE_EVEN_FOCUS_GRADIENT_TOL_PX_PER_M
+
+
+@pytest.mark.slow
+@pytest.mark.elt_scale
+@pytest.mark.parametrize("lenslet_axis", CONVENTIONS)
+def test_published_geometry_even_part_has_no_interior_focus_gradient(
+    published_scale, lenslet_axis
+) -> None:
+    """The even-part focus check at the published 384-pixel, 48-lenslet scale.
+
+    WFS only: no atmosphere model, DM, interaction matrix or loop.  On a
+    4-vCPU Linux VM both conventions together took 18 s with a 707 MiB peak
+    RSS, above the desktop-safe default, so the test runs only with
+    ``--enable-elt-scale``.  It checks the deterministic block-centred
+    defocus and the closed-loop-like tilt-removed residual screens, both on
+    interior lenslets.
+    """
+
+    config, geometry, sensor = published_scale
     wfs = sensor(lenslet_axis)
     centers_m = np.asarray(geometry.subaperture_centers_m, dtype=float)
+    interior = _interior(geometry)
+    seed = config.random.root_seed
+
+    even, usable = _even_part_px(
+        wfs, _block_defocus_opd_m(config, geometry, DEFOCUS_EDGE_OPD_M), seed
+    )
+    assert float(np.mean(usable)) > 0.99
+    gradient = _focus_gradient_px_per_m(even, centers_m, usable & interior)
+    assert abs(gradient) < PUBLISHED_EVEN_FOCUS_GRADIENT_TOL_PX_PER_M
+
     rng = np.random.default_rng(RESIDUAL_SEED)
     for _ in range(RESIDUAL_SCREENS):
         residual_m = _tilt_removed(_von_karman_opd_m(config, geometry, rng), geometry)
-        plus, plus_valid = _slopes_px(wfs, residual_m, config.random.root_seed)
-        minus, minus_valid = _slopes_px(wfs, -residual_m, config.random.root_seed)
-        usable = plus_valid & minus_valid
+        even, usable = _even_part_px(wfs, residual_m, seed)
         assert float(np.mean(usable)) > 0.9
-        gradient = _focus_gradient_px_per_m(0.5 * (plus + minus), centers_m, usable)
-        assert abs(gradient) < EVEN_FOCUS_GRADIENT_TOL_PX_PER_M
+        gradient = _focus_gradient_px_per_m(even, centers_m, usable & interior)
+        assert abs(gradient) < PUBLISHED_RESIDUAL_FOCUS_GRADIENT_TOL_PX_PER_M
 
 
 def test_the_block_centre_axis_changes_only_the_optics_identity(analogue) -> None:
