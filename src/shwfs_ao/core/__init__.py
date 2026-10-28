@@ -32,9 +32,11 @@ from .protocols import (
 from .provenance import ALLOWED_SOURCE_CLASSES, Provenance, SourceClass
 from .random import (
     DEFAULT_RANDOM_DOMAINS,
+    DETECTOR_PHYSICS_RANDOM_DOMAINS,
     DERIVATION_SCHEME_ID,
     NamedRandomStreams,
     RandomStreamError,
+    with_detector_physics_domains,
 )
 from .types import (
     DetectorFrame,
@@ -95,7 +97,9 @@ __all__ = (
     "Controller",
     "SciencePropagator",
     "DEFAULT_RANDOM_DOMAINS",
+    "DETECTOR_PHYSICS_RANDOM_DOMAINS",
     "DERIVATION_SCHEME_ID",
+    "with_detector_physics_domains",
     "NamedRandomStreams",
     "RandomStreamError",
     "HASH_SCHEMA_ID",

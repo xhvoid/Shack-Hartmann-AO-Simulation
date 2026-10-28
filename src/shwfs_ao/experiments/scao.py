@@ -49,8 +49,9 @@ from ..core.protocols import (
     SciencePropagator,
     WavefrontSensor,
 )
-from ..core.random import NamedRandomStreams
+from ..core.random import NamedRandomStreams, with_detector_physics_domains
 from ..detector import CentroidConfig, CentroidValidityConfig, DetectorConfig
+from ..detector.physical_config import PhysicalDetectorConfig
 from ..dm import DMConfig
 from ..io.configs import AtmosphereLayerConfig, SystemConfig
 from ..io.resources import read_text_resource
@@ -88,8 +89,13 @@ class ScaoExecutionOptions:
     # "regenerate" redraws the native layered atmosphere's band coefficients
     # each frame (bit-identical frames, ~16 * n_layers * (2N)**2 bytes not held).
     atmosphere_band_storage: str = "materialized"
+    # Physical camera path only: "full" keeps per-lenslet frames, "summary"
+    # only per-lenslet scalars.  Identity-neutral.
+    telemetry_level: str = "full"
 
     def __post_init__(self) -> None:
+        if self.telemetry_level not in ("full", "summary"):
+            raise ScaoConstructionError("telemetry_level must be 'full' or 'summary'.")
         if (
             isinstance(self.lenslet_batch_size, bool)
             or not isinstance(self.lenslet_batch_size, int)
@@ -496,6 +502,9 @@ def build_scao_system(
     # old factory with the new epoch.
     factory, factory_epoch = _factory_and_epoch(config.backend)
     streams = NamedRandomStreams(config.random.root_seed)
+    if config.detector_physics is not None:
+        # Registration cannot shift any existing domain's draws.
+        with_detector_physics_domains(streams)
     if streams.derivation_scheme_id != config.random.derivation_scheme_id:
         raise ScaoConstructionError(
             "random derivation scheme does not match the serialized profile."
@@ -556,6 +565,10 @@ def build_scao_system(
     )
     if config.wfs.lenslet_axis != "geometry_cell_center":
         wfs_keywords["lenslet_axis"] = config.wfs.lenslet_axis
+    if config.detector_physics is not None:
+        wfs_keywords["physical_detector"] = physical_detector_config(config)
+        wfs_keywords["telemetry_level"] = options.telemetry_level
+        wfs_keywords.setdefault("lenslet_batch_size", options.lenslet_batch_size)
     wfs = factory.build_wfs(
         model=config.wfs_model,
         geometry=geometry,
@@ -723,7 +736,20 @@ def run_closed_loop(
         include_noise=config.controller.include_noise,
         realization_index=realization_index,
         observers=observers,
+        **_exposure_keywords(config),
     )
+
+
+def _exposure_keywords(config: SystemConfig) -> dict[str, Any]:
+    """DET-08 time quadrature, passed only when a profile asks for it."""
+
+    physics = config.detector_physics
+    if physics is None or physics.exposure_subsamples == 1:
+        return {}
+    return {
+        "exposure_subsamples": int(physics.exposure_subsamples),
+        "exposure_s": float(config.detector.exposure_s),
+    }
 
 
 def _verify_supplied_system(config: SystemConfig, system: ScaoSystem) -> None:
@@ -920,6 +946,28 @@ def _detector_config(config: SystemConfig) -> DetectorConfig:
         source_note=source_note,
         prnu_mode=detector.prnu_mode,
         bad_pixel_fraction=detector.bad_pixel_fraction,
+    )
+
+
+def physical_detector_config(config: SystemConfig) -> PhysicalDetectorConfig:
+    """The detector-layer configuration of a schema-v7 ``detector_physics`` block."""
+
+    physics = config.detector_physics
+    if physics is None:
+        raise ScaoConstructionError("the profile declares no detector_physics block.")
+    return PhysicalDetectorConfig(
+        camera=physics.camera,
+        layout_scheme=physics.layout_scheme,
+        guard_px=physics.guard_px,
+        source=physics.source,
+        bandpass=physics.bandpass,
+        sampling=physics.sampling,
+        processing=physics.processing,
+        exposure_s=config.detector.exposure_s,
+        exposure_subsamples=physics.exposure_subsamples,
+        calibration_source_detected_e_per_full_subap_frame=(
+            physics.calibration_source_detected_e_per_full_subap_frame
+        ),
     )
 
 

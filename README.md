@@ -41,6 +41,7 @@ needed to assess sustained performance. [Executed notebook](notebooks/tutorials/
 [reconstruction and control](#reconstruction-and-control) →
 [PSFs and error budgets](#psfs-and-error-budgets) →
 [ESO E-ELT turbulence](#eso-e-elt-turbulence-model) →
+[detector-level camera model](#detector-level-camera-model) →
 [HCIPy lenslet-axis correction](#hcipy-lenslet-axis-correction) →
 [validation evidence](#validation-evidence).
 For execution, see [Run the project](#run-the-project).
@@ -398,6 +399,101 @@ path and the long-exposure definitions are in the
 [benchmark notes](docs/eso_scao_benchmark.md). The commands run, their
 results, and the gates still pending are in the
 [execution record](docs/refactor/ESO_SCAO_DEVELOPMENT_STATUS.md).
+
+## Detector-level camera model
+
+Schema-7 profiles can select a **physical camera path**
+(`shwfs_ao.detector.physical_camera.v1`) in place of the original idealized
+detector model, which stays the default and is unchanged. The path covers:
+
+- **Photometry:** an AB-magnitude source and sky with QE applied once.
+- **Optics:** polychromatic lenslet images formed by a matrix Fourier
+  transform, integrated over the detector pixels, with charge diffusion.
+- **Cameras:** synthetic CCD, EMCCD (Gamma register, F² = 2,
+  pre-register clock-induced charge) and CMOS (per-pixel offset, gain and
+  read-noise maps) models.
+- **Electronics:** separate pixel, register and ADC saturation, with an
+  optional declared electronic-coupling kernel.
+- **Pixel maps:** persistent maps tied to physical pixel IDs.
+- **RTC processing:** pixel processing that uses *estimated* bias, dark,
+  sky and flat masters.
+- **Noise model:** a first-order centroid-noise model,
+  `detector_covariance_v1`, that propagates the full covariance (including
+  coupling and master-frame errors) and flags the regimes it does not
+  support.
+
+The evidence is recorded in the
+[execution record](docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md), and
+the model is defined in the [detector model notes](docs/detector_model.md):
+
+- **Model versus Monte Carlo.** Across all three cameras, with and without
+  background, centroid scatter at 10⁴ trials per point stays within
+  **2.1 %** of the model throughout its supported domain. The calibration
+  ensembles over 200 regenerated masters agree within 4.4 %.
+- **Open-loop noise propagation.** On the 2 m systems the measured
+  slope-noise covariance averages 0.996–1.004× the independent prediction.
+  The reconstruction covariance is 0.984–0.998× R·Σ·Rᵀ.
+- **12 m noise propagation.** On the 12 m system the slope-noise
+  covariance averages 0.999× the prediction, and the reconstruction
+  covariance trace is 1.008× R·Σ·Rᵀ.
+- **Optics oracles.** With one sample per pixel, the matrix-Fourier optics
+  reproduce the original FFT spots to 1e-12. Pixel integration matches erf
+  integrals to 1e-6.
+
+| Profile | Camera | Sampling | Status |
+| --- | --- | --- | --- |
+| `det_ccd_2m_synthetic@1`, `det_emccd_2m_synthetic@1`, `det_cmos_2m_synthetic@1` | synthetic CCD, EMCCD, CMOS | 700 nm, FFT point sampling | noise-on closed loops run |
+| `det_emccd_2m_plane_synthetic@1` | coupled EMCCD | 0.6–0.9 µm, 3 nodes, pixel-integrated, diffusion | noise-on closed loops run |
+| `det_emccd_12m_medium_derived@1`, `@2` | coupled EMCCD | R3 band, pixel-integrated | magnitude scan, camera comparison, effect sizes, exposure integration and 12 m noise propagation run with explicit enablement |
+| `det_ccd_42m_r3band_derived@1` | CCD, 3 e⁻ | R3 band, pixel-integrated | one 2000-frame noise-on run, with explicit enablement |
+
+On the 12 m tier the magnitude scan exposed a limit set by the control
+policy rather than by the camera.
+
+- **`@1`, the predeclared version:**
+  - It collapses at m_AB = 10.
+  - The cause is a peak-pixel SNR gate inherited from the point-sampled
+    2 m profiles: it rejects lenslets whose total SNR is still about 20.
+  - From m_AB = 11 the interaction calibration, measured at the
+    guide-star flux, has no valid rows at all.
+- **`@2`, a recorded post-hoc revision:**
+  - It calibrates with a bright internal source.
+  - It gates on the validated noise-model domain instead.
+  - It holds 186–189 nm and a K-band Strehl of about 0.72 down to
+    m_AB = 10, with the EMCCD. At that magnitude the CCD is read-noise
+    limited, with no valid lenslet.
+  - Lock is lost at m_AB = 11. The loop first closes to about 225 nm, but
+    once fewer than half the lenslets are valid the reconstructor returns
+    no estimate, the deformable mirror stays frozen, and the loop does not
+    recover. This is a control-policy limit, not a camera limit.
+
+Further results:
+- **Effect sizes at m_AB = 8 (12 m, `@2`).** Three changes were tested:
+  point sampling in place of pixel integration, monochromatic in place of
+  polychromatic sensing, and oracle in place of estimated masters.
+  - In two of three seeds each moves the residual by less than 1 nm.
+  - In the strong-turbulence seed the residual varies by ±10 nm with no
+    consistent sign.
+  - Pixel integration with diffusion, and three-wavelength sensing, each
+    cost about a third more time per frame.
+- **42 m, one realization.** The 2000-frame noise-on run:
+  - corrects 1683 nm open loop to **173.2 nm**;
+  - keeps at least 99.4 % of lenslets valid in every frame;
+  - reaches a long-exposure K-band Strehl of **0.753**, against 0.78 for
+    the noiseless reference profile;
+  - took 1.75 s per frame and peaked at 1.61 GiB.
+
+Both 12 m versions, the 42 m run and the diagnoses are recorded in the
+execution record.
+
+<!-- readme-smoke: native -->
+```bash
+AO_DEMO_OUTPUT_DIR=readme-smoke-output python examples/run_detector_level_demo.py
+```
+
+The command runs the 2 m EMCCD profile with detector noise on (a few
+seconds). The camera presets are synthetic, not a model of any commercial
+camera, and nothing here is validated against laboratory or on-sky data.
 
 ## HCIPy lenslet-axis correction
 

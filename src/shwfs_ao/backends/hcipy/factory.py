@@ -173,7 +173,15 @@ class HcipyScaoComponentFactory:
         ),
         clip_negative_pixels: bool = True,
         lenslet_axis: LensletAxis = "geometry_cell_center",
+        physical_detector: object = None,
     ) -> WavefrontSensor:
+        if physical_detector is not None:
+            raise HcipyScaoFactoryError(
+                "the physical camera path (detector_physics: physical camera, "
+                "pixel integration, diffusion, coupling, polychromatic sensing, "
+                "pixel processing) is not implemented on the HCIPy backend; it "
+                "fails closed rather than silently skipping those stages."
+            )
         if model != "detector_level":
             raise HcipyScaoFactoryError(
                 f"HCIPy WFS model {model!r} is not registered; the HCIPy "

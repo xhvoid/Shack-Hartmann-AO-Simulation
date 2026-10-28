@@ -251,7 +251,19 @@ class NativeScaoComponentFactory:
         ),
         clip_negative_pixels: bool = True,
         lenslet_batch_size: int = DEFAULT_LENSLET_BATCH_SIZE,
+        physical_detector: Any = None,
+        telemetry_level: str = "full",
     ) -> WavefrontSensor:
+        """Build the WFS.
+
+        ``physical_detector`` (a
+        :class:`~shwfs_ao.detector.physical_config.PhysicalDetectorConfig`)
+        selects the physical camera path; it is passed only for schema-v7
+        profiles that declare one, so every earlier profile builds the
+        compatibility sensor unchanged.  ``detector_window_px`` is then the
+        centroid window and the optics return blocks of ``window + 2 * guard``
+        pixels.  ``telemetry_level`` is identity-neutral.
+        """
         def geometric() -> WavefrontSensor:
             if isinstance(geometry, CompactShackHartmannGeometry):
                 raise NativeScaoFactoryError(
@@ -259,7 +271,54 @@ class NativeScaoComponentFactory:
                 )
             return NativeGeometricShackHartmannSensor(geometry)
 
+        def physical() -> WavefrontSensor:
+            from ...wfs.shack_hartmann.physical_measurement import (
+                PhysicalShackHartmannSensor,
+            )
+            from .shwfs_mft import build_mft_optics
+
+            if detector_window_px is None:
+                raise NativeScaoFactoryError("the physical path needs an explicit window.")
+            block = int(detector_window_px) + 2 * int(physical_detector.guard_px)
+            optics: Any
+            if physical_detector.sampling.kind == "legacy_fft":
+                if isinstance(geometry, CompactShackHartmannGeometry):
+                    optics = BatchedNativeShackHartmannOptics(
+                        geometry,
+                        wfs_wavelength_m,
+                        pad_factor=pad_factor,
+                        detector_window_px=block,
+                        batch_size=lenslet_batch_size,
+                    )
+                else:
+                    optics = NativeShackHartmannOptics(
+                        geometry,
+                        wfs_wavelength_m,
+                        pad_factor=pad_factor,
+                        detector_window_px=block,
+                    )
+            else:
+                optics = build_mft_optics(
+                    geometry,
+                    physical_detector,
+                    wfs_wavelength_m=wfs_wavelength_m,
+                    block_px=block,
+                    batch_size=lenslet_batch_size,
+                )
+            return PhysicalShackHartmannSensor.calibrate(
+                geometry,
+                optics,
+                physical_detector,
+                wfs_wavelength_m=wfs_wavelength_m,
+                random_streams=random_streams.scoped("native-detector-wfs"),
+                centroid_config=centroid_config,
+                validity_config=validity_config,
+                telemetry_level=telemetry_level,
+            )
+
         def detector_level() -> WavefrontSensor:
+            if physical_detector is not None:
+                return physical()
             optics: NativeShackHartmannOptics | BatchedNativeShackHartmannOptics
             if isinstance(geometry, CompactShackHartmannGeometry):
                 # Batch size is an execution setting outside the identity.

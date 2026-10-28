@@ -182,6 +182,14 @@ and `tests/backends/hcipy/test_hcipy_layered_atmosphere.py`.
 - `PsfResult` is monochromatic. The scalar bandpass helper averages scalar
   metrics; it does not authorize same-index coaddition of wavelength-dependent
   PSF arrays.
+- The physical camera path (schema-7 `detector_physics`;
+  [detector model](detector_model.md)) is **native only**: matrix-Fourier
+  pixel-integrated optics (`backends.native.shwfs_mft`), polychromatic
+  sensing, charge diffusion, electronic coupling, CCD/EMCCD/CMOS cameras and
+  RTC pixel processing. It runs on the dense and the compact (scalable)
+  geometry. On the HCIPy backend every one of these features fails closed:
+  the profile is rejected while parsing and the HCIPy factory refuses a
+  `physical_detector`. No HCIPy parity is claimed for them.
 
 ## Command and residual convention
 
@@ -299,6 +307,13 @@ below are authoritative.
 | `bad_pixel_mask` | same shape, bool | persistent configured defect map |
 | `negative_clipped_mask` | same shape, bool | pixels clipped by the non-negative output policy |
 | `random_stream_ids` | mapping `str -> str` | identities of streams actually used, never generator state |
+| `raw_image` | same shape, `raw_unit`, or `None` | physical camera path only: the raw readout (ADU, or `output_e_equivalent` with the ADC disabled); `image_e` is then the processed, input-referred image the centroid sees |
+| `raw_unit` | `"adu"`, `"output_e_equivalent"` or `None` | unit of `raw_image` |
+| `pixel_saturated_mask` | same shape, bool, or `None` | physical path: pixels clipped at the pixel full well |
+| `register_saturated_mask` | same shape, bool, or `None` | physical path: EMCCD register-capacity clipping |
+| `digital_saturated_mask` | same shape, bool, or `None` | physical path: ADC codes clipped to `[0, 2**bits - 1]`; `saturated_mask` is the union of the three |
+| `response_model` | string or `None` | `shwfs_ao.detector.physical_camera.v1` on the physical path |
+| `calibration_products_hash` | string or `None` | content hash of the fixed calibration products that processed the frame |
 
 ### `DetectorTelemetry`
 
@@ -319,6 +334,11 @@ below are authoritative.
 | `clipping_fraction` | vector in `[0, 1]` | estimated flux outside the finite window |
 | `detector_frames` | tuple of `DetectorFrame` or `None` | optional per-lenslet detector details |
 | `optical_spots` | `SpotIntensityResult` or `None` | optional noiseless backend spots |
+| `telemetry_level` | `"full"` or `"summary"` | `summary` keeps only the per-lenslet scalars (no frames, no spots); an execution setting outside every identity |
+| `centroid_calibration_sigma_px` | vector, px, or `None` | physical path: calibration-ensemble centroid sigma from master-frame errors (a persistent per-run bias, not frame noise) |
+| `uncertainty_supported` | bool vector or `None` | physical path: whether `detector_covariance_v1` supports the regime; unsupported lenslets report an undefined sigma |
+| `masked_pixel_fraction` | vector in `[0, 1]` or `None` | physical path: masked (bad) fraction of each centroid window; on this path `fluxes_e` is the model-expected processed window flux that the flux gate uses |
+| `saturated_pixel_count` | vector or `None` | physical path: saturated pixels per block (pixel, register or digital) |
 
 ### `WfsMeasurement`
 

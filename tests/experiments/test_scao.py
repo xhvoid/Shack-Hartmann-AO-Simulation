@@ -147,6 +147,9 @@ def _tiny_system_config(wfs_model: str = "geometric") -> SystemConfig:
                 ),
             ),
         ),
+        # Schema 6 pinned explicitly: these tiny systems use even detector
+        # windows to exercise pre-v7 identities, which schema 7 refuses.
+        record_schema_version=6,
     )
 
 
