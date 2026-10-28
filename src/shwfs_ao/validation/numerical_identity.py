@@ -172,7 +172,10 @@ def _decode_source_payload(
         ):
             raise ValueError("unexpected DM hash envelope")
         return dict(value["config"]["$mapping"])
-    except (TypeError, KeyError, ValueError) as exc:
+    # Decoding and walking recurse once per nesting level, so a deeply nested
+    # payload exhausts the interpreter or C stack.  That is a malformed
+    # payload, not a reason to abort evaluating the whole document.
+    except (TypeError, KeyError, ValueError, RecursionError) as exc:
         raise ValueError("invalid canonical DM source_payload") from exc
 
 
@@ -197,9 +200,9 @@ def dm_source_failure(name: str, record: Mapping[str, Any]) -> str | None:
     payload = record["source_payload"]
     if not isinstance(payload, str):
         return "missing canonical DM source_payload"
-    if hashlib.sha256(payload.encode("utf-8")).hexdigest() != record["source_hash"]:
-        return "raw DM hash does not match source_payload"
     try:
+        if hashlib.sha256(payload.encode("utf-8")).hexdigest() != record["source_hash"]:
+            return "raw DM hash does not match source_payload"
         config = _dm_payload_config(payload)
         backend_name = name.removesuffix("_dm")
         expected_class = (
@@ -223,6 +226,15 @@ def dm_source_failure(name: str, record: Mapping[str, Any]) -> str | None:
             return "DM backend source_payload does not bind the witnessed influence array"
         if dm_semantic_hash(payload, backend_payload) != record["configuration_hash"]:
             return "DM configuration_hash does not bind its semantic inputs"
+    # A lone surrogate (which a JSON document can carry as a "\ud800" escape)
+    # has no UTF-8 encoding and therefore no hash preimage: a malformed
+    # payload.  Deep nesting is refused by the decoder's canonical-order walk
+    # before anything is hashed; RecursionError is caught here as well so the
+    # semantic hash, which recurses through the same values, cannot abort the
+    # evaluation either.  UnicodeError subclasses ValueError, so this clause
+    # must precede the next one, which would report the codec's message.
+    except (UnicodeError, RecursionError):
+        return "invalid canonical DM source_payload"
     except ValueError as exc:
         return str(exc)
     return None

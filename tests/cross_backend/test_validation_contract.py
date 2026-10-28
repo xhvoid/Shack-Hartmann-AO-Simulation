@@ -313,6 +313,71 @@ def _replace_numerical_input(report: dict, name: str, values: np.ndarray) -> Non
     )
 
 
+def _drifted_raw_hash(baseline: dict, name: str) -> str:
+    """The raw hash an honest run records when ``name`` drifts by 1 %."""
+    run = _report_copy(baseline)
+    values = numerical_input_values(run["numerical_inputs"][name])
+    _replace_numerical_input(run, name, 1.01 * values)
+    return run[NUMERICAL_INPUTS[name][0]][name]
+
+
+def _dm_config_pairs(parsed: dict) -> list:
+    """The mutable ``[key, value]`` config pairs of a parsed DM hash preimage."""
+    return dict(dict(parsed["$mapping"])["value"]["$mapping"])["config"]["$mapping"]
+
+
+def _canonical_text(parsed: dict) -> str:
+    return json.dumps(
+        parsed, ensure_ascii=False, allow_nan=False,
+        sort_keys=True, separators=(",", ":"),
+    )
+
+
+def _set_pairs(pairs: list, fields: dict) -> None:
+    found = {pair[0] for pair in pairs} & set(fields)
+    assert found == set(fields), f"preimage has no {set(fields) - found}"
+    for pair in pairs:
+        if pair[0] in fields:
+            pair[1] = fields[pair[0]]
+
+
+def _rewrite_dm_hash_preimages(
+    document: dict, name: str, *,
+    model: dict | None = None,
+    backend: dict | None = None,
+    backend_text: str | None = None,
+) -> None:
+    """Edit one DM witness's hash preimages and re-mint every hash over them.
+
+    The model preimage's ``backend_config_hash``, the witness ``source_hash``
+    and the raw component hash beside it are recomputed from the edited text,
+    so no preimage check can object to anything but the edit itself.
+    ``configuration_hash`` is left as it was; a caller whose edit changes the
+    semantics re-mints it explicitly.  ``backend_text`` replaces the backend
+    preimage verbatim, for text that is not a parseable preimage at all.
+    """
+    record = document["numerical_inputs"][name]
+    if backend_text is None:
+        parsed_backend = json.loads(record["backend_source_payload"])
+        _set_pairs(_dm_config_pairs(parsed_backend), backend or {})
+        backend_text = _canonical_text(parsed_backend)
+    backend_hash = hashlib.sha256(
+        backend_text.encode("utf-8", "surrogatepass")
+    ).hexdigest()
+    parsed = json.loads(record["source_payload"])
+    _set_pairs(
+        _dm_config_pairs(parsed),
+        {**(model or {}), "backend_config_hash": backend_hash},
+    )
+    payload = _canonical_text(parsed)
+    record.update(
+        source_payload=payload,
+        backend_source_payload=backend_text,
+        source_hash=hashlib.sha256(payload.encode()).hexdigest(),
+    )
+    document["component_hashes"][name] = record["source_hash"]
+
+
 @pytest.mark.parametrize("name", tuple(NUMERICAL_INPUTS))
 def test_platform_roundoff_keeps_numerical_identity(name, packaged_baseline):
     report = _report_copy(packaged_baseline)
@@ -432,6 +497,149 @@ def test_inner_backend_semantics_remain_exact_even_with_matching_influences():
     failures = evaluate_report_against_baseline(report, baseline)
     assert len(failures) == 1
     assert "configuration_hash differs" in failures[0]
+
+
+# Each binding between raw byte provenance and its witness gets a case that
+# only that binding can refuse.  The witnessed samples stay exactly the
+# baseline's, so the full-array comparison passes; every other hash is
+# re-minted, so every other check passes.  Without the binding under test the
+# evaluator would accept a run whose recorded bytes are a 1 % drifted input.
+
+
+@pytest.mark.parametrize(
+    "name",
+    [name for name, spec in NUMERICAL_INPUTS.items() if spec[0] == "fixture_hashes"],
+)
+def test_a_fixture_raw_hash_must_be_the_hash_of_its_witnessed_array(
+    name, packaged_baseline,
+):
+    report = _report_copy(packaged_baseline)
+    drifted = _drifted_raw_hash(packaged_baseline, name)
+    # The raw hash and the witness agree with each other, but name an array
+    # other than the one the witness carries.
+    report["fixture_hashes"][name] = drifted
+    report["numerical_inputs"][name]["source_hash"] = drifted
+    failures = evaluate_report_against_baseline(report, packaged_baseline)
+    assert len(failures) == 1
+    assert "raw fixture hash does not match the witnessed array" in failures[0]
+    with pytest.raises(BaselineContractError, match="raw fixture hash"):
+        validate_cross_backend_baseline(report)
+
+
+@pytest.mark.parametrize("name", tuple(NUMERICAL_INPUTS))
+def test_a_witness_must_name_the_raw_hash_recorded_beside_it(
+    name, packaged_baseline,
+):
+    report = _report_copy(packaged_baseline)
+    drifted = _drifted_raw_hash(packaged_baseline, name)
+    if NUMERICAL_INPUTS[name][0] == "fixture_hashes":
+        # The raw hash is the stable hash of the witnessed array, but the
+        # witness claims to be the record of a different one.
+        report["numerical_inputs"][name]["source_hash"] = drifted
+    else:
+        # The witness is the baseline's own, preimages included, and is
+        # self-consistent; the run's raw DM hash is that of a drifted stack.
+        report["component_hashes"][name] = drifted
+    failures = evaluate_report_against_baseline(report, packaged_baseline)
+    assert len(failures) == 1
+    assert "raw hash does not match the numerical input witness" in failures[0]
+    with pytest.raises(BaselineContractError, match="numerical input witness"):
+        validate_cross_backend_baseline(report)
+
+
+@pytest.mark.parametrize(
+    ("name", "identity"),
+    [
+        ("native_dm", "shwfs_ao.backends.hcipy.dm.HcipyDmBackend"),
+        ("hcipy_dm", "shwfs_ao.backends.native.dm.NativeDmBackend"),
+    ],
+)
+def test_a_dm_preimage_must_name_the_backend_of_its_witness(
+    name, identity, packaged_baseline,
+):
+    # A preimage naming the other backend's class changes the semantic hash,
+    # so against a correct baseline configuration_hash would differ anyway.
+    # Only a baseline that records the mislabel throughout, semantic hash
+    # included, isolates the identity check, and acceptance must refuse it.
+    # The backend_name half of the check cannot be isolated this way: the
+    # semantic hash decodes the backend preimage under the recorded name and
+    # the backend preimage check under the witness's own, so once the two
+    # names differ no backend preimage satisfies both.
+    baseline = _report_copy(packaged_baseline)
+    _rewrite_dm_hash_preimages(baseline, name, model={"backend_identity": identity})
+    record = baseline["numerical_inputs"][name]
+    record["configuration_hash"] = dm_semantic_hash(
+        record["source_payload"], record["backend_source_payload"],
+    )
+    with pytest.raises(BaselineContractError, match="does not match its named backend"):
+        validate_cross_backend_baseline(baseline)
+    with pytest.raises(BaselineContractError, match="does not match its named backend"):
+        evaluate_report_against_baseline(_report_copy(baseline), baseline)
+
+
+@pytest.mark.parametrize("name", ["native_dm", "hcipy_dm"])
+@pytest.mark.parametrize(
+    ("preimage", "detail"),
+    [
+        ("model", "DM source_payload does not bind the witnessed influence array"),
+        (
+            "backend",
+            "DM backend source_payload does not bind the witnessed influence array",
+        ),
+    ],
+)
+def test_each_dm_preimage_must_bind_the_witnessed_influence_array(
+    name, preimage, detail, packaged_baseline,
+):
+    # Neither semantic hash includes the influence descriptor, so the edited
+    # preimage leaves configuration_hash valid and only this binding remains.
+    report = _report_copy(packaged_baseline)
+    values = numerical_input_values(report["numerical_inputs"][name])
+    drifted = {"influence_functions": {"$array": stable_array_descriptor(1.01 * values)}}
+    _rewrite_dm_hash_preimages(report, name, **{preimage: drifted})
+    failures = evaluate_report_against_baseline(report, packaged_baseline)
+    assert len(failures) == 1
+    assert detail in failures[0]
+    with pytest.raises(BaselineContractError, match="witnessed influence array"):
+        validate_cross_backend_baseline(report)
+
+
+@pytest.mark.parametrize("field", ["source_payload", "backend_source_payload"])
+@pytest.mark.parametrize(
+    "text",
+    [
+        # A JSON document can carry a lone surrogate as an escape; it has no
+        # UTF-8 encoding and therefore no hash preimage.
+        '{"$mapping":[["hash_schema","\ud800"]]}',
+        # 5 000 levels decode on Python 3.14 and exhaust the interpreter in
+        # the canonical-order walk; 100 000 exhaust the JSON decoder itself.
+        "[" * 5_000 + "]" * 5_000,
+        "[" * 100_000 + "]" * 100_000,
+    ],
+    ids=["lone_surrogate", "nested_5000", "nested_100000"],
+)
+def test_an_unencodable_or_deeply_nested_dm_preimage_is_an_ordinary_failure(
+    field, text,
+):
+    baseline = _minimal_baseline()
+    report = _report_copy(baseline)
+    if field == "source_payload":
+        record = report["numerical_inputs"]["native_dm"]
+        record["source_payload"] = text
+        record["source_hash"] = hashlib.sha256(
+            text.encode("utf-8", "surrogatepass")
+        ).hexdigest()
+        report["component_hashes"]["native_dm"] = record["source_hash"]
+    else:
+        _rewrite_dm_hash_preimages(report, "native_dm", backend_text=text)
+    failures = evaluate_report_against_baseline(report, baseline)
+    assert len(failures) == 1
+    assert "invalid canonical DM source_payload" in failures[0]
+    with pytest.raises(BaselineContractError, match="invalid canonical DM"):
+        validate_cross_backend_baseline(report)
+    # The producer derives configuration_hash through the same decoder.
+    with pytest.raises(ValueError, match="invalid canonical DM source_payload"):
+        dm_semantic_hash(text, text)
 
 
 def test_numerical_mask_is_exact_even_when_finite_values_agree():
@@ -668,6 +876,35 @@ class TestDocumentContract:
                 match="artifact_schema_version",
             ):
                 validate_cross_backend_report(report)
+
+    def test_a_version_1_document_is_refused_by_its_version(self):
+        # Version 1 predates numerical_inputs.  Checking required fields before
+        # the version reported such a document as merely incomplete, which
+        # invites adding the field rather than regenerating and reviewing.
+        report = _minimal_report()
+        del report["numerical_inputs"]
+        report["artifact_schema_version"] = 1
+        with pytest.raises(
+            BaselineContractError,
+            match="artifact_schema_version 1 is no longer accepted",
+        ) as excinfo:
+            validate_cross_backend_report(report)
+        assert "missing required fields" not in str(excinfo.value)
+        assert "Regenerate a version-2 candidate" in str(excinfo.value)
+
+    def test_the_schema_gate_also_names_a_version_1_document_by_its_version(
+        self, packaged_baseline,
+    ):
+        # Errors at the root sort before every field path, so without the
+        # identity coming first the schema gate reported the missing field.
+        document = _report_copy(packaged_baseline)
+        del document["numerical_inputs"]
+        document["artifact_schema_version"] = 1
+        with pytest.raises(
+            BaselineContractError,
+            match="at artifact_schema_version: 2 was expected",
+        ):
+            validate_baseline_against_schema(document)
 
     def test_report_rejects_a_config_without_hash_and_short_hashes(self):
         report = _minimal_report()
@@ -917,6 +1154,58 @@ class TestDocumentContract:
             baseline["acceptance"][field] = "   "
             with pytest.raises(BaselineContractError):
                 validate_baseline_against_schema(baseline)
+
+    def test_both_gates_refuse_the_same_malformed_numerical_witnesses(
+        self, packaged_baseline,
+    ):
+        """The schema's witness definitions are as strict as the runtime's.
+
+        Each case changes one field of the packaged baseline, which passes both
+        gates, so the schema must refuse at that field and nowhere else.  The
+        hash and ``data`` cases end in a newline because jsonschema matches
+        patterns with ``re.search``, whose ``$`` also matches before a final
+        newline: the pattern alone admitted them.
+        """
+
+        validate_cross_backend_baseline(packaged_baseline)
+        validate_baseline_against_schema(packaged_baseline)
+        data = packaged_baseline["numerical_inputs"]["static_opd_m"]["data"]
+        digest = packaged_baseline["numerical_inputs"]["tilt_x_opd_m"]["source_hash"]
+        cases = (
+            # Direct array fixtures have no hash preimage to carry.
+            ("static_opd_m", "source_payload", "unverified text"),
+            ("time_grid_s", "backend_source_payload", ""),
+            # The DM raw hashes are hashes of these preimages.
+            ("native_dm", "source_payload", None),
+            ("hcipy_dm", "backend_source_payload", None),
+            ("hcipy_dm", "source_payload", ""),
+            # Padded standard base64 only.
+            ("static_opd_m", "data", data + "\n"),
+            ("static_opd_m", "data", "*" + data[1:]),
+            ("static_opd_m", "data", data[:-1]),
+            # Exactly 64 lowercase hexadecimal characters.
+            ("static_opd_m", "values_sha256", digest + "\n"),
+            ("tilt_x_opd_m", "source_hash", digest + "\n"),
+            ("native_dm", "configuration_hash", digest + "\n"),
+        )
+        for name, field, value in cases:
+            document = _report_copy(packaged_baseline)
+            document["numerical_inputs"][name][field] = value
+            with pytest.raises(BaselineContractError, match=name):
+                validate_cross_backend_baseline(document)
+            with pytest.raises(
+                BaselineContractError,
+                match=f"at numerical_inputs/{name}/{field}:",
+            ):
+                validate_baseline_against_schema(document)
+
+        # JSON Schema counts 48.0 as an integer, so only the runtime can
+        # refuse an integer-valued float shape entry (docs/artifact_schemas.md).
+        document = _report_copy(packaged_baseline)
+        document["numerical_inputs"]["static_opd_m"]["shape"] = [48.0, 48]
+        with pytest.raises(BaselineContractError, match="shape must be bounded positive"):
+            validate_cross_backend_baseline(document)
+        validate_baseline_against_schema(document)
 
     def test_a_measured_magnitude_cannot_be_recorded_as_negative(self):
         """Standard errors, runtimes and peak memory are magnitudes.

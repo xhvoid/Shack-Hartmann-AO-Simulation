@@ -145,7 +145,7 @@ packaged artifacts stay in the fast lane.
 ## Native-versus-HCIPy suite
 
 `shwfs_ao.validation.cross_backend.run_cross_backend_report()` and the accepted
-version-1 comparison baseline cover thirteen comparison groups:
+version-2 comparison baseline cover thirteen comparison groups:
 
 1. pupil-mask conversion and throughput;
 2. Zernike RMS/alignment and relative sign;
