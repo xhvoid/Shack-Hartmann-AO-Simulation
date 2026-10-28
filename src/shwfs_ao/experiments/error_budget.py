@@ -466,9 +466,11 @@ def default_error_budget_scenarios(
     The disturbance is the :data:`PHASE_SOURCE_CONTROL_SPACE` proxy, which
     carries no fitting error by construction.  Use
     :func:`physical_error_budget_scenarios` for a budget built on a real
-    atmosphere.
+    atmosphere.  ``n_steps`` must be a genuine integer, as in
+    :class:`ScenarioConfig`; it is never truncated.
     """
 
+    _require_integer("n_steps", n_steps, minimum=2)
     common: dict[str, Any] = {
         "n_steps": int(n_steps),
         "phase_amplitude_nm": float(phase_amplitude_nm),
