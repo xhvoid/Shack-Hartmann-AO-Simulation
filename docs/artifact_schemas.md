@@ -19,7 +19,7 @@ The installed schema resources are under
 | `validation_table_sidecar.schema.json` | `shwfs_ao.validation_table_sidecar`, v3 | exact validation CSV header/order/units/hash and run identity |
 | `runtime_table_sidecar.schema.json` | `shwfs_ao.runtime_table_sidecar`, v3 | exact runtime CSV header/order/units/hash and run identity |
 | `artifact_manifest.schema.json` | `shwfs_ao.artifact_manifest`, v3 | content-addressed member list for one multi-file write |
-| `cross_backend_baseline.schema.json` | `shwfs_ao.cross_backend_baseline`, v1 | strict accepted cross-backend baseline record, separate from fast metrics |
+| `cross_backend_baseline.schema.json` | `shwfs_ao.cross_backend_baseline`, v2 | strict accepted cross-backend baseline with full numerical input witnesses, separate from fast metrics |
 
 Schema-v2 fast-reference JSON and CSV layouts remain compatibility contracts
 even though no new v2 JSON Schema resource is added. They are read by the
@@ -28,11 +28,11 @@ deprecation window.
 
 ### Current cross-backend baseline record
 
-The AO-REF-018 version-1 runtime contract in
+The AO-REF-018 version-2 runtime contract in
 `shwfs_ao.validation.regression` is the canonical shape of this family.
 Reports/baselines use `artifact_schema_name`, `artifact_schema_version`,
 `comparison_config`, `root_seed`, `conventions`, `component_hashes`,
-`fixture_hashes`, `environment`, and `comparisons`; an accepted baseline adds
+`fixture_hashes`, `numerical_inputs`, `environment`, and `comparisons`; an accepted baseline adds
 `generator` and `acceptance`. The packaged `cross_backend_baseline.json` and
 the candidate script use this contract, and the installed
 `cross_backend_baseline.schema.json` describes exactly the same shape: the
@@ -40,6 +40,17 @@ packaged baseline validates against the packaged schema, and CI enforces
 that cross-validation. An earlier draft of the schema resource described a
 normalized `schema_name`/`artifact_kind`/`shared_input_hashes` envelope that
 no writer ever emitted; it was superseded by the runtime contract.
+
+Each numerical-input witness contains its shape, losslessly compressed
+little-endian float64 samples, data SHA-256, raw source hash and semantic
+configuration hash. DM witnesses also include their canonical model and backend
+configuration hash preimages, binding the source hash to the influence samples
+and exact semantic fields (including reflective factors and array ordering).
+Version 2 verifies complete arrays at fixed roundoff
+tolerances across platforms while keeping scientific metric criteria unchanged;
+version 1's exact hash gate incorrectly required identical low bits from
+different math and FFT libraries. Existing version-1 documents require an
+explicit regenerated and reviewed baseline; they are not silently upgraded.
 
 The strict schema pins the complete thirteen-kind comparison inventory in
 canonical order, requires acceptance reason/review-reference/timestamp and

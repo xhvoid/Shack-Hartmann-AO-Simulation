@@ -78,14 +78,20 @@ def test_the_report_covers_the_thirteen_ticket_comparisons(report):
     assert kinds == TICKET_COMPARISON_KINDS
 
 
-def test_shared_fixture_hashes_prove_identical_pointwise_inputs(
+def test_shared_inputs_reproduce_the_baseline_with_only_roundoff(
     report,
     baseline,
 ):
     # Pointwise optical comparisons feed both backends the same stored
     # fixtures; matching content hashes are the recorded evidence.
-    assert report["fixture_hashes"] == baseline["fixture_hashes"]
-    assert report["component_hashes"] == baseline["component_hashes"]
+    # Raw hashes prove which bytes the two backends shared within this run.
+    # Full-array witnesses, exact semantic identity and strict fixed roundoff
+    # tolerances establish reproduction across libm/FFT implementations.
+    from shwfs_ao.validation.regression import _numerical_input_basis_failures
+    assert _numerical_input_basis_failures(report, baseline) == []
+    for name in report["component_hashes"]:
+        if name not in {"native_dm", "hcipy_dm"}:
+            assert report["component_hashes"][name] == baseline["component_hashes"][name]
     assert (
         report["comparison_config"]["config_hash"]
         == baseline["comparison_config"]["config_hash"]

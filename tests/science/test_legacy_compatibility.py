@@ -7,6 +7,7 @@ import pytest
 
 from shwfs_ao.legacy.ao_diagnostics import science_psf_metrics_from_opd
 from shwfs_ao.legacy.psf_tools import compute_psf_from_phase
+from shwfs_ao.science.metrics import _encircled_energy_radius_from_discrete_flux
 
 
 def _historical_pixel_metrics(
@@ -37,7 +38,8 @@ def _historical_pixel_metrics(
 
     def encircled(fraction: float) -> float:
         flat_radius = radius.ravel()
-        order = np.argsort(flat_radius)
+        # Freeze the historical scalar quicksort tie order on all CPUs.
+        order = np.argsort(flat_radius.astype(object), kind="quicksort")
         sorted_radius = flat_radius[order]
         cumulative = np.cumsum(psf.ravel()[order])
         cumulative /= cumulative[-1]
@@ -89,3 +91,32 @@ def test_legacy_metric_facade_preserves_historical_pixel_conventions() -> None:
     assert actual.ee50_lambda_over_d == pytest.approx(actual.ee50_px / pad_factor)
     assert actual.ee80_lambda_over_d == pytest.approx(actual.ee80_px / pad_factor)
 
+
+@pytest.mark.parametrize("spacing", [0.25, 1.0, 2.0])
+@pytest.mark.parametrize(
+    ("fraction", "historical_radius", "stable_radius"),
+    [
+        (0.17, 1.7236289627606403, 1.9888421630928212),
+        (0.53, 3.113594362117866, 3.1622776601683795),
+        (0.93, 4.342538627255414, 4.47213595499958),
+    ],
+)
+def test_legacy_encircled_energy_freezes_equal_radius_tie_order(
+    spacing: float,
+    fraction: float,
+    historical_radius: float,
+    stable_radius: float,
+) -> None:
+    """A crossing between rings exposes CPU-dependent quicksort permutations."""
+    flux = np.arange(1.0, 65.0).reshape(8, 8)
+    axis = spacing * (np.arange(8, dtype=float) - 4.0)
+    historical = _encircled_energy_radius_from_discrete_flux(
+        flux, axis, axis, fraction,
+        center_angle_rad=(0.0, 0.0), sort_kind="legacy_quicksort",
+    )
+    stable = _encircled_energy_radius_from_discrete_flux(
+        flux, axis, axis, fraction,
+        center_angle_rad=(0.0, 0.0), sort_kind="stable",
+    )
+    assert historical == pytest.approx(spacing * historical_radius, rel=2.0e-14)
+    assert stable == pytest.approx(spacing * stable_radius, rel=2.0e-14)

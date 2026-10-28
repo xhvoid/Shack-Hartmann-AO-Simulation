@@ -340,7 +340,9 @@ documented in [Artifact schemas](artifact_schemas.md).
   JSON-serializable, and immutable. Backend-library objects are forbidden.
 - Configuration, component, row-layout, actuator-layout, sampling, and shared
   fixture hashes detect semantically different runs before numerical
-  tolerances are considered.
+  metric tolerances are considered. Cross-backend schema v2 preserves raw
+  hashes and verifies full numerical input witnesses at fixed roundoff limits
+  across platforms; configuration, layout and semantic identities remain exact.
 - Arrays may use NaN outside a pupil, in explicitly invalid full-layout rows,
   or for a type-documented not-applicable detector diagnostic such as ideal-
   path SNR. Infinities are forbidden; physical pupil/command values and every

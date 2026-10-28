@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://shwfs-ao.invalid/schemas/cross_backend_baseline.schema.json",
   "title": "SHWFS-AO accepted cross-backend physical comparison baseline",
-  "description": "Canonical shape of the accepted AO-REF-018 cross-backend baseline artifact. This is the version-1 runtime contract enforced by shwfs_ao.validation.regression and emitted by scripts/generate_cross_backend_candidate.py; the packaged reference_metrics/cross_backend/cross_backend_baseline.json instance validates against this schema byte-for-byte.",
+  "description": "Canonical shape of the accepted AO-REF-018 cross-backend baseline artifact. This is the version-2 runtime contract enforced by shwfs_ao.validation.regression and emitted by scripts/generate_cross_backend_candidate.py; the packaged reference_metrics/cross_backend/cross_backend_baseline.json instance validates against this schema byte-for-byte. Numerical input witnesses retain raw byte provenance and permit strict full-array roundoff comparisons across platforms.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -16,7 +16,8 @@
     "environment",
     "fixture_hashes",
     "generator",
-    "root_seed"
+    "root_seed",
+    "numerical_inputs"
   ],
   "properties": {
     "acceptance": {
@@ -44,7 +45,7 @@
       "const": "shwfs_ao.cross_backend_baseline"
     },
     "artifact_schema_version": {
-      "const": 1
+      "const": 2
     },
     "comparison_config": {
       "description": "Open record of the comparison's own inputs, pinned by its config_hash rather than by a field list. The runtime contract in shwfs_ao.validation.regression additionally recomputes config_hash from these contents and requires root_seed to equal the top-level root_seed; JSON Schema can state neither a content hash nor a cross-field equality, so those two rules live only there.",
@@ -2621,6 +2622,46 @@
     },
     "root_seed": {
       "$ref": "#/$defs/root_seed"
+    },
+    "numerical_inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "atmosphere_opd_cube_m",
+        "command_fixture_opd_m",
+        "static_opd_m",
+        "tilt_x_opd_m",
+        "tilt_y_opd_m",
+        "time_grid_s",
+        "native_dm",
+        "hcipy_dm"
+      ],
+      "properties": {
+        "atmosphere_opd_cube_m": {
+          "$ref": "#/$defs/numerical_input"
+        },
+        "command_fixture_opd_m": {
+          "$ref": "#/$defs/numerical_input"
+        },
+        "static_opd_m": {
+          "$ref": "#/$defs/numerical_input"
+        },
+        "tilt_x_opd_m": {
+          "$ref": "#/$defs/numerical_input"
+        },
+        "tilt_y_opd_m": {
+          "$ref": "#/$defs/numerical_input"
+        },
+        "time_grid_s": {
+          "$ref": "#/$defs/numerical_input"
+        },
+        "native_dm": {
+          "$ref": "#/$defs/numerical_input"
+        },
+        "hcipy_dm": {
+          "$ref": "#/$defs/numerical_input"
+        }
+      }
     }
   },
   "$defs": {
@@ -2934,6 +2975,61 @@
         },
         "type": {
           "const": "range"
+        }
+      }
+    },
+    "numerical_input": {
+      "description": "Lossless full-array input witness; runtime validation checks compressed data, content SHA-256, finiteness and fixed roundoff tolerances. No metric tolerance is encoded here.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "encoding",
+        "shape",
+        "data",
+        "values_sha256",
+        "source_hash",
+        "configuration_hash",
+        "source_payload",
+        "backend_source_payload"
+      ],
+      "properties": {
+        "encoding": {
+          "const": "zlib_base64_float64_le_c_v1"
+        },
+        "shape": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "data": {
+          "type": "string",
+          "minLength": 1
+        },
+        "values_sha256": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "source_hash": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "configuration_hash": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "source_payload": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Canonical DM configuration hash preimage; null for direct array fixtures."
+        },
+        "backend_source_payload": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Canonical inner DM backend hash preimage; null for direct array fixtures."
         }
       }
     }

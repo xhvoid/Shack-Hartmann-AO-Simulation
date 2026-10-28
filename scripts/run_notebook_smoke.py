@@ -78,15 +78,15 @@ DEFAULT_NETWORK_ISOLATION = "required"
 # shell — a notebook path may contain any character a path can contain.
 _NAMESPACE_SHELL = 'ip link set lo up && exec "$0" "$@"'
 
-# Run inside a candidate namespace to decide whether it may be used.  Bringing
-# loopback up is what the kernel needs; everything after it is evidence.  ``$1``
+# Run after a candidate has initialized loopback to decide whether it may be
+# used. ``$2`` is a caller-owned private file that must remain readable. ``$1``
 # is the *outer* network namespace — the one the notebook must not be able to
 # return to — so nsenter's refusal to enter it is the observation that a network
 # namespace alone would not have produced, and that a bare `unshare --net`
 # would have failed.  Printed as a word rather than signalled by exit status,
 # because the interface listing has to come back from the same run.
 _NAMESPACE_PROBE = (
-    'ip link set lo up && ip -o link show && '
+    'test -r "$2" && ip -o link show && cat /proc/self/status && '
     'if nsenter --net="$1" true 2>/dev/null; '
     "then echo ESCAPE_SUCCEEDED; else echo ESCAPE_REFUSED; fi"
 )
@@ -418,34 +418,22 @@ def _execute_in_process(
 def _namespace_prefix_candidates() -> Iterator[list[str]]:
     """The prefixes worth probing here, least privileged first.
 
-    Every form creates a child *user* namespace as well as a network one, and
-    that is a correctness requirement rather than a preference.  A network
-    namespace on its own does not confine a process that holds CAP_SYS_ADMIN in
-    the namespace's owning user namespace: setns(2) grants entry to any network
-    namespace the caller has that capability over, so notebook code under a bare
-    ``unshare --net`` — and equally under ``sudo unshare --net``, which is more
-    privileged, not less — can reopen ``/proc/<pid>/ns/net`` and step straight
-    back onto the host network.  Reading the interface list proves only where
-    the process started, not where it is able to go.  Entering a child user
-    namespace is what drops that capability with respect to the parent, so the
-    two forms that survive are:
+    The normal path enters a child user namespace, mapping the invoking user
+    to namespace root. This permits loopback setup without retaining any
+    capability over the host network namespace.
 
-    1. ``unshare --user --map-root-user --net``, the ordinary unprivileged path;
-    2. the same thing behind passwordless ``sudo``.
+    Ubuntu's AppArmor policy can deny that path. The passwordless-sudo fallback
+    therefore creates and initializes a network namespace as root, then uses
+    setpriv to return to the invoking UID/GID, clear supplementary groups and
+    every capability set, and prohibit new privileges before running any
+    notebook code. A bare privileged network namespace would be escapable;
+    dropping capabilities and disabling setuid/file-capability escalation is
+    essential. Both paths are tested for a refused host-namespace entry.
 
-    Sudo comes last because escalating when the cheaper form would have worked
-    runs the notebook kernel as root for nothing.  It is offered at all because
-    ``ubuntu-latest`` is Ubuntu 24.04, which ships
-    ``kernel.apparmor_restrict_unprivileged_userns=1``: AppArmor denies the
-    capabilities form 1 needs, and without form 2 the required notebook lanes
-    had no namespace and aborted.  The restriction is on *unprivileged* user
-    namespaces, so the same unshare succeeds once sudo has made it privileged —
-    and because that form still enters a child user namespace, it confines the
-    kernel rather than merely relocating it.
-
-    Generating the list lazily is deliberate: the sudo probe below runs a real
-    command, and a process that already satisfies form 1 must not pay for — or
-    ask for — an elevation it does not need.
+    Do not use ``sudo unshare --user --map-root-user`` here: it maps outer root,
+    not the invoking user, so private checkout and temporary paths become
+    inaccessible. The fallback keeps the caller's actual filesystem identity.
+    Candidates are lazy so a working unprivileged path never asks for sudo.
     """
 
     unshare = shutil.which("unshare")
@@ -457,9 +445,19 @@ def _namespace_prefix_candidates() -> Iterator[list[str]]:
     # so demanding both costs nothing an environment that has one would notice.
     if unshare is None or shutil.which("ip") is None or shutil.which("nsenter") is None:
         return
-    yield [unshare, "--user", "--map-root-user", "--net", "--"]
+    yield [
+        unshare,
+        "--user",
+        "--map-root-user",
+        "--net",
+        "--",
+        "sh",
+        "-c",
+        _NAMESPACE_SHELL,
+    ]
     sudo = shutil.which("sudo")
-    if sudo is None:
+    setpriv = shutil.which("setpriv")
+    if sudo is None or setpriv is None:
         return
     # ``-n`` never prompts.  A sudo that would ask for a password is the same
     # answer as no sudo at all here, because nothing is watching a CI step to
@@ -475,7 +473,25 @@ def _namespace_prefix_candidates() -> Iterator[list[str]]:
         return
     if elevation.returncode != 0:
         return
-    yield [sudo, "-n", unshare, "--user", "--map-root-user", "--net", "--"]
+    yield [
+        sudo,
+        "-n",
+        unshare,
+        "--net",
+        "--",
+        "sh",
+        "-c",
+        _NAMESPACE_SHELL,
+        setpriv,
+        f"--reuid={os.geteuid()}",
+        f"--regid={os.getegid()}",
+        "--clear-groups",
+        "--bounding-set=-all",
+        "--inh-caps=-all",
+        "--ambient-caps=-all",
+        "--no-new-privs",
+        "--",
+    ]
 
 
 def _sudo_escalation(isolation_prefix: list[str]) -> list[str]:
@@ -514,10 +530,30 @@ def _network_namespace_prefix() -> list[str] | None:
     if sys.platform != "linux":
         return None
     outer_net_namespace = f"/proc/{os.getpid()}/ns/net"
+    # The probe must also be usable by the caller: namespace root mapped to
+    # outer root can list interfaces but cannot traverse a caller-owned 0700
+    # directory. A private canary catches that before choosing a prefix.
+    with tempfile.TemporaryDirectory(prefix="nb-namespace-probe-") as probe_dir:
+        canary = Path(probe_dir) / "caller-owned"
+        canary.touch(mode=0o600)
+        return _probe_namespace_candidates(outer_net_namespace, canary)
+
+
+def _probe_namespace_candidates(
+    outer_net_namespace: str, canary: Path
+) -> list[str] | None:
     for prefix in _namespace_prefix_candidates():
         try:
             probe = subprocess.run(
-                [*prefix, "sh", "-c", _NAMESPACE_PROBE, "sh", outer_net_namespace],
+                [
+                    *prefix,
+                    "sh",
+                    "-c",
+                    _NAMESPACE_PROBE,
+                    "sh",
+                    outer_net_namespace,
+                    str(canary),
+                ],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -540,6 +576,27 @@ def _network_namespace_prefix() -> list[str] | None:
             continue
         if "ESCAPE_REFUSED" not in probe.stdout:
             continue
+        if _sudo_escalation(prefix):
+            status = dict(
+                line.split(":", 1) for line in probe.stdout.splitlines() if ":" in line
+            )
+            # Observe the final credentials, not just the setpriv arguments.
+            # no_new_privs prevents regaining host capabilities through sudo,
+            # setuid executables, or file capabilities after this probe.
+            if any(
+                status.get(field, "").split() != [str(identity)] * 4
+                for field, identity in (("Uid", os.geteuid()), ("Gid", os.getegid()))
+            ):
+                continue
+            if status.get("NoNewPrivs", "").strip() != "1":
+                continue
+            if "Groups" not in status or status["Groups"].strip():
+                continue
+            if any(
+                status.get(field, "").strip() != "0000000000000000"
+                for field in ("CapInh", "CapPrm", "CapEff", "CapBnd", "CapAmb")
+            ):
+                continue
         return prefix
     return None
 
@@ -605,14 +662,14 @@ def _runner_command(
     # dropped on the way through and a notebook could reach for an interactive
     # backend on a headless runner.  Re-stating it inside the namespace costs
     # one exec and keeps every isolation form running the same kernel
-    # environment; _NAMESPACE_SHELL ends in exec "$0" "$@", so env is simply the
-    # first positional argument.
+    # environment. Restore the caller's home as well, so Jupyter and plotting
+    # libraries use its writable configuration/cache directories after sudo.
     inner = (
-        ["env", "MPLBACKEND=Agg", *runner]
+        ["env", f"HOME={Path.home()}", "MPLBACKEND=Agg", *runner]
         if _sudo_escalation(isolation_prefix)
         else runner
     )
-    return [*isolation_prefix, "sh", "-c", _NAMESPACE_SHELL, *inner]
+    return [*isolation_prefix, *inner]
 
 
 def _kill_process_group(process: subprocess.Popen, escalation: list[str]) -> None:

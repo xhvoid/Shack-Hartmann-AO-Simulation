@@ -273,7 +273,28 @@ def _lock_header(platform_tag: str | None = None) -> str:
     return f"# Exact environment resolved for this interpreter on {_PLATFORM_PROSE[tag]}.\n"
 
 
+@pytest.mark.parametrize("version", [(3, 10), (3, 12), (3, 13), (3, 15)])
+def test_candidate_generation_rejects_unsupported_python(version):
+    with pytest.raises(SystemExit, match="unsupported on Python"):
+        script._constraint_profile_name(version)
+
+
+@pytest.mark.parametrize("version", [(3, 11), (3, 14)])
+def test_candidate_generation_selects_an_existing_profile(version):
+    assert (ROOT / script._constraint_profile_name(version)).is_file()
+
+
 class TestEnvironmentVerification:
+    @pytest.fixture(autouse=True)
+    def supported_profile(self, monkeypatch):
+        # These are lock-verification tests, runnable in the Python 3.10 core
+        # lane too. Model a supported generator runtime explicitly; support
+        # selection itself is tested separately below.
+        select = script._constraint_profile_name
+        monkeypatch.setattr(
+            script, "_constraint_profile_name", lambda: select((3, 11)),
+        )
+
     def test_constraint_pins_parse_names_versions_and_ignore_noise(self):
         pins = script._parse_constraint_pins(
             "# resolved profile\n"

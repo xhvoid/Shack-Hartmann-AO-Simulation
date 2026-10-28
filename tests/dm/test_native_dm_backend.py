@@ -27,6 +27,7 @@ FROZEN_FAMILY_HASHES = {
     "gaussian": "0c96eb37409152f15fbef9d9ff9bad8aa9b66a607ba21fc584741674a5e6a6ed",
     "pyramid_like": "e0ace6d10cd6f757f4c4b3a861a0248f87c09395deb854c9b4b91998d4779a2c",
 }
+FROZEN_FAMILY_SAMPLES = Path(__file__).with_name("native_dm_frozen_samples.npz")
 
 
 @pytest.fixture
@@ -201,7 +202,14 @@ def test_influence_families_preserve_frozen_samples_and_peak_normalization(
         np.max(influences[:, pupil], axis=1),
         np.ones(influences.shape[0]),
     )
-    assert stable_array_descriptor(influences)["sha256"] == FROZEN_FAMILY_HASHES[influence_model]
+    # The fixture retains every original sample and its original digest.
+    # Hashing a newly evaluated exp() instead requires platform-identical libm
+    # bits. Compare nonzero samples relatively so even the faint Gaussian
+    # wings remain protected; exact masking and peak checks are above.
+    with np.load(FROZEN_FAMILY_SAMPLES, allow_pickle=False) as samples:
+        expected = samples[influence_model]
+    assert stable_array_descriptor(expected)["sha256"] == FROZEN_FAMILY_HASHES[influence_model]
+    np.testing.assert_allclose(influences, expected, rtol=2.0e-15, atol=0.0)
 
 
 def test_low_level_gaussian_preserves_unnormalized_compatibility_arithmetic(
