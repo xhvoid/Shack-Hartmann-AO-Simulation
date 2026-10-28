@@ -7,7 +7,10 @@ and therefore skip in environments without the ``notebook-test`` extra
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import signal
+import subprocess
 import sys
 import time
 import types
@@ -79,13 +82,65 @@ def test_network_guard_is_injected_as_the_first_executed_cell():
     assert notebook.cells[0].metadata["tags"] == ["injected-network-guard"]
 
 
+def _guarded_socket_methods() -> tuple[str, ...]:
+    """The socket methods the guard patches that *this* platform actually has.
+
+    ``socket.socket.sendmsg`` is a Unix-only API.  These tests exec the guard
+    against the real socket module, so they have to save and restore exactly the
+    methods that exist here: reading ``socket.socket.sendmsg`` unconditionally
+    raises AttributeError on Windows before the test reaches its first
+    assertion, and assigning a replacement there would be worse still — it would
+    leave a ``sendmsg`` on a class that never had one, so later code would
+    believe the platform supports a call it cannot make.  The list is recomputed
+    on every call rather than snapshotted at import, which is what lets the
+    leak check below notice a hook that synthesised the attribute.
+    """
+
+    import socket
+
+    return tuple(
+        name
+        for name in ("connect", "connect_ex", "sendto", "sendmsg")
+        if hasattr(socket.socket, name)
+    )
+
+
+@contextlib.contextmanager
+def _sendmsg_hidden_from_socket():
+    """Make ``socket.socket.sendmsg`` absent the way it is absent on Windows.
+
+    The attribute is inherited from the C ``_socket.socket`` base, so it cannot
+    simply be deleted; a descriptor that raises AttributeError on lookup gives
+    ``hasattr`` and ``getattr(..., default)`` exactly the answer a platform
+    without the syscall gives, and those are the only two questions this code
+    asks.  Without such a stand-in the Windows portability of these tests could
+    be asserted only on Windows, so the suite would keep passing here while
+    failing there — which is how the unconditional accesses survived review.
+    """
+
+    import socket
+
+    class _absent:
+        def __get__(self, instance, owner=None):
+            raise AttributeError("sendmsg")
+
+    own = vars(socket.socket).get("sendmsg")
+    had_own = "sendmsg" in vars(socket.socket)
+    socket.socket.sendmsg = _absent()
+    try:
+        yield
+    finally:
+        if had_own:
+            socket.socket.sendmsg = own
+        else:
+            del socket.socket.sendmsg
+
+
 def test_network_guard_denies_outbound_ip_but_allows_loopback():
     import socket
 
-    saved_connect = socket.socket.connect
-    saved_connect_ex = socket.socket.connect_ex
-    saved_sendto = socket.socket.sendto
-    saved_sendmsg = socket.socket.sendmsg
+    guarded = _guarded_socket_methods()
+    saved_methods = {name: getattr(socket.socket, name) for name in guarded}
     # The guard also replaces these module-level functions, so they must be
     # restored or its deny-by-default resolution leaks into every later test.
     saved_resolvers = {
@@ -106,9 +161,10 @@ def test_network_guard_denies_outbound_ip_but_allows_loopback():
         socket.socket.connect = lambda self, address: recorded.append(address)
         socket.socket.connect_ex = lambda self, address: recorded.append(address)
         socket.socket.sendto = lambda self, data, *args: recorded.append(args[-1])
-        socket.socket.sendmsg = (
-            lambda self, *args: recorded.append(args[3] if len(args) >= 4 else None)
-        )
+        if "sendmsg" in guarded:
+            socket.socket.sendmsg = (
+                lambda self, *args: recorded.append(args[3] if len(args) >= 4 else None)
+            )
         exec(runner.NETWORK_GUARD_SOURCE, {})
 
         probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -122,8 +178,11 @@ def test_network_guard_denies_outbound_ip_but_allows_loopback():
             # though it never calls connect().
             with pytest.raises(OSError, match="denies outbound network"):
                 udp.sendto(b"x", ("8.8.8.8", 53))
-            with pytest.raises(OSError, match="denies outbound network"):
-                udp.sendmsg([b"x"], [], 0, ("8.8.8.8", 53))
+            # sendmsg exists only where the platform has the syscall; the rest
+            # of this contract is checked everywhere regardless.
+            if "sendmsg" in guarded:
+                with pytest.raises(OSError, match="denies outbound network"):
+                    udp.sendmsg([b"x"], [], 0, ("8.8.8.8", 53))
             # Loopback by address and by name fall through to the recorders.
             probe.connect(("127.0.0.1", 12345))
             probe.connect(("localhost", 12345))
@@ -137,10 +196,8 @@ def test_network_guard_denies_outbound_ip_but_allows_loopback():
             ("127.0.0.1", 12345),
         ]
     finally:
-        socket.socket.connect = saved_connect
-        socket.socket.connect_ex = saved_connect_ex
-        socket.socket.sendto = saved_sendto
-        socket.socket.sendmsg = saved_sendmsg
+        for name, original in saved_methods.items():
+            setattr(socket.socket, name, original)
         for name, original in saved_resolvers.items():
             setattr(socket, name, original)
 
@@ -164,11 +221,12 @@ def test_network_guard_blocks_name_resolution_before_any_dns_query_leaves():
         "getnameinfo",
     )
     saved = {name: getattr(socket, name) for name in resolvers}
-    # The guard replaces every one of these; restoring only some leaves a
-    # deny-by-default hook installed for the rest of the pytest session.
+    # The guard replaces every one of these that the platform provides;
+    # restoring only some leaves a deny-by-default hook installed for the rest
+    # of the pytest session, and reading one the platform lacks fails the test
+    # outright rather than the code it is meant to be checking.
     saved_methods = {
-        name: getattr(socket.socket, name)
-        for name in ("connect", "connect_ex", "sendto", "sendmsg")
+        name: getattr(socket.socket, name) for name in _guarded_socket_methods()
     }
     try:
         resolved: list = []
@@ -255,7 +313,10 @@ def test_the_guard_tests_leave_no_hook_installed_in_this_process():
     """Every socket entry point the guard patches must be restored.
 
     These tests exec the guard against the *real* socket module, so a hook left
-    behind denies traffic for every later test in the same process.
+    behind denies traffic for every later test in the same process.  The method
+    list is the one this platform actually has, recomputed here: a hook that
+    invented ``sendmsg`` on a platform without it appears in that list and is
+    caught by the same assertion, so nothing escapes by being unexpected.
     """
 
     import socket
@@ -269,7 +330,7 @@ def test_the_guard_tests_leave_no_hook_installed_in_this_process():
     ):
         module_level = getattr(socket, name)
         assert module_level.__module__ in ("socket", "_socket"), (name, module_level)
-    for name in ("connect", "connect_ex", "sendto", "sendmsg"):
+    for name in _guarded_socket_methods():
         method = getattr(socket.socket, name)
         assert not isinstance(method, types.FunctionType), (name, method)
 
@@ -317,6 +378,34 @@ def test_network_guard_installs_where_sendmsg_does_not_exist():
         _FakeSocketType.connect(
             types.SimpleNamespace(family=socket.AF_INET), ("93.184.216.34", 80)
         )
+
+
+def test_the_guard_tests_themselves_run_where_socket_sendmsg_is_absent():
+    """The suite must pass on Windows, not merely the code it exercises.
+
+    The runtime guard already installs where ``socket.sendmsg`` is missing, but
+    the tests above saved, replaced and asserted on that attribute
+    unconditionally, so on Windows they raised AttributeError and the offline
+    contract went unchecked on the one platform whose absent syscall the guard
+    was made portable for.  Running them here with the attribute hidden is the
+    only way to hold that from a Unix machine; each still checks everything that
+    is not sendmsg-specific, because a whole test skipped for one assertion is a
+    contract nobody verifies.
+    """
+
+    import socket
+
+    platform_has_sendmsg = hasattr(socket.socket, "sendmsg")
+    with _sendmsg_hidden_from_socket():
+        assert "sendmsg" not in _guarded_socket_methods()
+        test_network_guard_denies_outbound_ip_but_allows_loopback()
+        test_network_guard_blocks_name_resolution_before_any_dns_query_leaves()
+        test_the_guard_tests_leave_no_hook_installed_in_this_process()
+
+    # The stand-in is removed again, so the rest of the session sees whatever
+    # this platform really provides instead of a descriptor that refuses to be
+    # looked up at all.
+    assert hasattr(socket.socket, "sendmsg") is platform_has_sendmsg
 
 
 def test_kernel_receives_the_isolated_environment_and_the_override(
@@ -417,6 +506,295 @@ def test_an_available_namespace_is_used_by_every_mode_that_allows_it(monkeypatch
 
     for mode in ("required", "auto"):
         assert runner._resolve_network_isolation(mode) == prefix
+
+
+_FAKE_UNSHARE = "/usr/bin/unshare"
+_FAKE_IP = "/usr/sbin/ip"
+_FAKE_SUDO = "/usr/bin/sudo"
+
+_PRIVILEGED_NET = [_FAKE_UNSHARE, "--net", "--"]
+_USER_NET = [_FAKE_UNSHARE, "--user", "--map-root-user", "--net", "--"]
+_SUDO_NET = [_FAKE_SUDO, "-n", _FAKE_UNSHARE, "--net", "--"]
+
+# What `ip -o link show` prints inside a fresh namespace, and what it prints
+# where the unshare did not actually take: the runner parses these, so the
+# fakes are the real shape rather than a convenient one.
+_LOOPBACK_ONLY_LINKS = (
+    "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode "
+    "DEFAULT group default qlen 1000\\    link/loopback 00:00:00:00:00:00 brd "
+    "00:00:00:00:00:00\n"
+)
+_HOST_NETWORK_LINKS = _LOOPBACK_ONLY_LINKS + (
+    "2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode "
+    "DEFAULT group default qlen 1000\\    link/ether 02:42:ac:11:00:02 brd "
+    "ff:ff:ff:ff:ff:ff\n"
+)
+
+
+def _fake_linux_namespace_environment(
+    monkeypatch,
+    *,
+    links_seen_by,
+    sudo=_FAKE_SUDO,
+    sudo_needs_a_password=False,
+):
+    """Run the probe's Linux decision path against recorded fakes.
+
+    ``links_seen_by`` maps a prefix (as a tuple) to the ``ip -o link show``
+    output that prefix produces; a prefix that is absent from it probes as a
+    failure, which is exactly what a refused namespace looks like from here.
+
+    Nothing about a live namespace can be checked from macOS — there is no
+    unshare(1) to run — so what these fakes hold is the decision: which forms
+    are offered, in which order, which are skipped, and what the probe accepts
+    as evidence.  The namespace itself stays covered by the Linux-only tests
+    at the end of this module, which is where it can be created for real.
+    """
+
+    executed: list[list[str]] = []
+
+    def fake_run(command, **kwargs):
+        command = list(command)
+        executed.append(command)
+        if command[1:] == ["-n", "true"]:
+            return subprocess.CompletedProcess(
+                command,
+                1 if sudo_needs_a_password else 0,
+                "",
+                "sudo: a password is required\n" if sudo_needs_a_password else "",
+            )
+        assert command[-3:-1] == ["sh", "-c"], command
+        links = links_seen_by.get(tuple(command[:-3]))
+        if links is None:
+            return subprocess.CompletedProcess(
+                command, 1, "", "unshare: unshare failed: Operation not permitted\n"
+            )
+        return subprocess.CompletedProcess(command, 0, links, "")
+
+    tools = {"unshare": _FAKE_UNSHARE, "ip": _FAKE_IP}
+    if sudo is not None:
+        tools["sudo"] = sudo
+    monkeypatch.setattr(runner, "shutil", types.SimpleNamespace(which=tools.get))
+    monkeypatch.setattr(
+        runner,
+        "subprocess",
+        types.SimpleNamespace(
+            run=fake_run, SubprocessError=subprocess.SubprocessError
+        ),
+    )
+    monkeypatch.setattr(
+        runner,
+        "sys",
+        types.SimpleNamespace(platform="linux", executable=sys.executable),
+    )
+    return executed
+
+
+def test_a_stock_ubuntu_24_04_runner_reaches_a_namespace_through_sudo(monkeypatch):
+    """The configured hosted runner refuses both unelevated forms.
+
+    ubuntu-latest is Ubuntu 24.04, which ships
+    kernel.apparmor_restrict_unprivileged_userns=1: AppArmor denies
+    capabilities inside an unprivileged user namespace, and plain
+    ``unshare --net`` wants a CAP_SYS_ADMIN the runner user does not have.  With
+    only those two forms probed the required notebook lanes had no namespace at
+    all and aborted, so the passwordless sudo the hosted runners provide is
+    tried last rather than left unused.
+    """
+
+    executed = _fake_linux_namespace_environment(
+        monkeypatch, links_seen_by={tuple(_SUDO_NET): _LOOPBACK_ONLY_LINKS}
+    )
+
+    assert runner._network_namespace_prefix() == _SUDO_NET
+    # Both unelevated forms were actually tried before sudo was asked for
+    # anything, and the cheap question came before the expensive one.
+    attempted = [command[: command.index("sh")] for command in executed[:2]]
+    assert attempted == [_PRIVILEGED_NET, _USER_NET]
+    assert executed[2] == [_FAKE_SUDO, "-n", "true"]
+    assert executed[3][: len(_SUDO_NET)] == _SUDO_NET
+
+
+def test_the_probed_forms_are_ordered_least_privileged_first(monkeypatch):
+    _fake_linux_namespace_environment(monkeypatch, links_seen_by={})
+
+    assert list(runner._namespace_prefix_candidates()) == [
+        _PRIVILEGED_NET,
+        _USER_NET,
+        _SUDO_NET,
+    ]
+
+
+def test_a_form_that_needs_no_elevation_never_asks_sudo_for_anything(monkeypatch):
+    """Ordering is the whole point of the list, so it is asserted, not assumed.
+
+    Where the process already holds the capability the namespace costs one
+    unshare and the kernel keeps the invoking user's credentials; reaching for
+    sudo there would elevate for nothing and run the kernel as root.
+    """
+
+    executed = _fake_linux_namespace_environment(
+        monkeypatch, links_seen_by={tuple(_PRIVILEGED_NET): _LOOPBACK_ONLY_LINKS}
+    )
+
+    assert runner._network_namespace_prefix() == _PRIVILEGED_NET
+    assert len(executed) == 1
+    assert _FAKE_SUDO not in executed[0]
+
+
+def test_sudo_is_not_offered_when_it_cannot_elevate_without_asking(monkeypatch):
+    """A sudo that wants a password is the same answer as no sudo at all.
+
+    Neither can be turned into a namespace by a CI step nobody is watching, and
+    offering the form anyway would spend the probe budget proving it.
+    """
+
+    executed = _fake_linux_namespace_environment(
+        monkeypatch, links_seen_by={}, sudo_needs_a_password=True
+    )
+    assert list(runner._namespace_prefix_candidates()) == [
+        _PRIVILEGED_NET,
+        _USER_NET,
+    ]
+    assert [_FAKE_SUDO, "-n", "true"] in executed
+    assert all(command[0] != _FAKE_SUDO for command in executed[1:])
+
+    absent = _fake_linux_namespace_environment(
+        monkeypatch, links_seen_by={}, sudo=None
+    )
+    assert list(runner._namespace_prefix_candidates()) == [
+        _PRIVILEGED_NET,
+        _USER_NET,
+    ]
+    assert absent == []
+
+
+def test_a_probe_that_still_sees_the_host_network_is_not_used(monkeypatch):
+    """A prefix is evidence only if the namespace it made holds nothing else.
+
+    A probe that merely exited zero proves nothing: an unshare that silently did
+    not take, or a sudo rule that ran the command outside a namespace, would
+    otherwise be adopted and the lane would report an offline contract with a
+    route to the outside still in place.
+    """
+
+    _fake_linux_namespace_environment(
+        monkeypatch,
+        links_seen_by={
+            tuple(_PRIVILEGED_NET): _HOST_NETWORK_LINKS,
+            tuple(_USER_NET): _HOST_NETWORK_LINKS,
+            tuple(_SUDO_NET): _HOST_NETWORK_LINKS,
+        },
+    )
+
+    assert runner._network_namespace_prefix() is None
+    with pytest.raises(SystemExit, match="Network isolation is unavailable"):
+        runner._resolve_network_isolation("required")
+
+
+def test_required_isolation_still_refuses_when_not_even_sudo_isolates(monkeypatch):
+    _fake_linux_namespace_environment(monkeypatch, links_seen_by={})
+
+    assert runner._network_namespace_prefix() is None
+    with pytest.raises(SystemExit, match="Network isolation is unavailable"):
+        runner._resolve_network_isolation("required")
+
+
+def test_only_a_sudo_prefix_yields_something_to_escalate_a_signal_through():
+    assert runner._sudo_escalation(_SUDO_NET) == [_FAKE_SUDO, "-n"]
+    assert runner._sudo_escalation(_USER_NET) == []
+    assert runner._sudo_escalation(_PRIVILEGED_NET) == []
+    assert runner._sudo_escalation([]) == []
+
+
+def test_the_budget_kill_is_reissued_through_sudo_for_a_root_owned_group(monkeypatch):
+    """An unprivileged parent cannot signal the root group sudo started.
+
+    kill(2) delivers a signal only when the sender's real or effective uid
+    matches the target's real or saved uid, and everything behind sudo has both
+    set to root, so killpg raises EPERM.  Left unhandled the budget would report
+    PermissionError instead of the budget message and the notebook it was meant
+    to bound would keep running.
+    """
+
+    refused: list[tuple[int, int]] = []
+    escalated: list[list[str]] = []
+    waited: list[str] = []
+
+    def refuse_killpg(process_group, signal_number):
+        refused.append((process_group, signal_number))
+        raise PermissionError(1, "Operation not permitted")
+
+    def fake_run(command, **kwargs):
+        escalated.append(list(command))
+        return subprocess.CompletedProcess(list(command), 0, "", "")
+
+    monkeypatch.setattr(
+        runner, "os", types.SimpleNamespace(name="posix", killpg=refuse_killpg)
+    )
+    monkeypatch.setattr(
+        runner,
+        "subprocess",
+        types.SimpleNamespace(
+            run=fake_run, SubprocessError=subprocess.SubprocessError
+        ),
+    )
+    process = types.SimpleNamespace(
+        pid=4321, wait=lambda: waited.append("waited"), kill=lambda: None
+    )
+
+    runner._kill_process_group(process, [_FAKE_SUDO, "-n"])
+
+    assert refused == [(4321, signal.SIGKILL)]
+    assert escalated and escalated[0][:2] == [_FAKE_SUDO, "-n"]
+    assert "4321" in escalated[0]
+    # The parent still reaps the child, or the budget message would race the
+    # process it just ended.
+    assert waited == ["waited"]
+
+    # With nothing to escalate through, EPERM is not swallowed: a budget that
+    # silently failed to kill is a budget that was never enforced.
+    escalated.clear()
+    with pytest.raises(PermissionError):
+        runner._kill_process_group(process, [])
+    assert escalated == []
+
+
+def test_the_budget_hands_the_kill_the_escalation_its_prefix_implies(monkeypatch, tmp_path):
+    handed: list[list[str]] = []
+
+    class _NeverExits:
+        pid = 9999
+
+        def wait(self, timeout=None):
+            if timeout is not None:
+                raise subprocess.TimeoutExpired("runner", timeout)
+            return 0
+
+    monkeypatch.setattr(
+        runner,
+        "subprocess",
+        types.SimpleNamespace(
+            Popen=lambda *args, **kwargs: _NeverExits(),
+            TimeoutExpired=subprocess.TimeoutExpired,
+            SubprocessError=subprocess.SubprocessError,
+        ),
+    )
+    monkeypatch.setattr(
+        runner,
+        "_kill_process_group",
+        lambda process, escalation: handed.append(escalation),
+    )
+
+    with pytest.raises(SystemExit, match="whole-notebook budget"):
+        runner._run_with_budget(
+            tmp_path / "study.ipynb",
+            cell_timeout_s=90,
+            budget_s=1,
+            fast_smoke=False,
+            isolation_prefix=list(_SUDO_NET),
+        )
+    assert handed == [[_FAKE_SUDO, "-n"]]
 
 
 def test_the_runner_command_wraps_the_runner_inside_the_namespace(tmp_path):

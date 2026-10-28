@@ -1337,7 +1337,15 @@ def _install_and_smoke(
         assert high_order.wfs_model == "geometric"
 
         # A superseded version stays loadable and keeps its own identity while
-        # describing the same physics as its successor.
+        # describing the same physics as its successor.  Sameness of physics is
+        # asserted on the WFS block as a value, because that is what "the same
+        # physics" means here; two of the eleven nested hashes legitimately
+        # differ.  `profile` differs because the provenance is a different
+        # published record.  `wfs` differs because that hash is taken from the
+        # WfsConfig dataclass rather than the serialized record, and schema v2
+        # extended the dataclass's declared field list with photon_allocation:
+        # a v1 record keeps the twelve-field digest it was published under
+        # rather than being relabelled under a shape it predates.
         for name in (
             "fast_2m_detector",
             "portfolio_2m_detector",
@@ -1349,9 +1357,13 @@ def _install_and_smoke(
             current = by_key[(name, 2)]
             assert superseded.config_hash != current.config_hash
             assert superseded.wfs.photon_allocation == "throughput_scaled"
+            assert superseded.wfs == current.wfs
+            assert superseded.record_schema_version == 1
+            assert current.record_schema_version == 2
             physics = dict(superseded.component_config_hashes)
             successor = dict(current.component_config_hashes)
             assert physics.pop("profile") != successor.pop("profile")
+            assert physics.pop("wfs") != successor.pop("wfs")
             assert physics == successor
 
         assert native_factory.NATIVE_SCAO_COMPONENT_FACTORY.backend_name == "native"

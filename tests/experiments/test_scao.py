@@ -147,6 +147,42 @@ def _tiny_system_config(wfs_model: str = "geometric") -> SystemConfig:
     )
 
 
+class _DelegatingNativeFactory:
+    """A registered ``native`` factory that is as mutable as any real one.
+
+    A backend factory is an ordinary object, so what a registry key builds can
+    change without the object under that key changing: ``static_scale`` here
+    stands for any parameter a factory closes over, and rebinding one of the
+    ``build_*`` methods would do the same.  At ``static_scale == 1.0`` it builds
+    exactly what the native factory builds, which is what makes a
+    behavior-identical replacement expressible in a test at all.
+    """
+
+    backend_name = "native"
+
+    def __init__(self, delegate: object, *, static_scale: float = 1.0) -> None:
+        self._delegate = delegate
+        self.static_scale = static_scale
+
+    def build_geometry(self, **kwargs: object) -> object:
+        return self._delegate.build_geometry(**kwargs)  # type: ignore[attr-defined]
+
+    def build_dm(self, **kwargs: object) -> object:
+        return self._delegate.build_dm(**kwargs)  # type: ignore[attr-defined]
+
+    def build_wfs(self, **kwargs: object) -> object:
+        return self._delegate.build_wfs(**kwargs)  # type: ignore[attr-defined]
+
+    def build_science_propagator(self, **kwargs: object) -> object:
+        return self._delegate.build_science_propagator(**kwargs)  # type: ignore[attr-defined]
+
+    def build_atmosphere(self, **kwargs: object) -> object:
+        kwargs["static_opd_rms_m"] = (
+            kwargs["static_opd_rms_m"] * self.static_scale  # type: ignore[operator]
+        )
+        return self._delegate.build_atmosphere(**kwargs)  # type: ignore[attr-defined]
+
+
 @pytest.mark.parametrize(
     ("wfs_model", "expected_wfs_backend"),
     (("geometric", "native_geometric"), ("detector_level", "native")),
@@ -378,7 +414,8 @@ def test_a_build_attestation_cannot_be_minted_or_retargeted_by_a_caller() -> Non
 
     # Constructed by a caller rather than minted by a build.
     handmade = scao._BuildAttestation(
-        factory_epoch=scao._FACTORY_EPOCH,
+        factory_backend=config.backend,
+        factory_epoch=scao._factory_epoch(config.backend),
         source_config=config,
         supplied_matrix_identity=None,
         component_hashes=dict(system.component_hashes),
@@ -557,14 +594,14 @@ def test_replacing_a_backend_factory_invalidates_every_build_attestation() -> No
     # configuration could have been built against a backend that was not yet
     # registered, and retiring attestations there would put back the
     # rebuild-and-recalibrate cost they exist to avoid.
-    epoch = scao._FACTORY_EPOCH
+    epoch = scao._factory_epoch("native")
     scao._factory_for("hcipy")
-    assert scao._FACTORY_EPOCH == epoch
+    assert scao._factory_epoch("native") == epoch
     assert scao._attested_build_identity(system, None) == dict(system.component_hashes)
 
     try:
         scao.register_scao_backend_factory("native", StrongerAberration(), replace=True)
-        assert scao._FACTORY_EPOCH != epoch
+        assert scao._factory_epoch("native") != epoch
         # The system on hand is no longer what this registry builds, so its
         # attestation is retired and it must be refused by the rebuild.
         assert scao._attested_build_identity(system, None) is None
@@ -581,6 +618,178 @@ def test_replacing_a_backend_factory_invalidates_every_build_attestation() -> No
         scao.run_closed_loop(config, system=system)
     finally:
         scao.register_scao_backend_factory("native", honest_factory, replace=True)
+
+
+def test_re_registering_a_mutated_factory_object_retires_its_attestations() -> None:
+    """Object identity is no evidence that a key still builds the same thing.
+
+    Registering the same object again is the case an identity comparison would
+    dismiss as a no-op, and it is exactly the case that must not be dismissed:
+    the object may have been mutated in between, so the key now builds
+    something the attestations minted against it never described.  An explicit
+    ``replace=True`` is the caller's claim that the registry changed, and it is
+    the only claim available here — nothing about a factory object can be
+    hashed into an identity this module could compare instead.
+    """
+
+    config = _tiny_system_config()
+    honest_factory = scao._factory_for("native")
+    mutable = _DelegatingNativeFactory(honest_factory)
+
+    try:
+        scao.register_scao_backend_factory("native", mutable, replace=True)
+        system = scao.build_scao_system(config)
+        # Unmutated, the factory builds what the system records, so it runs.
+        scao.run_closed_loop(config, system=system)
+
+        mutable.static_scale = 3.0
+        scao.register_scao_backend_factory("native", mutable, replace=True)
+        assert scao._FACTORIES["native"] is mutable
+        assert (
+            scao.build_scao_system(config).component_hashes["atmosphere"]
+            != system.component_hashes["atmosphere"]
+        )
+
+        assert scao._attested_build_identity(system, None) is None
+        with pytest.raises(
+            scao.ScaoConstructionError,
+            match="do not match the components its source configuration rebuilds",
+        ):
+            scao.run_closed_loop(config, system=system)
+
+        # And it stays refused.  The rebuild that rejected it disagreed with
+        # what the system records, so it has nothing to attest about this
+        # system and must leave it carrying no usable evidence.
+        assert scao._attested_build_identity(system, None) is None
+        with pytest.raises(
+            scao.ScaoConstructionError,
+            match="do not match the components its source configuration rebuilds",
+        ):
+            scao.run_closed_loop(config, system=system)
+    finally:
+        scao.register_scao_backend_factory("native", honest_factory, replace=True)
+
+
+def test_a_first_lazy_registration_leaves_its_backend_epoch_untouched(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Loading a built-in backend on first use must not cost anything.
+
+    ``_factory_for`` registers a built-in the first time a configuration asks
+    for it, with ``replace`` left false.  Nothing could have been built against
+    a key that held no factory, so there is nothing to retire, and moving the
+    epoch there would charge every system on hand a rebuild and a
+    recalibration for a backend it does not even use.
+    """
+
+    monkeypatch.delitem(scao._FACTORIES, "hcipy", raising=False)
+    before = scao._factory_epoch("hcipy")
+
+    assert scao._factory_for("hcipy").backend_name == "hcipy"
+
+    assert scao._factory_epoch("hcipy") == before
+
+
+def test_a_behavior_identical_replacement_costs_one_rebuild_not_one_per_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The rebuild that clears a retired attestation must be remembered.
+
+    A replacement retires every attestation for its key, including those of
+    systems the new factory builds identically.  The first run after it pays a
+    rebuild to re-establish that agreement, which is the price of the registry
+    having changed; paying it again on every later run of the same system is
+    not, and for a profile that calibrates on build each of those runs is a
+    full interaction-matrix calibration.
+    """
+
+    calibrations: list[None] = []
+    real_calibrate = scao.calibrate_interaction_matrix
+
+    def counting_calibrate(*args: object, **kwargs: object) -> object:
+        calibrations.append(None)
+        return real_calibrate(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(scao, "calibrate_interaction_matrix", counting_calibrate)
+
+    config = _tiny_system_config()
+    assert config.calibration.source == "build"
+    honest_factory = scao._factory_for("native")
+    system = scao.build_scao_system(config)
+    assert len(calibrations) == 1
+
+    try:
+        scao.register_scao_backend_factory(
+            "native",
+            _DelegatingNativeFactory(honest_factory),
+            replace=True,
+        )
+        calibrations.clear()
+        scao.run_closed_loop(config, system=system)
+        scao.run_closed_loop(config, system=system)
+        scao.run_closed_loop(config, system=system)
+        assert len(calibrations) == 1
+    finally:
+        scao.register_scao_backend_factory("native", honest_factory, replace=True)
+
+
+def test_replacing_one_backend_leaves_the_other_backends_attested(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Invalidation is scoped to the registry key that actually changed.
+
+    A configuration resolves exactly one backend, so replacing the HCIPy
+    factory says nothing about what a native configuration builds.  Retiring
+    native attestations there would make installing or swapping an optional
+    backend recalibrate every native system in the session.
+    """
+
+    calibrations: list[None] = []
+    real_calibrate = scao.calibrate_interaction_matrix
+
+    def counting_calibrate(*args: object, **kwargs: object) -> object:
+        calibrations.append(None)
+        return real_calibrate(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(scao, "calibrate_interaction_matrix", counting_calibrate)
+
+    config = _tiny_system_config()
+    assert config.backend == "native"
+    system = scao.build_scao_system(config)
+    hcipy_factory = scao._factory_for("hcipy")
+
+    class _InertHcipyFactory:
+        """Registered under 'hcipy' and never called by a native profile."""
+
+        backend_name = "hcipy"
+
+        def build_geometry(self, **kwargs: object) -> object:
+            raise AssertionError("a native profile resolved the hcipy factory")
+
+        def build_atmosphere(self, **kwargs: object) -> object:
+            raise AssertionError("a native profile resolved the hcipy factory")
+
+        def build_wfs(self, **kwargs: object) -> object:
+            raise AssertionError("a native profile resolved the hcipy factory")
+
+        def build_dm(self, **kwargs: object) -> object:
+            raise AssertionError("a native profile resolved the hcipy factory")
+
+        def build_science_propagator(self, **kwargs: object) -> object:
+            raise AssertionError("a native profile resolved the hcipy factory")
+
+    try:
+        scao.register_scao_backend_factory(
+            "hcipy", _InertHcipyFactory(), replace=True
+        )
+        assert scao._attested_build_identity(system, None) == dict(
+            system.component_hashes
+        )
+        calibrations.clear()
+        scao.run_closed_loop(config, system=system)
+        assert calibrations == []
+    finally:
+        scao.register_scao_backend_factory("hcipy", hcipy_factory, replace=True)
 
 
 def test_supplied_system_is_rejected_when_a_live_component_drifts_after_build() -> None:

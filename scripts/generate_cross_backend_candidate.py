@@ -28,7 +28,15 @@ ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = ROOT
 
 GENERATOR_NAME = "scripts/generate_cross_backend_candidate.py"
-GENERATOR_VERSION = "2"
+# Bumped whenever a change here alters what a candidate's provenance actually
+# attests to.  Acceptance refuses any candidate whose recorded
+# generator_version differs from this constant, so the bump is the mechanism
+# that retires candidates written by an earlier, weaker generator: nothing in
+# the candidate document itself reveals that its clean-tree claim was made
+# without looking for concealed index entries, that its commit and patch hash
+# were sampled non-atomically, or that only the top-level package was checked
+# against this checkout.  Version 3 is the first that closes all three.
+GENERATOR_VERSION = "3"
 CANDIDATE_FILE = "cross_backend_candidate.json"
 DIFF_JSON = "cross_backend_diff.json"
 DIFF_MARKDOWN = "cross_backend_diff.md"
@@ -124,17 +132,28 @@ def _generate_candidate(candidate_dir: Path) -> None:
     from shwfs_ao.validation.cross_backend import run_cross_backend_report
     from shwfs_ao.validation.regression import validate_cross_backend_report
 
+    # The opening check could only judge the modules imported up to that point.
+    # These two lines are what pull in the code that computes the numbers, so
+    # the guard runs again over what they brought into sys.modules.
+    _require_executed_package_is_this_checkout()
+
     constraint_file, constraint_sha256 = _verified_constraint_identity()
-    # Establish provenance before the suite, not after.  Both checks can refuse,
+    # Establish provenance before the suite, not after.  Both halves can refuse,
     # and the suite takes minutes: a maintainer should learn that the tree
-    # cannot be recorded before paying for a run that will be discarded.
-    source_commit = _source_commit()
-    source_patch = _source_patch_sha256()
+    # cannot be recorded before paying for a run that will be discarded.  The
+    # commit and the patch hash are read together so the pair describes one
+    # state of the checkout rather than two.
+    source_commit, source_patch = _sample_source_identity()
 
     report = run_cross_backend_report(
         dependency_constraint_file=constraint_file,
         dependency_constraint_sha256=constraint_sha256,
     )
+    # The suite imports the rest of the package lazily as it runs, so the last
+    # word on which code executed can only be had once it has finished.  This
+    # still precedes every write, so nothing a foreign module produced is
+    # recorded.
+    _require_executed_package_is_this_checkout()
     _require_source_unchanged(source_commit, source_patch)
     candidate: dict[str, Any] = dict(report)
     candidate["generator"] = {
@@ -183,6 +202,11 @@ def _accept_reviewed_candidate(
         validate_baseline_against_schema,
         validate_cross_backend_report,
     )
+
+    # Same reason as in generation: the guard can only judge what is already
+    # imported, and these are the names that decide whether the candidate is
+    # valid and then rewrite the packaged baseline from it.
+    _require_executed_package_is_this_checkout()
 
     candidate_path = candidate_dir / CANDIDATE_FILE
     if not candidate_path.is_file():
@@ -250,6 +274,48 @@ def _accept_reviewed_candidate(
     _refresh_resource_manifest()
 
 
+# Two consecutive samples must agree before the source identity is trusted.
+# Five attempts is far more than a checkout nobody is writing to ever needs, and
+# a tree that still disagrees after them is being modified concurrently — a
+# state no single recorded provenance can describe.
+_SOURCE_IDENTITY_ATTEMPTS = 5
+
+
+def _sample_source_identity() -> tuple[str, str | None]:
+    """Return a ``(commit, patch)`` pair that describes one state of the tree.
+
+    The commit and the patch hash come from separate git invocations, so a HEAD
+    that moves between them yields a pair that never existed: one half names the
+    commit from before the move and the other describes the tree after it.  Both
+    halves are then individually plausible, which is what makes the mixture
+    dangerous — a pre-run pair mixed one way and a post-run pair mixed the other
+    can agree field for field while the suite ran against a commit neither of
+    them names.
+
+    Consistency is established the only way an external process can establish
+    it: by re-reading until two consecutive samples agree, so the pair that is
+    returned was observed twice with no change in between.  A checkout that will
+    not settle within :data:`_SOURCE_IDENTITY_ATTEMPTS` reads is refused rather
+    than described by whichever sample happened to be last.
+    """
+
+    previous = (_source_commit(), _source_patch_sha256())
+    for _ in range(_SOURCE_IDENTITY_ATTEMPTS - 1):
+        current = (_source_commit(), _source_patch_sha256())
+        if current == previous:
+            return current
+        previous = current
+    raise SystemExit(
+        "The source identity did not settle: the commit or the working tree "
+        f"changed on every one of {_SOURCE_IDENTITY_ATTEMPTS} consecutive "
+        f"reads (last seen commit {previous[0]} with patch {previous[1]!r}). A "
+        "baseline names one commit and one patch hash as the origin of its "
+        "numbers, so it cannot be generated from a checkout that is being "
+        "written to. Stop whatever is moving HEAD or the working tree and "
+        "re-run."
+    )
+
+
 def _require_source_unchanged(source_commit: str, source_patch: str | None) -> None:
     """Refuse a candidate whose source moved while the suite was running.
 
@@ -259,15 +325,23 @@ def _require_source_unchanged(source_commit: str, source_patch: str | None) -> N
     sides, so the candidate would record the commit the suite started on while
     the rest of it executed a different one — provenance naming code that never
     produced these numbers.
+
+    The re-read goes through :func:`_sample_source_identity`, exactly as the
+    pre-run read did, so the two sides compare quantities of the same kind: one
+    self-consistent description of the checkout each.  Comparing a
+    non-atomically sampled pair against another non-atomically sampled pair is
+    what let HEAD move unnoticed between the commit read and the patch read on
+    either side, with both fields matching afterwards.
     """
 
-    if _source_commit() != source_commit:
+    current_commit, current_patch = _sample_source_identity()
+    if current_commit != source_commit:
         raise SystemExit(
             f"HEAD moved from {source_commit} while the comparison suite ran, "
             "so the recorded source_commit would not name the code that "
             "produced this report. Re-run from a stationary checkout."
         )
-    if _source_patch_sha256() != source_patch:
+    if current_patch != source_patch:
         raise SystemExit(
             "The working tree changed while the comparison suite ran, so the "
             "recorded source_patch_sha256 would not describe the tree that "
@@ -292,6 +366,25 @@ def _require_executed_package_is_this_checkout() -> Path:
     repository (a built wheel in a virtualenv here, say) is refused for the same
     reason a foreign one is: its contents are a snapshot, not the tracked tree
     the commit and patch hash describe.
+
+    The top-level ``__path__`` is not sufficient on its own.  Import binds each
+    submodule to the file it was first loaded from and caches it in
+    ``sys.modules`` for the life of the process, so a foreign
+    ``shwfs_ao.validation.cross_backend`` left there by an earlier ``sys.path``,
+    a conftest, a plugin, or a half-replaced installation keeps executing no
+    matter where the parent package resolves afterwards.  Every ``shwfs_ao``
+    module the interpreter holds is therefore located individually, and one that
+    cannot say where it came from is refused rather than skipped: an unlocatable
+    module is precisely the one this check cannot clear.
+
+    A walk of ``sys.modules`` can only see what is already imported, so the
+    callers invoke this again after each deferred ``from shwfs_ao...`` import and
+    once more after the comparison suite returns, which is where the package's
+    remaining modules are pulled in.  Re-checking is a handful of dictionary
+    lookups.  Importing everything up front instead would be simpler to read but
+    strictly worse: a shadowing package that merely lacks the submodule would
+    then fail with a bare ImportError rather than the refusal above, which is the
+    message that tells a maintainer what is actually wrong.
     """
 
     import shwfs_ao
@@ -300,16 +393,65 @@ def _require_executed_package_is_this_checkout() -> Path:
     locations = [
         Path(entry).resolve() for entry in getattr(shwfs_ao, "__path__", []) or []
     ]
-    if locations == [expected]:
-        return expected
-    observed = ", ".join(str(path) for path in locations) or "<unknown>"
-    raise SystemExit(
-        f"The imported shwfs_ao package is {observed}, not {expected}. A "
-        "cross-backend baseline records this repository's commit as the origin "
-        "of its numbers, so it must be generated by this repository's code; "
-        "install the checkout in editable mode (python -m pip install -e .) or "
-        "run with this source tree first on the import path."
-    )
+    if locations != [expected]:
+        observed = ", ".join(str(path) for path in locations) or "<unknown>"
+        raise SystemExit(
+            f"The imported shwfs_ao package is {observed}, not {expected}. A "
+            "cross-backend baseline records this repository's commit as the "
+            "origin of its numbers, so it must be generated by this "
+            "repository's code; install the checkout in editable mode (python "
+            "-m pip install -e .) or run with this source tree first on the "
+            "import path."
+        )
+    for name, module in sorted(sys.modules.items()):
+        if not name.startswith("shwfs_ao."):
+            continue
+        located = _module_locations(module)
+        if not located:
+            raise SystemExit(
+                f"The imported {name} module reports no filesystem location, so "
+                "there is no way to tell whether it came from this checkout. A "
+                "baseline names this repository's commit as the origin of its "
+                "numbers, so an unlocatable module cannot be allowed to produce "
+                "them; remove it from sys.modules or generate the candidate in "
+                "a fresh interpreter."
+            )
+        foreign = [
+            path
+            for path in located
+            if path != expected and expected not in path.parents
+        ]
+        if foreign:
+            observed = ", ".join(str(path) for path in foreign)
+            raise SystemExit(
+                f"The imported {name} module is loaded from {observed}, which is "
+                f"not under {expected}. Python caches every imported submodule "
+                "for the life of the process, so this one would execute even "
+                "though the shwfs_ao package itself resolves to this checkout, "
+                "and the candidate would credit this repository's commit with "
+                "numbers another tree produced. Generate the candidate in a "
+                "fresh interpreter running only this source tree."
+            )
+    return expected
+
+
+def _module_locations(module: Any) -> list[Path]:
+    """Every filesystem location an imported module can be traced to.
+
+    A package contributes its search path as well as its file, and both matter:
+    the file is the code that already ran, the search path is where all of its
+    further submodules will be loaded from.  Both are resolved, so a symlink
+    into the checkout is recognised as the checkout and one out of it is not
+    mistaken for it.  A module with neither — a ``None`` placeholder, a bare
+    module object, an incompletely initialised namespace package — yields an
+    empty list, which the caller treats as a refusal rather than as consent.
+    """
+
+    entries = [Path(entry) for entry in getattr(module, "__path__", None) or []]
+    filename = getattr(module, "__file__", None)
+    if filename is not None:
+        entries.append(Path(filename))
+    return [entry.resolve() for entry in entries]
 
 
 def _verify_candidate_provenance(generator: dict[str, Any]) -> None:
@@ -377,6 +519,12 @@ def _refresh_resource_manifest() -> None:
     import tempfile
 
     from shwfs_ao.io.resources import render_resource_manifest
+
+    # The manifest records the content hashes the packaged resources are served
+    # under, so the renderer is as much this repository's code as the validator
+    # is; it is imported here, after the caller's guard ran, and so needs its
+    # own check.
+    _require_executed_package_is_this_checkout()
 
     resource_root = DESTINATION_DIR.parents[1]
     manifest_path = resource_root / "resource_manifest.json"
@@ -841,8 +989,16 @@ def _source_patch_sha256() -> str | None:
     hiding it.  Every divergence contributes its real bytes: anything that
     reduced to a placeholder would let two different working trees record the
     same evidence.  Returns ``None`` only when the tree matches HEAD exactly.
+
+    Both commands below are blind to entries the index tells git not to look at,
+    so the concealment check runs first — see
+    :func:`_require_no_concealed_index_entries`.  It sits here rather than at the
+    call sites because ``_source_tree_clean()`` is defined as this function
+    returning ``None``: guarding the one place both answers come from is what
+    makes a concealed modification impossible to record as a clean tree.
     """
 
+    _require_no_concealed_index_entries()
     # Everything here is handled as bytes.  A working tree can hold paths and
     # file contents that are not valid UTF-8, and a content hash has no business
     # decoding them: text mode would both corrupt the evidence (newline
@@ -925,6 +1081,79 @@ def _source_patch_sha256() -> str | None:
             ) from exc
         absorb(b"untracked-content", contents)
     return hasher.hexdigest()
+
+
+def _require_no_concealed_index_entries() -> None:
+    """Refuse a tree whose index hides tracked modifications from git itself.
+
+    ``git update-index --assume-unchanged`` and ``--skip-worktree`` both tell git
+    to believe the worktree copy of an entry matches the index and to stop
+    stat-ing it.  ``git diff HEAD`` and ``git status`` then report nothing for
+    that path no matter how it has been edited, and since the patch hash is built
+    from exactly those two commands, such a tree reproduces as
+    ``source_tree_clean=true`` with no patch hash at all while the run reads
+    modified source — the fail-open the patch hash exists to prevent.
+
+    There is no honest hash to record instead: the divergence is invisible to the
+    very tooling that would have to describe it, and a candidate that quietly
+    hashed the worktree bytes anyway would contradict what ``git diff`` reports
+    for the same commit.  Refusing is therefore the only correct answer, and it
+    costs the maintainer nothing, because both bits are deliberate local settings
+    they can clear.
+    """
+
+    try:
+        listing = subprocess.run(
+            # -v tags every index entry; a lowercase tag marks assume-unchanged
+            # and 'S' marks skip-worktree.  -z emits the paths raw, for the same
+            # reason `git status -z` is used above: the default form quotes any
+            # path containing a space, a quote, or a non-ASCII byte, and a
+            # refusal that named a path which does not exist on disk would send
+            # the maintainer looking for the wrong file.
+            ["git", "ls-files", "-z", "-v"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            check=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise SystemExit(
+            "Cannot record source provenance: reading the index entry flags "
+            "('git ls-files -v') failed, so whether the tree hides tracked "
+            "modifications from git is unknown and cannot be assumed benign."
+        ) from exc
+    concealed = _concealed_index_paths(listing)
+    if not concealed:
+        return
+    joined = ", ".join(os.fsdecode(path) for path in concealed)
+    raise SystemExit(
+        "Cannot record source provenance: the index marks "
+        f"{joined} assume-unchanged or skip-worktree. git diff and git status "
+        "skip those entries, so an edit to any of them would be recorded as a "
+        "clean checkout of the current commit with no patch hash describing it. "
+        "Clear the bits (git update-index --no-assume-unchanged / "
+        "--no-skip-worktree on those paths) and re-run."
+    )
+
+
+def _concealed_index_paths(listing: bytes) -> list[bytes]:
+    """Sorted paths from ``git ls-files -z -v`` whose worktree state git ignores.
+
+    Each record is a one-character tag, a space, and the raw path.  ``-v``
+    lowercases the tag of an assume-unchanged entry, and ``S`` — or ``s``, when
+    the entry carries both bits — is skip-worktree.  Paths stay bytes for the
+    same reason the rest of this module keeps them so: a worktree may hold names
+    that are not valid UTF-8, and a refusal that crashed while decoding one would
+    be no refusal at all.
+    """
+
+    concealed: list[bytes] = []
+    for record in listing.split(b"\0"):
+        if not record:
+            continue
+        tag = record[:1]
+        if tag.islower() or tag == b"S":
+            concealed.append(record[2:])
+    return sorted(concealed)
 
 
 def _untracked_paths(status: bytes) -> list[bytes]:

@@ -173,8 +173,17 @@ class _BuildAttestation:
     was given, and one carrying no usable attestation is verified the slow way,
     by rebuilding its configuration.  The rebuild is what makes this safe: the
     attestation can only ever save work, never widen what is accepted.
+
+    ``factory_backend`` and ``factory_epoch`` name the one registry entry the
+    build resolved and the epoch that entry stood at while it ran, which is what
+    scopes invalidation to the backend that actually changed — see
+    :func:`register_scao_backend_factory`.  The name is recorded rather than
+    re-derived from ``source_config`` so the epoch compared later is always the
+    counter of the factory that did the building, whatever a future build path
+    might select a factory by.
     """
 
+    factory_backend: str
     factory_epoch: int
     source_config: SystemConfig
     supplied_matrix_identity: tuple[str, str] | None
@@ -280,9 +289,21 @@ class ScaoSystem:
 
 
 _FACTORIES: dict[str, ScaoBackendComponentFactory] = {}
-# Moves whenever a registered factory is replaced, retiring every attestation
-# minted against the superseded registry.  See register_scao_backend_factory.
-_FACTORY_EPOCH = 0
+# One counter per registry key, moved whenever that key is explicitly replaced,
+# retiring every attestation minted against the superseded entry and no others.
+# See register_scao_backend_factory for the rules this implements.
+_FACTORY_EPOCHS: dict[str, int] = {}
+
+
+def _factory_epoch(backend_name: str) -> int:
+    """The epoch one registry key currently stands at.
+
+    A key that has never been replaced stands at zero whether or not it holds a
+    factory, which is what makes the first registration of a built-in backend
+    free: it moves nothing, so no attestation is retired by it.
+    """
+
+    return _FACTORY_EPOCHS.get(backend_name, 0)
 
 
 def _load_native_factory() -> ScaoBackendComponentFactory:
@@ -335,25 +356,41 @@ def register_scao_backend_factory(
         raise ScaoConstructionError(
             f"a SCAO backend factory is already registered for {name!r}."
         )
-    # The registry is an input to what a configuration builds, so replacing a
-    # factory invalidates every attestation minted before it: keeping them would
-    # let verification answer from a build that can no longer happen — accepting
-    # a system this registry would not build, and rejecting one it would.  Every
-    # earlier attestation is retired at once by moving the registry epoch, so a
-    # system built against the superseded factory is re-verified by rebuilding.
+    # The registry is an input to what a configuration builds, so a replacement
+    # here invalidates the attestations minted against what it superseded:
+    # keeping them would let verification answer from a build that can no longer
+    # happen — accepting a system this registry would not build, and rejecting
+    # one it would.  Three rules, together, decide exactly which attestations a
+    # registration retires.
     #
-    # Only a genuine replacement invalidates anything.  Registering a backend
-    # for the first time — which is how the built-in factories are loaded,
-    # lazily, on first use — cannot invalidate an attestation, because no
-    # configuration could have been built against a backend that was not yet
-    # registered.  Moving the epoch there would retire every attestation
-    # mid-session and put back exactly the rebuild-and-recalibrate cost they
-    # exist to avoid.
-    global _FACTORY_EPOCH
-    superseded = _FACTORIES.get(name)
+    # What retires them is moving an epoch, and every explicit ``replace=True``
+    # moves one, including a re-registration of the object already under the
+    # key.  A factory is an ordinary mutable object: its ``build_*`` methods can
+    # be rebound and the parameters it closes over can be changed, so the same
+    # object can build something different from what it built an hour ago, and
+    # this module has no immutable hashed identity for a factory it could
+    # compare instead.  ``replace=True`` is the caller's own claim that the
+    # registry changed, and it is the only evidence available, so it is taken at
+    # face value.  Comparing the new entry against the old one and keeping the
+    # epoch when they are the same object would go on serving attestations that
+    # describe behavior that no longer exists.
+    #
+    # What is retired is scoped to this one key.  A configuration resolves
+    # exactly one backend, so replacing the HCIPy factory says nothing about
+    # what a native configuration builds; a single process-wide epoch made
+    # installing or swapping an optional backend recalibrate every native
+    # system in the session.
+    #
+    # And a registration that is not a replacement retires nothing.  Registering
+    # a backend for the first time — which is how the built-in factories are
+    # loaded, lazily, on first use — cannot invalidate an attestation, because
+    # no configuration could have been built against a key that held no factory.
+    # Moving the epoch there would put back exactly the rebuild-and-recalibrate
+    # cost the attestations exist to avoid, for a backend the systems on hand do
+    # not even use.
     _FACTORIES[name] = factory
-    if superseded is not None and superseded is not factory:
-        _FACTORY_EPOCH += 1
+    if replace:
+        _FACTORY_EPOCHS[name] = _factory_epoch(name) + 1
 
 
 def build_scao_system(
@@ -372,6 +409,11 @@ def build_scao_system(
     if not isinstance(config, SystemConfig):
         raise ScaoConstructionError("config must be a SystemConfig.")
     factory = _factory_for(config.backend)
+    # Sampled with the lookup rather than after the build: an attestation must
+    # name the epoch the factory it used stood at, so a replacement landing
+    # while this build runs retires what this build produced instead of being
+    # silently absorbed into it.
+    factory_epoch = _factory_epoch(config.backend)
     streams = NamedRandomStreams(config.random.root_seed)
     if streams.derivation_scheme_id != config.random.derivation_scheme_id:
         raise ScaoConstructionError(
@@ -482,7 +524,8 @@ def build_scao_system(
     # travels with the system rather than sitting in a process-wide cache, so it
     # cannot be evicted out from under a long-running study.
     attestation = _BuildAttestation(
-        factory_epoch=_FACTORY_EPOCH,
+        factory_backend=config.backend,
+        factory_epoch=factory_epoch,
         source_config=config,
         supplied_matrix_identity=_supplied_matrix_identity(interaction_matrix),
         component_hashes=component_hashes,
@@ -573,8 +616,10 @@ def _verify_supplied_system(config: SystemConfig, system: ScaoSystem) -> None:
     deterministic, so it is learned by building once — in
     :func:`build_scao_system`, which attests the answer on the system it returns
     — and rebuilt here only for a system that carries no attestation matching
-    what it claims to be.  Verifying a system this process built therefore never
-    recalibrates an interaction matrix that has already been calibrated,
+    what it claims to be.  A rebuild that agrees hands its own attestation to
+    the supplied system, so it is paid once per system per registry change
+    rather than once per run.  Verifying a system this process built therefore
+    never recalibrates an interaction matrix that has already been calibrated,
     however many other configurations have been built since.
     """
 
@@ -607,12 +652,27 @@ def _verify_supplied_system(config: SystemConfig, system: ScaoSystem) -> None:
     )
     expected = _attested_build_identity(system, supplied)
     if expected is None:
-        expected = dict(
-            build_scao_system(
-                system.source_config,
-                interaction_matrix=supplied,
-            ).component_hashes
+        rebuilt = build_scao_system(
+            system.source_config,
+            interaction_matrix=supplied,
         )
+        expected = dict(rebuilt.component_hashes)
+        if expected == recorded:
+            # The rebuild just learned, authoritatively, what this configuration
+            # builds under the registry as it stands, and it agrees with the
+            # system in hand — which is precisely what an attestation records.
+            # Keeping it on the supplied system is what stops the next run from
+            # rediscovering the same agreement: without this, one factory
+            # replacement, even a behavior-identical one, makes every subsequent
+            # run of an existing system pay another build and, for every profile
+            # that calibrates on build, another interaction-matrix calibration.
+            # Nothing is minted here.  The attestation installed is the one
+            # build_scao_system minted and registered in _MINTED_ATTESTATIONS
+            # for that rebuild, and it is installed only where the rebuild
+            # agreed: an attestation moved onto a system whose components it
+            # contradicts would be evidence of a build that did not produce
+            # them, and a disagreement still raises below.
+            object.__setattr__(system, "build_attestation", rebuilt.build_attestation)
     if expected != recorded:
         raise ScaoConstructionError(
             "supplied system component identities do not match the components its "
@@ -643,17 +703,18 @@ def _attested_build_identity(
 ) -> dict[str, str] | None:
     """The attested identities of ``system``, or ``None`` if it has none usable.
 
-    Every field of the attestation is checked against the system presenting it,
-    so the answer is only reused for the build it actually describes: the same
-    configuration, the same supplied matrix, and the same component identities.
-    Anything else returns ``None`` and falls back to the rebuild, which is the
-    authority in every case.
+    Every field of the attestation is checked against the system presenting it
+    and against the registry, so the answer is only reused for the build it
+    actually describes: the same configuration, the same supplied matrix, the
+    same component identities, and the backend factory it resolved still
+    standing at the epoch it stood at then.  Anything else returns ``None`` and
+    falls back to the rebuild, which is the authority in every case.
     """
 
     attestation = system.build_attestation
     if attestation is None or attestation not in _MINTED_ATTESTATIONS:
         return None
-    if attestation.factory_epoch != _FACTORY_EPOCH:
+    if attestation.factory_epoch != _factory_epoch(attestation.factory_backend):
         return None
     if attestation.source_config != system.source_config:
         return None

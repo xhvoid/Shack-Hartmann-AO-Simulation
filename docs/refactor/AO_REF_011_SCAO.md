@@ -41,14 +41,37 @@ The current family is version 2:
 
 Their superseded `@1` peers remain packaged and loadable.  The v2 review made
 `wfs.photon_allocation` explicit at the `throughput_scaled` value v1 already
-ran with, so the two versions describe the same physics and differ only in
-profile identity — every non-profile component hash is unchanged between them.
+ran with, so the two versions describe the same physics: every component
+block, the WFS block included, compares equal as a value.  What separates
+them is identity.  The `profile` hash moves because the provenance is a
+different published record.  The nested `wfs` hash moves too, because that
+one entry is taken from the `WfsConfig` dataclass rather than from the
+serialized record, and schema v2 extended that dataclass's declared field
+list; a v1 record therefore keeps the twelve-field digest it was published
+with instead of being relabelled under a shape it predates.  Every other
+component hash is unchanged between the two.
 
 The *record* schema version is a separate axis from the profile version: v2
 records require `wfs.photon_allocation`, v1 records predate it and must omit
-it, and both parse (`SUPPORTED_PROFILE_SCHEMA_VERSIONS`).  Serialization is
-always to the current schema, so one configuration always has one hashing
-basis, whichever schema version it was read from.
+it, and both parse (`SUPPORTED_PROFILE_SCHEMA_VERSIONS`).  A configuration
+serializes under the schema it belongs to — its `record_schema_version`, which
+for a parsed record is the schema that record declared — so one configuration
+still has exactly one hashing basis; that basis is simply its own schema's and
+not the newest one.  The schema version sits *inside* the hashed mapping, so
+serializing every configuration under the current schema would move
+`config_hash` for profiles whose physics and whose packaged record never
+changed, and a result labelled with such a profile would stop reproducing its
+own identity.  Writing each record back through the schema it was published
+under is what makes a v1 record round-trip byte-identically and keeps a v1
+result reproducible forever; adding a schema version can only affect records
+written under the new one.
+
+The two axes are independent but not every pairing is coherent, so a
+configuration may only claim a schema that can express it: schema v1 accepts
+only a v1 profile carrying the reviewed `throughput_scaled` allocation.
+Promoting such a record to v2 would move its published hash and demoting a v2
+one would silently drop stated physics, so an incoherent pairing is refused
+rather than reconciled.
 
 `high_order_10m_hcipy@2` pairs the geometric 10 m scale through the registered
 HCIPy backend factory; loading it needs no optional dependency, building it
