@@ -181,6 +181,7 @@ def test_calibration_has_exact_rows_hash_inputs_and_immutable_reference(
         "detector_realization_hash",
         "config_hash",
         "provenance",
+        "photon_allocation",
     )
     assert calibration.subaperture_ids == geometry.subaperture_ids
     assert calibration.row_ids == geometry.row_ids
@@ -752,3 +753,90 @@ def test_geometric_sensor_supports_rectangular_pupil_sampling() -> None:
     )
     assert np.allclose(measured.vector.values[0::2], 2.0e-6, atol=1.0e-16)
     assert np.allclose(measured.vector.values[1::2], 3.0e-6, atol=1.0e-16)
+
+
+def test_photon_allocation_is_an_explicit_hashed_choice(
+    geometry: ShackHartmannGeometry,
+    native_backend: NativeShackHartmannOptics,
+) -> None:
+    detector = DetectorConfig(
+        photons_per_subap_frame=150.0,
+        prnu_mode="persistent",
+    )
+
+    def build(**kwargs) -> ShackHartmannCalibration:
+        return DetectorShackHartmannSensor.calibrate(
+            geometry,
+            native_backend,
+            detector,
+            wfs_wavelength_m=WAVELENGTH_M,
+            random_streams=NamedRandomStreams(31),
+            validity_config=_validity(),
+            **kwargs,
+        ).calibration
+
+    default = build()
+    explicit = build(photon_allocation="throughput_scaled")
+    unit_sum = build(photon_allocation="unit_sum")
+
+    assert default.photon_allocation == "throughput_scaled"
+    # The frozen default must hash byte-identically: this hash keys the
+    # runtime RNG scope derivation used by seeded regression baselines.
+    assert explicit.config_hash == default.config_hash
+    assert unit_sum.photon_allocation == "unit_sum"
+    assert unit_sum.config_hash != default.config_hash
+
+    with pytest.raises(
+        ShackHartmannMeasurementError,
+        match="photon_allocation",
+    ):
+        build(photon_allocation="per_lenslet")
+
+
+def test_unit_sum_allocation_gives_every_subaperture_the_full_budget(
+    geometry: ShackHartmannGeometry,
+    native_backend: NativeShackHartmannOptics,
+) -> None:
+    detector = DetectorConfig(
+        photons_per_subap_frame=200.0,
+        qe=0.8,
+        prnu_mode="persistent",
+    )
+    budget_e = 200.0 * 0.8
+    throughput = np.asarray(
+        native_backend.spot_intensities(
+            np.zeros(geometry.pupil_shape, dtype=float)
+        ).relative_throughput,
+        dtype=float,
+    )
+    assert throughput.min() < 1.0 - 1.0e-6
+
+    def source_sums(photon_allocation: str) -> np.ndarray:
+        sensor = DetectorShackHartmannSensor.calibrate(
+            geometry,
+            native_backend,
+            detector,
+            wfs_wavelength_m=WAVELENGTH_M,
+            random_streams=NamedRandomStreams(9),
+            validity_config=_validity(),
+            photon_allocation=photon_allocation,
+        )
+        measured = sensor.measure(
+            np.zeros(geometry.pupil_shape),
+            random_streams=NamedRandomStreams(9),
+            include_noise=False,
+        )
+        frames = measured.detector_telemetry.detector_frames
+        return np.array(
+            [float(np.sum(frame.expected_source_e)) for frame in frames]
+        )
+
+    scaled = source_sums("throughput_scaled")
+    np.testing.assert_allclose(scaled, budget_e * throughput, rtol=1.0e-9)
+
+    unit_sum = source_sums("unit_sum")
+    np.testing.assert_allclose(
+        unit_sum,
+        np.full(throughput.shape, budget_e),
+        rtol=1.0e-9,
+    )

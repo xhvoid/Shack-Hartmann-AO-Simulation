@@ -311,6 +311,7 @@ calibration, diagnostic, science, and experiment-result record is listed here.
 | `detector_sampling`, `detector_config`, `centroid_config` | typed records | exact sampling and algorithm/electron assumptions |
 | `detector_realization_hash`, `config_hash` | stable strings | persistent detector state and full calibration identity |
 | `provenance` | `Provenance` | source classification and references |
+| `photon_allocation` | `"throughput_scaled"` or `"unit_sum"` | explicit photon-budget interpretation shared by reference and runtime frames; the frozen throughput-scaled default hashes identically, while `"unit_sum"` changes the calibration hash |
 | `GeometricShackHartmannCalibration.geometry` | `ShackHartmannGeometry` | exact geometric-sensor layout |
 | `reference_slopes_rad` | `(n_subapertures, 2)` rad wavefront slope | finite local-slope references |
 | `subaperture_ids`, `row_ids` | ordered tuples | physical IDs and interleaved row identity |
