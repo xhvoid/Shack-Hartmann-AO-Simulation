@@ -407,6 +407,7 @@ DETECTOR_EXPORTS = (
 CONFIG_EXPORTS = (
     "PROFILE_SCHEMA_NAME",
     "PROFILE_SCHEMA_VERSION",
+    "SUPPORTED_PROFILE_SCHEMA_VERSIONS",
     "SystemConfigError",
     "ProfileProvenance",
     "AtmosphereConfig",
@@ -500,17 +501,27 @@ CORE_EXPORTS = (
     *HASHING_EXPORTS,
 )
 AO_REF_011_PROFILE_RESOURCES = (
+    "synthetic_presets/fast_2m_detector.v1.json",
     "synthetic_presets/fast_2m_detector.v2.json",
+    "synthetic_presets/portfolio_2m_detector.v1.json",
     "synthetic_presets/portfolio_2m_detector.v2.json",
+    "synthetic_presets/research_2m_detector.v1.json",
     "synthetic_presets/research_2m_detector.v2.json",
+    "synthetic_presets/high_order_10m_geometric.v1.json",
     "synthetic_presets/high_order_10m_geometric.v2.json",
+    "synthetic_presets/high_order_10m_hcipy.v1.json",
     "synthetic_presets/high_order_10m_hcipy.v2.json",
 )
 AO_REF_011_SYSTEM_PROFILES = (
+    ("fast_2m_detector", 1),
     ("fast_2m_detector", 2),
+    ("portfolio_2m_detector", 1),
     ("portfolio_2m_detector", 2),
+    ("research_2m_detector", 1),
     ("research_2m_detector", 2),
+    ("high_order_10m_geometric", 1),
     ("high_order_10m_geometric", 2),
+    ("high_order_10m_hcipy", 1),
     ("high_order_10m_hcipy", 2),
 )
 CONTRACT_MANIFEST = (
@@ -1303,21 +1314,50 @@ def _install_and_smoke(
                 len(value) == 64
                 for value in config.component_config_hashes.values()
             )
-        two_m_profiles = profile_configs[:3]
+        by_key = dict(zip(profile_keys, profile_configs))
+        # Every published version of every profile is installed, so select by
+        # name and version rather than by position in the inventory.
+        two_m_profiles = [
+            by_key[(name, 2)]
+            for name in (
+                "fast_2m_detector",
+                "portfolio_2m_detector",
+                "research_2m_detector",
+            )
+        ]
         assert len({config.config_hash for config in two_m_profiles}) == 3
         assert len(
             {config.observing_conditions_hash for config in two_m_profiles}
         ) == 1
-        high_order = profile_configs[3]
+        high_order = by_key[("high_order_10m_geometric", 2)]
         assert high_order.telescope_diameter_m == 10.0
         assert high_order.pupil_pixels == 384
         assert high_order.lenslets_across == 48
         assert high_order.actuators_across == 49
         assert high_order.wfs_model == "geometric"
 
+        # A superseded version stays loadable and keeps its own identity while
+        # describing the same physics as its successor.
+        for name in (
+            "fast_2m_detector",
+            "portfolio_2m_detector",
+            "research_2m_detector",
+            "high_order_10m_geometric",
+            "high_order_10m_hcipy",
+        ):
+            superseded = by_key[(name, 1)]
+            current = by_key[(name, 2)]
+            assert superseded.config_hash != current.config_hash
+            assert superseded.wfs.photon_allocation == "throughput_scaled"
+            physics = dict(superseded.component_config_hashes)
+            successor = dict(current.component_config_hashes)
+            assert physics.pop("profile") != successor.pop("profile")
+            assert physics == successor
+
         assert native_factory.NATIVE_SCAO_COMPONENT_FACTORY.backend_name == "native"
-        installed_system = experiments_scao.build_scao_system(profile_configs[0])
-        assert installed_system.config_hash == profile_configs[0].config_hash
+        fast = by_key[("fast_2m_detector", 2)]
+        installed_system = experiments_scao.build_scao_system(fast)
+        assert installed_system.config_hash == fast.config_hash
         assert all(len(value) == 64 for value in installed_system.component_hashes.values())
 
         with warnings.catch_warnings(record=True) as alias_caught:
@@ -1681,5 +1721,5 @@ def test_pep660_editable_install_generates_resource_alias_only_in_environment(
         capture_output=True,
         text=True,
     )
-    assert result.stdout.strip() == "editable-resource-alias-ok:38"
+    assert result.stdout.strip() == "editable-resource-alias-ok:43"
     assert not source_alias.exists()

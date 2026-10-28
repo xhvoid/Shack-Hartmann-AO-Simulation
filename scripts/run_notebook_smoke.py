@@ -12,8 +12,9 @@ has no ``env`` trait, so a constructor argument would be silently dropped.
 The runner imports only the installed package, so it validates that a
 notebook runs from a built, non-editable wheel without source-tree imports
 or hidden local files.  Offline execution is actively enforced, not merely
-assumed: an injected first cell denies outbound IPv4/IPv6 connections inside
-the kernel (blocking, for example, ``pandas.read_csv(url)``) while leaving
+assumed: an injected first cell denies outbound IPv4/IPv6 connections and
+non-loopback name resolution inside the kernel (blocking, for example,
+``pandas.read_csv(url)`` before it can even emit a DNS query) while leaving
 loopback — Jupyter's own ZMQ transport — and local Unix sockets working.
 
 Usage::
@@ -57,10 +58,11 @@ FAST_SMOKE_OVERRIDE_SOURCE = "FAST_SMOKE = True"
 # reaching the network (for example ``pandas.read_csv(url)``); this denies
 # outbound IPv4/IPv6 traffic inside the kernel while leaving loopback — the
 # transport Jupyter's own ZMQ channels already use — and local Unix sockets
-# untouched, so a canonical notebook must run from packaged data.  Connection-
-# oriented calls (connect/connect_ex) AND connectionless, address-bearing sends
-# (sendto/sendmsg) are all covered, so a UDP datagram cannot slip past a guard
-# that only watched connect().
+# untouched, so a canonical notebook must run from packaged data.  Three layers
+# are covered, because blocking only the last one still leaks: name resolution,
+# forward and reverse, which every real client reaches first; connection-
+# oriented calls (connect/connect_ex); and connectionless, address-bearing
+# sends (sendto/sendmsg), so a UDP datagram cannot slip past either.
 NETWORK_GUARD_SOURCE = '''\
 import ipaddress as _ipaddress
 import socket as _socket
@@ -69,9 +71,20 @@ import socket as _socket
 def _install_offline_guard():
     real_connect = _socket.socket.connect
     real_connect_ex = _socket.socket.connect_ex
-    real_sendto = _socket.socket.sendto
-    real_sendmsg = _socket.socket.sendmsg
     ip_families = (_socket.AF_INET, _socket.AF_INET6)
+
+    def _host_denied(host):
+        # None is a wildcard bind (AI_PASSIVE), and loopback stays reachable so
+        # Jupyter's own ZMQ transport keeps working; every other name or
+        # address is refused.
+        if host is None:
+            return False
+        if host == "localhost":
+            return False
+        try:
+            return not _ipaddress.ip_address(host).is_loopback
+        except ValueError:
+            return True
 
     def _denied(sock, address):
         if sock.family not in ip_families:
@@ -79,12 +92,7 @@ def _install_offline_guard():
         if address is None:
             return False
         host = address[0] if isinstance(address, (tuple, list)) else address
-        if host == "localhost":
-            return False
-        try:
-            return not _ipaddress.ip_address(host).is_loopback
-        except ValueError:
-            return True
+        return _host_denied(host)
 
     def _refuse(address):
         raise OSError(
@@ -101,26 +109,67 @@ def _install_offline_guard():
             _refuse(address)
         return real_connect_ex(self, address)
 
-    def sendto(self, data, *args):
-        # sendto(data, address) or sendto(data, flags, address): the destination
-        # is always the final positional argument.
-        address = args[-1] if args else None
-        if _denied(self, address):
-            _refuse(address)
-        return real_sendto(self, data, *args)
-
-    def sendmsg(self, *args):
-        # sendmsg(buffers[, ancdata[, flags[, address]]]): a datagram carries its
-        # destination as the optional fourth positional argument.
-        address = args[3] if len(args) >= 4 else None
-        if _denied(self, address):
-            _refuse(address)
-        return real_sendmsg(self, *args)
-
     _socket.socket.connect = connect
     _socket.socket.connect_ex = connect_ex
-    _socket.socket.sendto = sendto
-    _socket.socket.sendmsg = sendmsg
+
+    # Every real client resolves before it connects, so a guard that watched
+    # only connect() still let the query leave the machine.  Cover the whole
+    # resolution surface, forward and reverse: the host is the first argument
+    # of each of these, or the first element of the sockaddr getnameinfo takes.
+    def _guard_resolver(name, host_of):
+        real = getattr(_socket, name, None)
+        if real is None:
+            return
+
+        def guarded(*args, **kwargs):
+            host = host_of(args)
+            if _host_denied(host):
+                _refuse(host)
+            return real(*args, **kwargs)
+
+        setattr(_socket, name, guarded)
+
+    def _first_argument(args):
+        return args[0] if args else None
+
+    def _sockaddr_host(args):
+        address = args[0] if args else None
+        if isinstance(address, (tuple, list)) and address:
+            return address[0]
+        return address
+
+    for _resolver in ("getaddrinfo", "gethostbyname", "gethostbyname_ex", "gethostbyaddr"):
+        _guard_resolver(_resolver, _first_argument)
+    _guard_resolver("getnameinfo", _sockaddr_host)
+
+    # sendto is universal, but sendmsg is a Unix-only API.  Patch each only
+    # where it exists, so the guard installs on every platform instead of
+    # failing the whole notebook on the one where it is absent.
+    real_sendto = getattr(_socket.socket, "sendto", None)
+    if real_sendto is not None:
+
+        def sendto(self, data, *args):
+            # sendto(data, address) or sendto(data, flags, address): the
+            # destination is always the final positional argument.
+            address = args[-1] if args else None
+            if _denied(self, address):
+                _refuse(address)
+            return real_sendto(self, data, *args)
+
+        _socket.socket.sendto = sendto
+
+    real_sendmsg = getattr(_socket.socket, "sendmsg", None)
+    if real_sendmsg is not None:
+
+        def sendmsg(self, *args):
+            # sendmsg(buffers[, ancdata[, flags[, address]]]): a datagram
+            # carries its destination as the optional fourth argument.
+            address = args[3] if len(args) >= 4 else None
+            if _denied(self, address):
+                _refuse(address)
+            return real_sendmsg(self, *args)
+
+        _socket.socket.sendmsg = sendmsg
 
 
 _install_offline_guard()

@@ -3,7 +3,7 @@
   "schema_version": 2,
   "profile_name": "fast_2m_detector",
   "profile_version": 2,
-  "baseline_rationale": "Canonical version of the frozen fast 2 m detector-level numerical scale: 52 pupil pixels, 5 lenslets, 5 actuators across, and 12 loop frames. Observing conditions are held equal to the portfolio and research v1 profiles.",
+  "baseline_rationale": "Canonical version of the frozen fast 2 m detector-level numerical scale: 52 pupil pixels, 5 lenslets, 5 actuators across, and 12 loop frames. Observing conditions are held equal to the portfolio and research v2 profiles.",
   "provenance": {
     "schema_name": "shwfs_ao.provenance",
     "schema_version": 2,

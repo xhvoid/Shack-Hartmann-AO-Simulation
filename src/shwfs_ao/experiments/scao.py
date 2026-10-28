@@ -392,6 +392,11 @@ def build_scao_system(
         controller=controller,
         science_propagator=science_propagator,
     )
+    # Building is the authoritative — and only — way to learn which component
+    # identities a configuration produces, so record the answer while it is in
+    # hand: verifying a supplied system then costs a hash comparison instead of
+    # a second build and its interaction-matrix calibration.
+    _remember_build_identity(config, interaction_matrix, component_hashes)
     return ScaoSystem(
         random_streams=streams,
         atmosphere=atmosphere,
@@ -454,40 +459,123 @@ def run_closed_loop(
 def _verify_supplied_system(config: SystemConfig, system: ScaoSystem) -> None:
     """Reject a supplied system whose components do not match its own source.
 
-    ``ScaoSystem.__post_init__`` already binds ``component_hashes`` to the live
-    components and ``config_hash`` to ``source_config``.  The remaining trust
-    gap is that a caller can construct a system whose components were replaced
-    with a different but internally self-consistent set after build time (for
-    example a 90 nm atmosphere carrying its own valid component hash while the
-    retained ``config_hash`` still names a 30 nm profile).  Rebuilding from the
-    system's own recorded ``source_config`` and requiring identical component
-    identities closes it: results can never be labelled with a configuration
-    that did not build the components that ran.
+    Two distinct things must hold before a supplied system may run, and each is
+    checked against a different authority.
+
+    First, the recorded ``component_hashes`` must still be the identity of the
+    components the system holds *now*.  ``ScaoSystem.__post_init__`` establishes
+    that at construction, but a component can be mutated afterwards — registering
+    a further random-stream domain, for example, changes a hash-covered identity
+    — so the live components are re-hashed here rather than trusted.
+
+    Second, that recorded identity must be the one ``source_config`` actually
+    builds.  Otherwise a caller could construct a system whose components were
+    replaced with a different but internally self-consistent set (a 90 nm
+    atmosphere carrying its own valid component hash while the retained
+    ``config_hash`` still names a 30 nm profile).  What a configuration builds is
+    deterministic, so it is learned by building once — in
+    :func:`build_scao_system`, which records it — and only rebuilt here when this
+    process has no record of that configuration.  Verifying a run therefore never
+    recalibrates an interaction matrix that has already been calibrated.
     """
 
     if system.source_config != config:
         raise ScaoConstructionError(
             "system.source_config must equal the supplied configuration."
         )
-    reference = build_scao_system(
-        system.source_config,
-        interaction_matrix=(
-            system.interaction_matrix
-            if system.source_config.calibration.source == "supplied"
-            else None
-        ),
+    recorded = dict(system.component_hashes)
+    live = _expected_component_hashes(
+        random_streams=system.random_streams,
+        atmosphere=system.atmosphere,
+        wfs=system.wfs,
+        dm=system.dm,
+        interaction_matrix=system.interaction_matrix,
+        reconstructor=system.reconstructor,
+        command_projector=system.command_projector,
+        controller=system.controller,
+        science_propagator=system.science_propagator,
     )
-    if dict(reference.component_hashes) != dict(system.component_hashes):
-        drifted = sorted(
-            key
-            for key in set(reference.component_hashes) | set(system.component_hashes)
-            if reference.component_hashes.get(key)
-            != system.component_hashes.get(key)
+    if live != recorded:
+        raise ScaoConstructionError(
+            "supplied system components no longer carry the identity it records; "
+            f"mismatched keys: {_mismatched_keys(live, recorded)}. A component "
+            "was mutated after the system was built."
         )
+    supplied = (
+        system.interaction_matrix
+        if system.source_config.calibration.source == "supplied"
+        else None
+    )
+    expected = _recall_build_identity(system.source_config, supplied)
+    if expected is None:
+        expected = dict(
+            build_scao_system(
+                system.source_config,
+                interaction_matrix=supplied,
+            ).component_hashes
+        )
+    if expected != recorded:
         raise ScaoConstructionError(
             "supplied system component identities do not match the components its "
-            f"source configuration rebuilds; mismatched keys: {drifted}."
+            f"source configuration rebuilds; mismatched keys: "
+            f"{_mismatched_keys(expected, recorded)}."
         )
+
+
+def _mismatched_keys(left: Mapping[str, str], right: Mapping[str, str]) -> list[str]:
+    return sorted(
+        key for key in set(left) | set(right) if left.get(key) != right.get(key)
+    )
+
+
+# What a configuration builds is a deterministic function of that configuration,
+# so it is derived once and remembered for the life of the process.  The key is
+# a hash, but the remembered configuration itself is the authority on a hit, so
+# the memo can never widen verification into accepting a different config.  The
+# entry count is capped because a long-running process may build many
+# configurations; eviction only costs a rebuild, never correctness.
+_BUILD_IDENTITY_MEMO: dict[
+    tuple[str, str | None],
+    tuple[SystemConfig, dict[str, str]],
+] = {}
+_BUILD_IDENTITY_MEMO_LIMIT = 64
+
+
+def _build_identity_key(
+    config: SystemConfig,
+    supplied: InteractionMatrix | None,
+) -> tuple[str, str | None]:
+    if supplied is None:
+        return (config.config_hash, None)
+    # A supplied matrix is an input to the build, not a product of it, so the
+    # identity it yields is only reusable for that same matrix.
+    return (config.config_hash, f"{supplied.geometry_hash}:{supplied.matrix_hash}")
+
+
+def _remember_build_identity(
+    config: SystemConfig,
+    supplied: InteractionMatrix | None,
+    component_hashes: Mapping[str, str],
+) -> None:
+    memo = _BUILD_IDENTITY_MEMO
+    key = _build_identity_key(config, supplied)
+    if key not in memo:
+        while memo and len(memo) >= _BUILD_IDENTITY_MEMO_LIMIT:
+            del memo[next(iter(memo))]
+    memo[key] = (config, dict(component_hashes))
+
+
+def _recall_build_identity(
+    config: SystemConfig,
+    supplied: InteractionMatrix | None,
+) -> dict[str, str] | None:
+    entry = _BUILD_IDENTITY_MEMO.get(_build_identity_key(config, supplied))
+    if entry is None:
+        return None
+    remembered_config, component_hashes = entry
+    if remembered_config != config:
+        return None
+    return dict(component_hashes)
 
 
 def _factory_for(name: str) -> ScaoBackendComponentFactory:

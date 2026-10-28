@@ -18,8 +18,12 @@ applications can resolve their own environments.
 | --- | --- | --- |
 | `py310.txt` | Linux CPython 3.10 | `.[test,notebook-test]` + `build` (native CI lanes) |
 | `py314.txt` | Linux CPython 3.14 | `.[test,notebook-test,lint]` + `build` (native CI + lint lanes) |
-| `hcipy-py311.txt` | Linux CPython 3.11 | `.[test,hcipy,notebook-test]` + `build` (HCIPy lanes) |
+| `hcipy-py311.txt` | Linux-x86-64 CPython 3.11 | `.[test,hcipy,notebook-test]` + `build` (HCIPy lanes) |
 | `hcipy-py314.txt` | macOS-arm64 CPython 3.14 | maintainer environment that generates and accepts the packaged cross-backend baseline; verified by `scripts/generate_cross_backend_candidate.py` |
+
+The HCIPy profiles declare their platform *and* architecture in the header prose (`on Linux-x86-64`, `on macOS-arm64`), because
+`scripts/generate_cross_backend_candidate.py` matches that declaration against the running machine before it will generate a
+baseline: the profile is selected by Python version alone, and a lock resolved on another architecture cannot reproduce it.
 
 Install the profile matching the interpreter:
 

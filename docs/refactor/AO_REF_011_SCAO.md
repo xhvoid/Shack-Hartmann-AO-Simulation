@@ -29,13 +29,26 @@ writing are outside this boundary.
 
 ## Versioned profiles and hashes
 
-The installed schema-v1 presets are:
+Every published profile version stays installed, because a result is labelled
+with the exact profile that produced it and must stay reproducible from it.
+The current family is version 2:
 
 - `fast_2m_detector@2`;
 - `portfolio_2m_detector@2`;
 - `research_2m_detector@2`;
 - `high_order_10m_geometric@2`;
 - `high_order_10m_hcipy@2`.
+
+Their superseded `@1` peers remain packaged and loadable.  The v2 review made
+`wfs.photon_allocation` explicit at the `throughput_scaled` value v1 already
+ran with, so the two versions describe the same physics and differ only in
+profile identity — every non-profile component hash is unchanged between them.
+
+The *record* schema version is a separate axis from the profile version: v2
+records require `wfs.photon_allocation`, v1 records predate it and must omit
+it, and both parse (`SUPPORTED_PROFILE_SCHEMA_VERSIONS`).  Serialization is
+always to the current schema, so one configuration always has one hashing
+basis, whichever schema version it was read from.
 
 `high_order_10m_hcipy@2` pairs the geometric 10 m scale through the registered
 HCIPy backend factory; loading it needs no optional dependency, building it

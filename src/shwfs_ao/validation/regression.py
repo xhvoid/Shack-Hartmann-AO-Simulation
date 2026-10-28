@@ -22,7 +22,7 @@ import json
 import math
 import re
 from numbers import Real
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 
 from ..io.resources import read_text_resource
 
@@ -58,6 +58,13 @@ REQUIRED_COMPARISON_KINDS = (
     "closed_loop_residual",
     "runtime_and_memory",
 )
+# The atmosphere comparison is the estimated one: its ratios are averages over
+# independent realizations, so its recorded values mean nothing without the
+# estimator and uncertainty definition behind them.  The packaged JSON Schema
+# requires that prose; the application validator must require it too, or the
+# acceptance workflow — the only writer of a baseline — could drop it and still
+# satisfy every custom check.
+COMPARISONS_REQUIRING_STATISTICAL_DEFINITION = frozenset({"atmosphere_statistics"})
 _CRITERION_TYPES = ("equals", "abs_tolerance", "range", "informational")
 _CONTENT_HASH_64 = re.compile(r"[0-9a-f]{64}")
 _SOURCE_COMMIT_40 = re.compile(r"[0-9a-f]{40}")
@@ -339,6 +346,7 @@ __all__ = (
     "REQUIRED_COMPONENT_HASH_KEYS",
     "REQUIRED_FIXTURE_HASH_KEYS",
     "REQUIRED_METRIC_NAMES",
+    "COMPARISONS_REQUIRING_STATISTICAL_DEFINITION",
     "METRIC_CONTRACT",
     "BaselineContractError",
     "validate_cross_backend_report",
@@ -546,13 +554,16 @@ def validate_cross_backend_baseline(document: Mapping[str, Any]) -> Mapping[str,
                 "hash of the working-tree divergence when source_tree_clean is "
                 "false; a dirty baseline requires patch evidence."
             )
-    elif source_patch is not None and (
-        not isinstance(source_patch, str)
-        or not _CONTENT_HASH_64.fullmatch(source_patch)
-    ):
+    elif source_patch is not None:
+        # A clean tree has nothing that diverged from the recorded commit, so
+        # there is no divergence to hash.  Recording both says the baseline was
+        # generated from an unmodified checkout *and* from something else; one
+        # of the two claims is false and the document cannot say which, so the
+        # combination is rejected rather than silently believed.
         raise BaselineContractError(
-            "generator.source_patch_sha256 must be null or a 64-character "
-            "content hash when source_tree_clean is true."
+            "generator.source_patch_sha256 must be null or absent when "
+            f"source_tree_clean is true; got {source_patch!r}. A clean tree "
+            "has no working-tree divergence to record."
         )
     for comparison in document["comparisons"]:
         for metric in comparison["metrics"]:
@@ -575,9 +586,12 @@ def validate_cross_backend_baseline(document: Mapping[str, Any]) -> Mapping[str,
                     "number."
                 )
             # An exact metric's recorded value is the expectation it gates on,
-            # so the two must agree; otherwise the baseline could record one
-            # value and gate on another.
-            if criterion_type == "equals" and criterion["expected"] != metric["value"]:
+            # so the two must agree in kind as well as in value; otherwise the
+            # baseline could record one value and gate on another, or record a
+            # boolean flag where the gate expects a count.
+            if criterion_type == "equals" and not _same_value(
+                criterion["expected"], metric["value"]
+            ):
                 raise BaselineContractError(
                     f"baseline metric {metric['name']!r} in comparison "
                     f"{comparison['comparison_kind']!r} gates on equality, so "
@@ -664,9 +678,12 @@ def evaluate_report_against_baseline(
 ) -> tuple[str, ...]:
     """Return failure messages from checking a fresh report against a baseline.
 
-    An empty tuple means every gating criterion passed.  Every failure names
-    the observed value, the expected value or range, the tolerance with its
-    units, and the compared configuration/fixture hashes.
+    An empty tuple means every gating criterion passed *and* every metric the
+    baseline records is present in the report — including the informational
+    ones, whose values never gate but whose absence would quietly remove the
+    evidence the gated values are read against.  Every failure names the
+    observed value, the expected value or range, the tolerance with its units,
+    and the compared configuration/fixture hashes.
     """
 
     # The baseline is fully validated (it is the authority), but the report is
@@ -731,9 +748,14 @@ def evaluate_report_against_baseline(
         for metric in comparison["metrics"]:
             name = metric["name"]
             criterion = metric["pass_criterion"]
-            if criterion["type"] == "informational":
-                continue
             observed_entry = report_metrics.get((kind, name))
+            # Presence is checked before the criterion type, because an
+            # informational metric is required *evidence* even though its value
+            # never gates: the standard errors that qualify the atmosphere
+            # ratios, and the runtime and memory measurements, are the reason a
+            # reader can interpret the gated numbers at all.  Skipping them
+            # first would let a report drop every informational metric — or the
+            # whole runtime comparison — and still evaluate clean.
             if observed_entry is None:
                 # Report the same complete context a value violation would —
                 # the expected value or range, tolerance, units, and hashes —
@@ -746,6 +768,8 @@ def evaluate_report_against_baseline(
                         hash_context=hash_context,
                     )
                 )
+                continue
+            if criterion["type"] == "informational":
                 continue
             failure = _evaluate_metric(
                 kind,
@@ -799,22 +823,25 @@ def _evaluate_metric(
 ) -> str | None:
     criterion = metric["pass_criterion"]
     kind = criterion["type"]
+    # A numeric gate must see a number.  ``bool`` is a Python ``Real``, so an
+    # observation reported as ``True`` would otherwise be measured as 1.0 and
+    # could satisfy a Strehl or residual tolerance it never met.
     if kind == "equals":
-        if observed == criterion["expected"]:
+        if _same_value(observed, criterion["expected"]):
             return None
     elif kind == "abs_tolerance":
         if (
-            isinstance(observed, Real)
-            and math.isfinite(float(observed))
-            and abs(float(observed) - float(criterion["expected"]))
+            _finite_number(observed)
+            and abs(float(cast(float, observed)) - float(criterion["expected"]))
             <= float(criterion["tolerance"])
         ):
             return None
     elif kind == "range":
         if (
-            isinstance(observed, Real)
-            and math.isfinite(float(observed))
-            and float(criterion["low"]) <= float(observed) <= float(criterion["high"])
+            _finite_number(observed)
+            and float(criterion["low"])
+            <= float(cast(float, observed))
+            <= float(criterion["high"])
         ):
             return None
     else:  # pragma: no cover - validated earlier
@@ -841,6 +868,15 @@ def _validate_comparison(comparison: object) -> None:
             f"comparison {comparison['comparison_kind']!r} must contain "
             "metrics."
         )
+    if comparison["comparison_kind"] in COMPARISONS_REQUIRING_STATISTICAL_DEFINITION:
+        definition = comparison.get("statistical_definition")
+        if not isinstance(definition, str) or not definition.strip():
+            raise BaselineContractError(
+                f"comparison {comparison['comparison_kind']!r} is estimated "
+                "from repeated realizations, so it must record its "
+                "statistical_definition: the estimator and the uncertainty "
+                "behind every value it reports."
+            )
     seen_names: set[str] = set()
     for metric in metrics:
         if not isinstance(metric, Mapping):
@@ -986,6 +1022,22 @@ def _finite_number(value: object) -> bool:
         and not isinstance(value, bool)
         and math.isfinite(float(value))
     )
+
+
+def _same_value(left: object, right: object) -> bool:
+    """Equality that never lets a flag stand in for a number, or the reverse.
+
+    ``bool`` is a subclass of ``int``, so plain ``==`` accepts ``False`` where a
+    baseline expects ``0`` and ``1`` where it expects ``True``.  A metric's kind
+    is part of its meaning here — ``rank_difference`` is a count, and a
+    shared-cube consumption flag is a flag — so the two must agree in kind
+    before they can agree in value.  Widths stay interchangeable within a kind:
+    an integer-valued measurement serialized as ``4.0`` still equals ``4``.
+    """
+
+    if isinstance(left, bool) != isinstance(right, bool):
+        return False
+    return bool(left == right)
 
 
 def _metric_index(

@@ -3,19 +3,19 @@
   "schema_version": 2,
   "profile_name": "high_order_10m_hcipy",
   "profile_version": 2,
-  "baseline_rationale": "Canonical HCIPy realization of the high-order 10 m system: the same 384-pixel pupil, 48 Shack-Hartmann subapertures, 49 nominal actuators across, and 160 frames as high_order_10m_geometric.v1, sensed through the detector-level lenslet path on fixed 8-pixel block windows. Spot sampling of 4 detector pixels per lambda/d is realized by the equivalent lenslet f-number, the single-layer von Karman frozen flow realizes r0 directly without RMS normalization, and detector settings reuse the reviewed 2 m detector family budget at the 500 Hz frame period. The reconstructor validity floor is 0.75 rather than the geometric profile's 1.0: the fixed 8-pixel windows legitimately clip strongly displaced spots (measured open-loop validity 0.82-0.84 across the full 160-frame seed-21 realization), and closed-loop correction recenters spots above that floor.",
+  "baseline_rationale": "Canonical HCIPy realization of the high-order 10 m system: the same 384-pixel pupil, 48 Shack-Hartmann subapertures, 49 nominal actuators across, and 160 frames as high_order_10m_geometric.v2, sensed through the detector-level lenslet path on fixed 8-pixel block windows. Spot sampling of 4 detector pixels per lambda/d is realized by the equivalent lenslet f-number, the single-layer von Karman frozen flow realizes r0 directly without RMS normalization, and detector settings reuse the reviewed 2 m detector family budget at the 500 Hz frame period. The reconstructor validity floor is 0.75 rather than the geometric profile's 1.0: the fixed 8-pixel windows legitimately clip strongly displaced spots (measured open-loop validity 0.82-0.84 across the full 160-frame seed-21 realization), and closed-loop correction recenters spots above that floor.",
   "provenance": {
     "schema_name": "shwfs_ao.provenance",
     "schema_version": 2,
     "source_class": "synthetic_assumed",
-    "note": "Reviewed high-order HCIPy SCAO profile pairing high_order_10m_geometric.v1 through the registered HCIPy backend factory; synthetic benchmark, not an instrument prediction.",
+    "note": "Reviewed high-order HCIPy SCAO profile pairing high_order_10m_geometric.v2 through the registered HCIPy backend factory; synthetic benchmark, not an instrument prediction.",
     "source_id": "shwfs_ao.system_profile.high_order_10m_hcipy.v2",
     "url": null,
     "access_time": null,
     "fallback_used": false,
     "references": [
       "AO-REF-011",
-      "shwfs_ao.system_profile.high_order_10m_geometric.v1"
+      "shwfs_ao.system_profile.high_order_10m_geometric.v2"
     ]
   },
   "config": {

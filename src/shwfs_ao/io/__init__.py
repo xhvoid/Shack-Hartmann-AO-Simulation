@@ -3,6 +3,7 @@
 from .configs import (
     PROFILE_SCHEMA_NAME,
     PROFILE_SCHEMA_VERSION,
+    SUPPORTED_PROFILE_SCHEMA_VERSIONS,
     AtmosphereConfig,
     CalibrationConfig,
     CommandProjectorConfig,
@@ -40,6 +41,7 @@ from .public_data import (
 __all__ = (
     "PROFILE_SCHEMA_NAME",
     "PROFILE_SCHEMA_VERSION",
+    "SUPPORTED_PROFILE_SCHEMA_VERSIONS",
     "SystemConfigError",
     "ProfileProvenance",
     "AtmosphereConfig",

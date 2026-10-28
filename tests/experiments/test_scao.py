@@ -287,6 +287,91 @@ def test_supplied_system_components_must_match_its_source_configuration() -> Non
     )
 
 
+def test_running_a_supplied_system_never_rebuilds_or_recalibrates_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verification must cost a comparison, not a second calibration.
+
+    Every packaged profile calibrates on build, including the 384-pixel ones, so
+    a verification that rebuilt the system would make each closed loop pay for a
+    full interaction-matrix calibration it already has.
+    """
+
+    calibrations: list[None] = []
+    real_calibrate = scao.calibrate_interaction_matrix
+
+    def counting_calibrate(*args: object, **kwargs: object) -> object:
+        calibrations.append(None)
+        return real_calibrate(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(scao, "calibrate_interaction_matrix", counting_calibrate)
+
+    config = _tiny_system_config()
+    assert config.calibration.source == "build"
+    system = scao.build_scao_system(config)
+    assert len(calibrations) == 1
+
+    scao.run_closed_loop(config, system=system)
+    scao.run_closed_loop(config, system=system)
+    assert len(calibrations) == 1
+
+    # A configuration this process has never built is still verified — by
+    # building it — so the memo is an optimization, never the trust boundary.
+    other_config = replace(
+        config,
+        atmosphere=replace(config.atmosphere, target_rms_opd_m=45.0e-9),
+    )
+    other = scao.build_scao_system(other_config)
+    monkeypatch.setattr(scao, "_BUILD_IDENTITY_MEMO", {})
+    scao.run_closed_loop(other_config, system=other)
+    assert len(calibrations) == 3  # the build above, plus one cold-memo rebuild
+
+    # And a forged system is rejected on that cold path exactly as on the warm
+    # one: the rebuild remains the authority when nothing is remembered.
+    stronger = scao.build_scao_system(
+        replace(config, atmosphere=replace(config.atmosphere, target_rms_opd_m=60.0e-9))
+    )
+    forged_hashes = dict(system.component_hashes)
+    forged_hashes["atmosphere"] = stronger.component_hashes["atmosphere"]
+    forged = replace(
+        system,
+        atmosphere=stronger.atmosphere,
+        component_hashes=forged_hashes,
+    )
+    monkeypatch.setattr(scao, "_BUILD_IDENTITY_MEMO", {})
+    with pytest.raises(
+        scao.ScaoConstructionError,
+        match="do not match the components its source configuration rebuilds",
+    ):
+        scao.run_closed_loop(config, system=forged)
+
+
+def test_supplied_system_is_rejected_when_a_live_component_drifts_after_build() -> None:
+    """A hash-covered identity mutated after construction must not run.
+
+    ``ScaoSystem`` binds ``component_hashes`` to its components at construction,
+    so a later mutation leaves the record describing components that no longer
+    exist.  Registering a further random-stream domain changes the recorded
+    stream identity — and therefore which seeded streams the loop can draw —
+    without touching any config, so it is exactly the drift the run must catch.
+    """
+
+    config = _tiny_system_config()
+    system = scao.build_scao_system(config)
+    # Honest first: the unmutated system runs.
+    scao.run_closed_loop(config, system=system)
+
+    before = system.random_streams.registered_domains
+    system.random_streams.register_domain("post_build_extra")
+    assert system.random_streams.registered_domains != before
+
+    with pytest.raises(
+        scao.ScaoConstructionError,
+        match="no longer carry the identity it records",
+    ):
+        scao.run_closed_loop(config, system=system)
+
+
 def test_calibration_sources_are_explicit_and_never_fall_back(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

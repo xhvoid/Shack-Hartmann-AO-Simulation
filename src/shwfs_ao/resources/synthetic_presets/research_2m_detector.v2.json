@@ -3,7 +3,7 @@
   "schema_version": 2,
   "profile_name": "research_2m_detector",
   "profile_version": 2,
-  "baseline_rationale": "Canonical version of the research 2 m detector-level numerical scale: 96 pupil pixels, 9 lenslets, 9 actuators across, and 30 loop frames. It changes numerical scale only relative to fast v1.",
+  "baseline_rationale": "Canonical version of the research 2 m detector-level numerical scale: 96 pupil pixels, 9 lenslets, 9 actuators across, and 30 loop frames. It changes numerical scale only relative to fast v2.",
   "provenance": {
     "schema_name": "shwfs_ao.provenance",
     "schema_version": 2,
