@@ -1,5 +1,9 @@
 # ESO-derived SCAO benchmark
 
+Current execution setting: memory/pressure enforcement is disabled by default.
+Set `AO_RESOURCE_GUARD=1` to opt in; see [RESOURCE_POLICY.md](../RESOURCE_POLICY.md).
+Timeouts and explicit large-run enablement remain independent.
+
 This page documents the ESO-derived, single-NGS, Shack–Hartmann SCAO
 benchmark: what it is derived from, what is assumed, how it runs at the full
 84×84 / 85×85 spatial scale without dense arrays, how its long-exposure
