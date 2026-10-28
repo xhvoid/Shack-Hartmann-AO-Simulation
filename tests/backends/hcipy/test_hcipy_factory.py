@@ -217,7 +217,7 @@ def test_a_current_schema_record_runs_end_to_end() -> None:
     The fixture above is a schema-6 record on purpose: its contracts keep the
     historical cell-centred lens axes.  The current schema refuses those axes
     for an HCIPy detector-level record, and with block-centred axes builds
-    and runs the same tiny system deterministically (GPT audit F-09).
+    and runs the same tiny system deterministically (audit F-09).
     """
 
     historical = _tiny_hcipy_system_config()

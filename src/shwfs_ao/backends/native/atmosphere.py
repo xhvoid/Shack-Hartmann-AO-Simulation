@@ -704,7 +704,7 @@ def _fourier_translate(
     ``numpy.roll`` to rounding.  On an even grid the Nyquist row and column
     have no real fractional shift: taking the real part attenuates them (a
     half-pixel shift removes an alternating pattern entirely; a seeded legacy
-    screen loses 0.017 % of its mean square, GPT pre-refactor audit F-10).
+    screen loses 0.017 % of its mean square, pre-refactor audit F-10).
     This removes the temporal staircase of the integer-roll model, in which a
     wind slower than one pixel per frame leaves consecutive frames identical.
     """

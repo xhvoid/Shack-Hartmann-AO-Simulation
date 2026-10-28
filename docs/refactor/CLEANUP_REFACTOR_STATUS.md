@@ -1,8 +1,8 @@
 # Repository consolidation: execution record
 
-Prompt: [`CLEANUP_REFACTOR_EXECUTION_PROMPT.md`](CLEANUP_REFACTOR_EXECUTION_PROMPT.md)
+Plan: [`repository_consolidation_plan.md`](repository_consolidation_plan.md)
 (prepared 2026-10-17 at `f09eb16`). Review assignment:
-[`CLEANUP_REFACTOR_REVIEW_PROMPT.md`](CLEANUP_REFACTOR_REVIEW_PROMPT.md).
+[`repository_consolidation_review.md`](repository_consolidation_review.md).
 
 Started 2026-10-18 (Europe/Berlin). This file is the durable execution record:
 what was done, why, which invariant each change protects, the commands run and
@@ -884,7 +884,7 @@ identity `2312502` with an empty source digest). Evidence:
 
 ## Post-audit reconciliation (2026-10-18)
 
-Assignment: [`POST_AUDIT_RECONCILIATION_EXECUTION_PROMPT.md`](POST_AUDIT_RECONCILIATION_EXECUTION_PROMPT.md),
+Assignment: [`audit_reconciliation_plan.md`](audit_reconciliation_plan.md),
 format [`AUDIT_FINDING_EXCHANGE_FORMAT.md`](AUDIT_FINDING_EXCHANGE_FORMAT.md)
 (both copied byte for byte from the main checkout). It reconciles the GPT
 pre-refactor scientific audit (`outputs/pre_refactor_audit/20261017T143700Z/`

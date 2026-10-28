@@ -63,7 +63,7 @@ PROFILE_SCHEMA_NAME = "shwfs_ao.system_profile"
 # physical camera path (shwfs_ao.detector.physical_camera.v1): a packaged
 # camera preset, the detector-pixel layout, the photometric source and sky
 # budget, the WFS bandpass, the detector-plane sampling, RTC pixel processing
-# and exposure sub-samples (docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_PROMPT.md).
+# and exposure sub-samples (docs/refactor/detector_level_development_plan.md).
 # The existing detector and wfs blocks keep their field lists, so no nested
 # hash moves; a v1-v6 record cannot carry the block.  A v7 record also
 # requires an exposure no longer than the frame period and a centroid window

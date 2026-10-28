@@ -351,7 +351,7 @@ def run_tier(
     if tier in LARGE_TIERS and not enable_large_run:
         raise LargeRunNotEnabled(
             f"tier {tier!r} needs enable_large_run=True after the dry-run "
-            "estimate has been reviewed (docs/refactor/ESO_SCAO_DEVELOPMENT_PROMPT.md "
+            "estimate has been reviewed (docs/refactor/eso_scao_development_plan.md "
             "section 2.3)."
         )
     import numpy as np

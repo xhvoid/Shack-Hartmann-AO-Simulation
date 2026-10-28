@@ -77,7 +77,7 @@ Neither changes through rewording; only a new evidence record can move them.
 | G5 | Phase B removal of the root shims and the `ao_simulation_data` alias | `shwfs_ao/resources/deprecation_clock.json`, `src/*.py`, `shwfs_ao.legacy` | Publish release 0.2.0 and a later minor release first; Phase B is a separate release-bound change | Both release boundaries recorded in the clock | `removal_boundaries_satisfied()` true before any deletion | P3 | C1 |
 | G6 | Local evidence runs use an environment that is not the constraint lock (numpy 2.5.0 against the pinned 2.5.1) | `.venv`, `constraints/py314.txt` | Re-create the evidence environment from the lock before governed runs | `scripts/verify_environment_lock.py` passes | Governed records name a locked environment | P3 | C1 |
 | G7 | Two unmerged cleanup branches from 2026-10-17 (`claude/bold-shirley-6f1e9f`, `claude/trusting-bell-471569`) overlap this cleanup | git branches | The user decides to merge, supersede or delete them; this cleanup did not use them | — | One current line of history | P3 | C0 |
-| G12 | HCIPy long exposures average per-frame unit-sum window images (LIM-19, GPT audit F-04) | `backends.hcipy.propagation`, `science.long_exposure` | If an equal-source-flux exposure is wanted, weight frames by their captured fractions and normalize once, as a new observable | Oracle with known capture fractions | The new observable equals the source-weighted image; the existing one is unchanged | P3 | C1 |
+| G12 | HCIPy long exposures average per-frame unit-sum window images (LIM-19, audit F-04) | `backends.hcipy.propagation`, `science.long_exposure` | If an equal-source-flux exposure is wanted, weight frames by their captured fractions and normalize once, as a new observable | Oracle with known capture fractions | The new observable equals the source-weighted image; the existing one is unchanged | P3 | C1 |
 
 
 ### Closed on the cleanup branch (2026-10-18)
@@ -96,21 +96,21 @@ These were open engineering items; each is fixed on
 - **G10** (historical enablement notes on new runs): a gated command now
   refuses to run without `--enabled-by-user`, and a resume keeps the series'
   note and records its own beside it.
-- **GPT audit F-01, F-02, F-03** (post-audit reconciliation, run
+- **audit F-01, F-02, F-03** (post-audit reconciliation, run
   `2026-10-18-claude-27f34fa`; closed by that run's independent review, whose
   reviewed identity and verdict are in its `ACCEPTANCE.md`): the CMOS
   quantization gate uses each contributing pixel's own read noise and step;
   the component loop's effective exposure quadrature is part of the run
   identity; resumed evidence series bind the producing environment of every
-  run (series protocol 3). GPT F-10's docstring is qualified.
+  run (series protocol 3). audit F-10's docstring is qualified.
 - **F-02** (broken `DATA_LICENSES.md` links in the packaged resource
   READMEs, whose bytes AO-REF-001 freezes): the package carries a
   byte-identical copy of `DATA_LICENSES.md` where those links resolve, in
   the checkout and in an installed wheel; a test keeps it identical.
 
-### Closed on `claude/t3-g11-ledger-v2` (2026-10-20)
+### Detector-ledger corrections completed (2026-10-20)
 
-- **G11** (detector ledgers; GPT audit F-08, AR-008): version 2 of the
+- **G11** (detector ledgers; audit F-08, AR-008): version 2 of the
   detector source and assumption ledgers sits beside the byte-frozen
   version 1 files (commit `d4403e6`). B14 names the current uncertainty
   model `detector_covariance_v2`, B18 attributes the `@2` gating decision
@@ -129,16 +129,16 @@ valid where the current code still follows them, but their backlogs and
 status lines are not the current plan:
 
 - `AO_REFACTOR_MASTER_TICKETS_REVISED.md` and
-  [`repository_optimization_ticket.md`](repository_optimization_ticket.md):
+  [`repository_optimization_plan.md`](repository_optimization_plan.md):
   the original refactor backlog and optimization ticket. Both are untracked
   author files, kept unchanged.
 - [`refactor/AO_REF_*.md`](refactor/): the ticket records of the refactor
   that produced the package. Their contract sections (units, identities,
   protocols, tolerances) still describe the code; their status lines and next
   steps are dated.
-- [`refactor/DETECTOR_LEVEL_DEVELOPMENT_PROMPT.md`](refactor/DETECTOR_LEVEL_DEVELOPMENT_PROMPT.md),
-  [`refactor/ESO_SCAO_DEVELOPMENT_PROMPT.md`](refactor/ESO_SCAO_DEVELOPMENT_PROMPT.md)
-  and [`refactor/PRE_REFACTOR_SCIENTIFIC_AUDIT_PROMPT.md`](refactor/PRE_REFACTOR_SCIENTIFIC_AUDIT_PROMPT.md):
+- [`refactor/detector_level_development_plan.md`](refactor/detector_level_development_plan.md),
+  [`refactor/eso_scao_development_plan.md`](refactor/eso_scao_development_plan.md)
+  and [`refactor/pre_refactor_audit_plan.md`](refactor/pre_refactor_audit_plan.md):
   assignments that were carried out. Their outcomes are in the matching
   status files.
 - [`refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md`](refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md)

@@ -12,7 +12,7 @@ Subcommands
 
 Every record stores the command, versions, configuration hashes and seeds.
 ``e2-12m``, ``e3``, ``e4``, ``e6``, ``det08`` (12 m) and ``e5`` (42 m) are the
-gated runs of prompt section 2.5; so are the 12 m recovery, excursion,
+gated runs of plan section 2.5; so are the 12 m recovery, excursion,
 noise-isolation and ``-v2``/``-v3`` commands.  A gated command runs only with
 ``--enabled-by-user`` naming the date and wording of the user's go-ahead for
 that run; without it, it refuses before anything runs.  The historical records
@@ -86,7 +86,7 @@ imported package: a version-3 code identity named this script's repository,
 which need not hold the package a run imported, so version-3 records cannot
 be continued either and are never relabelled.  A
 resume that would add runs also stops when the code identity is unknown.  A
-saved record must also agree with itself (GPT independent review AR-016,
+saved record must also agree with itself (independent review AR-016,
 2026-10-20): every run's stored protocol hash is recomputed from its stored
 protocol; the label, seed, configuration hash, frame count and burn-in a run
 repeats must equal its protocol's; each label and seed is recorded once; and
@@ -378,7 +378,7 @@ def _canonical(value: Any) -> str:
 
 
 # Fields a saved run repeats from its protocol, and header fields that repeat
-# the series protocol of the record's runs (GPT independent review AR-016).
+# the series protocol of the record's runs (independent review AR-016).
 _REPEATED_RUN_FIELDS = ("label", "root_seed", "config_hash", "n_steps", "burn_in_frames")
 _REPEATED_HEADER_FIELDS = {
     "series_protocol_version": "series_protocol_version",
@@ -729,7 +729,7 @@ def _gated_series(
                     "pass --output NAME for a fresh record."
                 )
         # A saved record must agree with itself before its runs are compared
-        # with this invocation's (GPT independent review AR-016).
+        # with this invocation's (independent review AR-016).
         problems = _inconsistencies(previous)
         if problems:
             raise EvidenceRecordExists(
@@ -739,7 +739,7 @@ def _gated_series(
             )
         # Every retained run, in this plan or not (another comparison arm),
         # must share the series protocol: version, frames, burn-in, execution,
-        # code (re-review S2) and producing environment (GPT audit F-03).
+        # code (re-review S2) and producing environment (audit F-03).
         # Runs of this plan must also match their own configuration.
         shared = _shared_protocol(n_steps, burn_in, execution, code, environment)
         mismatched = []

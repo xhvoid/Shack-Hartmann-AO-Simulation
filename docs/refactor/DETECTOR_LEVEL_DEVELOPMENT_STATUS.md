@@ -5,7 +5,7 @@
 > current implementation is explained in the [technical reference](../technical_reference.md),
 > and open work is in the [roadmap](../roadmap.md).
 
-Prompt: [`DETECTOR_LEVEL_DEVELOPMENT_PROMPT.md`](DETECTOR_LEVEL_DEVELOPMENT_PROMPT.md).
+Plan: [`detector_level_development_plan.md`](detector_level_development_plan.md).
 Started 2026-10-15 (Europe/Berlin). This file is the durable execution record.
 Each ticket states its status, evidence, commands, limitations, and next
 action. A ticket is DONE only with its acceptance evidence. A gated run that

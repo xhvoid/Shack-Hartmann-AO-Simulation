@@ -491,7 +491,7 @@ def test_raw_readout_temporal_scatter_with_a_gain_map_fast() -> None:
     assert np.all(np.abs(ratio - 1.0) < 0.15), ratio
 
 
-# -- GPT pre-refactor audit F-01 (2026-10-18): per-pixel quantization support --
+# -- pre-refactor audit F-01 (2026-10-18): per-pixel quantization support --
 #
 # The white term step**2 / 12 is the model's quantization variance.  Its
 # declared domain is read noise of at least half an ADC step; the gate must
@@ -593,7 +593,7 @@ def test_a_contributing_pixel_below_half_a_step_unsupports_the_block() -> None:
 
 
 def test_the_audit_production_map_is_no_longer_supported() -> None:
-    # GPT F-01's case: seed 718, one 7 x 7 block, 0.6 e-, 1 e-/ADU, a
+    # audit F-01's case: seed 718, one 7 x 7 block, 0.6 e-, 1 e-/ADU, a
     # log-normal read-noise map of sigma 1 from the production generator; 20
     # pixels fall below 0.5 ADU (minimum 0.0716) and the block was supported.
     from shwfs_ao.core.random import NamedRandomStreams

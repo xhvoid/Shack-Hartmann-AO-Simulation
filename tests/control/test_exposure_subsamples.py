@@ -113,7 +113,7 @@ def test_subsamples_need_an_exposure_and_a_capable_wfs() -> None:
         _loop(system, config, exposure_subsamples=2, exposure_s=2.0e-3)
 
 
-# -- GPT pre-refactor audit F-02 (2026-10-18): the effective quadrature is identity --
+# -- pre-refactor audit F-02 (2026-10-18): the effective quadrature is identity --
 
 # A single-sample run must keep exactly the identity it had before the change
 # (2312502): the run payload without any exposure entry.  Its digest binds
