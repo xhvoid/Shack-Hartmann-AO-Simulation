@@ -51,6 +51,14 @@ def print_both_streams() -> dict[str, Any]:
     return {"printed": True}
 
 
+def report_paths() -> dict[str, Any]:
+    """Where the child runs and which job file it was given, after a line on each stream."""
+
+    print("fresh-process worker: paths to stdout", flush=True)
+    print("fresh-process worker: paths to stderr", file=sys.stderr, flush=True)
+    return {"cwd": os.getcwd(), "argv": sys.argv[1:], "pid": os.getpid()}
+
+
 def raise_value_error(message: str) -> None:
     raise ValueError(message)
 

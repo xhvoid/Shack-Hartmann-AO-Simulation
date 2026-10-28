@@ -239,9 +239,270 @@ def test_the_mode_is_opt_in_and_refuses_what_it_does_not_cover(tmp_path, monkeyp
     ["--fresh-process-dir", "DIR", "--fresh-process-timeout-s", "60", "--fresh-process-budget-mib", "512", "e1"],
     ["--fresh-process-dir", "DIR", "--fresh-process-timeout-s", "60", "--fresh-process-budget-mib", "512", "noise-isolation-2m"],
     ["--fresh-process-timeout-s", "60", "e3"],
+    ["--fresh-process-dir", "DIR", "--fresh-process-timeout-s", "60", "--fresh-process-budget-mib", "1e-9", "e3"],
+    ["--fresh-process-dir", "DIR", "--fresh-process-timeout-s", "nan", "--fresh-process-budget-mib", "512", "e3"],
 ])
 def test_the_command_line_checks_the_opt_in_before_anything_runs(tmp_path, monkeypatch, argv):
     monkeypatch.setattr(runner, "OPTIONS", runner.argparse.Namespace(**vars(runner.OPTIONS)))
     with pytest.raises(SystemExit) as stopped:
         runner.main([str(tmp_path / "jobs") if item == "DIR" else item for item in argv])
     assert stopped.value.code == 2 and not (tmp_path / "jobs").exists()
+
+
+# -- R18-01: every location is the caller's, fixed before the child starts in its own working directory --------------
+
+
+def _forbid_science(monkeypatch):
+    """Make the science entry points raise in this process, so a test that reaches one fails instead of computing."""
+
+    import shwfs_ao.control.loop
+    import shwfs_ao.experiments.detector_level
+    import shwfs_ao.experiments.scao
+
+    def forbidden(*_, **__):
+        raise AssertionError("a fresh-process test reached a science entry point")
+
+    for module, name in (
+        (shwfs_ao.experiments.detector_level, "science_run"),
+        (shwfs_ao.experiments.scao, "build_scao_system"),
+        (shwfs_ao.experiments.scao, "run_closed_loop"),
+        (shwfs_ao.control.loop, "run_closed_loop"),
+    ):
+        monkeypatch.setattr(module, name, forbidden)
+
+
+@pytest.fixture
+def caller_cwd(tmp_path, monkeypatch):
+    """A working directory outside the repository, with a space and non-ASCII characters in its name."""
+
+    cwd = tmp_path / "caller cwd ü"
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
+    assert Path.cwd() != ROOT
+    return cwd
+
+
+def _relative_job(target: str, *args, job_dir, timeout_s: float = TIMEOUT_S, import_paths=(WORKERS,), **kwargs):
+    return runner.run_in_fresh_process(
+        f"fresh_process_workers:{target}" if ":" not in target else target, args, kwargs, job_dir=job_dir, label="job",
+        timeout_s=timeout_s, budget_bytes=BUDGET, import_paths=import_paths,
+    )
+
+
+@pytest.mark.parametrize("form", ["absolute", "relative", "nested relative", "space and non-ASCII"])
+def test_every_job_dir_form_names_one_place_for_parent_and_child(caller_cwd, form):
+    requested = {
+        "absolute": caller_cwd / "absolute job",
+        "relative": Path("job"),
+        "nested relative": Path("a") / "b" / "job",
+        "space and non-ASCII": "jobs dir/jöb ñame",
+    }[form]
+    located = Path(requested) if Path(requested).is_absolute() else caller_cwd / requested
+    result, envelope = _relative_job("report_paths", job_dir=requested)
+    assert envelope["status"] == "succeeded", envelope["status_reason"]
+    assert envelope["job_dir"] == str(located) and envelope["job_dir_requested"] == str(requested)
+    assert result["cwd"] == str(located) and result["argv"] == [runner.FRESH_PROCESS_CHILD_FLAG, str(located / "job.json")]
+    assert sorted(path.name for path in located.iterdir()) == ["child.json", "envelope.json", "job.json", "output.log", "payload.pickle", "result.json"]
+    log = (located / "output.log").read_text()
+    assert "fresh-process worker: paths to stdout" in log and "fresh-process worker: paths to stderr" in log
+    job = json.loads((located / "job.json").read_text())
+    assert job["job_dir"] == str(located) and job["import_paths"] == [WORKERS]
+    assert json.loads((located / "envelope.json").read_text()) == envelope
+    # Nothing is created anywhere but the requested place: no doubled job directory inside it, nothing else here.
+    top = Path(requested).parts[0] if not Path(requested).is_absolute() else "absolute job"
+    assert [path.name for path in caller_cwd.iterdir()] == [top]
+
+
+def test_a_relative_import_path_is_the_callers_and_is_recorded_as_given(caller_cwd):
+    (caller_cwd / "worker modules").mkdir()
+    (caller_cwd / "worker modules" / "relative_import_worker.py").write_text("def where():\n    return __file__\n")
+    result, envelope = _relative_job("relative_import_worker:where", job_dir="job", import_paths=("worker modules",))
+    assert envelope["status"] == "succeeded" and result == str(caller_cwd / "worker modules" / "relative_import_worker.py")
+    job = json.loads((caller_cwd / "job" / "job.json").read_text())
+    assert job["import_paths"] == [str(caller_cwd / "worker modules")] and job["import_paths_requested"] == ["worker modules"]
+
+
+def test_the_failure_outcomes_hold_for_a_relative_job_dir(caller_cwd):
+    result, raised = _relative_job("raise_value_error", "stand-in failure", job_dir="out/raised")
+    assert result is None and raised["status"] == "failed" and raised["child"]["outcome"] == "raised"
+    assert raised["child"]["exception"]["type"] == "builtins.ValueError" and (caller_cwd / "out/raised/exception.pickle").is_file()
+    result, exited = _relative_job("exit_without_report", 7, job_dir="out/exited")
+    assert result is None and exited["status"] == "failed" and exited["returncode"] == 7 and exited["child"] is None
+    assert exited["child_process_peak_rss_bytes"] is None and exited["child_process_peak_rss"]["available"] is False
+    pid_file = caller_cwd / "pids.json"
+    started = time.monotonic()
+    result, stopped = _relative_job("sleep_with_grandchild", str(pid_file), 600, job_dir="out/stopped", timeout_s=3.0)
+    assert time.monotonic() - started < 60.0 and result is None and stopped["status"] == "timed_out"
+    assert stopped["child"] is None and stopped["child_process_peak_rss_bytes"] is None
+    pids = json.loads(pid_file.read_text())
+    deadline = time.monotonic() + 10.0
+    while time.monotonic() < deadline and any(_running(pid) for pid in pids.values()):
+        time.sleep(0.1)
+    assert not any(_running(pid) for pid in pids.values()), pids
+    # Every outcome left its files where the caller asked, for diagnosis; no job wrote anywhere else.
+    for name in ("raised", "exited", "stopped"):
+        assert {"job.json", "payload.pickle", "output.log", "envelope.json"} <= {path.name for path in (caller_cwd / "out" / name).iterdir()}
+    assert sorted(path.name for path in caller_cwd.iterdir()) == ["out", "pids.json"]
+
+
+def test_an_existing_relative_job_dir_is_refused_and_its_bytes_are_kept(caller_cwd):
+    (caller_cwd / "jobs" / "job").mkdir(parents=True)
+    kept = caller_cwd / "jobs" / "job" / "kept.bin"
+    kept.write_bytes(b"\x00earlier output\xff")
+    marker = caller_cwd / "marker"
+    with pytest.raises(runner.FreshProcessError, match="never reuses an output directory"):
+        _relative_job("touch", str(marker), job_dir="jobs/job")
+    assert not marker.exists() and kept.read_bytes() == b"\x00earlier output\xff" and [path.name for path in kept.parent.iterdir()] == ["kept.bin"]
+    with pytest.raises(runner.FreshProcessError, match="must name a new directory"):
+        runner.fresh_process_runner("jobs", timeout_s=TIMEOUT_S, budget_bytes=BUDGET)
+    assert kept.read_bytes() == b"\x00earlier output\xff" and [path.name for path in (caller_cwd / "jobs").iterdir()] == ["job"]
+
+
+def test_the_adapter_fixes_its_directory_at_construction(caller_cwd, monkeypatch):
+    # MOCK science target; loading the profile builds nothing.
+    config = load_system_profile("det_ccd_2m_synthetic", 1)
+    run = runner.fresh_process_runner("adapter jobs/ü", timeout_s=TIMEOUT_S, budget_bytes=BUDGET, target="fresh_process_workers:mock_science_run", import_paths=(WORKERS,))
+    assert run.directory == caller_cwd / "adapter jobs" / "ü" and run.directory_requested == "adapter jobs/ü"
+    elsewhere = caller_cwd.parent / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)  # a later change of working directory does not move the jobs
+    first = run(config, root_seed=31, n_steps=400, burn_in_frames=100)
+    assert first["mock"].startswith("inert stand-in") and first["execution_envelope"]["status"] == "succeeded"
+    job_dir = caller_cwd / "adapter jobs" / "ü" / f"0001-seed31-{config.config_hash[:12]}"
+    assert first["execution_envelope"]["job_dir"] == str(job_dir) and (job_dir / "result.json").is_file()
+    assert list(elsewhere.iterdir()) == []
+
+
+def _cli(*options: str, command: str = "det08") -> list[str]:
+    return ["--fresh-process-timeout-s", "60", "--fresh-process-budget-mib", "512", *options, command]
+
+
+def test_the_command_line_dispatch_runs_each_planned_run_in_a_fresh_job(caller_cwd, monkeypatch):
+    # MOCK dispatch: the target is the inert stand-in; the science entry points raise in this process.
+    _forbid_science(monkeypatch)
+    monkeypatch.setattr(runner, "OPTIONS", runner.argparse.Namespace(**vars(runner.OPTIONS)))
+    monkeypatch.setattr(runner, "_STARTED", set())
+    monkeypatch.setattr(runner, "FRESH_PROCESS_TARGET", "fresh_process_workers:mock_science_run")
+    monkeypatch.setattr(runner, "FRESH_PROCESS_IMPORT_PATHS", (WORKERS,))
+    argv = _cli("--fresh-process-dir", "fresh jobs/ü", "--output-dir", "records", "--enabled-by-user", "test fixture: mock dispatch only")
+    assert runner.main(argv) == 0
+    jobs = caller_cwd / "fresh jobs" / "ü"
+    assert runner.OPTIONS.fresh_process_dir == jobs
+    record = json.loads((caller_cwd / "records" / "det08_exposure_subsamples_12m.json").read_text())
+    assert len(record["runs"]) == 15 and sorted(path.name for path in caller_cwd.iterdir()) == ["fresh jobs", "records"]
+    for index, entry in enumerate(record["runs"], 1):
+        envelope = entry["execution_envelope"]
+        assert entry["mock"].startswith("inert stand-in") and envelope["status"] == "succeeded"
+        assert envelope["target"] == "fresh_process_workers:mock_science_run" and envelope["label"].startswith(f"{index:04d}-seed{entry['root_seed']}-")
+        assert Path(envelope["job_dir"]).parent == jobs and (Path(envelope["job_dir"]) / "result.json").is_file()
+    assert len(list(jobs.iterdir())) == 15
+
+
+def test_the_command_line_refuses_an_existing_fresh_process_dir_before_anything_runs(caller_cwd, monkeypatch):
+    _forbid_science(monkeypatch)
+    monkeypatch.setattr(runner, "OPTIONS", runner.argparse.Namespace(**vars(runner.OPTIONS)))
+    (caller_cwd / "used").mkdir()
+    (caller_cwd / "used" / "kept.bin").write_bytes(b"kept\x00")
+    with pytest.raises(SystemExit) as stopped:
+        runner.main(_cli("--fresh-process-dir", "used", "--output-dir", "records", "--enabled-by-user", "test fixture"))
+    assert stopped.value.code == 2 and (caller_cwd / "used" / "kept.bin").read_bytes() == b"kept\x00"
+    assert sorted(path.name for path in caller_cwd.iterdir()) == ["used"]
+
+
+@pytest.mark.parametrize("change", [
+    {"timeout_s": 0}, {"timeout_s": -1.0}, {"timeout_s": float("nan")}, {"timeout_s": float("inf")}, {"timeout_s": True}, {"timeout_s": "60"},
+    {"budget_bytes": 0}, {"budget_bytes": -1}, {"budget_bytes": 1.5 * MIB}, {"budget_bytes": True},
+    {"target": "no_colon"}, {"target": ":function"}, {"target": "module:"}, {"target": "a:b:c"}, {"target": None},
+])
+def test_invalid_options_fail_before_anything_is_created(caller_cwd, change):
+    options = {"target": "fresh_process_workers:echo", "timeout_s": TIMEOUT_S, "budget_bytes": BUDGET, **change}
+    with pytest.raises(runner.FreshProcessError, match="nothing ran"):
+        runner.run_in_fresh_process(options["target"], ("x",), {}, job_dir="parent/job", label="job", timeout_s=options["timeout_s"], budget_bytes=options["budget_bytes"], import_paths=(WORKERS,))
+    if change.get("target", "") is not None:
+        with pytest.raises(runner.FreshProcessError, match="nothing ran"):
+            runner.fresh_process_runner("jobs", **options)
+    assert list(caller_cwd.iterdir()) == []
+
+
+def test_an_argument_that_cannot_be_sent_fails_before_anything_is_created(caller_cwd):
+    import pickle
+
+    with pytest.raises((pickle.PicklingError, AttributeError, TypeError)):  # the type depends on the Python version
+        _relative_job("echo", lambda: None, job_dir="parent/job")
+    assert list(caller_cwd.iterdir()) == []
+
+
+def test_a_child_that_cannot_be_started_is_a_launch_failure_with_no_measurement(caller_cwd, monkeypatch):
+    monkeypatch.setattr(sys, "executable", str(caller_cwd.parent / "no such interpreter"))
+    result, envelope = _relative_job("echo", "x", job_dir="job")
+    assert result is None and envelope["status"] == "launch_failed" and "could not be started" in envelope["status_reason"]
+    assert envelope["returncode"] is None and envelope["child"] is None and envelope["supervisor"] is None
+    assert envelope["child_process_peak_rss_bytes"] is None and envelope["child_process_peak_rss"]["available"] is False
+    assert envelope["child_process_peak_rss"]["unavailable_reason"] == "no child was started; no measurement exists"
+    kept = {path.name for path in (caller_cwd / "job").iterdir()}
+    assert {"job.json", "payload.pickle", "envelope.json"} <= kept and "result.json" not in kept
+    assert json.loads((caller_cwd / "job" / "envelope.json").read_text()) == envelope
+    config = load_system_profile("det_ccd_2m_synthetic", 1)
+    run = runner.fresh_process_runner("jobs", timeout_s=TIMEOUT_S, budget_bytes=BUDGET, target="fresh_process_workers:mock_science_run", import_paths=(WORKERS,))
+    with pytest.raises(runner.FreshProcessError, match="launch_failed") as failed:
+        run(config, root_seed=1, n_steps=400, burn_in_frames=100)
+    assert failed.value.envelope["status"] == "launch_failed"
+
+
+@pytest.mark.parametrize("damage", ["payload", "job"])
+def test_unreadable_control_input_is_a_failure_not_a_success(caller_cwd, monkeypatch, damage):
+    import shwfs_ao.runtime.resource_guard as guard
+
+    real = guard.run_supervised
+
+    def damaged(argv, **options):  # test-controlled: spoil one control file after it was written, then start the real child
+        target = Path(options["cwd"]) / ("payload.pickle" if damage == "payload" else "job.json")
+        target.write_bytes(b"not what was recorded")
+        return real(argv, **options)
+
+    monkeypatch.setattr(guard, "run_supervised", damaged)
+    marker = caller_cwd / "marker"
+    result, envelope = _relative_job("touch", str(marker), job_dir="job")
+    assert result is None and envelope["status"] == "failed" and envelope["returncode"] == 1 and not marker.exists()
+    assert envelope["child"]["outcome"] == "raised" and envelope["files"]["result.json"] is None
+    expected = "FreshProcessError" if damage == "payload" else "JSONDecodeError"
+    assert envelope["child"]["exception"]["type"].endswith(expected)
+
+
+def test_a_hand_run_child_resolves_a_relative_job_file_against_its_own_cwd(caller_cwd):
+    import pickle
+    import subprocess
+
+    import shwfs_ao
+
+    job_dir = caller_cwd / "hand job"
+    job_dir.mkdir()
+    payload = pickle.dumps((("by hand",), {}))
+    (job_dir / "payload.pickle").write_bytes(payload)
+    job = {"target": "fresh_process_workers:echo", "import_paths": [WORKERS], "payload": {"file": "payload.pickle", "sha256": runner.hashlib.sha256(payload).hexdigest()}}
+    (job_dir / "job.json").write_text(json.dumps(job))
+    environment = {**os.environ, "PYTHONPATH": str(Path(shwfs_ao.__file__).resolve().parents[1]), "PYTHONDONTWRITEBYTECODE": "1"}
+    completed = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/run_detector_level_evidence.py"), runner.FRESH_PROCESS_CHILD_FLAG, "hand job/job.json"],
+        cwd=caller_cwd, env=environment, capture_output=True, timeout=TIMEOUT_S, check=False,
+    )
+    assert completed.returncode == 0, completed.stderr[-2000:]
+    assert json.loads((job_dir / "result.json").read_text())["echo"] == "by hand"
+    assert json.loads((job_dir / "child.json").read_text())["outcome"] == "returned"
+
+
+def test_the_documented_example_is_a_working_invocation(caller_cwd, monkeypatch):
+    import shlex
+
+    # The command is replaced by a recorder: the example's options are parsed and checked, nothing runs.
+    example = runner.__doc__.split("for example::", 1)[1].split("\n\n", 2)[1]
+    words = shlex.split(example.replace("\\\n", " "))
+    assert words[:2] == ["python", "scripts/run_detector_level_evidence.py"] and words[-1] == "det08"
+    seen = []
+    monkeypatch.setattr(runner, "OPTIONS", runner.argparse.Namespace(**vars(runner.OPTIONS)))
+    monkeypatch.setattr(runner, "det08", lambda arguments: seen.append(runner.argparse.Namespace(**vars(runner.OPTIONS))))
+    assert runner.main(words[2:]) == 0
+    (options,) = seen
+    assert options.fresh_process_dir == caller_cwd / "outputs/g4-det08/jobs" and options.output_dir == Path("outputs/g4-det08")
+    assert options.fresh_process_timeout_s == 3600 and options.fresh_process_budget_bytes == 4096 * MIB and options.enabled_by_user == "DATE: WORDING"
+    assert list(caller_cwd.iterdir()) == []
