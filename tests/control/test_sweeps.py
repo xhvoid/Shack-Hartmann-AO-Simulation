@@ -15,7 +15,9 @@ from shwfs_ao.control.sweeps import (
     read_noise_scan,
 )
 from shwfs_ao.core.random import NamedRandomStreams
-from tests.control.test_loop import (
+# pytest puts this directory on sys.path (no __init__.py), so the sibling
+# helper module imports by basename under any pytest entry point.
+from test_loop import (
     _CalibrationSensor,
     _RuntimeWfs,
     _ScalarDmProbeBasis,

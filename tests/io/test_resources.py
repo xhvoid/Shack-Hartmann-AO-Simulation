@@ -3,22 +3,34 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import inspect
 import json
 from pathlib import Path
+import sys
 
 import pytest
 
-from build_support.resource_alias import (
-    ResourceManifestError,
-    load_checked_manifest,
-    render_resource_manifest as render_build_manifest,
-)
 from shwfs_ao.io import resources
 from shwfs_ao.legacy import runtime_resources as legacy_resources
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+# build_support/ is a repository build hook, not an installed package;
+# loading it by file keeps collection working under both `python -m pytest`
+# (repository root on sys.path) and the bare `pytest` entry point.
+_ALIAS_SPEC = importlib.util.spec_from_file_location(
+    "resource_alias_for_io_tests",
+    ROOT / "build_support" / "resource_alias.py",
+)
+assert _ALIAS_SPEC is not None and _ALIAS_SPEC.loader is not None
+_resource_alias = importlib.util.module_from_spec(_ALIAS_SPEC)
+sys.modules[_ALIAS_SPEC.name] = _resource_alias
+_ALIAS_SPEC.loader.exec_module(_resource_alias)
+ResourceManifestError = _resource_alias.ResourceManifestError
+load_checked_manifest = _resource_alias.load_checked_manifest
+render_build_manifest = _resource_alias.render_resource_manifest
 CANONICAL_ROOT = ROOT / "src" / "shwfs_ao" / "resources"
 REQUIRED_SCHEMAS = {
     "artifact_manifest.schema.json",
