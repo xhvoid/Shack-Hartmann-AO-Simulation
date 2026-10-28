@@ -1028,7 +1028,8 @@ NOBODY = 65534
 
 def test_an_unreadable_cache_is_refused_by_the_os_for_an_ordinary_user() -> None:
     # Root reads a file of mode 0, so the OS refusal is shown by an ordinary-user child (uid and gid 65534) in a
-    # disposable world-readable tree; as an ordinary user the test above already meets the refusal itself.
+    # disposable world-readable tree (pytest's own temporary directory is private to root, so the tree is made with
+    # tempfile and removed at the end); as an ordinary user the test above already meets the refusal itself.
     if os.geteuid() != 0:
         pytest.skip("not root: test_the_bytecode_cache_is_checked_where_python_reads_it meets the OS refusal directly")
     disposable = Path(tempfile.mkdtemp(prefix="bytecode-readability-"))
@@ -1036,9 +1037,28 @@ def test_an_unreadable_cache_is_refused_by_the_os_for_an_ordinary_user() -> None
         disposable.chmod(0o755)
         source = disposable / "module.py"
         source.write_text("VALUE = 1\n")
-        cache = Path(importlib.util.cache_from_source(str(source)))
-        py_compile.compile(str(source), cfile=str(cache), invalidation_mode=py_compile.PycInvalidationMode.UNCHECKED_HASH, doraise=True)
+        # The cache the isolated child reads: next to the source, whatever bytecode prefix this process has.
+        cache = disposable / "__pycache__" / f"module.{sys.implementation.cache_tag}.pyc"
+        cache.parent.mkdir()
         cache.parent.chmod(0o755)
+        runner_script = str(ROOT / "scripts/run_detector_level_evidence.py")
+        environment = {"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8", **{name: "2" for name in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "NUMEXPR_NUM_THREADS")}}
+
+        def as_nobody(code: str, *arguments: str) -> subprocess.CompletedProcess:
+            return subprocess.run(
+                [sys.executable, "-I", "-B", "-c", code, *arguments],
+                user=NOBODY, group=NOBODY, extra_groups=[], cwd=disposable, capture_output=True, text=True, timeout=120, check=False, env=environment,
+            )
+
+        # Preflight, without running any production code: can uid 65534 start this interpreter and reach the runner,
+        # its imports and the disposable tree?  If not (a private checkout, virtual environment or TMPDIR, or a user
+        # namespace without uid 65534), the OS refusal cannot be shown here.
+        try:
+            reach = as_nobody("import sys, numpy\nfor path in sys.argv[1:]:\n    open(path, 'rb').close()\n", runner_script, str(source))
+        except OSError as exc:
+            pytest.skip(f"cannot start a child as uid {NOBODY}: {exc}")
+        if reach.returncode != 0:
+            pytest.skip(f"uid {NOBODY} cannot reach the interpreter, the runner or the disposable tree: {reach.stderr.strip()[-300:]}")
         probe = (
             "import importlib.util, sys\n"
             "from pathlib import Path\n"
@@ -1046,23 +1066,21 @@ def test_an_unreadable_cache_is_refused_by_the_os_for_an_ordinary_user() -> None
             "module = importlib.util.module_from_spec(spec)\n"
             "sys.modules[spec.name] = module\n"
             "spec.loader.exec_module(module)\n"
+            "assert importlib.util.cache_from_source(sys.argv[2]) == sys.argv[3], importlib.util.cache_from_source(sys.argv[2])\n"
             "print(module._unchecked_bytecode(Path(sys.argv[2])))\n"
         )
 
-        def as_nobody() -> str:
-            completed = subprocess.run(
-                [sys.executable, "-I", "-B", "-c", probe, str(ROOT / "scripts/run_detector_level_evidence.py"), str(source)],
-                user=NOBODY, group=NOBODY, extra_groups=[], cwd=disposable, capture_output=True, text=True, timeout=120, check=False,
-                env={"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8", **{name: "2" for name in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "NUMEXPR_NUM_THREADS")}},
-            )
+        def unchecked_seen_by_nobody() -> str:
+            completed = as_nobody(probe, runner_script, str(source), str(cache))
             assert completed.returncode == 0, completed.stderr[-2000:]
             return completed.stdout.strip()
 
+        py_compile.compile(str(source), cfile=str(cache), invalidation_mode=py_compile.PycInvalidationMode.UNCHECKED_HASH, doraise=True)
         cache.chmod(0o644)
-        assert as_nobody() == "True"  # readable to the child: an unchecked cache would run unchecked
+        assert unchecked_seen_by_nobody() == "True"  # readable to the child: an unchecked cache would run unchecked
         cache.chmod(0)
         assert _readable(cache)  # this process (root) still reads it: the mode bits alone say nothing here
-        assert as_nobody() == "False"  # the OS refuses the child, so the cache is not run
+        assert unchecked_seen_by_nobody() == "False"  # the OS refuses the child, so the cache is not run
     finally:
         shutil.rmtree(disposable, ignore_errors=True)
 
