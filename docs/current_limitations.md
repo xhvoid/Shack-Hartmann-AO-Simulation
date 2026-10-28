@@ -8,6 +8,10 @@ Focused addition on **2026-10-23**: LIM-20 records open tip/tilt questions
 from the one-second 2 m explorer dataset. This does not revalidate the other
 entries or change their recorded review dates.
 
+Focused addition on **2026-10-26**: LIM-17 records the S6 status after the static
+C1 noise step (roadmap S6). This does not revalidate the other entries or change
+their recorded review dates.
+
 This is a living record of the simulation's modelling assumptions, known
 issues and remaining validation work. It reflects the current code, now
 including the completed detector-level work and its review fixes; it is not a
@@ -510,6 +514,17 @@ and LIM-07.
   ensemble of one profile and one configuration. Every run still repeats the
   fastest layers' periodic bands (LIM-08, roadmap S11), and the 0.001 damping
   question is open (roadmap S6).
+- **Update 2026-10-26 (roadmap S6, C1):** the static S6 diagnostics and the C1
+  noise step are complete (private evidence, frozen producer `98e1027`). Under
+  the frozen static covariance and stationary linear-loop model at 10⁵ detected
+  electrons per fully illuminated subaperture per frame, the selected admissible
+  comparator (α 0.0025) does not meet the C1 material-benefit trigger: the
+  predicted stationary detector-noise component is 1.1113 nm RMS at α 0.001 and
+  1.1071 nm at α 0.0025. These are component predictions, not total residuals;
+  C3 is not triggered by this evaluation and the damping stays 0.001. Whether
+  the 0.001 damping is adequate in a broader sense stays open: closed-loop
+  behaviour under noise and other operating conditions are unmeasured
+  ([S6 status](research/s6_42m_regularization/README.md)).
 - **Evidence:** [E5 record](refactor/detector_level_evidence/det09_e5_42m_noise_on.json),
   [S1 rerun](refactor/detector_level_evidence/det09_e5_42m_noise_on_current_2312502.json),
   S2 records `det09_s2_42m_seed2.json` … `det09_s2_42m_seed11.json` in the same

@@ -302,3 +302,46 @@ tr.excluded th, tr.excluded td { color: var(--muted); font-style: italic; }
 .ngc602-credit {font-size:.8rem;line-height:1.6}
 @media(max-width:800px){.ngc602-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.ngc602-overviews{grid-template-columns:1fr}.ngc602-section{scroll-margin-top:120px}.ngc602-grid{gap:8px}}
+
+/* 42 m experience: entry points, recording facts, per-frame strip, transport and the separate C1 summary. */
+.nav a.nav-feature { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.r42-callout { margin: 0 0 12px; font-size: 14px; max-width: 90ch; }
+.r42-callout a { font-weight: 600; }
+.r42-callout span { color: var(--muted); }
+.r42-facts { list-style: none; margin: 10px 0 8px; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; max-width: 1000px; }
+.r42-facts li { border-left: 3px solid var(--accent); padding: 2px 10px; }
+.r42-facts strong, .r42-facts span { display: block; }
+.r42-facts span { color: var(--muted); font-size: 13px; }
+.r42-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin: 8px 0 4px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 4px; background: #fff; }
+.r42-strip div { min-width: 0; }
+.r42-strip dt { font-size: 12px; overflow-wrap: anywhere; }
+.r42-strip dt span { display: block; color: var(--muted); font-size: 11px; }
+.r42-strip dd { margin: 2px 0 0; font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; }
+#r42-viewer[aria-busy="true"] .r42-maps canvas, #r42-viewer[aria-busy="true"] .psfs canvas { opacity: .8; }
+.r42-time { font-family: var(--mono); font-size: 13px; min-width: 15ch; font-variant-numeric: tabular-nums; }
+.r42-speed { font-size: 13px; display: flex; gap: 6px; align-items: center; }
+.r42-speed select { font: inherit; font-size: 13px; }
+.r42-cmp { margin-bottom: 0; }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.c1-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 10px 0 12px; }
+.c1-cards h3 { margin-top: 4px; }
+.c1-cards p { font-size: 14px; margin: 0; }
+.c1-figure { margin: 8px 0 0; }
+.c1-figure .segmented { display: inline-flex; flex-wrap: wrap; margin-bottom: 6px; }
+.c1-chart { max-width: 760px; }
+.c1-chart svg { display: block; max-width: 100%; height: auto; background: #fff; border: 1px solid var(--rule); border-radius: 4px; }
+.c1-chart .c1-tick { font: 11px var(--mono); fill: var(--muted); }
+.c1-chart .c1-group { font: 600 12px var(--sans); fill: var(--ink); }
+.c1-chart .c1-label { font: 12px var(--sans); fill: var(--ink); }
+.c1-chart .c1-value { font: 12px var(--mono); fill: var(--ink); }
+.c1-readout { font-size: 13px; margin-top: 6px; max-width: 760px; overflow-wrap: anywhere; }
+.c1-not { font-size: 13px; color: var(--muted); max-width: 90ch; padding-left: 18px; }
+.c1-table { border-collapse: collapse; font-size: 13px; margin: 6px 0 10px; }
+.c1-table caption { text-align: left; font-weight: 600; margin-bottom: 4px; }
+.c1-table th, .c1-table td { border-bottom: 1px solid var(--rule); padding: 4px 10px 4px 0; text-align: left; vertical-align: top; }
+.c1-table td { font-family: var(--mono); }
+.c1-ids { font-size: 12px; overflow-wrap: anywhere; }
+@media (min-width: 601px) { #replay42, #replay42 [id] { scroll-margin-top: 140px; } }
+@media (max-width: 900px) { .r42-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .r42-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .c1-cards { grid-template-columns: 1fr; gap: 10px; } }
+@media (max-width: 600px) { .r42-facts { grid-template-columns: 1fr; } .r42-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } .r42-transport .seek { flex-basis: 100%; } }

@@ -7,7 +7,7 @@
 <meta name="description" content="Recorded 2 m, 2.2 m natural-guide-star and exploratory 42 m adaptive-optics experiments, with a documented loss-of-lock diagnosis, repair and explicit assumptions.">
 <link rel="icon" href="data:,">
 <!-- Code and style come from the content-addressed build directory; see scripts/ao_explorer/site_build.py. -->
-<link rel="stylesheet" href="code-556491604cbcf0c7/styles.css">
+<link rel="stylesheet" href="code-549903c9a600fc0d/styles.css">
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script type="module" src="code-556491604cbcf0c7/app.js" onerror="aoCodeUnavailable()"></script>
+<script type="module" src="code-549903c9a600fc0d/app.js" onerror="aoCodeUnavailable()"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -31,7 +31,7 @@ function aoCodeUnavailable() {
       <ul class="nav">
         <li><a href="#explore">Explore 2 m</a></li>
         <li><a href="#project">Behind the simulation</a></li>
-        <li><a href="#replay42">Explore 42 m</a></li>
+        <li><a href="#replay42" class="nav-feature">Explore 42 m</a></li>
         <li><a href="#ngs22">2.2 m NGS study</a></li>
         <li><a href="#appendix">Appendix</a></li>
       </ul>
@@ -43,6 +43,7 @@ function aoCodeUnavailable() {
 <section id="explore" class="wrap section" aria-labelledby="explore-title">
   <h1 id="explore-title">2 m Interactive AO Experiment</h1>
   <p class="lede" id="explore-lede">A precomputed native 2 m Shack-Hartmann SCAO loop with a synthetic on-axis guide source: one seed, 1000 frames at 1 kHz (1.000 s of simulated time). Your browser replays recorded frames, slowed down, and selects recorded cases; it does not simulate, interpolate or draw noise.</p>
+  <p class="r42-callout"><a href="#replay42">Step through the recorded 42 m simulation →</a> <span>500 frames, uncorrected and AO-corrected side by side, with what the numerical checks do and do not establish.</span></p>
 
   <div id="status" class="status" role="status" aria-live="polite">Loading the dataset manifest…</div>
   <div id="error" class="error" role="alert" hidden></div>
@@ -255,10 +256,57 @@ function aoCodeUnavailable() {
 <section id="replay42" class="wrap section" aria-labelledby="replay42-title">
   <p class="section-kicker">Recorded exploratory run</p>
   <h1 id="replay42-title">42 m SCAO simulation</h1>
-  <p class="lede">Follow one fixed on-axis simulation from a ten-layer atmosphere to DM correction and science images. The run covers one second at a 500 Hz simulated loop rate and was calculated offline. The browser replays 126 saved snapshots.</p>
+  <p class="lede">Step through one saved simulation of a 42 m telescope's adaptive optics: a ten-layer atmosphere distorts the light, a deformable mirror corrects it and the images sharpen. Everything was calculated offline; your browser only replays recorded frames. It does not simulate, interpolate or draw noise.</p>
+  <ul class="r42-facts" aria-label="About this recording">
+    <li><strong>500 frames</strong><span>simulated 500 Hz loop rate · 1.000 s of simulated time</span></li>
+    <li><strong>126 recorded snapshots</strong><span>every 4th frame and the final frame, shown as saved</span></li>
+    <li><strong>Analysis window</strong><span>frames 100–499 (0.2–1.0 s); the first 0.2 s is startup</span></li>
+    <li><strong>Pre-update metrics</strong><span>residual after the held correction, before that frame's update</span></li>
+  </ul>
   <p class="hint">Simplified annular pupil based on the <a href="https://www.eso.org/sci/facilities/eelt/science/drm/tech_data/telescope/">historical 42 m E-ELT reference geometry</a>. The <a href="https://elt.eso.org/about/">current ELT is 39 m</a>; this run does not predict an ELT instrument’s performance.</p>
+  <p class="hint r42-jumps"><a href="#evidence-42m">Parameters &amp; evidence ↓</a> · <a href="#c1-noise">What the numerical checks establish ↓</a> · <a href="#replay42-methods">Full configuration and checks →</a></p>
   <div id="r42-status" class="status" role="status">The 42 m recording loads when this section is in view.</div><div id="r42-error" class="error" role="alert" hidden></div>
-  <section id="evidence-42m" class="panel evidence-card" aria-labelledby="r42-assumptions-title">
+  <section class="panel r42-keys" id="r42-viewer" aria-labelledby="r42-viewer-title">
+    <div class="viewer-head"><h2 id="r42-viewer-title">Wavefronts and images</h2><fieldset class="segmented"><legend>Image panels show</legend><label><input type="radio" name="r42-mode" value="frame" checked disabled> This frame (instantaneous)</label><label><input type="radio" name="r42-mode" value="mean" disabled> Mean intensity, frames 100–499</label></fieldset></div>
+    <dl class="r42-strip" id="r42-strip" aria-label="Recorded values of the selected frame">
+      <div><dt>Recorded frame</dt><dd id="r42-frame-short">—</dd></div>
+      <div><dt>Simulated time</dt><dd id="r42-time-short">—</dd></div>
+      <div><dt>Window <span>analysis = frames 100–499</span></dt><dd id="r42-window">—</dd></div>
+      <div><dt>Residual RMS <span>pre-update · this frame</span></dt><dd id="r42-rms-c">—</dd></div>
+      <div><dt>Atmosphere RMS <span>before correction · this frame</span></dt><dd id="r42-rms-u">—</dd></div>
+      <div><dt id="r42-sr-label">Peak Strehl <span>uncorrected → corrected</span></dt><dd id="r42-sr">—</dd></div>
+    </dl>
+    <div class="maps r42-maps">
+      <figure class="map"><canvas id="r42-atmosphere" width="256" height="256" role="img" aria-label="42 m atmospheric OPD before correction"></canvas><figcaption><strong>Atmospheric OPD</strong><span>before correction · µm</span></figcaption></figure>
+      <figure class="map"><canvas id="r42-dm" width="256" height="256" role="img" aria-label="42 m held DM correction"></canvas><figcaption><strong>Held DM correction</strong><span>atmosphere minus residual · µm OPD-equivalent</span></figcaption></figure>
+      <figure class="map"><canvas id="r42-residual" width="256" height="256" role="img" aria-label="42 m residual OPD after held correction"></canvas><figcaption><strong>Residual OPD</strong><span>after held correction, before this step's update · µm</span></figcaption></figure>
+      <div class="colorbar-block"><canvas id="r42-cbar-opd" width="24" height="200" aria-hidden="true"></canvas><div class="cbar-labels" id="r42-opd-labels"></div><p class="cbar-note">One fixed symmetric OPD scale for all three maps and all replay frames. Maps use 4 × 4 spatial averaging for display.</p></div>
+    </div>
+    <p class="hint r42-cmp">Same recorded frame, same scales: left PSF without correction (same atmosphere, zero DM), right with AO correction.</p>
+    <div class="psfs">
+      <figure class="map psf"><canvas id="r42-psf-u" width="256" height="256" role="img" aria-label="42 m matched uncorrected PSF"></canvas><figcaption><strong>Uncorrected PSF</strong><span>same atmosphere, zero DM</span><span id="r42-strehl-u"></span></figcaption></figure>
+      <figure class="map psf"><canvas id="r42-psf-c" width="256" height="256" role="img" aria-label="42 m AO corrected PSF"></canvas><figcaption><strong>AO-corrected PSF</strong><span>pre-update residual</span><span id="r42-strehl-c"></span></figcaption></figure>
+      <div class="colorbar-block"><canvas id="r42-cbar-psf" width="24" height="200" aria-hidden="true"></canvas><div class="cbar-labels" id="r42-psf-labels"></div><p class="cbar-note">Fixed log intensity / ideal peak, at 2.2 µm. Both panels share this scale; crops are not renormalized.</p></div>
+    </div>
+    <p class="mode-note" id="r42-mode-note"></p>
+    <div class="transport r42-transport" role="group" aria-label="42 m playback"><button id="r42-restart" aria-label="First recorded frame" disabled>⏮ First</button><button id="r42-prev" disabled>◀ Step</button><button id="r42-play" aria-pressed="false" disabled>Play</button><button id="r42-next" disabled>Step ▶</button><button id="r42-end" aria-label="Final recorded frame" disabled>Final ⏭</button><label class="seek">Seek <input type="range" id="r42-seek" min="0" max="125" value="25" step="1" disabled aria-valuetext="frame 100, 0.200 s"></label><output id="r42-time" class="r42-time" for="r42-seek">—</output><label class="r42-speed">Presentation <select id="r42-speed" disabled><option value="10">10× slower</option><option value="20" selected>20× slower</option><option value="40">40× slower</option></select></label></div>
+    <p class="hint">Speed changes only how fast saved frames are shown; it is not a simulation parameter. Keyboard, with a 42 m control focused: ← and → step, Home and End jump to the first and final frame, K plays or pauses.<span id="r42-motion-note"></span></p>
+    <p class="frame-readout" id="r42-readout"></p><p class="hint">Wavefront maps and numerical RMS always show the selected frame. Mean-intensity images use every frame in 0.2–1.0 s, not just the replay snapshots. The 42 m timeline is independent of the 2 m controls.</p>
+    <p id="r42-live" class="visually-hidden" aria-live="polite"></p>
+  </section>
+  <section class="panel" aria-labelledby="r42-metrics-title"><h2 id="r42-metrics-title">Metrics over the whole trajectory</h2><p class="hint">All 500 numerical samples, including startup. The shaded first 0.2 s was excluded before the run; this is not a convergence result.</p><div class="charts"><figure class="chart"><canvas id="r42-chart-rms" width="900" height="220" role="img" aria-label="42 m atmosphere and residual RMS over time"></canvas><figcaption>Atmosphere and total pre-update residual, nm OPD; piston removed and tilt retained.</figcaption></figure><figure class="chart"><canvas id="r42-chart-strehl" width="900" height="220" role="img" aria-label="42 m instantaneous Strehl over time"></canvas><figcaption>Instantaneous peak Strehl at 2.2 µm, pre-update. The cursor marks the selected recorded frame.</figcaption></figure></div><div class="rms-readout"><p class="rms-head">Analysis window · 0.8 s · frames 100–499 · 400 equal weights</p><dl class="rms-values"><div><dt>Mean instantaneous atmosphere RMS</dt><dd id="r42-mean-rms-u">—</dd></div><div><dt>Mean instantaneous pre-update residual RMS</dt><dd id="r42-mean-rms-c">—</dd></div><div><dt>Peak Strehl of mean AO intensity PSF</dt><dd id="r42-mean-strehl">—</dd></div></dl></div><p class="takeaway">At 2.2 µm, with 10⁵ detected e⁻ per full subaperture per 2 ms. These averages describe one seed and one 0.8 s window; robustness across conditions and long-run stability have not been established.</p></section>
+  <section class="panel r42-keys" aria-labelledby="r42-binary-title">
+    <h2 id="r42-binary-title">Observed binary with additional simulated blur</h2><p class="takeaway">An HST F775W image convolved separately with the uncorrected and corrected simulation PSFs. The original HST resolution and noise remain. This illustrates additional blur; it does not predict a 42 m K-band observation or measure its resolving power.</p><p class="hint">2MASS J0746425+200032 AB · HST/ACS HRC F775W · 2002-10-21. All three panels share one angular scale and one fixed brightness mapping.</p>
+    <div class="r42-binary-grid">
+      <figure class="map"><div class="r42-picture"><canvas id="r42-source" width="256" height="256" role="img" aria-label="Observed HST binary template"></canvas><span class="r42-scale"><i></i>0.2″</span></div><figcaption><strong>Observed HST template</strong><span>original HST resolution and noise retained</span></figcaption></figure>
+      <figure class="map"><div class="r42-picture"><canvas id="r42-binary-u" width="256" height="256" role="img" aria-label="HST template with additional blur from the uncorrected simulation PSF"></canvas><span class="r42-scale"><i></i>0.2″</span></div><figcaption><strong>Template + uncorrected PSF</strong><span>observed template ∗ zero-DM PSF</span></figcaption></figure>
+      <figure class="map"><div class="r42-picture"><canvas id="r42-binary-c" width="256" height="256" role="img" aria-label="HST template with additional blur from the corrected simulation PSF"></canvas><span class="r42-scale"><i></i>0.2″</span></div><figcaption><strong>Template + corrected PSF</strong><span>observed template ∗ corrected PSF</span></figcaption></figure>
+    </div>
+    <p class="frame-readout" id="r42-photo-readout"></p>
+    <div class="transport r42-transport" role="group" aria-label="42 m binary playback"><button id="r42-photo-restart" aria-label="First recorded frame" disabled>⏮ First</button><button id="r42-photo-prev" disabled>◀ Step</button><button id="r42-photo-play" aria-pressed="false" disabled>Play</button><button id="r42-photo-next" disabled>Step ▶</button><button id="r42-photo-end" aria-label="Final recorded frame" disabled>Final ⏭</button><label class="seek">Seek <input type="range" id="r42-photo-seek" min="0" max="125" value="25" step="1" disabled aria-valuetext="frame 100, 0.200 s"></label></div>
+    <p class="hint">Both simulated images are generated from the observed template; the right-hand panel is not a restoration of the middle panel. Credit: NASA/ESA Hubble Space Telescope, ACS/HRC program 9451; MAST/STScI. <a href="#replay42-source">Scientific source and image preparation →</a></p>
+  </section>
+  <section id="evidence-42m" class="panel evidence-card r42-after-viewer" aria-labelledby="r42-assumptions-title">
     <h2 id="r42-assumptions-title">Parameters &amp; evidence · 42 m</h2>
     <p class="evidence-kind">Historical geometry + published atmosphere inputs + local hardware assumptions</p>
     <ul class="params"><li>42 m annular pupil · 28% obstruction</li><li>10 layers · r₀ 0.13 m at 500 nm</li><li>Science PSF at 2.2 µm</li><li>WFS: 10⁵ detected e⁻ per full subaperture per 2 ms</li><li>Synthetic CCD · detector noise on</li><li>One seed · 500 steps · 1 s simulated time</li></ul>
@@ -273,35 +321,33 @@ function aoCodeUnavailable() {
     <p><strong>Not established:</strong> current 39 m ELT performance, a causal aperture-only comparison, or long-run stability. The 0.2 s startup exclusion does not establish convergence.</p>
     <p class="hint">On-axis only; no segment gaps or spiders. Assumed detector and DM models, with a ±100 µm OPD command limit; no hardware-performance claim or complete instrument error budget. The 2 m and 42 m configurations and wavelengths differ, so they do not isolate the effect of aperture size. <a href="#dm-stroke">DM stroke, saturation and ELT M4 context →</a> · <a href="#replay42-methods">Full configuration and checks →</a></p>
   </section>
-  <section class="panel" aria-labelledby="r42-viewer-title">
-    <div class="viewer-head"><h2 id="r42-viewer-title">Wavefronts and images</h2><fieldset class="segmented"><legend>42 m image view</legend><label><input type="radio" name="r42-mode" value="frame" checked disabled> Instantaneous</label><label><input type="radio" name="r42-mode" value="mean" disabled> Analysis-window average</label></fieldset></div>
-    <div class="maps r42-maps">
-      <figure class="map"><canvas id="r42-atmosphere" width="256" height="256" role="img" aria-label="42 m atmospheric OPD before correction"></canvas><figcaption><strong>Atmospheric OPD</strong><span>before correction · µm</span></figcaption></figure>
-      <figure class="map"><canvas id="r42-dm" width="256" height="256" role="img" aria-label="42 m held DM correction"></canvas><figcaption><strong>Held DM correction</strong><span>atmosphere minus residual · µm OPD-equivalent</span></figcaption></figure>
-      <figure class="map"><canvas id="r42-residual" width="256" height="256" role="img" aria-label="42 m residual OPD after held correction"></canvas><figcaption><strong>Residual OPD</strong><span>after held correction, before this step's update · µm</span></figcaption></figure>
-      <div class="colorbar-block"><canvas id="r42-cbar-opd" width="24" height="200" aria-hidden="true"></canvas><div class="cbar-labels" id="r42-opd-labels"></div><p class="cbar-note">One fixed symmetric OPD scale for all three maps and all replay frames. Maps use 4 × 4 spatial averaging for display.</p></div>
+  <section id="c1-noise" class="panel c1-panel" aria-labelledby="c1-title">
+    <span class="badge">Separate static calculation · no new images</span>
+    <h2 id="c1-title">What the numerical checks establish</h2>
+    <div class="c1-cards">
+      <div><h3>The replay above</h3><p>One saved trajectory of one simulated configuration, seed 1. Its mean pre-update residual over frames 100–499 is <strong id="c1-replay-rms">—</strong>. It is an exploratory simulation, not a hardware measurement.</p></div>
+      <div><h3>A separate noise check (C1)</h3><p>A static calculation at the same guide-star brightness (10⁵ detected e⁻ per full subaperture per frame) predicted only the part of the wavefront error that detector noise causes, for the production damping and one admissible alternative.</p></div>
+      <div><h3>What it found</h3><p>The alternative changed that predicted noise part from <strong id="c1-rms-b">—</strong> to <strong id="c1-rms-c">—</strong>. That is far below the trigger for a new closed-loop damping experiment, so none was started; the production damping stays 0.001. C1 made no images: every picture above comes from the saved replay.</p></div>
     </div>
-    <div class="rms-readout"><p class="rms-head" id="r42-rms-label">Full-resolution pupil RMS of the selected frame · piston removed, tilt retained</p><dl class="rms-values"><div><dt>Atmosphere before correction</dt><dd id="r42-rms-u">—</dd></div><div><dt>Residual after held correction</dt><dd id="r42-rms-c">—</dd></div><div><dt>Recorded frame</dt><dd id="r42-frame-short">—</dd></div></dl></div>
-    <div class="psfs">
-      <figure class="map psf"><canvas id="r42-psf-u" width="256" height="256" role="img" aria-label="42 m matched uncorrected PSF"></canvas><figcaption><strong>Matched uncorrected PSF</strong><span>same atmosphere, zero DM</span><span id="r42-strehl-u"></span></figcaption></figure>
-      <figure class="map psf"><canvas id="r42-psf-c" width="256" height="256" role="img" aria-label="42 m AO corrected PSF"></canvas><figcaption><strong>AO-corrected PSF</strong><span>pre-update residual</span><span id="r42-strehl-c"></span></figcaption></figure>
-      <div class="colorbar-block"><canvas id="r42-cbar-psf" width="24" height="200" aria-hidden="true"></canvas><div class="cbar-labels" id="r42-psf-labels"></div><p class="cbar-note">Fixed log intensity / ideal peak, at 2.2 µm. Crops are not renormalized.</p></div>
-    </div>
-    <p class="mode-note" id="r42-mode-note"></p>
-    <div class="transport" role="group" aria-label="42 m playback"><button id="r42-restart" disabled>Restart</button><button id="r42-prev" disabled>◀ Step</button><button id="r42-play" aria-pressed="false" disabled>Play</button><button id="r42-next" disabled>Step ▶</button><label class="seek">Seek <input type="range" id="r42-seek" min="0" max="125" value="25" step="1" disabled></label><span class="hint">20× slower (nominal)</span></div>
-    <p class="frame-readout" id="r42-readout"></p><p class="hint">Wavefront maps and numerical RMS always show the selected frame. Image averages use every frame in 0.2–1.0 s, not just the replay snapshots. The 42 m timeline is independent of the 2 m controls.</p>
-  </section>
-  <section class="panel" aria-labelledby="r42-metrics-title"><h2 id="r42-metrics-title">Metrics over the whole trajectory</h2><p class="hint">All 500 numerical samples, including startup. The shaded first 0.2 s was excluded before the run; this is not a convergence result.</p><div class="charts"><figure class="chart"><canvas id="r42-chart-rms" width="900" height="220" role="img" aria-label="42 m atmosphere and residual RMS over time"></canvas><figcaption>Atmosphere and total pre-update residual, nm OPD; piston removed and tilt retained.</figcaption></figure><figure class="chart"><canvas id="r42-chart-strehl" width="900" height="220" role="img" aria-label="42 m instantaneous Strehl over time"></canvas><figcaption>Instantaneous peak Strehl at 2.2 µm. The cursor marks the selected recorded frame.</figcaption></figure></div><div class="rms-readout"><p class="rms-head">Analysis window · 0.8 s · frames 100–499 · 400 equal weights</p><dl class="rms-values"><div><dt>Mean instantaneous atmosphere RMS</dt><dd id="r42-mean-rms-u">—</dd></div><div><dt>Mean instantaneous residual RMS</dt><dd id="r42-mean-rms-c">—</dd></div><div><dt>Peak Strehl of mean AO intensity PSF</dt><dd id="r42-mean-strehl">—</dd></div></dl></div><p class="takeaway">At 2.2 µm, with 10⁵ detected e⁻ per full subaperture per 2 ms. These averages describe one seed and one 0.8 s window; robustness across conditions and long-run stability have not been established.</p></section>
-  <section class="panel" aria-labelledby="r42-binary-title">
-    <h2 id="r42-binary-title">Observed binary with additional simulated blur</h2><p class="takeaway">An HST F775W image convolved separately with the uncorrected and corrected simulation PSFs. The original HST resolution and noise remain. This illustrates additional blur; it does not predict a 42 m K-band observation or measure its resolving power.</p><p class="hint">2MASS J0746425+200032 AB · HST/ACS HRC F775W · 2002-10-21. All three panels share one angular scale and one fixed brightness mapping.</p>
-    <div class="r42-binary-grid">
-      <figure class="map"><div class="r42-picture"><canvas id="r42-source" width="256" height="256" role="img" aria-label="Observed HST binary template"></canvas><span class="r42-scale"><i></i>0.2″</span></div><figcaption><strong>Observed HST template</strong><span>original HST resolution and noise retained</span></figcaption></figure>
-      <figure class="map"><div class="r42-picture"><canvas id="r42-binary-u" width="256" height="256" role="img" aria-label="HST template with additional blur from the uncorrected simulation PSF"></canvas><span class="r42-scale"><i></i>0.2″</span></div><figcaption><strong>Template + uncorrected PSF</strong><span>observed template ∗ zero-DM PSF</span></figcaption></figure>
-      <figure class="map"><div class="r42-picture"><canvas id="r42-binary-c" width="256" height="256" role="img" aria-label="HST template with additional blur from the corrected simulation PSF"></canvas><span class="r42-scale"><i></i>0.2″</span></div><figcaption><strong>Template + corrected PSF</strong><span>observed template ∗ corrected PSF</span></figcaption></figure>
-    </div>
-    <p class="frame-readout" id="r42-photo-readout"></p>
-    <div class="transport" role="group" aria-label="42 m binary playback"><button id="r42-photo-restart" disabled>Restart</button><button id="r42-photo-prev" disabled>◀ Step</button><button id="r42-photo-play" aria-pressed="false" disabled>Play</button><button id="r42-photo-next" disabled>Step ▶</button><label class="seek">Seek <input type="range" id="r42-photo-seek" min="0" max="125" value="25" step="1" disabled></label></div>
-    <p class="hint">Both simulated images are generated from the observed template; the right-hand panel is not a restoration of the middle panel. <a href="#replay42-source">Scientific source and image preparation →</a></p>
+    <div id="c1-status" class="status" role="status">The C1 summary loads when this panel is in view.</div><div id="c1-error" class="error" role="alert" hidden></div>
+    <figure class="c1-figure">
+      <fieldset class="segmented"><legend>Highlight in this chart only</legend><label><input type="radio" name="c1-highlight" value="both" checked disabled> Both</label><label><input type="radio" name="c1-highlight" value="baseline" disabled> Production α 0.001</label><label><input type="radio" name="c1-highlight" value="comparator" disabled> Alternative α 0.0025</label></fieldset>
+      <div id="c1-chart" class="c1-chart"></div>
+      <figcaption id="c1-readout" class="c1-readout"></figcaption>
+    </figure>
+    <p class="hint">This control changes only the chart. It does not relabel or alter the replay above, which was recorded at the production damping α 0.001. Bars start at zero.</p>
+    <ul class="c1-not">
+      <li>The 0.0042 nm is the difference of two predictions of one noise component, not a change in the total residual, not the spread of paired runs and not a forecast of what a closed-loop comparison would measure.</li>
+      <li>Only the alternative α 0.0025 was carried through the full noise calculation; total closed-loop behaviour and other operating conditions are unmeasured.</li>
+      <li>Numerical agreement between independent calculations (about 10⁻¹³) is not a statistical interval: this was one deterministic calculation for one configuration.</li>
+    </ul>
+    <details id="c1-provenance"><summary>C1 provenance, model conditions and identities</summary><div class="prose">
+      <table class="c1-table"><caption>Selected C1 values (static stationary-loop predictions)</caption><thead><tr><th scope="col">Quantity</th><th scope="col">Production α 0.001</th><th scope="col">Alternative α 0.0025</th></tr></thead><tbody id="c1-table-body"></tbody></table>
+      <p id="c1-conditions"></p>
+      <p id="c1-qualification"></p>
+      <p id="c1-identities" class="c1-ids"></p>
+      <div id="c1-downloads" class="downloads"></div>
+    </div></details>
   </section>
 </section>
 
