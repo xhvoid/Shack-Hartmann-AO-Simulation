@@ -64,6 +64,7 @@ from shwfs_ao.core.hashing import (
 from shwfs_ao.validation.numerical_identity import (
     NUMERICAL_INPUTS,
     dm_semantic_hash,
+    dm_source_failure,
     numerical_input_failure,
     numerical_input_record,
     numerical_input_values,
@@ -502,8 +503,10 @@ def test_inner_backend_semantics_remain_exact_even_with_matching_influences():
 # Each binding between raw byte provenance and its witness gets a case that
 # only that binding can refuse.  The witnessed samples stay exactly the
 # baseline's, so the full-array comparison passes; every other hash is
-# re-minted, so every other check passes.  Without the binding under test the
-# evaluator would accept a run whose recorded bytes are a 1 % drifted input.
+# re-minted, so every other check passes.  In the hash and influence cases,
+# without the binding under test the evaluator would accept a run whose
+# recorded bytes are a 1 % drifted input; the backend-identity case guards a
+# baseline that mislabels the backend class behind its witness.
 
 
 @pytest.mark.parametrize(
@@ -564,7 +567,8 @@ def test_a_dm_preimage_must_name_the_backend_of_its_witness(
     # The backend_name half of the check cannot be isolated this way: the
     # semantic hash decodes the backend preimage under the recorded name and
     # the backend preimage check under the witness's own, so once the two
-    # names differ no backend preimage satisfies both.
+    # names differ no backend preimage satisfies both.  The next test pins
+    # that half's diagnostic instead.
     baseline = _report_copy(packaged_baseline)
     _rewrite_dm_hash_preimages(baseline, name, model={"backend_identity": identity})
     record = baseline["numerical_inputs"][name]
@@ -575,6 +579,25 @@ def test_a_dm_preimage_must_name_the_backend_of_its_witness(
         validate_cross_backend_baseline(baseline)
     with pytest.raises(BaselineContractError, match="does not match its named backend"):
         evaluate_report_against_baseline(_report_copy(baseline), baseline)
+
+
+@pytest.mark.parametrize(("name", "other"), [("native_dm", "hcipy"), ("hcipy_dm", "native")])
+def test_a_dm_preimage_naming_another_backend_is_reported_as_such(
+    name, other, packaged_baseline,
+):
+    # Without the backend_name check this relabel is still refused, later and
+    # as an undecodable backend preimage, because the semantic hash decodes
+    # that preimage under the recorded name.  The failure must name the
+    # mislabel rather than a malformed payload.
+    report = _report_copy(packaged_baseline)
+    _rewrite_dm_hash_preimages(report, name, model={"backend_name": other})
+    detail = "DM source_payload does not match its named backend"
+    assert dm_source_failure(name, report["numerical_inputs"][name]) == detail
+    failures = evaluate_report_against_baseline(report, packaged_baseline)
+    assert len(failures) == 1
+    assert detail in failures[0]
+    with pytest.raises(BaselineContractError, match="does not match its named backend"):
+        validate_cross_backend_baseline(report)
 
 
 @pytest.mark.parametrize("name", ["native_dm", "hcipy_dm"])
