@@ -2659,3 +2659,52 @@ result, so no evidence was rerun.
   --check` passes.
 - After the documentation edits, the docs and refactor-contract tests pass
   (21).
+
+## Closure review and readiness finding (2026-10-16)
+
+The closure review of `580e83f`
+(`outputs/detector_final_review_2026-10-16_580e83f/review.md`) confirmed
+S1–S3 closed with independent reproductions and 353 passing focused tests.
+Together with the first review, that closes R1–R7 and the isolated-noise
+requirement.
+
+A readiness review of the same revision
+(`outputs/refactor_readiness_2026-10-16_580e83f/review.md`) found one
+further P2 defect, which predates both reviews.
+
+**The finding.** With the ADC off, raw-readout processing and a non-uniform
+CMOS gain map, the noise model divided the bias and offset pedestal by the
+gain map. The camera adds the pedestal *after* the gain-map division. On
+the review's 7×7 fixture (5000 e⁻ spot, gain-map rms 0.15, 200 ADU bias),
+the predicted mean frame differed from the forward frame by up to 92.55 e⁻,
+and its centroid was offset by about 0.02 px, while the model still reported
+`supported = True`.
+
+**The fix.** `noise_model.py` now uses the pedestal
+(bias + offset) × conversion / G, without the gain map, for both raw-readout
+cases. With the ADC on that is the same value as before, because in raw
+readout the gain left in the data is the gain map.
+
+**Evidence.**
+- On the review's fixture the predicted and forward mean frames now agree
+  exactly (maximum difference 0.0 e⁻), and so do the centroids.
+- Tests:
+  - `test_raw_readout_expectation_matches_the_forward_frame_with_a_gain_map`:
+    ADC off at two conversion gains, and ADC on;
+  - `test_raw_readout_temporal_scatter_with_a_gain_map_fast`: 1000-trial
+    Monte Carlo within 15 %.
+
+**Scope.** No packaged profile and no recorded result uses raw readout with
+the ADC off; every profile processes estimated or oracle products. So no
+evidence changes, and the model id stays `detector_covariance_v2`.
+
+**Verification.**
+- Regression `-m "not hcipy and not slow and not elt_scale"`, seven
+  batches: **2151 passed, 18 skipped, 2 xfailed, 0 failed** (531 / 628 /
+  502 / 124 / 244 / 120 / 2).
+- Slow tests over the detector-level test files: 16 passed.
+- ruff and mypy (130 files) clean; the generator check passes.
+
+**README.** The README's isolated-noise statement now states the recorded
+departures (power 0.95–0.96 of the model, a 6.7 % dip at 12 m, a 9 % drift
+at 2 m) instead of "within a few per cent".
