@@ -1,1 +1,0 @@
-wrong_dtype.npz: array noise_on__saturation_fraction has dtype float32, the canonical layout requires float64; the sidecar is not read as data.
