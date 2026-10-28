@@ -346,6 +346,61 @@ def test_running_a_supplied_system_never_rebuilds_or_recalibrates_it(
         scao.run_closed_loop(config, system=forged)
 
 
+def test_replacing_a_backend_factory_invalidates_the_build_identity_memo() -> None:
+    """The factory registry is an input to what a configuration builds.
+
+    It is not part of the memo key, so a remembered identity outlives the
+    factory set that produced it.  Serving it afterwards answers verification
+    from a build that can no longer happen — in both directions: accepting a
+    system this registry would not build, and rejecting one it would.
+    """
+
+    config = _tiny_system_config()
+    honest_factory = scao._factory_for("native")
+    system = scao.build_scao_system(config)
+    scao.run_closed_loop(config, system=system)
+
+    class StrongerAberration:
+        """A registered factory that builds a materially different atmosphere."""
+
+        backend_name = "native"
+
+        def build_geometry(self, **kwargs: object) -> object:
+            return honest_factory.build_geometry(**kwargs)  # type: ignore[arg-type]
+
+        def build_dm(self, **kwargs: object) -> object:
+            return honest_factory.build_dm(**kwargs)  # type: ignore[arg-type]
+
+        def build_wfs(self, **kwargs: object) -> object:
+            return honest_factory.build_wfs(**kwargs)  # type: ignore[arg-type]
+
+        def build_science_propagator(self, **kwargs: object) -> object:
+            return honest_factory.build_science_propagator(**kwargs)  # type: ignore[arg-type]
+
+        def build_atmosphere(self, **kwargs: object) -> object:
+            # Three times the static aberration this profile asked for.
+            kwargs["static_opd_rms_m"] = kwargs["static_opd_rms_m"] * 3.0  # type: ignore[operator]
+            return honest_factory.build_atmosphere(**kwargs)  # type: ignore[arg-type]
+
+    try:
+        scao.register_scao_backend_factory("native", StrongerAberration(), replace=True)
+        # The system on hand is no longer what this registry builds, so it must
+        # be refused rather than accepted from the pre-replacement memory.
+        with pytest.raises(
+            scao.ScaoConstructionError,
+            match="do not match the components its source configuration rebuilds",
+        ):
+            scao.run_closed_loop(config, system=system)
+
+        # And the converse: an identity remembered under the replaced factory
+        # must not outlive it and reject an honest system afterwards.
+        scao.build_scao_system(config)
+        scao.register_scao_backend_factory("native", honest_factory, replace=True)
+        scao.run_closed_loop(config, system=system)
+    finally:
+        scao.register_scao_backend_factory("native", honest_factory, replace=True)
+
+
 def test_supplied_system_is_rejected_when_a_live_component_drifts_after_build() -> None:
     """A hash-covered identity mutated after construction must not run.
 

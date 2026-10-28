@@ -440,6 +440,95 @@ class TestEnvironmentVerification:
         fourth = script._source_patch_sha256()
         assert third is not None and fourth is not None and third != fourth
 
+    def test_an_external_diff_driver_cannot_empty_the_patch_evidence(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        # git honours GIT_EXTERNAL_DIFF, diff.external and .gitattributes
+        # textconv drivers.  A driver that prints nothing would turn a dirty
+        # tree into an empty diff, which this function would then record as a
+        # clean checkout of the recorded commit — a fail-open on the exact
+        # claim the patch hash exists to make.
+        repository = tmp_path / "repo"
+        repository.mkdir()
+        _git_init(repository)
+        fixture = repository / "input.npy"
+        fixture.write_bytes(b"\x93NUMPY\x01\x00" + b"A" * 32)
+        subprocess.run(
+            ["git", "add", "input.npy"], cwd=repository, check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "commit", "--quiet", "--message", "fixture"],
+            cwd=repository,
+            check=True,
+            capture_output=True,
+        )
+        monkeypatch.setattr(script, "REPO_ROOT", repository)
+        fixture.write_bytes(b"\x93NUMPY\x01\x00" + b"B" * 32)
+
+        honest = script._source_patch_sha256()
+        assert honest is not None
+
+        monkeypatch.setenv("GIT_EXTERNAL_DIFF", "/usr/bin/true")
+        assert script._source_patch_sha256() == honest
+        assert script._source_tree_clean() is False
+
+    def test_two_different_working_trees_cannot_record_the_same_evidence(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        # The hashed stream is framed by length, not by separators alone: a
+        # file whose *contents* spell the separator sequence would otherwise
+        # imitate a second file, so two different trees would record one hash.
+        digests = []
+        for index, files in enumerate(
+            (
+                {"a.npy": b"\0untracked\0b.npy\0content\0X"},
+                {"a.npy": b"", "b.npy": b"X"},
+            )
+        ):
+            repository = tmp_path / f"repo{index}"
+            repository.mkdir()
+            _git_init(repository)
+            monkeypatch.setattr(script, "REPO_ROOT", repository)
+            for name, payload in files.items():
+                (repository / name).write_bytes(payload)
+            digest = script._source_patch_sha256()
+            assert digest is not None
+            digests.append(digest)
+        assert digests[0] != digests[1]
+
+    def test_an_untracked_nested_repository_names_itself_and_its_remedy(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        # git reports a directory containing its own .git as a single '?? dir/'
+        # record, so its contents cannot be hashed.  Refusing is right; refusing
+        # without naming the cause or the remedy is not.
+        repository = tmp_path / "repo"
+        repository.mkdir()
+        _git_init(repository)
+        nested = repository / "vendor-data"
+        nested.mkdir()
+        _git_init(nested)
+        monkeypatch.setattr(script, "REPO_ROOT", repository)
+        assert script._untracked_paths(
+            subprocess.run(
+                ["git", "status", "--porcelain", "-z", "--untracked-files=all"],
+                cwd=repository,
+                check=True,
+                capture_output=True,
+            ).stdout
+        ) == [b"vendor-data/"]
+        with pytest.raises(SystemExit, match="is a directory") as excinfo:
+            script._source_patch_sha256()
+        message = str(excinfo.value)
+        assert "vendor-data/" in message
+        assert ".gitignore" in message and "outside the repository" in message
+
     def test_an_unreadable_untracked_input_fails_closed(
         self,
         tmp_path,
@@ -469,6 +558,24 @@ class TestEnvironmentVerification:
             script._lock_platform_tag(
                 "# Exact environment resolved on Linux.\n", "stale.txt"
             )
+        # Only the header declares.  The body is a list of pins, so a package
+        # name, URL or note there that happens to carry a platform token must
+        # not stand in for a declaration the lock never made.
+        with pytest.raises(SystemExit, match="does not declare its platform"):
+            script._lock_platform_tag(
+                "numpy==2.5.0\n# note: wheels also published on macOS-arm64\n",
+                "body-only.txt",
+            )
+        assert (
+            script._lock_platform_tag(
+                "# Exact environment resolved for CPython 3.11 on\n"
+                "# Linux-x86-64: the extras.\n"
+                "numpy==2.5.0\n"
+                "# a later note mentioning macOS-arm64\n",
+                "header-wins.txt",
+            )
+            == "linux-x86-64"
+        )
         # The declaration is still found when the header prose wraps it across
         # comment lines, which is how the packaged locks are written.
         assert (
