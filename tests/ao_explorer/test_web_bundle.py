@@ -29,9 +29,15 @@ def _run(web_dir: Path):
 
 
 def test_committed_bundle_is_valid(web_dir):
-    report = _run(_bundle_or_skip(web_dir))
+    site = _bundle_or_skip(web_dir)
+    report = _run(site)
     assert report["valid"], report["failures"][:10]
     assert report["checks_passed"] > 500
+    # The contract is selected from the committed schemas, never assumed.
+    manifest = json.loads((site / "data" / json.loads((site / "data" / "current.json").read_text())["manifest"]).read_text())
+    assert report["contract"]["manifest_schema"] == manifest["schema"]
+    assert report["contract"]["name"] == validate.web_contract.CONTRACTS[manifest["schema"]].name
+    assert report["raw_evidence_checked"] is False and report["raw_evidence_layout"] is None
 
 
 def test_no_bundle_member_is_hidden_by_an_ignore_rule(web_dir):
@@ -65,8 +71,19 @@ def test_no_bundle_member_is_hidden_by_an_ignore_rule(web_dir):
 
 
 def _copy(web_dir: Path, tmp_path: Path) -> Path:
+    """A copy of what the validator reads: the datasets under data/, the page and its code directory.
+
+    The recordings and derived bundles of the other sections are not part of the 2 m dataset contract and are left
+    out of the copy (they are checked by ``check_bindings.py``).
+    """
+
+    source = _bundle_or_skip(web_dir)
     target = tmp_path / "site"
-    shutil.copytree(_bundle_or_skip(web_dir), target)
+    target.mkdir(parents=True)
+    shutil.copytree(source / "data", target / "data")
+    shutil.copy2(source / "index.html", target / "index.html")
+    for code in source.glob("code-*"):
+        shutil.copytree(code, target / code.name)
     return target
 
 
@@ -93,7 +110,7 @@ def _rehash(site: Path, relative: str, data: bytes) -> None:
             for item in value:
                 update(item)
 
-    update({key: manifest[key] for key in ("cases", "scene", "display", "diagnostics", "results")})
+    update({key: manifest[key] for key in ("cases", "scene", "display", "diagnostics", "blocks", "results") if key in manifest})
     manifest_bytes = (json.dumps(manifest, indent=1) + "\n").encode()
     manifest_path.write_bytes(manifest_bytes)
     entry.update(manifest_bytes=len(manifest_bytes), manifest_sha256=hashlib.sha256(manifest_bytes).hexdigest())
@@ -167,19 +184,25 @@ def test_non_finite_json_and_manifest_mismatch_are_refused(web_dir, tmp_path):
 def test_observation_parent_window_defect_is_refused(web_dir, tmp_path):
     site = _copy(web_dir, tmp_path)
     entry = json.loads((site / "data" / "current.json").read_text())
+    contract = validate.web_contract.CONTRACTS[json.loads((site / "data" / entry["manifest"]).read_text())["schema"]]
     path = site / "data" / entry["dataset_id"] / "cases" / "baseline" / "observation.json"
     payload = json.loads(path.read_text())
-    payload["roles"]["corrected"]["parent"]["sample_count"] = 40  # the movie frames are no substitute
-    payload["roles"]["corrected"]["parent"]["window"] = [140, 180]
+    # The displayed (movie) frames are no substitute for the analysis window.
+    payload["roles"]["corrected"]["parent"]["sample_count"] = contract.display_count
+    payload["roles"]["corrected"]["parent"]["window"] = [contract.frames - contract.display_count, contract.frames]
     _rehash(site, "cases/baseline/observation.json", (json.dumps(payload, indent=1) + "\n").encode())
     report = _run(site)
-    assert any("corrected parent is the full 140-frame mean" in failure for failure in report["failures"])
+    assert any(f"corrected parent is the full {contract.analysis_count}-frame mean" in failure for failure in report["failures"])
 
 
 def test_research_results_are_independent_of_the_2m_controls(web_dir):
     site = _bundle_or_skip(web_dir)
     entry = json.loads((site / "data" / "current.json").read_text())
-    results_text = (site / "data" / entry["dataset_id"] / "research" / "results.json").read_text()
+    # The results member is wherever the manifest points: inside the dataset (v1) or referenced in place from the
+    # preserved previous dataset (v2).
+    manifest_path = site / "data" / entry["manifest"]
+    manifest = json.loads(manifest_path.read_text())
+    results_text = (manifest_path.parent / manifest["results"]["href"]).resolve().read_text()
     results = json.loads(results_text)
     # The research export binds only saved evidence of the frozen source; it
     # names no 2 m case, dataset or series of the new experiment.
@@ -299,7 +322,8 @@ def test_changed_code_or_entry_build_is_detected(web_dir, tmp_path):
     assert not _run(site)["valid"]
     report = site_build.write(site)  # renames the directory, restamps the page and the entry
     assert report["problems"] == [] and report["code_dir"] != code.name
-    assert _run(site)["valid"]
+    restamped = _run(site)
+    assert restamped["valid"], restamped["failures"][:5]
     entry_path = site / "data" / "current.json"
     entry = json.loads(entry_path.read_text())
     entry["code_build"] = "0" * 16

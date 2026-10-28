@@ -175,13 +175,24 @@ directory and is not part of this site.
 python scripts/ao_explorer/validate.py --web-dir web/ao-explorer
 ```
 
-checks the bundle's structure and semantics; add
-`--series-dir outputs/ao_explorer_v1/<series-id>` to also bind it to the raw
-evidence. Its rules were written for the 180-frame schemas (`*.v1`); it has
-not been extended to, or run on, the 1000-frame dataset (`*.v2`) or its galaxy
-derivative.
-Because the entry names that `*.v2` manifest, `validate.py` currently stops at
-the entry ("unsupported manifest schema").
+checks the bundle's structure and semantics against the dataset contract that
+the entry and manifest schemas select (`scripts/ao_explorer/web_contract.py`):
+the active 1000-frame dataset (`ao-explorer.manifest.v2`: frame counts and
+sample times, the [200, 1000) analysis window, the 126 displayed frames, the
+255-level OPD atlases with a transparent exterior, the block summaries,
+playback and screen metadata, and the previous dataset's Research Results
+referenced in place and verified byte for byte) or the preserved 180-frame
+dataset (`ao-explorer.manifest.v1`, the frozen `protocol.py` values). Every
+other schema pair is refused. The expected values come from the producer
+modules (`protocol.py`, `long_series.py`), never from the manifest under test;
+summary values and block statistics are recomputed from the per-frame rows,
+and the metrics of the mean intensity image are kept apart from the mean
+instantaneous metrics. Add `--series-dir` with the dataset's own raw layout
+(`outputs/ao_explorer_1s/<series-id>` for the active dataset,
+`outputs/ao_explorer_v1/<series-id>` for the 180-frame one) to also bind it to
+the raw evidence; without it the report states that no raw array was checked.
+The galaxy and RMS derivatives and the other sections' bundles are covered by
+the binding check below, not by this validator.
 
 ```bash
 python scripts/ao_explorer/check_bindings.py --web-dir web/ao-explorer
