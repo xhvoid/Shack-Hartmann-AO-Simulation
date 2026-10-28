@@ -16,8 +16,8 @@ Usage::
     python scripts/ao_explorer/site_build.py --web-dir web/ao-explorer --write   # rename and restamp
 
 ``--write`` renames the single code directory to its build, rewrites the
-references in ``index.html`` and records the build in ``data/current.json``.
-Exit status 0 means the site is consistent.
+references in ``index.html`` and records the build in ``data/current.json``,
+keeping that file's indentation.  Exit status 0 means the site is consistent.
 """
 
 from __future__ import annotations
@@ -63,6 +63,12 @@ def listing(web_dir: Path, code_dir: Path) -> Dict[str, str]:
     files = {"index.html": _sha(normalized_index(index).encode("utf-8"))}
     files.update({name: _sha((code_dir / name).read_bytes()) for name in CODE_FILES})
     return files
+
+
+def _json_indent(text: str) -> int | str:
+    """The indentation a JSON document was written with: the whitespace of its first indented line (1 if none)."""
+    match = re.search(r"\n([ \t]+)\S", text)
+    return match.group(1) if match else 1
 
 
 def build_id(files: Dict[str, str]) -> str:
@@ -115,9 +121,10 @@ def write(web_dir: Path) -> Dict[str, Any]:
     index_path.write_text(_REF.sub(f"code-{build}/", index), encoding="utf-8")
     entry_path = web_dir / "data" / "current.json"
     if entry_path.is_file():
-        entry_value = json.loads(entry_path.read_text(encoding="utf-8"))
+        entry_text = entry_path.read_text(encoding="utf-8")
+        entry_value = json.loads(entry_text)
         entry_value["code_build"] = build
-        entry_path.write_text(json.dumps(entry_value, indent=1) + "\n", encoding="utf-8")
+        entry_path.write_text(json.dumps(entry_value, indent=_json_indent(entry_text)) + "\n", encoding="utf-8")
     report = check(web_dir, entry=entry_path.is_file())
     if report["problems"]:
         raise SiteBuildError("; ".join(report["problems"]))
