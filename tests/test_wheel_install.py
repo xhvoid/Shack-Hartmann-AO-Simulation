@@ -306,11 +306,13 @@ SHWFS_OPTICS_EXPORTS = (
     "validate_optics_backend_result",
 )
 SHWFS_CALIBRATION_EXPORTS = (
+    "NOISE_STREAM_IDENTITY_SCHEMA",
     "ShackHartmannCalibrationError",
     "ShackHartmannCalibration",
     "row_ids_for_subapertures",
     "calibrate_zero_phase_reference",
     "shack_hartmann_calibration_hash",
+    "shack_hartmann_noise_stream_identity",
     "legacy_calibration_seeds",
 )
 SHWFS_MEASUREMENT_EXPORTS = (

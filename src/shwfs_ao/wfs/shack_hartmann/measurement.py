@@ -30,10 +30,12 @@ from ...detector.validity import (
     evaluate_centroid_validity,
 )
 from .calibration import (
+    NOISE_STREAM_IDENTITY_SCHEMA,
     ShackHartmannCalibration,
     ShackHartmannCalibrationError,
     calibrate_zero_phase_reference,
     legacy_calibration_seeds,
+    shack_hartmann_noise_stream_identity,
 )
 from .geometry import ShackHartmannGeometry
 from .optics import validate_spot_intensity_result
@@ -115,6 +117,14 @@ class DetectorShackHartmannSensor:
             calibration,
             calibration_legacy_seeds,
         )
+        try:
+            noise_stream_identity = shack_hartmann_noise_stream_identity(
+                calibration,
+                detector_realization,
+                optics_backend=optics_backend,
+            )
+        except ShackHartmannCalibrationError as exc:
+            raise ShackHartmannMeasurementError(str(exc)) from exc
         self._optics_backend = optics_backend
         self._calibration = calibration
         self._detector_realization = detector_realization
@@ -122,6 +132,7 @@ class DetectorShackHartmannSensor:
         self._calibration_legacy_seeds = seeds
         self._backend_name = backend_name
         self._backend_config_hash = backend_hash
+        self._noise_stream_identity = noise_stream_identity
         self._config_hash = component_config_hash(
             "detector_shack_hartmann_sensor",
             {
@@ -129,6 +140,7 @@ class DetectorShackHartmannSensor:
                 "backend_name": backend_name,
                 "backend_config_hash": backend_hash,
                 "validity_config": validity_config,
+                "noise_stream_identity": noise_stream_identity,
             },
         )
 
@@ -237,6 +249,17 @@ class DetectorShackHartmannSensor:
     @property
     def calibration(self) -> ShackHartmannCalibration:
         return self._calibration
+
+    @property
+    def noise_stream_identity(self) -> str:
+        """Declared sensor identity keying runtime noise streams.
+
+        Unlike ``calibration.config_hash`` it binds no realized floating-point
+        content, so one root seed selects the same noise streams on every
+        host.
+        """
+
+        return self._noise_stream_identity
 
     @property
     def detector_realization(self) -> DetectorRealization:
@@ -398,7 +421,7 @@ class DetectorShackHartmannSensor:
             )
             frame_streams = random_streams.scoped(
                 "shack_hartmann.measurement",
-                key=(self._calibration.config_hash, subaperture_id),
+                key=(self._noise_stream_identity, subaperture_id),
             )
             legacy_seed = (
                 ordered_legacy_seeds[index]
@@ -533,6 +556,8 @@ class DetectorShackHartmannSensor:
         metadata = {
             "sensor_config_hash": self.config_hash,
             "calibration_config_hash": self._calibration.config_hash,
+            "noise_stream_identity": self._noise_stream_identity,
+            "noise_stream_identity_schema": NOISE_STREAM_IDENTITY_SCHEMA,
             "detector_realization_hash": (
                 self._detector_realization.realization_hash
             ),

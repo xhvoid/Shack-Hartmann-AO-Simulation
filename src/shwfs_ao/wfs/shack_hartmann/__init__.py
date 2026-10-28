@@ -1,12 +1,14 @@
 """Canonical Shack--Hartmann geometry, calibration, and sensors."""
 
 from .calibration import (
+    NOISE_STREAM_IDENTITY_SCHEMA,
     ShackHartmannCalibration,
     ShackHartmannCalibrationError,
     calibrate_zero_phase_reference,
     legacy_calibration_seeds,
     row_ids_for_subapertures,
     shack_hartmann_calibration_hash,
+    shack_hartmann_noise_stream_identity,
 )
 from .geometric import (
     GeometricShackHartmannCalibration,
@@ -53,11 +55,13 @@ __all__ = (
     "make_detector_plane_sampling",
     "validate_spot_intensity_result",
     "validate_optics_backend_result",
+    "NOISE_STREAM_IDENTITY_SCHEMA",
     "ShackHartmannCalibrationError",
     "ShackHartmannCalibration",
     "row_ids_for_subapertures",
     "calibrate_zero_phase_reference",
     "shack_hartmann_calibration_hash",
+    "shack_hartmann_noise_stream_identity",
     "legacy_calibration_seeds",
     "ShackHartmannMeasurementError",
     "DetectorShackHartmannSensor",
