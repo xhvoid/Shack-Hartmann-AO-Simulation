@@ -1680,4 +1680,380 @@ lane, and slow tests. The change touches no HCIPy or 42 m code path.
 2. With authorization: publish `det_emccd_12m_medium_derived@3` with the
    `reset` policy, pin its identity, and rerun E3/E4 at m = 10–12 on it.
 3. Follow-up: address the excursion trigger at faint flux (regularization,
-   or an acceptance rule above 0.5), now that recovery is handled.
+   or an acceptance rule above 0.5), now that recovery is handled. Done in
+   "Excursion trigger at m_AB = 11" below, which recommends
+   `reconstructor.alpha = 0.1` together with the reset.
+
+## Excursion trigger at m_AB = 11 (follow-up, 2026-10-16)
+
+This follows "Next actions (recovery policy)" item 3. With the `reset`
+policy the m_AB = 11 loop on `det_emccd_12m_medium_derived@2` no longer
+latches up. It still has 4–12 excursions per 400 frames, and its mean
+residual is 376.5 ± 88.3 nm against 189.3 nm at m_AB = 10. This section
+finds what triggers the excursions and tests opt-in remedies.
+- Base: `545463e` (the recovery-policy commit on `a31099b`, branch
+  `claude/pensive-tu-cb17dc`). The work was developed and evaluated on an
+  uncommitted copy of that work, byte-identical to `545463e` in all 18
+  files. This section's changes are uncommitted on top.
+- Execution: runs are serial with 2 threads, and the resource guard stays
+  suspended.
+- Enablement: the task brief for this follow-up (2026-10-16) names the
+  development runs on root seeds 11 and 12 and the evaluation on root seeds
+  21–25 at m_AB 10, 11 and 12.
+- Every candidate is a configuration set in code: `reconstructor.alpha`,
+  `reconstructor.min_valid_fraction`, `controller.leak` and
+  `controller.recovery` already exist. No library code, profile, ledger or
+  pinned identity changes.
+
+### Diagnosis (development; root seeds 11 and 12 only)
+
+Tool:
+[`e3_v2_m11_excursion_diagnostic.py`](detector_level_evidence/e3_v2_m11_excursion_diagnostic.py)
+and its output
+[`.txt`](detector_level_evidence/e3_v2_m11_excursion_diagnostic.txt)
+(420 s, 412 MiB).
+- It wraps the WFS to record each lenslet's gate outcome and projects the
+  applied command onto the singular modes of the interaction matrix.
+- It runs @2 with the `reset` policy and reproduces the development values
+  of the previous section exactly (332.2 and 295.9 nm).
+- The development itself used a scratch version of the same diagnostic,
+  which also recorded the per-lenslet residual.
+- After the evaluation, the figures below were aligned with the committed
+  script's output, which uses a slightly stricter selection of locked
+  frames. The arms, expectations and decision rule below are unchanged.
+
+**The interaction matrix has one badly sensed mode: waffle.**
+- The matrix has 832 calibration-valid rows and 476 actuators, with an RMS
+  column norm of 3.65e6 px/m.
+- Its weakest non-null singular value, 9.67e4 px/m (0.0265 of the RMS
+  column norm), belongs to global waffle (overlap 0.94 with the ±1
+  checkerboard). The next six are edge and central-obstruction modes at
+  3.4e5–6.2e5. The median is 3.72e6.
+- The @2 damping, `alpha = 0.001` relative, is 3.6e3 px/m: 4 % of the
+  waffle singular value. The solve is unregularized least squares for
+  every mode except piston.
+
+**Waffle wanders, and the SH barely restores it.**
+- The waffle coefficient (mode norm) of the applied command is close to a
+  random walk. On locked frames its per-frame increment has a std of
+  0.85 µm at m_AB = 8, 1.1 µm at 10 and 2.5–3.6 µm at 11. That growth
+  follows the centroid noise (median σ 0.07, 0.18 and 0.29 px).
+- Regressing the increment on the coefficient three frames earlier gives an
+  effective restoring gain of 0.07–0.17. A mode sensed as calibrated would
+  give the loop gain, 0.3.
+
+**Waffle growth precedes most excursions.**
+- At m_AB = 11, 11 of the 14 resets in seeds 11 and 12 are preceded by a
+  waffle coefficient above its locked-frame 90th percentile (8.3 and
+  9.8 µm) three frames before the first rejected frame. The values are
+  8.7–29.6 µm, against a locked median of 3.7–3.9 µm.
+- In the five frames before a first rejection the valid fraction averages
+  0.78. Spots broaden and shift: the clipping gate fails on 18 % of
+  lenslets, the SNR_T ≥ 7 support on 12 %, the flux gate on 10 % and the
+  σ gate on 6 %. The scratch diagnostic showed the intra-lenslet residual
+  (piston and tilt removed per lenslet) doubling, from a locked median of
+  110 nm to 231 nm.
+- The 50–70 %-valid frames that follow are reconstructed from fewer rows,
+  so waffle and the edge modes are sensed even worse. The collapse
+  completes in a few frames.
+- At m_AB = 8 and 10 the same wander occurs (p99 about 12 µm), but the
+  validity margins are wider, so it does not drop lenslets.
+
+**Conclusion (development).** The trigger is the unregularized waffle mode,
+together with the weakly sensed edge modes, near the m_AB = 11 validity
+margin. It is not a property of the acceptance threshold or of the
+integrator.
+
+### Development runs (before the protocol; root seeds 11 and 12 only)
+
+The table gives the mean post-update residual over frames 100–399, the
+mean valid fraction in brackets, and the resets over all 400 frames. The
+`reset` policy is on unless the arm says "alone".
+
+| m_AB | Arm | Seed 11 | Seed 12 |
+| --- | --- | --- | --- |
+| 11 | `reset` (α = 0.001, the reference) | 332.2 nm (0.881), 8 resets | 295.9 (0.886), 6 |
+| 11 | α = 0.03 + reset | 196.8 (0.952), 0 | — |
+| 11 | **α = 0.1 + reset** | **189.3 (0.957), 0** | **181.0 (0.957), 0** |
+| 11 | α = 0.3 + reset | 269.4 (0.957), 0 | — |
+| 11 | α = 0.1 alone | 189.3 (0.957), identical | 181.0 (0.957), identical |
+| 11 | min_valid_fraction 0.7 + reset | 345.3 (0.892), 9 | 333.9 (0.888), 6 |
+| 11 | min_valid_fraction 0.7 alone | 1380.7 (0.463), latched | 1602.6 (0.001), latched |
+| 11 | leak 0.01 + reset | 272.4 (0.920), 5 | 300.0 (0.895), 5 |
+| 10 | `reset` | 182.8 (0.999) | 179.7 (0.999) |
+| 10 | α = 0.1 + reset | 176.9 (1.000) | 171.6 (1.000) |
+| 10 | leak 0.01 + reset | 187.1 (0.999) | 181.7 (1.000) |
+| 8 | `reset` | 179.0 (0.999) | — |
+| 8 | α = 0.1 + reset | 175.2 (1.000) | — |
+
+**Reading.**
+- **Damping.** α = 0.1 removes every rejected frame in both seeds, and the
+  residual falls to the m_AB = 10 level.
+  - The reconstructor gain on waffle falls to 0.066 of its unregularized
+    value. Its per-frame drive falls to 72–81 nm at m_AB = 11, and to
+    76–79 nm at m_AB 8 and 10 (scratch diagnostic).
+  - Only 25 of 475 modes keep less than 0.9 of their gain, and the median
+    mode keeps 0.99.
+  - α = 0.03 is almost as good: it damps waffle by 0.44 only.
+  - α = 0.3 slows 185 modes and costs 80 nm.
+  - α = 0.1 is chosen. It also lowers the residual at m_AB = 10 (−5.9,
+    −8.1 nm) and at m_AB = 8 (−3.8 nm), where the same wander occurs.
+- **The reset is then idle.** With α = 0.1 no frame is rejected, so the
+  arm without the reset gives identical residuals.
+- **A higher acceptance threshold.** It does not address the trigger: the
+  excursion is already under way when frames start being rejected. With
+  the reset it only rejects earlier (+13 and +38 nm). Alone, it freezes
+  the DM in a bad shape sooner and latches up.
+- **Leak.** A leak of 0.01 adds a restoring force to every mode, waffle
+  included. With the reset it halves the excursions on seed 11 (−60 nm),
+  does nothing on seed 12 (+4 nm), and costs +2 to +4 nm at m_AB = 10.
+
+### Predeclared protocol (written 2026-10-16 before any evaluation run)
+
+**Runs.**
+- Matrix: six arms × m_AB ∈ {10, 11, 12} × root seeds 21–25, on
+  `det_emccd_12m_medium_derived@2`. Each arm is set in code; no profile is
+  created or changed.
+- Settings: 400 frames, burn-in 100, metrics over frames 100–399, summary
+  telemetry, long-exposure science at 2.2 µm. These are identical to the
+  recovery-policy evaluation.
+- Command: `scripts/run_detector_level_evidence.py e3-excursion --arm
+  <arm>`, one batch of 15 runs (about 18 min) per arm. Order: `reset`,
+  `damped_reset`, `damped`, `strict_reset`, `leaky_reset`, `strict`.
+- Record:
+  [`det_excursion_e3_12m_v2.json`](detector_level_evidence/det_excursion_e3_12m_v2.json).
+
+**Arms.** These are fixed from the development runs and do not change
+after this point. "Reset" is `controller.recovery =
+{rejected_frames_before_decay: 2, decay_per_rejected_frame: 1.0}`.
+
+| Arm | `controller.recovery` | Change from @2 |
+| --- | --- | --- |
+| `reset` (the reference) | reset | none |
+| `damped_reset` (candidate 1) | reset | `reconstructor.alpha = 0.1` |
+| `damped` (candidate 1, alone) | none | `reconstructor.alpha = 0.1` |
+| `strict_reset` (candidate 2) | reset | `reconstructor.min_valid_fraction = 0.7` |
+| `strict` (candidate 2, alone) | none | `reconstructor.min_valid_fraction = 0.7` |
+| `leaky_reset` (candidate 3) | reset | `controller.leak = 0.01` |
+
+**Endpoints.**
+- Primary: the paired-by-seed change in mean post-update residual against
+  `reset` at m_AB = 11.
+- Secondary: valid fraction, K-band peak Strehl, lost lock (final residual
+  above open loop), resets (decayed frames), the reconstruction-usable
+  fraction, and neutrality at m_AB = 10 and 12.
+
+**Identity check.** Every `reset` run must equal the recorded `reset` run
+of the same magnitude and seed in
+[`det_recovery_e3_12m_v2.json`](detector_level_evidence/det_recovery_e3_12m_v2.json)
+exactly: residuals, valid fractions, lost-lock flag, science metrics,
+recovery counts and config hash.
+
+**Expectations.**
+- **`damped_reset` at m_AB = 11.**
+  - Every seed improves against `reset`. The mean is 175–230 nm and the
+    paired mean change −130 to −250 nm. The recorded `reset` seeds range
+    from 261 to 496 nm.
+  - No reset in at least 4 of 5 seeds.
+  - Valid fraction 0.94–0.97 (the partly illuminated edge lenslets below
+    the SNR_T floor are lost), K-band peak Strehl 0.65–0.75, lost lock
+    0/5.
+  - By the predeclared limit definition (valid < 0.9, or Strehl below
+    half the m = 8 value), m_AB = 11 is then *within* the limit. The limit
+    moves to between 11 and 12.
+- **`damped` at m_AB = 11.** The same residuals as `damped_reset` in every
+  seed where `damped_reset` has no reset. If a seed has an excursion,
+  `damped` may latch up there; that is reported, not tuned.
+- **`strict_reset` at m_AB = 11.** No improvement: a paired mean change
+  within ±40 nm and 4–12 resets per run.
+- **`strict` at m_AB = 11.** It latches up as the policy-off loop does:
+  residual above 1 µm and lost lock in at least 4 of 5 seeds.
+- **`leaky_reset` at m_AB = 11.** A partial effect: a paired mean change
+  of −80 to +20 nm, and 3–10 resets per run.
+- **m_AB = 10.**
+  - `damped_reset` and `damped`: a paired change of −12 to 0 nm against
+    `reset`, valid ≥ 0.99.
+  - `strict_reset` and `strict`: bit-identical to `reset`. The threshold
+    never binds: the recorded minimum valid fraction at m = 10 is 0.93
+    over frames 100–399, and it stayed ≥ 0.97 in every development frame.
+  - `leaky_reset`: within 0 to +8 nm.
+- **m_AB = 12.** No lenslet is valid, so no arm reconstructs. Every arm's
+  residual and science metrics are bit-identical to `reset` (open loop).
+  Config hashes differ by construction.
+
+**Decision rule.** An arm is recommended only if all four hold:
+1. m = 11 improves against `reset` in all five seeds;
+2. m = 11 loses lock in no seed;
+3. m = 10 has a paired mean change ≤ +2 nm and no seed worse by more than
+   5 nm (a bit-identical seed counts as 0);
+4. m = 12 is bit-identical to `reset` in residual and science.
+
+If both damped arms qualify, the recommendation is α = 0.1 *with* the
+reset kept as a safety net. The reset costs nothing when no frame is
+rejected.
+- A recommendation is for a future opt-in profile version only. No
+  published profile or baseline changes without the user's authorization.
+- Departures are reported, not tuned away.
+
+### Evaluation results (2026-10-16)
+
+**Run.** `… e3-excursion --arm
+reset|damped_reset|damped|strict_reset|leaky_reset|strict`, writing
+[`det_excursion_e3_12m_v2.json`](detector_level_evidence/det_excursion_e3_12m_v2.json).
+- 90 runs, none refused.
+- The record was appended by six invocations, 11:26–13:12 CEST. Its
+  header names the last one; each run carries its own label and seed.
+- Each arm took 1049–1072 s wall at 0.150–0.165 s per frame; peak RSS was
+  391–414 MiB. No arm changes the per-frame cost.
+
+**Identity check: met.** All 15 `reset` runs equal the recorded `reset`
+runs of
+[`det_recovery_e3_12m_v2.json`](detector_level_evidence/det_recovery_e3_12m_v2.json)
+exactly: every residual and valid fraction, the lost-lock flag, every
+science metric, the recovery counts and the config hash.
+
+Residual means are over frames 100–399, ± the seed standard deviation.
+Paired Δ is against `reset`, ± its standard error. "Resets" counts decayed
+frames over all 400 frames (one per reset at m_AB 10 and 11).
+
+| m_AB | Arm | Residual | Paired Δ | Valid | K peak Strehl | Lost lock | Resets per run |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 10 | reset | 189.3 ± 6.2 nm | — | 0.998 | 0.718 ± 0.013 | 0/5 | 0 |
+| 10 | **damped_reset**, **damped** | **179.9 ± 1.8 nm** | **−9.4 ± 2.2 nm** (−2.8, −14.0, −6.0, −14.3, −9.8) | 1.000 | 0.733 ± 0.005 | 0/5 | 0 |
+| 10 | strict_reset, strict | 189.3 ± 6.2 nm | 0, bit-identical in 5/5 each | 0.998 | 0.718 | 0/5 | 0 |
+| 10 | leaky_reset | 194.6 ± 5.4 nm | +5.3 ± 1.1 nm (+7.1, +2.3, +6.1, +7.5, +3.3) | 0.999 | 0.707 ± 0.012 | 0/5 | 0 |
+| 11 | reset | 376.5 ± 88.3 nm | — | 0.877 | 0.508 ± 0.084 | 0/5 | 7, 9, 4, 12, 6 |
+| 11 | **damped_reset**, **damped** | **195.3 ± 4.8 nm** | **−181.1 ± 37.7 nm** (−171.7, −223.7, −70.5, −295.1, −144.7) | 0.957 | **0.708 ± 0.008** | **0/5** | **0** (no frame rejected) |
+| 11 | strict_reset | 366.9 ± 102.1 nm | −9.5 ± 21.7 nm (−68.4, +62.5, −8.7, −35.1, +2.0) | 0.892 | 0.522 ± 0.091 | 0/5 | 5, 12, 3, 11, 7 |
+| 11 | leaky_reset | 360.2 ± 55.0 nm | −16.3 ± 20.2 nm (+16.3, −38.2, +5.8, −85.4, +20.1) | 0.885 | 0.521 ± 0.055 | 0/5 | 8, 8, 5, 10, 7 |
+| 11 | strict | 1871 ± 161 nm | +1495 ± 59 nm | 0.037 | 0.001 | 5/5 | — (no policy) |
+| 12 | every arm | 1315.7 ± 110.8 nm (= open loop) | 0, bit-identical in 5/5 each | 0.000 | 0.019 | 0/5 | DM stays flat |
+
+**`damped_reset` at m_AB = 11, per seed (21–25).**
+
+| Quantity | Seed 21 | Seed 22 | Seed 23 | Seed 24 | Seed 25 |
+| --- | --- | --- | --- | --- | --- |
+| Residual, nm | 190.2 | 198.1 | 190.7 | 201.2 | 196.4 |
+| Residual with `reset`, nm | 361.8 | 421.8 | 261.2 | 496.4 | 341.1 |
+| Resets (`reset` arm) | 0 (7) | 0 (9) | 0 (4) | 0 (12) | 0 (6) |
+| K peak Strehl (`reset` arm) | 0.714 (0.513) | 0.698 (0.467) | 0.717 (0.622) | 0.706 (0.396) | 0.706 (0.540) |
+
+- Every frame is reconstructed (usable fraction 1.000). The valid fraction
+  over frames 100–399 never drops below 0.945, against 0.000 for `reset`.
+  Final-frame residuals are 178–218 nm.
+- **`damped` equals `damped_reset`.** Residual, valid fraction and science
+  metrics are identical in all 15 runs: no frame is rejected at m_AB 10
+  or 11, so the reset never acts. At m_AB 12 it only decays a flat DM.
+- **`strict` at m_AB = 11.** It matches the recorded policy-off run in seed
+  22 only. In the other seeds the stricter threshold freezes the DM on
+  different frames, but all five latch up (1.67–2.09 µm).
+- **`strict_reset` and `strict` at m_AB = 10** are bit-identical to `reset`
+  (minimum valid fraction 0.930). The threshold never binds there.
+- **`leaky_reset` at m_AB = 10.** The leak costs 2–8 nm, and one seed dips
+  to a valid fraction of 0.892 on one frame without a rejection.
+
+### Predeclared expectations against outcomes (excursion trigger)
+
+| Expectation (written before the runs) | Outcome |
+| --- | --- |
+| `reset` equals the recorded `reset` runs exactly | 15/15 identical: **met** |
+| m = 11 `damped_reset`: every seed improves; mean 175–230 nm; paired mean −130 to −250 nm | every seed improves (−70.5 to −295.1 nm); mean 195.3 nm; paired −181.1 nm: **met** |
+| m = 11 `damped_reset`: no reset in ≥ 4/5 seeds; valid 0.94–0.97; K Strehl 0.65–0.75; lost lock 0/5 | 0 resets in 5/5; valid 0.956–0.958; K Strehl 0.708 ± 0.008; lost lock 0/5: **met** |
+| m = 11 within the predeclared limit definition, so the limit moves to between 11 and 12 | valid 0.957 ≥ 0.9 and Strehl 0.708 above half the m = 8 value (0.36); m = 12 still has no valid lenslet: **met** |
+| m = 11 `damped`: identical to `damped_reset` where that arm has no reset | identical in 5/5 (no seed had a reset): **met** |
+| m = 11 `strict_reset`: paired mean within ±40 nm, 4–12 resets | −9.5 nm: **met**; resets 3–12, seed 23 has 3: **minor departure** (one fewer than the predicted lower bound) |
+| m = 11 `strict`: above 1 µm and lost lock in ≥ 4/5 | 1.67–2.09 µm, lost lock 5/5: **met** |
+| m = 11 `leaky_reset`: paired mean −80 to +20 nm, 3–10 resets | −16.3 nm; resets 5–10: **met** |
+| m = 10 damped arms: paired −12 to 0 nm, valid ≥ 0.99 | mean −9.4 nm, but two seeds at −14.0 and −14.3 nm lie beyond −12 on the favourable side; valid 1.000: **met for the mean**, two seeds better than the predicted bound |
+| m = 10 strict arms bit-identical to `reset` | 5/5 each: **met** |
+| m = 10 `leaky_reset` within 0 to +8 nm | +2.3 to +7.5 nm: **met** |
+| m = 12 every arm bit-identical to `reset` in residual and science | 25/25: **met** |
+
+### Decision and interpretation
+
+**Decision rule applied.**
+
+| Arm | 1. m = 11 improves in 5/5 | 2. no lost lock at m = 11 | 3. m = 10 mean ≤ +2 nm, no seed > +5 nm | 4. m = 12 bit-identical | Qualifies |
+| --- | --- | --- | --- | --- | --- |
+| `damped_reset` | yes | yes | yes (−9.4 nm) | yes | **yes** |
+| `damped` | yes | yes | yes (−9.4 nm) | yes | **yes** |
+| `strict_reset` | no (seeds 22, 25 worse) | yes | yes (0) | yes | no |
+| `leaky_reset` | no (seeds 21, 23, 25 worse) | yes | no (+5.3 nm; three seeds above +5) | yes | no |
+| `strict` | no | no (5/5) | yes (0) | yes | no |
+
+**What triggers the excursions.**
+- The excursions at m_AB = 11 are triggered by an unregularized
+  reconstructor, not by the acceptance rule or the integrator.
+  - The @2 damping (`alpha = 0.001` relative) leaves the global waffle
+    mode, sensed about 40× more weakly than a typical mode, effectively
+    unregularized.
+  - The SH barely restores waffle, so measurement noise drives it as a
+    random walk.
+  - At m_AB = 11 its wander is enough to broaden and clip the spots of
+    lenslets that sit close to the SNR_T and clipping limits. The valid
+    fraction then drops through 0.5.
+- Raising the relative damping to 0.1 removes that drive. The
+  development seeds and all five evaluation seeds then run 400 frames
+  without a single rejected frame.
+
+**What changes, and what does not.**
+- With `alpha = 0.1`, the m_AB = 11 loop is a steady lock: 195 nm and a
+  K-band peak Strehl of 0.71, against 189 nm and 0.72 at m_AB = 10 under
+  @2.
+- The predeclared limiting-magnitude definition now places m_AB = 11
+  inside the limit. The limit moves to between 11 and 12, which is
+  consistent with the original E3 prediction of 11.5–12.
+- m_AB = 12 is unchanged: no lenslet reaches SNR_T ≥ 7, and the DM stays
+  flat in every arm.
+- The same damping also lowers the residual at m_AB = 10, by 9.4 nm
+  paired. Development showed −3.8 nm at m_AB = 8 on one seed. The
+  evaluation does not cover m_AB = 8 or 9, so no claim is made there.
+- A stricter acceptance threshold and a small leak leave the trigger in
+  place. The threshold only moves the rejection earlier; alone it brings
+  back the latch-up. The leak trades a few nanometres at m_AB = 10 for
+  fewer, not zero, excursions at m_AB = 11.
+
+**Recommendation.**
+- Under the predeclared decision rule both damped arms qualify. Following
+  the predeclared tie-break, the recommendation is `reconstructor.alpha =
+  0.1` *with* the reset policy kept as a safety net. Any future excursion
+  (another seed, worse seeing, a stuck actuator) then recovers instead of
+  latching up. On these runs the reset never acts and costs nothing.
+- The concrete form is a future opt-in profile version, for example
+  `det_emccd_12m_medium_derived@3` with `reconstructor.alpha = 0.1` and
+  `controller.recovery = {rejected_frames_before_decay: 2,
+  decay_per_rejected_frame: 1.0}`. It supersedes the recovery-only @3
+  suggested in the previous section.
+- That version is not created here. A new profile, its identity pin, a
+  rerun of E3/E4 on it (including m_AB 8 and 9) and any baseline need the
+  user's authorization.
+- `det_emccd_12m_medium_derived@2` and every other published profile are
+  unchanged. The summary's "Still out of bounds" item on the m = 11
+  latch-up therefore remains true of the published profiles.
+- **Not tested here.** The 42 m `det_ccd_42m_r3band_derived@1` shares the
+  0.001 damping; whether its faint-end behaviour has the same trigger is
+  not tested. The 2 m detector profiles use TSVD with
+  `min_valid_fraction = 0.75` and are not affected by this setting.
+
+### Verification (excursion-trigger follow-up)
+
+| Check | Result |
+| --- | --- |
+| Changes on top of `545463e` | `scripts/run_detector_level_evidence.py` (the `e3-excursion` subcommand and its six arms), this section, the evaluation record, and the diagnostic with its output. No library code, test, profile, ledger or manifest changes. |
+| Profile identities | unchanged by construction (no source change). `scripts/generate_detector_level_profiles.py --check` exits 0. |
+| `reset` closed loops | 15/15 recorded `reset` runs reproduced exactly; the diagnostic reproduces the development values of the recovery-policy section (332.2 and 295.9 nm) |
+| Regression `-m "not hcipy and not slow and not elt_scale"`, one process, 2 threads | **2120 passed, 18 skipped, 2 xfailed, 0 failed**, 648 s by pytest's clock, peak 740 MiB. `/usr/bin/time` reports 3919 s wall against 577 s CPU: the host slept during the run, so read the wall time as host state, not cost. |
+| `ruff check src tests scripts examples build_support` and the new diagnostic | clean |
+| `mypy` | no issues in 130 source files |
+
+**Not run here.** HCIPy-marked and `elt_scale` tests, the README smoke
+lane, and slow tests. Nothing here touches library code.
+
+**Next actions (excursion trigger).**
+1. Commit only with the user's authorization, as Xu Han only.
+2. With authorization: publish `det_emccd_12m_medium_derived@3` with
+   `reconstructor.alpha = 0.1` and the `reset` policy, pin its identity,
+   and rerun E3 (m_AB 8–13) and E4 on it.
+3. Optional: test whether `det_ccd_42m_r3band_derived@1`, which shares
+   `alpha = 0.001`, shows the same waffle wander at its faint end (needs a
+   gated 42 m enablement).
