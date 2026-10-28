@@ -1465,7 +1465,11 @@ _RESPONSE_INPUT_PERTURBATIONS = {
     ),
 }
 # ``enabled`` selects the geometric sensor, which carries its own identity.
-_RESPONSE_INPUT_EXCLUSIONS = {"detector.enabled"}
+# ``wfs.lenslet_axis`` only applies to the HCIPy lenslet backend, and this
+# tiny native system refuses a non-default value.  The response identity binds
+# it through the HCIPy optics config hash, which changes with the axis
+# (tests/backends/hcipy/test_hcipy_lenslet_axis.py).
+_RESPONSE_INPUT_EXCLUSIONS = {"detector.enabled", "wfs.lenslet_axis"}
 
 
 def _setting(config: SystemConfig, name: str) -> object:
