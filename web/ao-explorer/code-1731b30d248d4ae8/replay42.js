@@ -15,9 +15,9 @@ function member(name) {
 function setButtons() { prefixes.forEach(p=>{$(`${p}play`).textContent=playing?'Pause':'Play';$(`${p}play`).setAttribute('aria-pressed',String(playing));}); }
 function pause() { playing=false; setButtons(); }
 function fail(error) {
-  pause(); $('error').hidden=false; $('error').textContent=`42 m recording unavailable: ${error.message}. Any previously displayed frame remains the last verified frame; reload to retry.`;
+  pause(); $('error').hidden=false; $('error').textContent=`42 m recording unavailable: ${error.message}. Any previously displayed frame remains the last frame that passed file integrity checks; reload to retry.`;
   document.querySelectorAll('#replay42 .transport button, #replay42 .transport input, input[name="r42-mode"]').forEach(e=>e.disabled=true);
-  $('status').textContent='The requested recording or asset could not be verified.';
+  $('status').textContent='The requested recording or asset failed its integrity checks.';
 }
 function atlas(k) {
   const key=k==='mean'?'mean':String(k).padStart(4,'0');
@@ -62,7 +62,7 @@ async function show(next) {
     $('photo-readout').textContent=mean?'400-frame intensity mean · 0.200–1.000 s · same image mode as the PSF panels':`Recorded instantaneous images · frame ${k} · ${time} s`;
     $('mode-note').textContent=(mean?`PSFs and binary images: 400-frame intensity mean. Wavefronts and RMS: frame ${k}. `:`All wavefronts, PSFs and binary images: recorded frame ${k}. `)+`Image field ${data.field_arcsec.toFixed(3)}″ × ${data.field_arcsec.toFixed(3)}″; native sampling ${(data.step_arcsec*1000).toFixed(2)} mas.`;
     charts();
-    $('status').textContent='Verified 42 m recording · fixed configuration · 126 actual replay snapshots';
+    $('status').textContent='Recorded simulation loaded · file integrity checked · 126 saved snapshots';
     if(index+1<data.indices.length)atlas(data.indices[index+1]).catch(fail);
   } catch(error) { fail(error); } finally { if(request===ticket)busy=false; }
 }
@@ -105,7 +105,7 @@ function download(host,label,name) {
   });$(host).append(link);
 }
 async function load(entry,entryUrl) {
-  if(loaded||loading)return;loading=true;$('status').textContent='Loading and verifying the fixed 42 m recording…';
+  if(loaded||loading)return;loading=true;$('status').textContent='Loading the 42 m simulation recording and checking file integrity…';
   try {
     const e=entry.replay42;require(e?.schema==='ao-explorer.recording42-entry.v1','No supported 42 m recording entry');
     const r=await fetchVerifiedJson({href:e.manifest,bytes:e.manifest_bytes,sha256:e.manifest_sha256,media_type:'application/json'},entryUrl);
@@ -118,9 +118,9 @@ async function load(entry,entryUrl) {
     require(data.metrics.time_s.every((v,i)=>Math.abs(v-i/500)<1e-12),'42 m timestamps are inconsistent');
     const source=await fetchVerifiedImage(member('source.png'),manifestUrl);$('source').getContext('2d').drawImage(source.bitmap,0,0);source.bitmap.close();
     document.querySelectorAll('.r42-scale').forEach(e=>e.style.width=`${.2/data.field_arcsec*100}%`);
-    $('mean-rms-u').textContent=`${data.mean_rms_nm.atmosphere.toFixed(1)} nm`;$('mean-rms-c').textContent=`${data.mean_rms_nm.residual.toFixed(1)} nm`;$('mean-strehl').textContent=data.mean_peak_strehl.corrected.toFixed(4);
+    $('mean-rms-u').textContent=`${data.mean_rms_nm.atmosphere.toFixed(1)} nm`;$('mean-rms-c').textContent=`${data.mean_rms_nm.residual.toFixed(1)} nm`;$('mean-strehl').textContent=`≈ ${data.mean_peak_strehl.corrected.toFixed(2)}`;
     $('config-hash').textContent=data.config_hash;
-    $('checks').textContent=`Recorded RMS and timestamps match the loop history; independent intensity accumulations agree. Saved maps and convolution alignment/flux checks passed. ${data.trajectory_quality.unusable_reconstruction_frames} unusable reconstruction frames; maximum DM saturation fraction ${(data.trajectory_quality.max_dm_saturation_fraction*100).toFixed(3)}%. An eight-step fixture checked observer-neutral loop history; there was no second full 42 m control run.`;
+    $('checks').textContent=`Numerical consistency checks: recorded RMS and timestamps match the loop history; separate intensity accumulations agree. Saved maps and convolution alignment/flux checks passed. ${data.trajectory_quality.unusable_reconstruction_frames} unusable reconstruction frames; maximum DM saturation fraction ${(data.trajectory_quality.max_dm_saturation_fraction*100).toFixed(3)}%. A separate eight-step check found that recording diagnostics did not change the loop history. This did not repeat the full 42 m run or validate instrument performance.`;
     for(const [label,name] of [['Source provenance','evidence/source.json'],['Linear template','evidence/binary-template.npz'],['Mean convolved images','evidence/binary-mean.npz']])download('source-downloads',label,name);
     for(const [label,name] of [['Public run plan','evidence/plan.json'],['Run summary','evidence/run-summary.json'],['All frame metrics','data.json'],['Export checks','evidence/export-checks.json'],['Source and archive identities','evidence/publication.json']])download('downloads',label,name);
     colourbars();loaded=true;await show(data.indices.indexOf(100));
@@ -139,5 +139,10 @@ export function initReplay42(entry,entryUrl) {
   document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
   if('IntersectionObserver' in window)new IntersectionObserver(items=>{if(items.some(i=>i.isIntersecting))load(entry,entryUrl);else if(loaded)pause();},{rootMargin:'200px'}).observe(document.getElementById('replay42'));
   else load(entry,entryUrl);
-  const hash=()=>{if(location.hash==='#replay42')load(entry,entryUrl);};window.addEventListener('hashchange',hash);hash();
+  const hash=()=>{
+    const id=location.hash.slice(1);
+    if(['replay42-methods','replay42-source'].includes(id))document.getElementById(id).open=true;
+    if(['replay42','replay42-methods','replay42-source'].includes(id))load(entry,entryUrl);
+  };
+  window.addEventListener('hashchange',hash);hash();
 }
