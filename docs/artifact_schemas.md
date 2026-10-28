@@ -19,7 +19,7 @@ The installed schema resources are under
 | `validation_table_sidecar.schema.json` | `shwfs_ao.validation_table_sidecar`, v3 | exact validation CSV header/order/units/hash and run identity |
 | `runtime_table_sidecar.schema.json` | `shwfs_ao.runtime_table_sidecar`, v3 | exact runtime CSV header/order/units/hash and run identity |
 | `artifact_manifest.schema.json` | `shwfs_ao.artifact_manifest`, v3 | content-addressed member list for one multi-file write |
-| `cross_backend_baseline.schema.json` | `shwfs_ao.cross_backend_baseline`, v1 | strict accepted cross-backend interchange record, separate from fast metrics |
+| `cross_backend_baseline.schema.json` | `shwfs_ao.cross_backend_baseline`, v1 | strict accepted cross-backend baseline record, separate from fast metrics |
 
 Schema-v2 fast-reference JSON and CSV layouts remain compatibility contracts
 even though no new v2 JSON Schema resource is added. They are read by the
@@ -28,20 +28,28 @@ deprecation window.
 
 ### Current cross-backend baseline record
 
-The AO-REF-018 executable comparison suite uses its version-1 runtime contract
-in `shwfs_ao.validation.regression`. Reports/baselines use
-`artifact_schema_name`, `artifact_schema_version`, `comparison_config`,
-`conventions`, `component_hashes`, `fixture_hashes`, `environment`, and
-`comparisons`; an accepted baseline adds `generator` and `acceptance`. The
-packaged `cross_backend_baseline.json` and candidate script use this contract.
+The AO-REF-018 version-1 runtime contract in
+`shwfs_ao.validation.regression` is the canonical shape of this family.
+Reports/baselines use `artifact_schema_name`, `artifact_schema_version`,
+`comparison_config`, `root_seed`, `conventions`, `component_hashes`,
+`fixture_hashes`, `environment`, and `comparisons`; an accepted baseline adds
+`generator` and `acceptance`. The packaged `cross_backend_baseline.json` and
+the candidate script use this contract, and the installed
+`cross_backend_baseline.schema.json` describes exactly the same shape: the
+packaged baseline validates against the packaged schema, and CI enforces
+that cross-validation. An earlier draft of the schema resource described a
+normalized `schema_name`/`artifact_kind`/`shared_input_hashes` envelope that
+no writer ever emitted; it was superseded by the runtime contract.
 
-The installed JSON Schema resource uses the normalized `schema_name`,
-`schema_version`, `artifact_kind`, `shared_input_hashes`, estimator/sample/bin,
-metric/tolerance, provenance/reproducibility shape. There is currently no
-automatic converter between those two version-1 representations. Consumers of
-the packaged executable baseline must use
-`validation.regression.load_cross_backend_baseline()` rather than assuming the
-other shape or guessing by field similarity.
+The strict schema pins the complete thirteen-kind comparison inventory in
+canonical order, requires acceptance reason/review-reference/timestamp and
+generator identity, forbids unknown fields at every level, and constrains
+every gating criterion (finite JSON numerics, non-negative absolute
+tolerances, explicit range bounds, a `statistical_definition` on the
+statistical comparison). Consumers load the packaged executable baseline
+through `validation.regression.load_cross_backend_baseline()`, which applies
+the same contract plus the range-ordering and value-finiteness checks JSON
+Schema cannot express.
 
 ## Frozen schema-v2 compatibility
 
