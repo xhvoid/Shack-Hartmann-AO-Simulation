@@ -2,8 +2,8 @@
 
 Research record for roadmap item G11 (pre-refactor audit F-08; AR-008 in
 the later review, whose report is not available here). Written
-2026-10-20 on task branch `claude/fervent-einstein-4g3syq`, from source commit
-`10f04e268871a19bfedb47b035f2905b67f23e43` (`claude/cleanup-refactor-exec`).
+2026-10-20 against cleanup source commit
+`10f04e268871a19bfedb47b035f2905b67f23e43`.
 
 Access status vocabulary: `full text checked`, `relevant passage checked`,
 `abstract only`, `search summary only` (a web-search tool's generated summary
@@ -123,5 +123,5 @@ None of these is in the tracked tree. All lie under the git-ignored `outputs/`.
 | --- | --- | --- |
 | pre-refactor audit report with finding F-08 | `outputs/pre_refactor_audit/20261017T143700Z/` (main checkout, tree `f09eb16`) | G11's T2 locators (section 3.1, equation 13, Appendix A) cannot be traced to what that audit read |
 | AR-008 | a review run under `outputs/audit_reconciliation/` (the ID does not occur anywhere in the tracked tree) | its exact wording, including any finite-field statement, is unknown; T3 is reconstructed from this assignment's text |
-| Reconciliation run records | `outputs/audit_reconciliation/2026-10-18-claude-27f34fa/` and the 2026-10-19/20 runs | the ledger status of F-08 (open, deferred) is known only from the status file |
+| Reconciliation run records | the retained reconciliation archive for 2026-10-18 at `27f34fa`, and the 2026-10-19/20 runs | the ledger status of F-08 (open, deferred) is known only from the status file |
 | [Tho06] full text | publisher, or an open copy | T1–T5 stay unverified (section 1) |

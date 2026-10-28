@@ -100,7 +100,7 @@ run, including the runs of other arms, must share the record's series
 protocol (version, frames, burn-in, execution options, code and environment),
 so arms of ``e3-recovery`` and ``e3-excursion`` append to one record with
 ``--resume`` only under the same protocol.  Each run's protocol names the
-environment that produced it (series protocol version 3, 2026-10-18, GPT
+environment that produced it (series protocol version 3, 2026-10-18,
 pre-refactor audit F-03); version-2 records do not, so they cannot be
 continued, and nothing is attributed to them after the fact.  Series
 protocol version 4 (2026-10-20, OBS-07) takes the code identity from the

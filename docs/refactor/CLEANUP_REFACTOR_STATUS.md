@@ -10,26 +10,31 @@ their results, and what remains. The final implementation is explained in
 [`../technical_reference.md`](../technical_reference.md); this record explains
 how the work happened.
 
-- **Run identifier:** `2026-10-18-claude-2312502`.
-- **Machine-readable evidence:** `outputs/cleanup_refactor/2026-10-18-claude-2312502/`
+- **Run:** cleanup starting at `2312502`, 2026-10-18.
+- **Machine-readable evidence:** `<cleanup-evidence>/`
   in the execution checkout (ignored by git, as `outputs/` always is). The
   harness that produced every inventory, witness and benchmark is in its
   `harness/` directory.
-- **Execution checkout:** the git worktree
-  `.claude/worktrees/cleanup-refactor-exec` on branch
-  `claude/cleanup-refactor-exec`, created from `main` at `2312502`. The user
-  said that another agent works on similar tasks at the same time, so every
-  edit happens in this isolated worktree and the main checkout
+- **Execution checkout:** an isolated cleanup worktree created from `main`
+  at `2312502`. Concurrent work on related tasks required isolation, so
+  every edit happens in this worktree and the main checkout
   (`/Users/xuhan/Documents/AO Simulation`) is left untouched. Its uncommitted
   inputs were copied byte for byte (SHA-256 recorded) into this worktree.
 - **Committed at the user's request; nothing pushed, tagged or accepted.**
   On 2026-10-18 the user asked to commit the work so far on the branch above,
   authored by Xu Han only, together with the untracked author files the docs
-  link to (`docs/current_limitations.md`, the three refactor prompts and
+  link to (`docs/current_limitations.md`, the three refactor specifications and
   `docs/repository_optimization_ticket.md`). `AO_REFACTOR_MASTER_TICKETS_REVISED.md`,
-  `.agents/` and the Codex plugin source under
+  local workspace settings and the validation-workflow source under
   `plugins/ao-simulation-research-validation/` are linked from no document and
   stay untracked. The S1 record is committed as produced.
+
+**Evidence locators.** Run labels and angle-bracketed locators below describe
+retained local archives by task, date and source revision. They are editorial
+labels, not replacement record IDs or renamed directories. The original execution paths and branch names are
+preserved in the [source snapshot](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/642a5b76de97e1fbe46fc49dd5fad232fb725219/docs/refactor/CLEANUP_REFACTOR_STATUS.md)
+and in unchanged raw records. Numerical results, source revisions, finding IDs
+and evidence hashes are retained.
 
 ## Summary
 
@@ -44,12 +49,12 @@ how the work happened.
 | CLN-06 | DONE | Notebooks and examples use installed APIs (one documented exception: the separate TIPTOP study loads its own support module); notebook governance intact; wheel pins and docs graph follow the two new private modules; no tracked clutter exists, and the main checkout's ignored clutter was inventoried and retained; nothing deleted |
 | CLN-07 | DONE (resource model written in CLN-08) | Interleaved A/B (baseline snapshot of `2312502` against the cleanup tree), 10 fresh-process timed runs per side and case: every build, per-frame, end-to-end and peak-RSS median within −3.6 % to +1.4 %; identical results; no regression to investigate |
 | CLN-08 | DONE (reviewed; R-01–R-07 repaired) | `docs/technical_reference.md` complete (sections 1–9, 1083 lines): 11 method-family tables, compatibility matrix backed by 29 probed combinations (31 after the review), assumption and claim tables, 30-entry bibliography verified against Crossref/publisher pages, resource model; documentation number fixes U5 (wrong Oke & Gunn DOI), U6 (1.41 GiB, 84.0 s, 2.4 %) |
-| CLN-09 | DONE: `PASS_WITH_DECLARED_VALIDATION_LIMITS` | independent reviewer (separate agent): first `CHANGES_REQUIRED` for R-01 (P2: the resource model omitted the end-of-run `LoopHistory` copies) and seven P3 precision findings, no code defect; R-01–R-07 fixed (U8, U9) and closed on recheck, R-08 deferred (roadmap G10) and accepted |
+| CLN-09 | DONE: `PASS_WITH_DECLARED_VALIDATION_LIMITS` | independent review: first `CHANGES_REQUIRED` for R-01 (P2: the resource model omitted the end-of-run `LoopHistory` copies) and seven P3 precision findings, no code defect; R-01–R-07 fixed (U8, U9) and closed on recheck, R-08 deferred (roadmap G10) and accepted |
 | CLN-10 | DONE (named lanes unavailable locally) | final native regression 2157 passed / 18 skipped / 2 xfailed (0 failed; +6 new tests, none removed); slow detector 16 passed; HCIPy 234 passed / 0 failed / 2 xfailed; ruff, mypy, generators clean; inventories, 33 witnesses, report witness and 29-case probe identical to entry; accepted resources unchanged; offline wheel/sdist gate passed (native bundle 1298 passed, HCIPy bundle 229 passed, examples and README smokes from the wheel) after F-08/U7, a pre-existing bundle-manifest gap |
 
 ## Change map, ownership map and retention log
 
-Every change is on `claude/cleanup-refactor-exec`, relative to `2312502`
+Every change is in the isolated cleanup worktree, relative to `2312502`
 plus the copied entry inputs; `git diff 2312502` lists them. They were
 working-tree changes until the user's commit request of 2026-10-18.
 
@@ -93,7 +98,7 @@ main checkout; and every historical evidence record.
 
 ## Execution policy in force
 
-- **Resource policy (prompt section 5).** Numerical jobs run one at a time
+- **Resource policy (specification section 5).** Numerical jobs run one at a time
   with `OMP/OPENBLAS/MKL/VECLIB_MAXIMUM/NUMEXPR_NUM_THREADS=2`. The detector
   development's 2026-10-15 instruction to suspend the resource guard and its
   2026-10-16 per-run enablements are historical context; they authorize nothing
@@ -106,27 +111,27 @@ main checkout; and every historical evidence record.
   here therefore runs with `PYTHONPATH=<worktree>/src`, which precedes `.pth`
   entries, and every harness records the `shwfs_ao.__file__` it imported. The
   wheel checks (CLN-10) run outside the checkout with `PYTHONPATH` cleared.
-- **Authorship.** If the user authorizes commits, they carry only the user's
-  authorship and no AI trailer (the user's standing instruction).
+- **Publication.** Commits and pushes require the authorization recorded for
+  this historical task; commit messages describe the changes.
 
 ## CLN-00 — Entry state and behavioral contract
 
-**Status: DONE.** Evidence: `outputs/cleanup_refactor/2026-10-18-claude-2312502/cln00_entry/`.
+**Status: DONE.** Evidence: `<cleanup-evidence>/cln00_entry/`.
 
 ### Entry identity
 
 | Item | Value |
 | --- | --- |
-| Execution HEAD | `23125024e77769d067f53d837e035b340fc2139a` (`main`, "Add the Claude Code edition of the AO research and validation skills") |
+| Execution HEAD | `23125024e77769d067f53d837e035b340fc2139a` (`main`; validation-workflow integration) |
 | Preparation baseline | `f09eb16`; one intervening commit, `2312502` |
-| Intervening diff | 26 files, all under `.claude/` and `plugins/claude/` (the Claude edition of the validation skills); no file under `src`, `tests`, `scripts`, `examples`, `docs`, `notebooks` or packaging changed (`intervening_diff_outside_plugin.txt` is empty), so the prompt's scope is unchanged |
-| Main checkout uncommitted inputs | modified `docs/README.md`; untracked `AO_REFACTOR_MASTER_TICKETS_REVISED.md`, `docs/current_limitations.md`, `docs/repository_optimization_ticket.md`, the three refactor prompts, the Codex plugin source under `plugins/ao-simulation-research-validation/` and `.agents/plugins/marketplace.json` (29 files). All were copied unchanged into the worktree; `main_checkout_dirty_inputs_sha256.txt` holds their hashes. |
-| Unmerged earlier cleanup work | `claude/bold-shirley-6f1e9f` (5 commits on `62c0092`: evidence-runner record I/O and protocol modules, `io/config_codec.py`, `experiments/scao_component_configs.py`, a status section) and `claude/trusting-bell-471569` (1 commit: historical banners and a roadmap). Neither is in `main`, and the prompt's baseline does not include them. They were read as prior art (their recorded constraints are used below); nothing was merged or cherry-picked. |
+| Intervening diff | 26 files, all in local workflow configuration and validation extensions; no file under `src`, `tests`, `scripts`, `examples`, `docs`, `notebooks` or packaging changed (`intervening_diff_outside_plugin.txt` is empty), so the specification's scope is unchanged |
+| Main checkout uncommitted inputs | modified `docs/README.md`; untracked `AO_REFACTOR_MASTER_TICKETS_REVISED.md`, `docs/current_limitations.md`, `docs/repository_optimization_ticket.md`, the three refactor specifications, the validation-workflow source under `plugins/ao-simulation-research-validation/` and `.agents/plugins/marketplace.json` (29 files). All were copied unchanged into the worktree; `main_checkout_dirty_inputs_sha256.txt` holds their hashes. |
+| Unmerged earlier cleanup work | the codec-extraction attempt (`2a4d7c3`) (5 commits on `62c0092`: evidence-runner record I/O and protocol modules, `io/config_codec.py`, `experiments/scao_component_configs.py`, a status section) and the documentation attempt (`17d4ce6`) (1 commit: historical banners and a roadmap). Neither is in `main`, and the specification's baseline does not include them. They were read as prior art (their recorded constraints are used below); nothing was merged or cherry-picked. |
 | Python | 3.14.3 (framework build), `/Users/xuhan/Documents/AO Simulation/.venv` |
 | Key packages | numpy 2.5.0, scipy 1.18.0, matplotlib 3.11.0, pandas 3.0.3, pytest 9.1.1, jsonschema 4.26.0, hcipy 0.7.0, astro-tiptop 1.5.1, astro-p3 1.6.2, mastsel 1.5.2, ruff 0.15.22, mypy 2.3.0, build 1.5.0 (`pip_freeze.txt`) |
 | Environment against the lock | **Not the CI lock.** `scripts/verify_environment_lock.py --constraints constraints/py314.txt` fails: numpy 2.5.0 against the pinned 2.5.1, pillow and platformdirs differ, and the environment carries the HCIPy/TIPTOP extras the native lock does not pin. `pip check` is clean. Local results are therefore evidence for this environment only; the locked CI lanes are recorded separately in CLN-10. |
 | Host | Apple M1 Pro, 8 cores, 16 GiB, macOS 26.5 (25F71), arm64. Background load average about 3.4–3.9 from other host activity during every measurement. |
-| Instructions | No `AGENTS.md` or `CLAUDE.md` in the repository. The user's standing instructions: no AI attribution in commits; no commit or push without explicit authorization. |
+| Instructions | No repository instruction file was present at entry. The standing publication rule required explicit authorization before committing or pushing. |
 
 ### Same-revision test evidence at entry
 
@@ -254,14 +259,14 @@ tests/detector/test_noise_model.py`): **16 passed** in 8.0 s.
 ## CLN-01 — Scientific scope and documentation authority
 
 **Status: DONE.** The technical reference itself is completed in CLN-08.
-Evidence: `outputs/cleanup_refactor/2026-10-18-claude-2312502/cln01/`.
+Evidence: `<cleanup-evidence>/cln01/`.
 
 | Item | What was done |
 | --- | --- |
-| Technical reference | `docs/technical_reference.md` created with the complete section outline of prompt section 7. Section 1 (scientific purpose, the questions the implementation can and cannot answer, non-goals, kinds of use, evidence levels) and section 2 (a capability inventory for all eleven families: implemented, retained for compatibility, experimental, refused by the code, future work) were written from source and evidence before any implementation change. Selector vocabularies were taken from the `Literal` types and validation sets in `io/configs.py`. |
+| Technical reference | `docs/technical_reference.md` created with the complete section outline of specification section 7. Section 1 (scientific purpose, the questions the implementation can and cannot answer, non-goals, kinds of use, evidence levels) and section 2 (a capability inventory for all eleven families: implemented, retained for compatibility, experimental, refused by the code, future work) were written from source and evidence before any implementation change. Selector vocabularies were taken from the `Literal` types and validation sets in `io/configs.py`. |
 | Roadmap | `docs/roadmap.md`: two results kept visible (the pre-review 42 m realization; the failed 12 m pure 1/N_e test), eleven scientific items (S1–S11) and seven engineering items (G1–G7). Each has a question or problem, affected path, proposed experiment or change, evidence needed, success criterion, priority and cost category. A historical-plans section is included. Numbers were checked against the saved records: E5 started 2026-10-16 at 02:51 local time and was committed in `a31099b` at 07:50, with no code-identity field; at m_AB 11, damping alone gives 195.3 ± 4.8 nm, bit-identical to damping with reset, against 376.5 ± 88.3 nm for reset alone. |
 | Limitations | `docs/current_limitations.md` reconciled with the current code. All 16 IDs and the author's concerns are kept. LIM-04 now describes `detector_covariance_v2` and the raw-readout fix. LIM-11 records that the detector work is complete but has not run in CI, with F-01. LIM-16 adds the opt-in recovery supervisor (it acts after the controller update, never clears the queue) and attributes the @3 improvement mainly to damping. New: LIM-17 (the 42 m noise-on result is one pre-review realization) and LIM-18 (the 12 m isolated noise departs from 1/N_e). The facts behind LIM-12–LIM-15 were rechecked in source: the zero-flux guards in native, batched, MFT and HCIPy optics, and window capture taken from noiseless optics. |
-| Historical classification | Banners on the 21 AO-REF records (their contract statements remain, status lines are dated), the two development prompts, the two development status records and ten historical component notes. The generated `ao_realistic_demo_parameter_source_inventory.md` was left unchanged because `tests/test_inventory_consistency.py` pins it. The untracked author files `AO_REFACTOR_MASTER_TICKETS_REVISED.md`, `docs/repository_optimization_ticket.md` and `PRE_REFACTOR_SCIENTIFIC_AUDIT_PROMPT.md` were left byte-identical; they are classified in the roadmap and docs index instead. |
+| Historical classification | Banners on the 21 AO-REF records (their contract statements remain, status lines are dated), the two development specifications, the two development status records and ten historical component notes. The generated `ao_realistic_demo_parameter_source_inventory.md` was left unchanged because `tests/test_inventory_consistency.py` pins it. The untracked author files `AO_REFACTOR_MASTER_TICKETS_REVISED.md`, `docs/repository_optimization_ticket.md` and the pre-refactor scientific-audit specification were left byte-identical; they are classified in the roadmap and docs index instead. |
 | Navigation | `README.md` points to the reference, roadmap and limitations, without a new bash block, because every README bash block needs a wheel-CI owner. The README's 42 m review-fix line said the result "comes from the reviewed code", which reads as if the result covered the fixes; it now says the result predates them and names the producing code (`a31099b`, 2026-10-16). `docs/README.md` gains a "Start here" section, separates current model notes (including the previously unlisted detector model) from historical component notes, labels the AO-REF pages as contract records, and links this execution record. |
 
 **Checks.**
@@ -282,7 +287,7 @@ No model, profile, identity or code changed in CLN-01.
 ## CLN-02 — Experiment protocol, identity and output responsibilities
 
 **Status: DONE.** Change unit U2. Evidence:
-`outputs/cleanup_refactor/2026-10-18-claude-2312502/cln02/` (patch
+`<cleanup-evidence>/cln02/` (patch
 `U2_evidence_runner.patch`).
 
 ### Responsibility map
@@ -304,10 +309,10 @@ identity contracts. The detector runner's code identity is an input to its
 resume protocol hashes. The cross-backend generator's `source_patch_sha256`
 is a governed baseline field. The ESO benchmark writes its own manifest
 schema. Merging them would either move recorded hashes or create the generic
-workflow layer the prompt rules out. Inside the detector runner, the record
+workflow layer the specification rules out. Inside the detector runner, the record
 mechanics have a single consumer, and the R6/S2 guard tests load the script by
 file and patch its globals. Splitting it would move code without reducing
-coupling. The earlier unmerged attempt (`claude/bold-shirley-6f1e9f`) split
+coupling. The earlier codec-extraction attempt (`2a4d7c3`) split
 it into `records.py` and `protocols.py` plus an end-of-module import; that
 was not adopted.
 
@@ -352,7 +357,7 @@ one process is that noisy, and both runs used identical `src`.
 ## CLN-03 — Configuration codecs and historical schema handling
 
 **Status: DONE.** Change unit U3. Evidence:
-`outputs/cleanup_refactor/2026-10-18-claude-2312502/cln03/` (patch
+`<cleanup-evidence>/cln03/` (patch
 `U3_profile_schema.patch`, the new module as
 `U3_new_module__profile_schema.py`).
 
@@ -388,9 +393,9 @@ name its live class carried, so moving it cannot move a hash.
 and the codec constructs the records. The live records cannot move either,
 because their hash schema id is `module.qualname` (`core/hashing.py`), so
 moving a class would move every published identity. The earlier unmerged
-attempt (`claude/bold-shirley-6f1e9f`, `io/config_codec.py`) moved the codec
+attempt (`2a4d7c3`, `io/config_codec.py`) moved the codec
 and resolved the resulting cycle with an import at the end of
-`configs.py`; that was not adopted, because the prompt asks for no new
+`configs.py`; that was not adopted, because the specification asks for no new
 import cycle.
 
 ### Checks
@@ -409,7 +414,7 @@ import cycle.
 ## CLN-04 — System assembly and calibration resolution
 
 **Status: DONE.** Change unit U4. Evidence:
-`outputs/cleanup_refactor/2026-10-18-claude-2312502/cln04/` (patch
+`<cleanup-evidence>/cln04/` (patch
 `U4_component_configs.patch`, new module `U4_new_module__component_configs.py`).
 
 ### Responsibilities in `experiments/scao.py` at entry
@@ -441,7 +446,7 @@ import `scao._exposure_keywords` and `scao._loop_config`; it now imports the
 shared functions from the new module. `physical_detector_config` stays in
 `scao.py`. It is a public function that raises `ScaoConstructionError` for a
 profile without `detector_physics`, and moving it would require a cycle or a
-different exception. The earlier unmerged attempt (`claude/bold-shirley-6f1e9f`,
+different exception. The earlier unmerged attempt (`2a4d7c3`,
 `scao_component_configs.py`) moved it as well and closed the cycle with an
 end-of-module import; that was not adopted.
 
@@ -474,7 +479,7 @@ change.
 ## CLN-05 — Validation and artifact responsibilities
 
 **Status: DONE; no extraction was justified.** No code changed. Evidence:
-`outputs/cleanup_refactor/2026-10-18-claude-2312502/cln05/`.
+`<cleanup-evidence>/cln05/`.
 
 ### Ownership of the evidence families
 
@@ -523,13 +528,13 @@ canonical smoke routes are run in CLN-10.
 | Scripts as runtime dependencies | No module under `src/shwfs_ao` imports `scripts/` (one comment names a generator). |
 | Example outputs | Every example writes to `$AO_DEMO_OUTPUT_DIR` when it is set, and CI always sets it to a temporary directory. When it is unset, most examples regenerate the tracked figures (`figures/detector_level_SCAO`, `figures/eso_elt_turbulence`). That is the documented way to refresh those figures, so it is kept; the risk of an accidental local overwrite is recorded as roadmap item G9. `run_detector_level_demo.py` and the ESO benchmark runner already default to local output directories. |
 | Moved internals | `io/_profile_schema.py` and `experiments/_component_configs.py` are listed in `tests/test_wheel_install.py`'s wheel and sdist layouts. The package-level dependency diagram is unchanged, because neither module adds a package edge, and `test_the_package_dependency_diagram_matches_the_real_import_graph` passes. The technical reference describes both modules. |
-| Clutter | `git ls-files` (664 files) contains no generated clutter: no `__pycache__`, `.DS_Store`, build products, egg-info, notebook checkpoints or archives. The main checkout's ignored, user-owned clutter was inventoried read-only: `build/` 5.3 MB, `readme-smoke-output/` 1.6 MB, `.mypy_cache` 38 MB, `.pytest_cache`, `.ruff_cache`, `__pycache__`, `.DS_Store`, `.ipynb_checkpoints`, `src/*.egg-info`, and 341 MB of earlier audit and review outputs under `outputs/`. It was **retained**: it is ignored by git and the user's to manage, the other agent is using that checkout now, and `outputs/` holds review evidence. |
+| Clutter | `git ls-files` (664 files) contains no generated clutter: no `__pycache__`, `.DS_Store`, build products, egg-info, notebook checkpoints or archives. The main checkout's ignored, user-owned clutter was inventoried read-only: `build/` 5.3 MB, `readme-smoke-output/` 1.6 MB, `.mypy_cache` 38 MB, `.pytest_cache`, `.ruff_cache`, `__pycache__`, `.DS_Store`, `.ipynb_checkpoints`, `src/*.egg-info`, and 341 MB of earlier audit and review outputs under `outputs/`. It was **retained**: it is ignored by git and the user's to manage, concurrent work is using that checkout, and `outputs/` holds review evidence. |
 
 ## CLN-07 — Bounded performance and resource estimates
 
 **Status: DONE.** The resource model, the historical anchors and the
 scenarios are written in section 9 of the technical reference (CLN-08).
-Evidence: `outputs/cleanup_refactor/2026-10-18-claude-2312502/cln07/`.
+Evidence: `<cleanup-evidence>/cln07/`.
 
 **Protocol (predeclared in `harness/bench.py` before any run).** There are
 six cases: the compatibility profile, the physical EMCCD (FFT), the physical
@@ -588,7 +593,7 @@ quantities, Noll), `historical_anchor_check.txt`, `memory_formulas.txt`,
 F-05 full-tier peak documented as 1.44 GiB, record 1.41 GiB; F-06 TIPTOP
 84.1 s against 84.03 s in the JSON; F-07 README's 2.1 % Monte Carlo figure is
 the pre-review record (2.38 % on the current model). All three corrected in
-current docs (U6); the dated ESO status record and the user's prompt were left
+current docs (U6); the dated ESO status record and the user's specification were left
 unchanged.
 
 Drift guard (added on resumption):
@@ -627,12 +632,12 @@ pages). `tests/test_inventory_consistency.py` and
 **Status: DONE — reviewer decision after recheck:
 `PASS_WITH_DECLARED_VALIDATION_LIMITS`.**
 
-A separate reviewer agent ran the review prompt with
+A separate review applied the review specification with
 `review/reviewer_brief.md` (started 12:53; stopped by the usage limit at
 13:25 and resumed at 17:31; report written 17:35). It worked read-only on the
 tree, wrote only under `review/`, and ran its own numerical checks only after
 the wheel gate and the session-memory A/B had finished. Report:
-`outputs/cleanup_refactor/2026-10-18-claude-2312502/review/review.md`, with its
+`<cleanup-evidence>/review/review.md`, with its
 reproductions `r01`–`r07`.
 
 **Decision: `CHANGES_REQUIRED`** for one P2 finding in the resource model; no
@@ -808,7 +813,7 @@ configuration.
    Roadmap: [`docs/roadmap.md`](../roadmap.md). Limitations:
    [`docs/current_limitations.md`](../current_limitations.md). Execution
    record: this file. Evidence and review:
-   `outputs/cleanup_refactor/2026-10-18-claude-2312502/` (ignored by git).
+   `<cleanup-evidence>/` (ignored by git).
 3. **Checks on the final tree.** Native regression 2157 passed, 18 skipped,
    2 xfailed (2158 with the U7 guard), 0 failed, no test removed; slow
    detector 16 passed; HCIPy 234 passed, 0 failed, 2 xfailed (the four entry
@@ -870,7 +875,7 @@ The user's message ("Conduct the large experiments.", 2026-10-18) enables
 roadmap S1, S2 and S3, run one at a time. To give every record a clean
 committed code identity, and to keep the fixes above from changing the code
 under a running series, the experiments run from a separate detached
-worktree at `2312502` (`.claude/worktrees/large-experiments-2312502`, code
+worktree at `2312502` (the isolated large-experiment checkout, code
 identity `2312502` with an empty source digest). Evidence:
 `outputs/large_experiments/2026-10-18/` in that worktree; records in its
 `docs/refactor/detector_level_evidence/`.
@@ -886,15 +891,15 @@ identity `2312502` with an empty source digest). Evidence:
 
 Assignment: [`audit_reconciliation_plan.md`](audit_reconciliation_plan.md),
 format [`AUDIT_FINDING_EXCHANGE_FORMAT.md`](AUDIT_FINDING_EXCHANGE_FORMAT.md)
-(both copied byte for byte from the main checkout). It reconciles the GPT
+(both copied byte for byte from the main checkout). It reconciles the
 pre-refactor scientific audit (`outputs/pre_refactor_audit/20261017T143700Z/`
 in the main checkout, tree `f09eb16`) with this branch at `27f34fa`. Run
-`2026-10-18-claude-27f34fa`; ledger, report, test manifest, acceptance and
-status are in `outputs/audit_reconciliation/2026-10-18-claude-27f34fa/`.
-GPT finding IDs are namespaced there (`gpt-preaudit-20261017`); GPT F-01 is
+`2026-10-18-27f34fa`; ledger, report, test manifest, acceptance and
+status are in `<reconciliation-evidence:2026-10-18-27f34fa>/`.
+Pre-refactor finding IDs are namespaced separately; pre-refactor F-01 is
 not this record's F-01.
 
-| Unit | GPT finding | Change | Behaviour and identity |
+| Unit | Pre-refactor finding | Change | Behaviour and identity |
 | --- | --- | --- | --- |
 | A | F-01 (P2) | `detector/noise_model.py`: the coarse-quantization gate applies the half-ADC-step condition to every pixel that enters the centroid, with its own read-noise map and gain map | support flags change only where a contributing pixel is under-dithered, block by block (such a block reports the undefined sigma, so its lenslet fails the validity gate); the propagated covariance is unchanged; no packaged or recorded configuration flips (at least 0.65 ADU on every pixel of their CMOS maps); identifier kept `detector_covariance_v2` (it enters the physical WFS hash) |
 | B | F-02 (P2) | `control/loop.py`: a multi-sample effective quadrature (count, duration) enters the run `config_hash` and a `wfs_exposure` metadata entry, which also records an override of the WFS's configured count | single-sample identities and metadata unchanged; no packaged profile uses more than one sample; a WFS's declared count must be an integer of at least 1 |
@@ -939,14 +944,14 @@ committed on its own, on top of `fab2f29`.
 - Patch of exactly this unit: `u14_s2_s3_docs/u14.patch` (tracked files) and
   `u14_s2_s3_docs/added_records.txt` (the twelve records with SHA-256).
 
-## Follow-up repair of GPT independent review AR-014–AR-016 (2026-10-20)
+## Follow-up repair of independent review AR-014–AR-016 (2026-10-20)
 
-GPT's independent review of `949d931` (run
-`outputs/audit_reconciliation/2026-10-19-gpt-independent-949d931/`) accepted
+The independent review of `949d931` (run
+`<reconciliation-evidence:2026-10-19-independent-949d931>/`) accepted
 repairs A–D and proposed three new findings outside them. The user authorized
-their targeted repair. Run `2026-10-20-claude-949d931` holds the successor
+their targeted repair. Run `2026-10-20-949d931` holds the successor
 ledger, report, test manifest, acceptance and status in
-`outputs/audit_reconciliation/2026-10-20-claude-949d931/`; the earlier runs'
+`<reconciliation-evidence:2026-10-20-949d931>/`; the earlier runs'
 records are unchanged. Until an independent review confirms a repair, that
 ledger keeps it `FIXED_PENDING_VERIFICATION`.
 
@@ -958,13 +963,13 @@ ledger keeps it `FIXED_PENDING_VERIFICATION`.
 
 ## Follow-up repair of OBS-07: the detector runner's code identity (2026-10-20)
 
-Run `2026-10-20-claude-949d931` recorded its reviewer's issue CR-02 as
+Run `2026-10-20-949d931` recorded its reviewer's issue CR-02 as
 observation OBS-07 (P3) instead of repairing it: binding the imported package
 changes the protocol identity of every new run of the governed series runner.
 The user authorized the repair on top of `f801cac` (the committed AR-014–AR-016
-repair). Run `2026-10-20-claude-f801cac` adopts it as AR-017 and holds the
+repair). Run `2026-10-20-f801cac` adopts it as AR-017 and holds the
 successor ledger, report, test manifest, acceptance and status in
-`outputs/audit_reconciliation/2026-10-20-claude-f801cac/`; the earlier runs'
+`<reconciliation-evidence:2026-10-20-f801cac>/`; the earlier runs'
 records are unchanged. Until an independent review confirms the repair, that
 ledger keeps it `FIXED_PENDING_VERIFICATION`. The CLN-02 responsibility map
 above describes the code identity used up to series protocol 3.
@@ -975,12 +980,12 @@ above describes the code identity used up to series protocol 3.
 
 ## Follow-up hardening of the package code identity: OBS-15–OBS-18 (2026-10-20)
 
-The review of unit J (run `2026-10-20-claude-f801cac`, committed as
+The review of unit J (run `2026-10-20-f801cac`, committed as
 `714941c`) confirmed the repair and recorded four P3 issues as observations
 OBS-15–OBS-18; OBS-15 and OBS-16 apply to the S3 driver's code identity too.
-The user asked for their repair. Run `2026-10-20-claude-f801cac-hardening`
+The user asked for their repair. Run `2026-10-20-f801cac-hardening`
 holds the records in
-`outputs/audit_reconciliation/2026-10-20-claude-f801cac-hardening/`; the
+`<reconciliation-evidence:2026-10-20-f801cac-hardening>/`; the
 earlier runs' records are unchanged. Until an independent review confirms
 the repair, its ledger keeps it `FIXED_PENDING_VERIFICATION`.
 
@@ -991,16 +996,16 @@ the repair, its ledger keeps it `FIXED_PENDING_VERIFICATION`.
 ## Versioned detector ledgers: AR-008 and roadmap G11 (2026-10-20)
 
 The post-audit reconciliation deferred the packaged-ledger part of AR-008
-(GPT audit F-08) to a governed resource version (unit E above). Ticket T3 of
+(pre-refactor audit F-08) to a governed resource version (unit E above). Ticket T3 of
 the next-stage plan carried it out from `e486b18`; it is commit `d4403e6`
-(tree `15fb1e17`) on `claude/t3-g11-ledger-v2`, and its implementation record
-is in `outputs/t3_g11_ledger_v2/2026-10-20-opus-e486b18/`.
+(tree `15fb1e17`), and its implementation record
+is in `<t3_g11_ledger_v2-evidence:2026-10-20-e486b18>/`.
 
 | Unit | Finding | Change | Behaviour and identity |
 | --- | --- | --- | --- |
-| L | AR-008 (GPT F-08; P3), roadmap G11 | `detector_source_ledger.v2.json` and `detector_level.assumptions.v2.json` beside the version 1 files: B14 states the current uncertainty model `detector_covariance_v2`, its support gates and the separate calibration-ensemble sigma; B18 and `historical_producers` attribute the `@2` gating decision and its records to version 1; D4 was checked against the publisher PDF of Thomas et al. (2006) and attributes the thresholding rule to the repository; the profile generator writes and checks version 2, and a test pins the version 1 bytes; the technical reference and the roadmap | descriptions only: the profiles keep referencing version 1, so every profile file and configuration hash is unchanged; the manifest gains the two resources (81); the package digest of both evidence scripts changes with them |
+| L | AR-008 (pre-refactor F-08; P3), roadmap G11 | `detector_source_ledger.v2.json` and `detector_level.assumptions.v2.json` beside the version 1 files: B14 states the current uncertainty model `detector_covariance_v2`, its support gates and the separate calibration-ensemble sigma; B18 and `historical_producers` attribute the `@2` gating decision and its records to version 1; D4 was checked against the publisher PDF of Thomas et al. (2006) and attributes the thresholding rule to the repository; the profile generator writes and checks version 2, and a test pins the version 1 bytes; the technical reference and the roadmap | descriptions only: the profiles keep referencing version 1, so every profile file and configuration hash is unchanged; the manifest gains the two resources (81); the package digest of both evidence scripts changes with them |
 
-An independent review, `outputs/t3_g11_ledger_v2/review-2026-10-20-gpt/`,
+An independent review, `<t3_g11_ledger_v2-review:2026-10-20>/`,
 read the uncommitted change that `d4403e6` commits byte for byte (base
 `e486b18`, tracked diff SHA-256 `d7f4303e…`, new files `fa56a8d4…` and
 `20cf6dd3…`) and accepted it, `PASS_WITH_DECLARED_VALIDATION_LIMITS`, with no
@@ -1018,17 +1023,17 @@ they are.
 ## Traced paired-noise instrument: ticket T1 and roadmap S4 (2026-10-21)
 
 Ticket T1 of the next-stage plan (S4 tracing and the bounded 2 m replay) was
-carried out from `b644a08`; it is commit `36768d2` on `claude/t1-s4-telemetry`,
+carried out from `b644a08`; it is commit `36768d2`,
 and its implementation record is in
-`outputs/t1_s4_telemetry/2026-10-20-fable-b644a08/`.
+`<t1_s4_telemetry-evidence:2026-10-20-b644a08>/`.
 
 | Unit | Finding | Change | Behaviour and identity |
 | --- | --- | --- | --- |
 | M | roadmap S4 (an instrument for LIM-18 and AR-006, not their closure) | passive frame observation of the effective measurement row mask and the current frame's detector telemetry (model sigma and expected centroid per lenslet and axis, validated on their own domain); `paired_noise_run_traced` beside the unchanged `paired_noise_run`; the mask-locked arm with its own protocol identity (twin first; a partial lock is never reported exact); the traced record family (`noise-isolation-2m-traced`; the gated `-12m-traced` and `-12m-masklocked`) with one verified, allow-pickle-free NumPy sidecar per run under a diagnostic protocol beside series protocol 4, validated against the full schema (exact arrays, dtype, shape, canonical units, axes and meaning, frame domains, one lenslet order, canonical interleaved rows, map retention, mode-specific arrays) before any reuse; the NumPy-only analysis script and the 2 m H5 bound; tests, `docs/backends.md`, `docs/architecture.md`, technical reference 5.11 and the roadmap S4 note | every configuration, sensor, loop and detector hash, every history and the RNG draw order are unchanged (witnesses: 0 changed scientific leaves; five historical 2 m runs and the 32-run C0 replay reproduce `det09_noise_isolation_2m.json` bit for bit, and the traced and untraced runs of the current code are identical); the 12 m commands refuse before any profile or model without the user's enablement note; LIM-18 and the recorded records are untouched |
 
 Three independent reviews read the uncommitted change
-(`outputs/t1_s4_telemetry/review-2026-10-20-gpt/`,
-`review-2026-10-21-gpt-r2/` and `review-2026-10-21-gpt-r3/`). The first
+(`<t1_s4_telemetry-review:2026-10-20>/`,
+`<review:2026-10-21-round-2>/` and `<review:2026-10-21-round-3>/`). The first
 returned five P2 findings, T1-01 to T1-05 (an undefined expected centroid
 could refuse a measurement; digest-bound malformed sidecars passed reuse
 validation; supported construction refusals lost their diagnostic identity;
@@ -1055,9 +1060,9 @@ or 42 m arm was run.
 
 ## Fixed-physics convergence interfaces, oracles and driver: ticket T2 and roadmap AR-007 (2026-10-21)
 
-Ticket T2 of the next-stage plan was carried out from `e5918c1` on the
-worktree `claude/t2-convergence` and committed on that branch; its
-implementation record is in `outputs/t2_convergence/2026-10-21-fable-e5918c1/`
+Ticket T2 of the next-stage plan was carried out from `e5918c1` in an
+isolated convergence worktree and committed there; its
+implementation record is in `<t2_convergence-evidence:2026-10-21-e5918c1>/`
 (git-ignored; `IMPLEMENTATION_RECORD.md`, `REVIEWER_BRIEF.md`, `RECORD.json`,
 the pre-edit `DESIGN_NOTE.md`, the review under `review/`). Status: implementation
 complete; accepted by the first independent review on 2026-10-21 (review round 2); a second
@@ -1082,7 +1087,7 @@ scientific row, dated historical section or closed item changed.
 | --- | --- | --- |
 | G1 | The local commits of this cleanup are on `main` and have run in CI. Workflow `tests` passed all seven push jobs on `5514285` (run 39656946715, 2026-10-21; post-T2 packet) and last on `5df797f` (run 39942155146, 2026-10-23), including the README native commands from the clean wheel on 3.14; the 19 later first-parent commits up to `3ce386f` carry `[skip ci]`. The scheduled lane on `3ce386f` (run 40296997307, 2026-10-26) failed in the slow native tests on `test_the_real_ci_self_check_runs_in_fresh_child_processes_on_the_exposure_axis` (1 failed, 25 passed, 9 skipped; `StudyRecordError`: a child's run record carries another code identity or environment than the parent's); the full HCIPy sweep passed. The test came with T2 (`229fb6a`) after the previous scheduled run (2026-10-19, `37b5bd9`, success), so this was its first CI execution. | open: the failure is not triaged. An unverified reading from the sources is that the lane replaces the source install with the built wheel while the test sets `PYTHONPATH` to `src/` for its children. **Diagnosed the same day:** confirmed by rebuilding the lane's layout (clean `3ce386f`, the built wheel installed, `PYTHONPATH` empty) and comparing the producer identities the parent and a child compute, without running a study: they differ in `package_directory`, `package_sha256`, `git_head` and `source_changes_sha256`, and agree when both import from `src/` or when the children follow the parent. The fix proposed for the test is that the children import from the parent's import directory; not applied, and not yet confirmed end to end. **Fix checked the same day (local, at the owner's request):** with the change, the self-check passes in a rebuilt lane environment (installed wheel, empty `PYTHONPATH`, Python 3.11 with the `hcipy-py311` lock) and from a source tree, four runs each under one producer; the unfixed test fails there exactly as in CI; every result value except timing and memory equals the post-T2 packet's ci record. Not a CI result. **Fix integrated the same day (engineering batch):** the reviewed change is a commit on the development branch (patch-id equal to the reviewed patch); identity probes with a locally built wheel and from a source tree repeat the diagnosis under the old rule and agree under the fix; the slow test collects in both layouts and was not run. Scheduled CI has not run it; open until merged and a scheduled run passes. |
 | G4 | Still accurate: `science_run` reads `ru_maxrss` into `process_peak_rss_bytes` (`src/shwfs_ao/experiments/detector_level.py`, lines 528–538). | open. **Opt-in path added the same day (engineering batch):** `--fresh-process-dir` of `scripts/run_detector_level_evidence.py` runs each `science_run` of a gated series in a fresh interpreter (`run_supervised` launches, times out and reaps it) and records `execution_envelope.child_process_peak_rss_bytes`, the child's own peak since exec (Linux `VmHWM`), beside the unchanged result; `science_run` and `process_peak_rss_bytes` are untouched and the default is unchanged. On Linux an exec'd child's `ru_maxrss` also keeps its parent's footprint at spawn, so it is recorded only for comparison. Tested with inert workers and a mocked dispatch (`tests/experiments/test_fresh_process_runner.py`); no AO run measured, so the acceptance stays open. **Closeout the same day (engineering):** a relative job directory failed (review R18-01); paths are now fixed against the caller's working directory before the child starts, invalid options are refused before anything is created and a launch failure is recorded as `launch_failed`; the `ru_maxrss` explanation is qualified (vfork inherits the supervisor's historical peak, fork the resident set copied at the fork). Still no AO run measured. |
-| G7 | Neither `claude/bold-shirley-6f1e9f` nor `claude/trusting-bell-471569` is on the remote, which holds only `main` and `feature/dynamic-phase`; their state in the owner's local clone is not known here. | open until the owner confirms |
+| G7 | Neither the codec-extraction attempt (`2a4d7c3`) nor the documentation attempt (`17d4ce6`) is on the remote, which holds only `main` and `feature/dynamic-phase`; their state in the owner's local clone is not known here. | open until the owner confirms |
 | Explorer build tool | `scripts/ao_explorer/site_build.py --write` rewrote `data/current.json` with one-space indentation, while the NGS-family packagers write two spaces (the entry on `main` has two since `3ce386f`). A restamp of an unchanged build therefore rewrote all 83 indented lines of the entry. | fixed: `write` keeps the entry's existing indentation (one helper, `_json_indent`); `test_restamping_keeps_the_entry_layout` covers one and two spaces and fails on the previous code for two. The older packagers that write one space are unchanged. |
 | Explorer validator | `scripts/ao_explorer/validate.py` accepted only the 180-frame `ao-explorer.manifest.v1` manifest and carried that dataset's values (180 frames, burn-in 40, 40 movie frames, 140-frame means) as fixed assumptions. On the active 1000-frame dataset it exited 2 with "unsupported manifest schema or dataset mismatch", so the Pages `validate` step and the web-bundle tests that reach it (`test_committed_bundle_is_valid`, `test_changed_code_or_entry_build_is_detected`) could not pass on the current site (recorded under E1 and E2 on 2026-10-27). The defect predates the 42 m enhancement. | fixed 2026-10-27: the expected values come from an explicit contract selected from the entry and manifest schemas (`scripts/ao_explorer/web_contract.py`: v1 from `protocol.py`, v2 from `long_series.py` plus the `long_export.py` display constants restated for a NumPy-free validator and drift-tested against the exporters); every other schema pair is refused. The v2 checks cover the time domain, display indices and timestamps, atlas layout and bounds, per-frame series and CSV coherence, summary and block-summary recomputation with the mean-image metrics kept apart from the mean instantaneous metrics, playback, screen and series identity, pairing and shared images, the preserved previous dataset and its in-place Research Results (verified byte for byte and bound to their source commit), and the content build; raw-evidence mode uses each contract's own archive layout and frame indexing and claims nothing without `--series-dir`. The committed bundle passes unchanged (2126 checks), the preserved v1 dataset passes under its own contract (offline fixture), and 104 focused explorer tests pass (web bundle, contracts, bindings). Not run: CI, the full suite, raw-evidence mode against the archives. **Follow-up the same day (engineering batch):** the v2 provenance's copy of the producer's record checks is now checked against `long_series.run_case` itself (read from its source): every required check present and literally `true`, `analysis_frames` [200, 1000) and `analysis_count` 800 as integers, the numeric diagnostics with the producer's keys and finite values; before, a missing check, `"false"`, `null`, `0` or a wrong count passed (review R17-01). The committed bundle passes with 2158 checks. Raw-evidence mode is exercised on synthetic archives in both layouts (`tests/ao_explorer/test_validate_raw.py`, unit fixtures and the committed site end to end, with the command line for v2), and a missing or malformed archive is now a recorded failure instead of a crash; it has still not been run against the real archives. **Closeout the same day (engineering):** the observation parents' mean-file digest was never joined to the archive (review R18-03); now both parents must name `mean_psfs.npz` with one digest equal to the provenance's, and raw mode checks that digest against the archive's bytes before decoding the arrays from the same bytes. The committed bundle passes with 2190 checks. `long_export.py` judges producer checks by the validator's rule (`web_contract.producer_check_problems`) instead of a truthiness filter over the booleans present. |
 

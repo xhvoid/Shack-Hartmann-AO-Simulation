@@ -99,7 +99,7 @@ verified unless the project's own records also give it.
 
 | Item | Value | Status |
 | --- | --- | --- |
-| Analysed tree | `claude/cleanup-refactor-exec` at `10f04e268871a19bfedb47b035f2905b67f23e43` ("Harden the package code identity of both evidence scripts", 2026-10-20 15:32 CEST), the frozen input; task branch `claude/eager-franklin-tk0duo` reset onto it; working tree clean apart from this directory | INSPECTED_CURRENT |
+| Analysed tree | the cleanup tree at `10f04e268871a19bfedb47b035f2905b67f23e43` ("Harden the package code identity of both evidence scripts", 2026-10-20 15:32 CEST), the frozen input; the analysis checkout reset onto it; working tree clean apart from this directory | INSPECTED_CURRENT |
 | Records | `docs/refactor/detector_level_evidence/det09_noise_isolation_12m_v3.json` (SHA-256 `3dd8d681bc22883c…`), `det09_noise_isolation_2m.json` (`655528b64e087b3f…`), `det09_noise_isolation_2m_attempt1.json` (`333c1a3a3ffc2055…`); full digests in `results.json` | INSPECTED_HISTORICAL |
 | Context records read | `det09_e2_noise_propagation*.json`, `det09_e3_magnitude_scan_12m_v3_review.json`, `det07_e1_centroid_noise_review.json`, `e3_v2_snr_diagnostic.{py,txt}`, the detector status file, LIM-18, technical reference 5.11/7.2/7.5/9.3, README | INSPECTED_HISTORICAL |
 | Code read | `experiments/detector_level.py` (`paired_noise_run`, `_OperatingExpectationSensor`, `_PupilResidualRecorder`), `wfs/shack_hartmann/physical_measurement.py`, `detector/noise_model.py`, `detector/validity.py`, `control/loop.py`, `control/recovery.py`, `calibration/sparse.py`, `scripts/run_detector_level_evidence.py`, the two profiles | INSPECTED_CURRENT |

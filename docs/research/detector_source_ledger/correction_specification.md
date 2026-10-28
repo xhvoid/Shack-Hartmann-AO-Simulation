@@ -2,10 +2,8 @@
 
 **Historical proposal (2026-10-20).** This specification records research against source commit 10f04e2. It is retained for its rationale and source-access limits. The current packaged v2 ledgers and their acceptance are recorded in [the integration record](../../refactor/CLEANUP_REFACTOR_STATUS.md#versioned-detector-ledgers-ar-008-and-roadmap-g11-2026-10-20); these proposals are not a request to apply the changes again.
 Research output for roadmap item G11 (pre-refactor audit F-08; AR-008 in
-the later review). Written 2026-10-20 on task branch
-`claude/fervent-einstein-4g3syq`, which starts at source commit
-`10f04e268871a19bfedb47b035f2905b67f23e43`, the head of
-`claude/cleanup-refactor-exec`. Companion files:
+the later review). Written 2026-10-20 against the cleanup source commit
+`10f04e268871a19bfedb47b035f2905b67f23e43`. Companion files:
 [`proposed_corrections.json`](proposed_corrections.json) (machine-readable candidates),
 [`references.md`](references.md) (sources, locators, access limits),
 [`acceptance_plan.md`](acceptance_plan.md) (checks for a later change),

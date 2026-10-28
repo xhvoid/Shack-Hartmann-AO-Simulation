@@ -292,7 +292,7 @@ def _code_identity(package: Path | None = None) -> dict[str, object]:
 
     ``package_sha256`` digests the imported ``shwfs_ao`` package itself, so two
     processes that import different package files never share a known
-    identity, whatever Git says (review CR-01 of GPT finding AR-014; bytecode
+    identity, whatever Git says (review CR-01 of finding AR-014; bytecode
     caches are not digested: LIM-11 names the stale-cache case).  Git HEAD
     and the digest of the uncommitted ``src`` changes are recorded only when
     the repository that holds the package tracks it, its paths read literally
