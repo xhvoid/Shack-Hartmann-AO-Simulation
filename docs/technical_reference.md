@@ -514,7 +514,7 @@ datasheet, a named commercial camera or a measured calibration (LIM-01).
 | Gain treatment | `known_per_pixel` applies the CMOS gain map as conversion gain; `flat_absorbs_gain_map` leaves it in the flat | `processing.gain_treatment` | no gain estimation is modelled |
 | Bad pixels | `zero_weight` or `interpolate_mean4` | `processing.bad_pixel_policy` | profiles use `zero_weight` |
 | Internal calibration source | a bright source observed without sky for references and interaction probes; its frames subtract bias and dark only (`without_sky_master`) | `detector_physics.calibration_source_detected_e_per_full_subap_frame` | `measure_operating_expectation` (star and sky through the operating products, noiseless) differs from `measure(include_noise=False)` (the calibration observation) |
-| Estimators | plain centre of gravity; thresholded centre of gravity (fraction of the processed maximum); optional minimum subtraction | `wfs.centroid_estimator`, `threshold_fraction`, `subtract_minimum` | thresholding is not first-order linear (Thomas et al. 2006) |
+| Estimators | plain centre of gravity; thresholded centre of gravity (fraction of the processed maximum); optional minimum subtraction | `wfs.centroid_estimator`, `threshold_fraction`, `subtract_minimum` | the first-order noise models do not cover thresholding or minimum subtraction: a repository support rule (`detector.noise_model` reports such blocks unsupported), not a result of Thomas et al. (2006), whose section 4.1 evaluates the thresholded estimator's noise approximately with their equations 11–12 (N_s² the mean number of pixels above threshold) and requires subtracting the threshold for unit response |
 | Negative pixels | compatibility path: `wfs.clip_negative_pixels` (schema ≥ 3; earlier schemas clip); physical path: `processing.clip_negative` | — | clipping rectifies read noise into a pedestal that pulls faint spots toward the window centre (backends.md) |
 
 | Uncertainty model | Definition | Supported domain | Use |
@@ -745,8 +745,16 @@ camera, DM and controller value is synthetic). Packaged ledgers hold the
 row-level detail and are checked against every profile they cover:
 [`eso_drm_42m_scao_derived.assumptions.v2.json`](../src/shwfs_ao/resources/benchmarks/eso_drm_42m_scao_derived.assumptions.v2.json)
 (ESO rows S/A/T/P) and
-[`detector_level.assumptions.v1.json`](../src/shwfs_ao/resources/benchmarks/detector_level.assumptions.v1.json)
-(B01–B21), validated by `shwfs_ao.io.benchmark_ledgers`.
+[`detector_level.assumptions.v2.json`](../src/shwfs_ao/resources/benchmarks/detector_level.assumptions.v2.json)
+(B01–B21) with its source ledger
+[`detector_source_ledger.v2.json`](../src/shwfs_ao/resources/benchmarks/detector_source_ledger.v2.json),
+validated by `shwfs_ao.io.benchmark_ledgers`. Version 2 of the detector
+ledgers (roadmap G11) corrects descriptions only: B14 states the current
+`detector_covariance_v2` domain, B18 separates its historical producer from
+the current gating, and source D4 states what Thomas et al. (2006) cover,
+checked against the paper's full text. No
+value, gate or profile changed. Version 1 of both files, which every
+detector-level profile references, is kept byte-identical as history.
 
 | ID | Assumption | Category | Implementation and configuration | Affected results | Tested domain | Unresolved uncertainty |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -899,7 +907,9 @@ the stated values), **listing** (confirmed only through a search listing or
 package index), **ledger** (as recorded in a packaged source ledger, not
 re-fetched here), **not verified**. A record check confirms that the source
 exists and is correctly cited; it does not confirm an equation locator unless
-the entry says so. No paywalled text was copied into the repository.
+the entry says so. No paywalled text was copied into the repository. Added
+2026-10-20 (roadmap G11): **full text** (the cited sections, equations and
+appendices were read in the publisher's PDF).
 
 | ID | Source | DOI or URL | Locator | Supports | Used in | Verification |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -919,7 +929,7 @@ the entry says so. No paywalled text was copied into the repository.
 | [Rob03] | M. S. Robbins, B. J. Hadwen, "The noise performance of electron multiplying charge-coupled devices", IEEE Trans. Electron Devices 50(5), 1227–1232 (2003) | [10.1109/TED.2003.813462](https://doi.org/10.1109/TED.2003.813462) | excess noise factor (ledger D2) | `F² → 2` at high gain | `detector.physical`, `detector.noise_model` | record (the ledger's open DOI question is now confirmed); full text not read |
 | [Tut12] | J. H. Tutt et al., "The noise performance of electron-multiplying charge-coupled devices at X-ray energies", IEEE Trans. Electron Devices 59(1), 167–175 (2012) | [10.1109/TED.2011.2172611](https://doi.org/10.1109/TED.2011.2172611) | abstract | independent statement that the excess noise factor tends to √2 at gains above 100 | corroborates DET-2 | abstract |
 | [Jan07] | J. R. Janesick, *Photon Transfer*, SPIE Press (2007), ISBN 9780819478382 | [10.1117/3.725073](https://doi.org/10.1117/3.725073) | photon-transfer definitions (ledger D3) | conversion gain, read noise, PRNU, fixed pattern | `detector.camera`, `detector.processing` | record |
-| [Tho06] | S. Thomas et al., "Comparison of centroid computation algorithms in a Shack–Hartmann sensor", MNRAS 371(1), 323–336 (2006) | [10.1111/j.1365-2966.2006.10661.x](https://doi.org/10.1111/j.1365-2966.2006.10661.x) | centre-of-gravity noise, thresholding (ledger D4) | first-order CoG noise; thresholding is not first-order linear | `detector.validity`, `detector.noise_model` | record |
+| [Tho06] | S. Thomas et al., "Comparison of centroid computation algorithms in a Shack–Hartmann sensor", MNRAS 371(1), 323–336 (2006) | [10.1111/j.1365-2966.2006.10661.x](https://doi.org/10.1111/j.1365-2966.2006.10661.x) | §3.1 (eqs 11–13), §3.2 (eq. 14), §4.1, App. A and B (ledger D4, version 2) | photon and read-noise CoG terms for a Gaussian spot (§3.1, eqs 11–12); photon noise of a diffraction-limited spot growing linearly with the lenslet field of view (eq. 13, App. A); CoG response non-linearity on a finite window (§3.2, eq. 14, App. B); the thresholded CoG's noise approximated with eqs 11–12 (§4.1). The implementation uses none of these closed forms | `detector.validity`, `detector.noise_model` | full text |
 | [Oke83] | J. B. Oke, J. E. Gunn, "Secondary standard stars for absolute spectrophotometry", ApJ 266, 713 (1983) | [10.1086/160817](https://doi.org/10.1086/160817) | AB system (ledger D5) | `m_AB = −2.5 log₁₀ f_ν − 48.60` (cgs) | `detector.photometry`, the parameter-source inventory | record; the inventory's earlier `10.1086/113325` resolved to an unrelated paper and was corrected (status U5) |
 | [EMVA] | EMVA Standard 1288, Release 4.0 (in effect since June 2021) | [emva.org](https://www.emva.org/standards-technology/emva-1288/) | linear-camera definitions (ledger D7) | separate pixel and digital saturation; PRNU/DSNU definitions | `detector.camera` | page (release confirmed; the release PDF was not re-fetched) |
 | [Kan16] | A. Kannawadi et al., "The impact of interpixel capacitance in CMOS detectors on PSF shapes and implications for WFIRST", PASP 128(967), 095001 (2016) | [10.1088/1538-3873/128/967/095001](https://doi.org/10.1088/1538-3873/128/967/095001), arXiv:1512.01570 | IPC (ledger D8) | a 3×3 coupling kernel and its covariance | electronic coupling in `detector.physical` | abstract; equation locator not read |

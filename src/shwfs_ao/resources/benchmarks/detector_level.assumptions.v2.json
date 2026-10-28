@@ -1,0 +1,1601 @@
+{
+  "schema_name": "shwfs_ao.assumption_ledger",
+  "schema_version": 1,
+  "ledger_id": "detector_level.assumptions.v2",
+  "benchmark": "Detector-level SCAO profiles (docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_PROMPT.md)",
+  "source_ledger": "benchmarks/detector_source_ledger.v2.json",
+  "profiles": [
+    "det_ccd_2m_synthetic@1",
+    "det_emccd_2m_synthetic@1",
+    "det_cmos_2m_synthetic@1",
+    "det_emccd_2m_plane_synthetic@1",
+    "det_emccd_12m_medium_derived@1",
+    "det_ccd_42m_r3band_derived@1",
+    "det_emccd_12m_medium_derived@2",
+    "det_emccd_12m_medium_derived@3"
+  ],
+  "frozen": "2026-10-15",
+  "revised": "2026-10-20",
+  "classifications": {
+    "source_derived": "value taken from a normative source with its locator",
+    "source_scale_adapted": "normative value adapted to this repository's topology; the adaptation is stated",
+    "engineering_assumption": "value no source supplies, chosen for a stated engineering reason",
+    "declared_experiment_choice": "a choice that defines the experiment, declared before running",
+    "software_policy": "a software convention with no physical content"
+  },
+  "rows": [
+    {
+      "id": "B01",
+      "title": "Camera response model, preset and supported EM-gain regime",
+      "classification": "engineering_assumption",
+      "applies_to": "all",
+      "unit": "preset key",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "CCD (read 3 e-, the R3 contextual value), EMCCD (G = 300 in the Gamma high-gain regime, pre-register CIC 0.005 e-/px/read) and CMOS (per-pixel offset, gain and lognormal read-noise maps) synthetic presets; coupled EMCCD for milestone B",
+      "transformation": "none",
+      "limitation": "synthetic_assumed engineering presets without a datasheet (no D6); CIC is pre-register only; intermediate EM gains are rejected",
+      "consuming_tests": [
+        "tests/detector/test_physical_camera.py::test_poisson_through_register_has_excess_factor_two",
+        "tests/io/test_detector_level_profiles.py::test_packaged_camera_presets_are_versioned_and_synthetic"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "detector_physics.camera.preset_name": "synthetic_ccd",
+          "detector_physics.camera.preset_version": 1
+        },
+        "det_emccd_2m_synthetic@1": {
+          "detector_physics.camera.preset_name": "synthetic_emccd",
+          "detector_physics.camera.preset_version": 1
+        },
+        "det_cmos_2m_synthetic@1": {
+          "detector_physics.camera.preset_name": "synthetic_cmos",
+          "detector_physics.camera.preset_version": 1
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "detector_physics.camera.preset_name": "synthetic_emccd_coupled",
+          "detector_physics.camera.preset_version": 1
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "detector_physics.camera.preset_name": "synthetic_emccd_coupled",
+          "detector_physics.camera.preset_version": 1
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "detector_physics.camera.preset_name": "synthetic_ccd",
+          "detector_physics.camera.preset_version": 1
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "detector_physics.camera.preset_name": "synthetic_emccd_coupled",
+          "detector_physics.camera.preset_version": 1
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector_physics.camera.preset_name": "synthetic_emccd_coupled",
+          "detector_physics.camera.preset_version": 1
+        }
+      },
+      "context_sources": [
+        "D1",
+        "D2",
+        "D3",
+        "D7",
+        "R3"
+      ]
+    },
+    {
+      "id": "B02",
+      "title": "Pixel scale and centroid-window field of view",
+      "classification": "engineering_assumption",
+      "applies_to": "all",
+      "unit": "px; rad",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "2 m: the base profile's FFT scale (pad 3) with an odd 23 px window (21 px for the MFT profile); 12/42 m: lambda/(2 d) at 700 nm with a 15 px window so the field stays inside one far-field period at 600 nm",
+      "transformation": "pixel scale = lambda/(pad n_s dx) of the base profile, dx = D/(N-1)",
+      "limitation": "the 15 px window spans 7.5 lambda/d at 700 nm; broadened spots clip earlier than in the 23 px ESO tiers",
+      "consuming_tests": [
+        "tests/backends/native/test_shwfs_mft.py::test_k1_mft_reproduces_the_frozen_fft_spots",
+        "tests/backends/native/test_shwfs_mft.py::test_pixel_integration_matches_erf_integrals_and_converges"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "wfs.detector_window_px": 23,
+          "wfs.pad_factor": 3,
+          "detector_physics.sampling.pixel_scale_rad": null
+        },
+        "det_emccd_2m_synthetic@1": {
+          "wfs.detector_window_px": 23,
+          "wfs.pad_factor": 3,
+          "detector_physics.sampling.pixel_scale_rad": null
+        },
+        "det_cmos_2m_synthetic@1": {
+          "wfs.detector_window_px": 23,
+          "wfs.pad_factor": 3,
+          "detector_physics.sampling.pixel_scale_rad": null
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "wfs.detector_window_px": 21,
+          "wfs.pad_factor": null,
+          "detector_physics.sampling.pixel_scale_rad": 5.409090909090908e-07
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "wfs.detector_window_px": 15,
+          "wfs.pad_factor": null,
+          "detector_physics.sampling.pixel_scale_rad": 6.975694444444442e-07
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "wfs.detector_window_px": 15,
+          "wfs.pad_factor": null,
+          "detector_physics.sampling.pixel_scale_rad": 6.993055555555555e-07
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "wfs.detector_window_px": 15,
+          "wfs.pad_factor": null,
+          "detector_physics.sampling.pixel_scale_rad": 6.975694444444442e-07
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "wfs.detector_window_px": 15,
+          "wfs.pad_factor": null,
+          "detector_physics.sampling.pixel_scale_rad": 6.975694444444442e-07
+        }
+      }
+    },
+    {
+      "id": "B03",
+      "title": "Detector-plane sampling and optical oversampling",
+      "classification": "engineering_assumption",
+      "applies_to": "all",
+      "unit": "nodes per pixel and axis",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "legacy FFT point sampling for milestone A; Gauss-Legendre pixel quadrature with k = 4 (2 at 42 m for cost) for milestone B, where the erf oracle meets 1e-6 at k = 4",
+      "transformation": "none",
+      "limitation": "k = 2 at 42 m trades pixel-integration accuracy (~1e-4 relative) for run time",
+      "consuming_tests": [
+        "tests/backends/native/test_shwfs_mft.py::test_k1_mft_reproduces_the_frozen_fft_spots",
+        "tests/backends/native/test_shwfs_mft.py::test_pixel_integration_matches_erf_integrals_and_converges"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "detector_physics.sampling.kind": "legacy_fft",
+          "detector_physics.sampling.oversampling": 1
+        },
+        "det_emccd_2m_synthetic@1": {
+          "detector_physics.sampling.kind": "legacy_fft",
+          "detector_physics.sampling.oversampling": 1
+        },
+        "det_cmos_2m_synthetic@1": {
+          "detector_physics.sampling.kind": "legacy_fft",
+          "detector_physics.sampling.oversampling": 1
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "detector_physics.sampling.kind": "mft_pixel_integrated",
+          "detector_physics.sampling.oversampling": 4
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "detector_physics.sampling.kind": "mft_pixel_integrated",
+          "detector_physics.sampling.oversampling": 4
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "detector_physics.sampling.kind": "mft_pixel_integrated",
+          "detector_physics.sampling.oversampling": 2
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "detector_physics.sampling.kind": "mft_pixel_integrated",
+          "detector_physics.sampling.oversampling": 4
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector_physics.sampling.kind": "mft_pixel_integrated",
+          "detector_physics.sampling.oversampling": 4
+        }
+      }
+    },
+    {
+      "id": "B04",
+      "title": "Charge diffusion, electronic coupling, placement and boundary",
+      "classification": "engineering_assumption",
+      "applies_to": "all",
+      "unit": "px",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "diffusion sigma 0.25 px (2 m) and 0.2 px (12/42 m, keeps the margin to one pixel), truncated at 5 sigma; coupling only in the coupled EMCCD preset (1 % nearest, 0.2 % diagonal) after saturation and before read noise, zero boundary at the block edge with a one-pixel guard ring",
+      "transformation": "none",
+      "limitation": "synthetic values; light of neighbouring lenslets is not modelled in a block; the coupling placement is a model assumption (D8 describes CMOS IPC)",
+      "consuming_tests": [
+        "tests/backends/native/test_shwfs_mft.py::test_diffusion_adds_its_variance_to_the_spot",
+        "tests/detector/test_noise_model.py::test_coupled_readout_covariance_is_k_diag_mu_k_transpose_plus_read"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "detector_physics.sampling.diffusion_sigma_px": 0.0,
+          "detector_physics.layout.guard_px": 0
+        },
+        "det_emccd_2m_synthetic@1": {
+          "detector_physics.sampling.diffusion_sigma_px": 0.0,
+          "detector_physics.layout.guard_px": 0
+        },
+        "det_cmos_2m_synthetic@1": {
+          "detector_physics.sampling.diffusion_sigma_px": 0.0,
+          "detector_physics.layout.guard_px": 0
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "detector_physics.sampling.diffusion_sigma_px": 0.25,
+          "detector_physics.layout.guard_px": 1
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "detector_physics.sampling.diffusion_sigma_px": 0.2,
+          "detector_physics.layout.guard_px": 1
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "detector_physics.sampling.diffusion_sigma_px": 0.2,
+          "detector_physics.layout.guard_px": 1
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "detector_physics.sampling.diffusion_sigma_px": 0.2,
+          "detector_physics.layout.guard_px": 1
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector_physics.sampling.diffusion_sigma_px": 0.2,
+          "detector_physics.layout.guard_px": 1
+        }
+      },
+      "context_sources": [
+        "D8"
+      ]
+    },
+    {
+      "id": "B05",
+      "title": "WFS bandpass, wavelength quadrature and spectral weights",
+      "classification": "declared_experiment_choice",
+      "applies_to": "all",
+      "unit": "m; nodes",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "milestone A: monochromatic 700 nm carrying a 550-850 nm bandwidth for photometry; milestone B: the R3 contextual sensing band 0.6-0.9 um with 3 Gauss-Legendre nodes weighted by detected electrons (flat in photon number per wavelength for direct budgets)",
+      "transformation": "none",
+      "limitation": "3 nodes; quadrature convergence verified to 2e-3 px between 5 and 7 nodes on the 2 m fixture",
+      "consuming_tests": [
+        "tests/backends/native/test_shwfs_mft.py::test_quadrature_convergence_of_slopes_and_centroid_gain",
+        "tests/detector/test_photometry.py::test_wavelength_dependent_qe_matches_an_independent_integral"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "detector_physics.bandpass.kind": "monochromatic",
+          "detector_physics.bandpass.band_min_m": 5.5e-07,
+          "detector_physics.bandpass.band_max_m": 8.5e-07,
+          "detector_physics.bandpass.n_samples": 1,
+          "wfs_wavelength_m": 7e-07
+        },
+        "det_emccd_2m_synthetic@1": {
+          "detector_physics.bandpass.kind": "monochromatic",
+          "detector_physics.bandpass.band_min_m": 5.5e-07,
+          "detector_physics.bandpass.band_max_m": 8.5e-07,
+          "detector_physics.bandpass.n_samples": 1,
+          "wfs_wavelength_m": 7e-07
+        },
+        "det_cmos_2m_synthetic@1": {
+          "detector_physics.bandpass.kind": "monochromatic",
+          "detector_physics.bandpass.band_min_m": 5.5e-07,
+          "detector_physics.bandpass.band_max_m": 8.5e-07,
+          "detector_physics.bandpass.n_samples": 1,
+          "wfs_wavelength_m": 7e-07
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "detector_physics.bandpass.kind": "gauss_legendre",
+          "detector_physics.bandpass.band_min_m": 6e-07,
+          "detector_physics.bandpass.band_max_m": 9e-07,
+          "detector_physics.bandpass.n_samples": 3,
+          "wfs_wavelength_m": 7e-07
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "detector_physics.bandpass.kind": "gauss_legendre",
+          "detector_physics.bandpass.band_min_m": 6e-07,
+          "detector_physics.bandpass.band_max_m": 9e-07,
+          "detector_physics.bandpass.n_samples": 3,
+          "wfs_wavelength_m": 7e-07
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "detector_physics.bandpass.kind": "gauss_legendre",
+          "detector_physics.bandpass.band_min_m": 6e-07,
+          "detector_physics.bandpass.band_max_m": 9e-07,
+          "detector_physics.bandpass.n_samples": 3,
+          "wfs_wavelength_m": 7e-07
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "detector_physics.bandpass.kind": "gauss_legendre",
+          "detector_physics.bandpass.band_min_m": 6e-07,
+          "detector_physics.bandpass.band_max_m": 9e-07,
+          "detector_physics.bandpass.n_samples": 3,
+          "wfs_wavelength_m": 7e-07
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector_physics.bandpass.kind": "gauss_legendre",
+          "detector_physics.bandpass.band_min_m": 6e-07,
+          "detector_physics.bandpass.band_max_m": 9e-07,
+          "detector_physics.bandpass.n_samples": 3,
+          "wfs_wavelength_m": 7e-07
+        }
+      },
+      "context_sources": [
+        "R3"
+      ]
+    },
+    {
+      "id": "B06",
+      "title": "Source budget, magnitude system, area, throughput and QE accounting",
+      "classification": "declared_experiment_choice",
+      "applies_to": "all",
+      "unit": "AB mag; dimensionless; e-",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "AB magnitudes (Oke & Gunn zero point) with throughput 0.4 excluding QE and the camera's QE applied once; bright-star settings m = 5 (CCD, CMOS) and 7 (EMCCD) at 2 m, m = 8 for the 12 m EMCCD (register capacity), R4's 1e5 per frame per subaperture read as detected photoelectrons at 42 m; per-subaperture budgets scale with illuminated area",
+      "transformation": "none",
+      "limitation": "R4 states photons, not electrons; reading it as detected electrons keeps the 42 m tier comparable with eso_drm_42m_scao_derived@2",
+      "consuming_tests": [
+        "tests/detector/test_photometry.py::test_flat_fnu_top_hat_matches_the_analytic_integral",
+        "tests/wfs/test_physical_sensor.py::test_half_qe_gives_half_the_source_electrons_not_a_quarter"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "detector_physics.source.kind": "ab_flat_fnu",
+          "detector_physics.source.ab_magnitude": 5.0,
+          "detector_physics.source.throughput_excluding_qe": 0.4,
+          "detector_physics.source.incident_photons_per_full_subap_frame": null,
+          "detector_physics.source.detected_e_per_full_subap_frame": null
+        },
+        "det_emccd_2m_synthetic@1": {
+          "detector_physics.source.kind": "ab_flat_fnu",
+          "detector_physics.source.ab_magnitude": 7.0,
+          "detector_physics.source.throughput_excluding_qe": 0.4,
+          "detector_physics.source.incident_photons_per_full_subap_frame": null,
+          "detector_physics.source.detected_e_per_full_subap_frame": null
+        },
+        "det_cmos_2m_synthetic@1": {
+          "detector_physics.source.kind": "ab_flat_fnu",
+          "detector_physics.source.ab_magnitude": 5.0,
+          "detector_physics.source.throughput_excluding_qe": 0.4,
+          "detector_physics.source.incident_photons_per_full_subap_frame": null,
+          "detector_physics.source.detected_e_per_full_subap_frame": null
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "detector_physics.source.kind": "ab_flat_fnu",
+          "detector_physics.source.ab_magnitude": 7.0,
+          "detector_physics.source.throughput_excluding_qe": 0.4,
+          "detector_physics.source.incident_photons_per_full_subap_frame": null,
+          "detector_physics.source.detected_e_per_full_subap_frame": null
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "detector_physics.source.kind": "ab_flat_fnu",
+          "detector_physics.source.ab_magnitude": 8.0,
+          "detector_physics.source.throughput_excluding_qe": 0.4,
+          "detector_physics.source.incident_photons_per_full_subap_frame": null,
+          "detector_physics.source.detected_e_per_full_subap_frame": null
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "detector_physics.source.kind": "detected_electrons",
+          "detector_physics.source.ab_magnitude": null,
+          "detector_physics.source.throughput_excluding_qe": null,
+          "detector_physics.source.incident_photons_per_full_subap_frame": null,
+          "detector_physics.source.detected_e_per_full_subap_frame": 100000.0
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "detector_physics.source.kind": "ab_flat_fnu",
+          "detector_physics.source.ab_magnitude": 8.0,
+          "detector_physics.source.throughput_excluding_qe": 0.4,
+          "detector_physics.source.incident_photons_per_full_subap_frame": null,
+          "detector_physics.source.detected_e_per_full_subap_frame": null
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector_physics.source.kind": "ab_flat_fnu",
+          "detector_physics.source.ab_magnitude": 8.0,
+          "detector_physics.source.throughput_excluding_qe": 0.4,
+          "detector_physics.source.incident_photons_per_full_subap_frame": null,
+          "detector_physics.source.detected_e_per_full_subap_frame": null
+        }
+      },
+      "context_sources": [
+        "D5",
+        "R4"
+      ]
+    },
+    {
+      "id": "B07",
+      "title": "Sky surface brightness",
+      "classification": "engineering_assumption",
+      "applies_to": "all",
+      "unit": "AB mag arcsec^-2",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "20.5 mag/arcsec^2, a dark-sky visible value, constant in f_nu across the band; null for the direct 42 m budget",
+      "transformation": "none",
+      "limitation": "not site data; negligible at these pixel scales and exposures",
+      "consuming_tests": [
+        "tests/detector/test_photometry.py::test_sky_electrons_scale_with_pixel_solid_angle_and_match_a_hand_calculation"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "detector_physics.source.sky_ab_mag_per_arcsec2": 20.5
+        },
+        "det_emccd_2m_synthetic@1": {
+          "detector_physics.source.sky_ab_mag_per_arcsec2": 20.5
+        },
+        "det_cmos_2m_synthetic@1": {
+          "detector_physics.source.sky_ab_mag_per_arcsec2": 20.5
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "detector_physics.source.sky_ab_mag_per_arcsec2": 20.5
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "detector_physics.source.sky_ab_mag_per_arcsec2": 20.5
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "detector_physics.source.sky_ab_mag_per_arcsec2": null
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "detector_physics.source.sky_ab_mag_per_arcsec2": 20.5
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector_physics.source.sky_ab_mag_per_arcsec2": 20.5
+        }
+      }
+    },
+    {
+      "id": "B08",
+      "title": "Calibration-frame protocol and product definitions",
+      "classification": "engineering_assumption",
+      "applies_to": "all",
+      "unit": "frames; e-",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "estimated products from 32 frames each (16 at 42 m for cost), flat at 1000 input e- per pixel; B = bias mean, D = dark mean - B, S = sky mean - B - D, flat = (flat mean - B - D) normalized over valid pixels",
+      "transformation": "none",
+      "limitation": "no shared input frames between products; products fixed per run and regenerated only with a new calibration realization",
+      "consuming_tests": [
+        "tests/wfs/test_physical_sensor.py::test_master_variance_scales_as_one_over_n_with_shared_frame_covariance",
+        "tests/detector/test_noise_model.py::test_calibration_ensemble_matches_the_model"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "detector_physics.processing.mode": "estimated",
+          "detector_physics.processing.n_bias_frames": 32,
+          "detector_physics.processing.n_dark_frames": 32,
+          "detector_physics.processing.n_sky_frames": 32,
+          "detector_physics.processing.n_flat_frames": 32,
+          "detector_physics.processing.flat_level_e": 1000.0
+        },
+        "det_emccd_2m_synthetic@1": {
+          "detector_physics.processing.mode": "estimated",
+          "detector_physics.processing.n_bias_frames": 32,
+          "detector_physics.processing.n_dark_frames": 32,
+          "detector_physics.processing.n_sky_frames": 32,
+          "detector_physics.processing.n_flat_frames": 32,
+          "detector_physics.processing.flat_level_e": 1000.0
+        },
+        "det_cmos_2m_synthetic@1": {
+          "detector_physics.processing.mode": "estimated",
+          "detector_physics.processing.n_bias_frames": 32,
+          "detector_physics.processing.n_dark_frames": 32,
+          "detector_physics.processing.n_sky_frames": 32,
+          "detector_physics.processing.n_flat_frames": 32,
+          "detector_physics.processing.flat_level_e": 1000.0
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "detector_physics.processing.mode": "estimated",
+          "detector_physics.processing.n_bias_frames": 32,
+          "detector_physics.processing.n_dark_frames": 32,
+          "detector_physics.processing.n_sky_frames": 32,
+          "detector_physics.processing.n_flat_frames": 32,
+          "detector_physics.processing.flat_level_e": 1000.0
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "detector_physics.processing.mode": "estimated",
+          "detector_physics.processing.n_bias_frames": 32,
+          "detector_physics.processing.n_dark_frames": 32,
+          "detector_physics.processing.n_sky_frames": 32,
+          "detector_physics.processing.n_flat_frames": 32,
+          "detector_physics.processing.flat_level_e": 1000.0
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "detector_physics.processing.mode": "estimated",
+          "detector_physics.processing.n_bias_frames": 16,
+          "detector_physics.processing.n_dark_frames": 16,
+          "detector_physics.processing.n_sky_frames": 16,
+          "detector_physics.processing.n_flat_frames": 16,
+          "detector_physics.processing.flat_level_e": 1000.0
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "detector_physics.processing.mode": "estimated",
+          "detector_physics.processing.n_bias_frames": 32,
+          "detector_physics.processing.n_dark_frames": 32,
+          "detector_physics.processing.n_sky_frames": 32,
+          "detector_physics.processing.n_flat_frames": 32,
+          "detector_physics.processing.flat_level_e": 1000.0
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector_physics.processing.mode": "estimated",
+          "detector_physics.processing.n_bias_frames": 32,
+          "detector_physics.processing.n_dark_frames": 32,
+          "detector_physics.processing.n_sky_frames": 32,
+          "detector_physics.processing.n_flat_frames": 32,
+          "detector_physics.processing.flat_level_e": 1000.0
+        }
+      },
+      "context_sources": [
+        "D9"
+      ]
+    },
+    {
+      "id": "B09",
+      "title": "Bad-pixel detection thresholds and policy",
+      "classification": "engineering_assumption",
+      "applies_to": "all",
+      "unit": "input e- per frame; normalized flat",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "hot threshold about six times the dark-master noise of each camera; flat outside [0.5, 1.5] is bad; zero weight",
+      "transformation": "none",
+      "limitation": "interpolation is available but not used by the profiles",
+      "consuming_tests": [
+        "tests/wfs/test_physical_sensor.py::test_bad_pixels_mask_without_losing_a_usable_centroid_and_invalid_when_all_masked"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "detector_physics.processing.hot_pixel_threshold_e": 5.0,
+          "detector_physics.processing.flat_low_threshold": 0.5,
+          "detector_physics.processing.flat_high_threshold": 1.5,
+          "detector_physics.processing.bad_pixel_policy": "zero_weight"
+        },
+        "det_emccd_2m_synthetic@1": {
+          "detector_physics.processing.hot_pixel_threshold_e": 0.5,
+          "detector_physics.processing.flat_low_threshold": 0.5,
+          "detector_physics.processing.flat_high_threshold": 1.5,
+          "detector_physics.processing.bad_pixel_policy": "zero_weight"
+        },
+        "det_cmos_2m_synthetic@1": {
+          "detector_physics.processing.hot_pixel_threshold_e": 3.0,
+          "detector_physics.processing.flat_low_threshold": 0.5,
+          "detector_physics.processing.flat_high_threshold": 1.5,
+          "detector_physics.processing.bad_pixel_policy": "zero_weight"
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "detector_physics.processing.hot_pixel_threshold_e": 0.5,
+          "detector_physics.processing.flat_low_threshold": 0.5,
+          "detector_physics.processing.flat_high_threshold": 1.5,
+          "detector_physics.processing.bad_pixel_policy": "zero_weight"
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "detector_physics.processing.hot_pixel_threshold_e": 0.5,
+          "detector_physics.processing.flat_low_threshold": 0.5,
+          "detector_physics.processing.flat_high_threshold": 1.5,
+          "detector_physics.processing.bad_pixel_policy": "zero_weight"
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "detector_physics.processing.hot_pixel_threshold_e": 5.0,
+          "detector_physics.processing.flat_low_threshold": 0.5,
+          "detector_physics.processing.flat_high_threshold": 1.5,
+          "detector_physics.processing.bad_pixel_policy": "zero_weight"
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "detector_physics.processing.hot_pixel_threshold_e": 0.5,
+          "detector_physics.processing.flat_low_threshold": 0.5,
+          "detector_physics.processing.flat_high_threshold": 1.5,
+          "detector_physics.processing.bad_pixel_policy": "zero_weight"
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector_physics.processing.hot_pixel_threshold_e": 0.5,
+          "detector_physics.processing.flat_low_threshold": 0.5,
+          "detector_physics.processing.flat_high_threshold": 1.5,
+          "detector_physics.processing.bad_pixel_policy": "zero_weight"
+        }
+      }
+    },
+    {
+      "id": "B10",
+      "title": "Finite-exposure sub-sample count",
+      "classification": "engineering_assumption",
+      "applies_to": "all",
+      "unit": "samples",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "1: the DET-08 study is opt-in and measured separately",
+      "transformation": "none",
+      "limitation": "the time quadrature study at 12 m needs enablement",
+      "consuming_tests": [
+        "tests/control/test_exposure_subsamples.py::test_one_subsample_is_bit_identical_with_one_atmosphere_call_per_frame"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "detector_physics.exposure_subsamples": 1
+        },
+        "det_emccd_2m_synthetic@1": {
+          "detector_physics.exposure_subsamples": 1
+        },
+        "det_cmos_2m_synthetic@1": {
+          "detector_physics.exposure_subsamples": 1
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "detector_physics.exposure_subsamples": 1
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "detector_physics.exposure_subsamples": 1
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "detector_physics.exposure_subsamples": 1
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "detector_physics.exposure_subsamples": 1
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector_physics.exposure_subsamples": 1
+        }
+      }
+    },
+    {
+      "id": "B11",
+      "title": "Controller gain selection for noise-on profiles",
+      "classification": "declared_experiment_choice",
+      "applies_to": "all",
+      "unit": "dimensionless",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "predeclared scan over {0.2, 0.3, 0.4, 0.5} with max |pole| <= 0.98; the lowest second-half residual wins, ties within 2 % go to the lower gain (det09_gain_scan.json)",
+      "transformation": "none",
+      "limitation": "selected on 3 atmosphere realizations; 12/42 m gains scanned on the ci geometry",
+      "consuming_tests": [
+        "tests/control/test_profile_stability.py",
+        "tests/io/test_detector_level_ledgers.py::test_profile_gains_are_the_recorded_scan_selections"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "controller.gain": 0.2,
+          "controller.include_noise": true
+        },
+        "det_emccd_2m_synthetic@1": {
+          "controller.gain": 0.2,
+          "controller.include_noise": true
+        },
+        "det_cmos_2m_synthetic@1": {
+          "controller.gain": 0.2,
+          "controller.include_noise": true
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "controller.gain": 0.2,
+          "controller.include_noise": true
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "controller.gain": 0.3,
+          "controller.include_noise": true
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "controller.gain": 0.3,
+          "controller.include_noise": true
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "controller.gain": 0.3,
+          "controller.include_noise": true
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "controller.gain": 0.3,
+          "controller.include_noise": true
+        }
+      }
+    },
+    {
+      "id": "B12",
+      "title": "Detector-pixel layout and immutable pixel IDs",
+      "classification": "software_policy",
+      "applies_to": "all",
+      "unit": "scheme",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "isolated lenslet blocks keyed by stable subaperture IDs; maps drawn per physical block",
+      "transformation": "none",
+      "limitation": "synthetic non-overlapping layout, not a real detector geometry",
+      "consuming_tests": [
+        "tests/detector/test_physical_camera.py::test_maps_follow_physical_pixels_not_order_batch_or_subset"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "detector_physics.layout.scheme": "isolated_lenslet_blocks.v1"
+        },
+        "det_emccd_2m_synthetic@1": {
+          "detector_physics.layout.scheme": "isolated_lenslet_blocks.v1"
+        },
+        "det_cmos_2m_synthetic@1": {
+          "detector_physics.layout.scheme": "isolated_lenslet_blocks.v1"
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "detector_physics.layout.scheme": "isolated_lenslet_blocks.v1"
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "detector_physics.layout.scheme": "isolated_lenslet_blocks.v1"
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "detector_physics.layout.scheme": "isolated_lenslet_blocks.v1"
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "detector_physics.layout.scheme": "isolated_lenslet_blocks.v1"
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector_physics.layout.scheme": "isolated_lenslet_blocks.v1"
+        }
+      }
+    },
+    {
+      "id": "B13",
+      "title": "Gain knowledge, EM/input-electron conversion and clipping",
+      "classification": "software_policy",
+      "applies_to": "all",
+      "unit": "policy",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "conversion and EM gain are known engineering inputs applied once (per-pixel CMOS gain applied as known conversion gain, the flat then carries PRNU only); no negative clipping, so the centre of gravity stays first-order",
+      "transformation": "none",
+      "limitation": "no gain estimation; gain errors are outside the model",
+      "consuming_tests": [
+        "tests/wfs/test_physical_sensor.py::test_noiseless_linear_fixture_recovers_the_input_electron_signal"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "detector_physics.processing.gain_treatment": "known_per_pixel",
+          "detector_physics.processing.clip_negative": false,
+          "wfs.clip_negative_pixels": false
+        },
+        "det_emccd_2m_synthetic@1": {
+          "detector_physics.processing.gain_treatment": "known_per_pixel",
+          "detector_physics.processing.clip_negative": false,
+          "wfs.clip_negative_pixels": false
+        },
+        "det_cmos_2m_synthetic@1": {
+          "detector_physics.processing.gain_treatment": "known_per_pixel",
+          "detector_physics.processing.clip_negative": false,
+          "wfs.clip_negative_pixels": false
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "detector_physics.processing.gain_treatment": "known_per_pixel",
+          "detector_physics.processing.clip_negative": false,
+          "wfs.clip_negative_pixels": false
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "detector_physics.processing.gain_treatment": "known_per_pixel",
+          "detector_physics.processing.clip_negative": false,
+          "wfs.clip_negative_pixels": false
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "detector_physics.processing.gain_treatment": "known_per_pixel",
+          "detector_physics.processing.clip_negative": false,
+          "wfs.clip_negative_pixels": false
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "detector_physics.processing.gain_treatment": "known_per_pixel",
+          "detector_physics.processing.clip_negative": false,
+          "wfs.clip_negative_pixels": false
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector_physics.processing.gain_treatment": "known_per_pixel",
+          "detector_physics.processing.clip_negative": false,
+          "wfs.clip_negative_pixels": false
+        }
+      }
+    },
+    {
+      "id": "B14",
+      "title": "Uncertainty-model validity domain; temporal versus persistent calibration error",
+      "classification": "software_policy",
+      "applies_to": "all",
+      "unit": "n/a",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "detector_covariance_v2 (detector.noise_model.UNCERTAINTY_MODEL_ID) is supported only for a plain centre of gravity (no threshold, no minimum subtraction), without negative clipping or a declared non-linearity, with no expected saturation above 90 % of the pixel, EM-register or ADC capacity, with every block pixel's expected ADC code (bias and offset map included) at least 5 temporal noise sigmas inside both ADC limits, with read noise of at least half an ADC step on every pixel that enters the centroid (its own read-noise and gain maps, ADC on), with a positive window total and with SNR_T >= 7; its conditional mean, Jacobian, flux and SNRs subtract what the processing actually removes (the realized masters); the temporal sigma, conditional on those fixed masters, gates validity, and the calibration-ensemble sigma, linearized about the nominal background, is reported separately (centroid_calibration_sigma_px) as a persistent per-run bias",
+      "transformation": "none",
+      "limitation": "outside the domain the model reports an undefined sigma and the lenslet is invalid; first order, it reads low by about 4/SNR_T^2 near the SNR_T floor (E1); its Monte Carlo checks used Gaussian fixture spots (E1, tests/detector/test_noise_model.py) and, in open loop, the profiles' own lenslet optics (E2); the formula itself assumes no spot shape",
+      "consuming_tests": [
+        "tests/detector/test_noise_model.py::test_temporal_scatter_matches_the_model_within_ten_percent",
+        "tests/detector/test_noise_model.py::test_regimes_outside_the_first_order_domain_are_flagged",
+        "tests/detector/test_noise_model.py::test_conditional_mean_is_the_processing_of_the_expected_frame",
+        "tests/detector/test_noise_model.py::test_codes_within_the_noise_headroom_of_code_zero_are_flagged",
+        "tests/detector/test_noise_model.py::test_codes_within_the_noise_headroom_of_the_top_code_are_flagged",
+        "tests/detector/test_noise_model.py::test_a_contributing_pixel_below_half_a_step_unsupports_the_block",
+        "tests/detector/test_noise_model.py::test_calibration_ensemble_matches_the_model"
+      ],
+      "implicit_model_property": true
+    },
+    {
+      "id": "B15",
+      "title": "Neutral compatibility detector block and exposure clock",
+      "classification": "software_policy",
+      "applies_to": "all",
+      "unit": "various",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "the camera preset owns noise and QE and the source block owns the budget, so the legacy detector block is neutral and only carries the exposure, equal to the frame period",
+      "transformation": "none",
+      "limitation": "none",
+      "consuming_tests": [
+        "tests/io/test_detector_level_profiles.py::test_malformed_or_unsupported_records_are_rejected_while_parsing"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "detector.enabled": true,
+          "detector.photons_per_subap_frame": null,
+          "detector.read_noise_e": 0.0,
+          "detector.dark_e_per_s": 0.0,
+          "detector.background_e_per_pixel_frame": 0.0,
+          "detector.full_well_e": null,
+          "detector.qe": 1.0,
+          "detector.prnu_rms": 0.0,
+          "detector.prnu_mode": "persistent",
+          "detector.bad_pixel_fraction": 0.0,
+          "detector.exposure_s": 0.001
+        },
+        "det_emccd_2m_synthetic@1": {
+          "detector.enabled": true,
+          "detector.photons_per_subap_frame": null,
+          "detector.read_noise_e": 0.0,
+          "detector.dark_e_per_s": 0.0,
+          "detector.background_e_per_pixel_frame": 0.0,
+          "detector.full_well_e": null,
+          "detector.qe": 1.0,
+          "detector.prnu_rms": 0.0,
+          "detector.prnu_mode": "persistent",
+          "detector.bad_pixel_fraction": 0.0,
+          "detector.exposure_s": 0.001
+        },
+        "det_cmos_2m_synthetic@1": {
+          "detector.enabled": true,
+          "detector.photons_per_subap_frame": null,
+          "detector.read_noise_e": 0.0,
+          "detector.dark_e_per_s": 0.0,
+          "detector.background_e_per_pixel_frame": 0.0,
+          "detector.full_well_e": null,
+          "detector.qe": 1.0,
+          "detector.prnu_rms": 0.0,
+          "detector.prnu_mode": "persistent",
+          "detector.bad_pixel_fraction": 0.0,
+          "detector.exposure_s": 0.001
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "detector.enabled": true,
+          "detector.photons_per_subap_frame": null,
+          "detector.read_noise_e": 0.0,
+          "detector.dark_e_per_s": 0.0,
+          "detector.background_e_per_pixel_frame": 0.0,
+          "detector.full_well_e": null,
+          "detector.qe": 1.0,
+          "detector.prnu_rms": 0.0,
+          "detector.prnu_mode": "persistent",
+          "detector.bad_pixel_fraction": 0.0,
+          "detector.exposure_s": 0.001
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "detector.enabled": true,
+          "detector.photons_per_subap_frame": null,
+          "detector.read_noise_e": 0.0,
+          "detector.dark_e_per_s": 0.0,
+          "detector.background_e_per_pixel_frame": 0.0,
+          "detector.full_well_e": null,
+          "detector.qe": 1.0,
+          "detector.prnu_rms": 0.0,
+          "detector.prnu_mode": "persistent",
+          "detector.bad_pixel_fraction": 0.0,
+          "detector.exposure_s": 0.002
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "detector.enabled": true,
+          "detector.photons_per_subap_frame": null,
+          "detector.read_noise_e": 0.0,
+          "detector.dark_e_per_s": 0.0,
+          "detector.background_e_per_pixel_frame": 0.0,
+          "detector.full_well_e": null,
+          "detector.qe": 1.0,
+          "detector.prnu_rms": 0.0,
+          "detector.prnu_mode": "persistent",
+          "detector.bad_pixel_fraction": 0.0,
+          "detector.exposure_s": 0.002
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "detector.enabled": true,
+          "detector.photons_per_subap_frame": null,
+          "detector.read_noise_e": 0.0,
+          "detector.dark_e_per_s": 0.0,
+          "detector.background_e_per_pixel_frame": 0.0,
+          "detector.full_well_e": null,
+          "detector.qe": 1.0,
+          "detector.prnu_rms": 0.0,
+          "detector.prnu_mode": "persistent",
+          "detector.bad_pixel_fraction": 0.0,
+          "detector.exposure_s": 0.002
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector.enabled": true,
+          "detector.photons_per_subap_frame": null,
+          "detector.read_noise_e": 0.0,
+          "detector.dark_e_per_s": 0.0,
+          "detector.background_e_per_pixel_frame": 0.0,
+          "detector.full_well_e": null,
+          "detector.qe": 1.0,
+          "detector.prnu_rms": 0.0,
+          "detector.prnu_mode": "persistent",
+          "detector.bad_pixel_fraction": 0.0,
+          "detector.exposure_s": 0.002
+        }
+      }
+    },
+    {
+      "id": "B18",
+      "title": "Validity gating on the uncertainty-model domain instead of the peak-pixel SNR gate (version 2, post-hoc)",
+      "classification": "engineering_assumption",
+      "applies_to": "all",
+      "unit": "dimensionless",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "E3 on @1 showed the inherited peak-pixel SNR gate (3) rejects lenslets with total SNR ~20 from m_AB ~ 9.5 and collapses the loop at m_AB = 10; @2 sets it to 0 and relies on SNR_T >= 7 (validated domain) and sigma <= 0.5 px; recorded reason, the affected experiments are rerun on @2; the decision, and E3 and E4 on @2, were made and produced under detector_covariance_v1 (2026-10-16, before commit 573f875), and those records keep that identity; runs of @2, and of @3, which inherits the gate, on current code gate on detector_covariance_v2 (B14), whose SNR_T is formed from the conditional mean on the realized masters",
+      "transformation": "none",
+      "limitation": "changed after inspecting E3; @1 keeps the predeclared gate and its results stand",
+      "consuming_tests": [
+        "tests/detector/test_noise_model.py::test_temporal_scatter_matches_the_model_within_ten_percent"
+      ],
+      "values_by_profile": {
+        "det_emccd_12m_medium_derived@2": {
+          "wfs.min_peak_snr": 0.0
+        }
+      }
+    },
+    {
+      "id": "B19",
+      "title": "Bright internal calibration source (version 2)",
+      "classification": "engineering_assumption",
+      "applies_to": "all",
+      "unit": "detected e- per full subaperture per frame",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "2500 e- (an m_AB = 8 equivalent at 12 m for the EMCCD) for reference centroids and interaction probes, without sky; @1 calibrated at the operating flux and refused to build from m_AB = 11",
+      "transformation": "none",
+      "limitation": "the internal source has the operating spectral weights; its sky-free reference differs from the operating sky pedestal only by the sky master (about 1e-4 e- per pixel)",
+      "consuming_tests": [
+        "tests/wfs/test_physical_sensor.py::test_a_calibration_source_decouples_calibration_from_the_operating_flux"
+      ],
+      "values_by_profile": {
+        "det_emccd_12m_medium_derived@2": {
+          "detector_physics.calibration_source_detected_e_per_full_subap_frame": 2500.0
+        }
+      }
+    },
+    {
+      "id": "B20",
+      "title": "Reconstructor Tikhonov damping (version 3, post-hoc)",
+      "classification": "engineering_assumption",
+      "applies_to": "all",
+      "unit": "relative to the RMS column norm",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "0.1 (was 0.001): 0.001 leaves the global waffle mode (singular value 0.0265 of the RMS column norm) unregularized, and its noise-driven wander latched the loop up at m_AB = 11; 0.1 damps waffle by 15x and leaves the median mode at 0.99 of its gain; selected on root seeds 11 and 12 (0.03, 0.1, 0.3) and evaluated, predeclared, on root seeds 21-25 (det_excursion_e3_12m_v2.json)",
+      "transformation": "none",
+      "limitation": "changed after inspecting E3 on @2; selected at m_AB = 11 on the 12 m geometry only; @2 keeps 0.001 and its results stand",
+      "consuming_tests": [
+        "tests/io/test_detector_level_profiles.py::test_version_3_is_version_2_with_damping_and_the_reset_policy"
+      ],
+      "values_by_profile": {
+        "det_emccd_12m_medium_derived@3": {
+          "reconstructor.alpha": 0.1
+        }
+      }
+    },
+    {
+      "id": "B21",
+      "title": "Closed-loop recovery policy (version 3)",
+      "classification": "engineering_assumption",
+      "applies_to": "all",
+      "unit": "frames; fraction of the command removed per frame; null = off",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "reset the DM to flat after two consecutive rejected frames (det_recovery_e3_12m_v2.json); with the version-3 damping no frame is rejected at m_AB 10-11 on the evaluation seeds, so it is a safety net that never acts there; the subset fallback and the gain schedule stay off (null): neither recovered the loop in that evaluation",
+      "transformation": "none",
+      "limitation": "a reset costs about 20 frames of re-closing when it fires",
+      "consuming_tests": [
+        "tests/control/test_recovery.py",
+        "tests/io/test_recovery_policy_config.py"
+      ],
+      "values_by_profile": {
+        "det_emccd_12m_medium_derived@3": {
+          "controller.recovery.rejected_frames_before_decay": 2,
+          "controller.recovery.decay_per_rejected_frame": 1.0,
+          "controller.recovery.fallback_min_valid_fraction": null,
+          "controller.recovery.fallback_min_actuator_coverage": null,
+          "controller.recovery.gain_full_valid_fraction": null
+        }
+      }
+    },
+    {
+      "id": "B16",
+      "title": "Noise-on reconstruction validity floor",
+      "classification": "engineering_assumption",
+      "applies_to": "all",
+      "unit": "fraction",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "0.75 (the 2 m base profiles required 1.0, which freezes the DM on the first noise-invalidated lenslet); the ESO tiers keep 0.5",
+      "transformation": "none",
+      "limitation": "none",
+      "consuming_tests": [
+        "tests/control/test_profile_stability.py",
+        "tests/io/test_detector_level_ledgers.py::test_profile_gains_are_the_recorded_scan_selections"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "reconstructor.min_valid_fraction": 0.75
+        },
+        "det_emccd_2m_synthetic@1": {
+          "reconstructor.min_valid_fraction": 0.75
+        },
+        "det_cmos_2m_synthetic@1": {
+          "reconstructor.min_valid_fraction": 0.75
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "reconstructor.min_valid_fraction": 0.75
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "reconstructor.min_valid_fraction": 0.5
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "reconstructor.min_valid_fraction": 0.5
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "reconstructor.min_valid_fraction": 0.5
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "reconstructor.min_valid_fraction": 0.5
+        }
+      }
+    },
+    {
+      "id": "B17",
+      "title": "Values inherited unchanged from the base profile",
+      "classification": "software_policy",
+      "applies_to": "all",
+      "unit": "various",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "geometry, atmosphere, DM, calibration, reconstructor kind, command projector, loop timing and science settings are the base profile's; ESO-derived tiers are traced by eso_drm_42m_scao_derived.assumptions.v2.json",
+      "transformation": "none (copied from the base profile)",
+      "limitation": "the 2 m base (fast_2m_detector@4) is a synthetic engineering profile without its own ledger",
+      "consuming_tests": [
+        "tests/io/test_detector_level_profiles.py::test_malformed_or_unsupported_records_are_rejected_while_parsing"
+      ],
+      "values_by_profile": {
+        "det_ccd_2m_synthetic@1": {
+          "backend": "derived:fast_2m_detector@4",
+          "wfs_model": "derived:fast_2m_detector@4",
+          "atmosphere_model": "derived:fast_2m_detector@4",
+          "telescope_diameter_m": "derived:fast_2m_detector@4",
+          "pupil_pixels": "derived:fast_2m_detector@4",
+          "lenslets_across": "derived:fast_2m_detector@4",
+          "actuators_across": "derived:fast_2m_detector@4",
+          "science_wavelengths_m": "derived:fast_2m_detector@4",
+          "atmosphere.r0_m": "derived:fast_2m_detector@4",
+          "atmosphere.r0_reference_wavelength_m": "derived:fast_2m_detector@4",
+          "atmosphere.outer_scale_m": "derived:fast_2m_detector@4",
+          "atmosphere.wind_m_per_s": "derived:fast_2m_detector@4",
+          "atmosphere.target_rms_opd_m": "derived:fast_2m_detector@4",
+          "atmosphere.normalize_rms": "derived:fast_2m_detector@4",
+          "atmosphere.layers": "derived:fast_2m_detector@4",
+          "wfs.min_fill_fraction": "derived:fast_2m_detector@4",
+          "wfs.centroid_estimator": "derived:fast_2m_detector@4",
+          "wfs.threshold_fraction": "derived:fast_2m_detector@4",
+          "wfs.subtract_minimum": "derived:fast_2m_detector@4",
+          "wfs.min_flux_e": "derived:fast_2m_detector@4",
+          "wfs.min_peak_snr": "derived:fast_2m_detector@4",
+          "wfs.max_centroid_sigma_px": "derived:fast_2m_detector@4",
+          "wfs.max_window_clipping_fraction": "derived:fast_2m_detector@4",
+          "wfs.central_obstruction_ratio": "derived:fast_2m_detector@4",
+          "wfs.spider_width_m": "derived:fast_2m_detector@4",
+          "wfs.photon_allocation": "derived:fast_2m_detector@4",
+          "wfs.lenslet_axis": "derived:fast_2m_detector@4",
+          "dm.influence_model": "derived:fast_2m_detector@4",
+          "dm.coupling_width_pitch": "derived:fast_2m_detector@4",
+          "dm.stroke_limit_opd_m": "derived:fast_2m_detector@4",
+          "dm.include_edge_actuators": "derived:fast_2m_detector@4",
+          "dm.actuator_margin_fraction": "derived:fast_2m_detector@4",
+          "dm.dead_actuator_indices": "derived:fast_2m_detector@4",
+          "dm.stuck_actuator_indices": "derived:fast_2m_detector@4",
+          "dm.stuck_command_opd_m": "derived:fast_2m_detector@4",
+          "calibration.source": "derived:fast_2m_detector@4",
+          "calibration.method": "derived:fast_2m_detector@4",
+          "calibration.probe_kind": "derived:fast_2m_detector@4",
+          "calibration.amplitude_m": "derived:fast_2m_detector@4",
+          "calibration.include_noise": "derived:fast_2m_detector@4",
+          "calibration.repeats": "derived:fast_2m_detector@4",
+          "calibration.resource_name": "derived:fast_2m_detector@4",
+          "reconstructor.kind": "derived:fast_2m_detector@4",
+          "reconstructor.rcond": "derived:fast_2m_detector@4",
+          "reconstructor.alpha": "derived:fast_2m_detector@4",
+          "reconstructor.min_rank": "derived:fast_2m_detector@4",
+          "reconstructor.max_cached_masks": "derived:fast_2m_detector@4",
+          "command_projector.kind": "derived:fast_2m_detector@4",
+          "command_projector.mapping_resource": "derived:fast_2m_detector@4",
+          "controller.n_steps": "derived:fast_2m_detector@4",
+          "controller.leak": "derived:fast_2m_detector@4",
+          "controller.latency_frames": "derived:fast_2m_detector@4",
+          "controller.frame_rate_hz": "derived:fast_2m_detector@4",
+          "science.psf_pad_factor": "derived:fast_2m_detector@4",
+          "random.root_seed": "derived:fast_2m_detector@4",
+          "random.derivation_scheme_id": "derived:fast_2m_detector@4",
+          "scalable": "derived:fast_2m_detector@4"
+        },
+        "det_emccd_2m_synthetic@1": {
+          "backend": "derived:fast_2m_detector@4",
+          "wfs_model": "derived:fast_2m_detector@4",
+          "atmosphere_model": "derived:fast_2m_detector@4",
+          "telescope_diameter_m": "derived:fast_2m_detector@4",
+          "pupil_pixels": "derived:fast_2m_detector@4",
+          "lenslets_across": "derived:fast_2m_detector@4",
+          "actuators_across": "derived:fast_2m_detector@4",
+          "science_wavelengths_m": "derived:fast_2m_detector@4",
+          "atmosphere.r0_m": "derived:fast_2m_detector@4",
+          "atmosphere.r0_reference_wavelength_m": "derived:fast_2m_detector@4",
+          "atmosphere.outer_scale_m": "derived:fast_2m_detector@4",
+          "atmosphere.wind_m_per_s": "derived:fast_2m_detector@4",
+          "atmosphere.target_rms_opd_m": "derived:fast_2m_detector@4",
+          "atmosphere.normalize_rms": "derived:fast_2m_detector@4",
+          "atmosphere.layers": "derived:fast_2m_detector@4",
+          "wfs.min_fill_fraction": "derived:fast_2m_detector@4",
+          "wfs.centroid_estimator": "derived:fast_2m_detector@4",
+          "wfs.threshold_fraction": "derived:fast_2m_detector@4",
+          "wfs.subtract_minimum": "derived:fast_2m_detector@4",
+          "wfs.min_flux_e": "derived:fast_2m_detector@4",
+          "wfs.min_peak_snr": "derived:fast_2m_detector@4",
+          "wfs.max_centroid_sigma_px": "derived:fast_2m_detector@4",
+          "wfs.max_window_clipping_fraction": "derived:fast_2m_detector@4",
+          "wfs.central_obstruction_ratio": "derived:fast_2m_detector@4",
+          "wfs.spider_width_m": "derived:fast_2m_detector@4",
+          "wfs.photon_allocation": "derived:fast_2m_detector@4",
+          "wfs.lenslet_axis": "derived:fast_2m_detector@4",
+          "dm.influence_model": "derived:fast_2m_detector@4",
+          "dm.coupling_width_pitch": "derived:fast_2m_detector@4",
+          "dm.stroke_limit_opd_m": "derived:fast_2m_detector@4",
+          "dm.include_edge_actuators": "derived:fast_2m_detector@4",
+          "dm.actuator_margin_fraction": "derived:fast_2m_detector@4",
+          "dm.dead_actuator_indices": "derived:fast_2m_detector@4",
+          "dm.stuck_actuator_indices": "derived:fast_2m_detector@4",
+          "dm.stuck_command_opd_m": "derived:fast_2m_detector@4",
+          "calibration.source": "derived:fast_2m_detector@4",
+          "calibration.method": "derived:fast_2m_detector@4",
+          "calibration.probe_kind": "derived:fast_2m_detector@4",
+          "calibration.amplitude_m": "derived:fast_2m_detector@4",
+          "calibration.include_noise": "derived:fast_2m_detector@4",
+          "calibration.repeats": "derived:fast_2m_detector@4",
+          "calibration.resource_name": "derived:fast_2m_detector@4",
+          "reconstructor.kind": "derived:fast_2m_detector@4",
+          "reconstructor.rcond": "derived:fast_2m_detector@4",
+          "reconstructor.alpha": "derived:fast_2m_detector@4",
+          "reconstructor.min_rank": "derived:fast_2m_detector@4",
+          "reconstructor.max_cached_masks": "derived:fast_2m_detector@4",
+          "command_projector.kind": "derived:fast_2m_detector@4",
+          "command_projector.mapping_resource": "derived:fast_2m_detector@4",
+          "controller.n_steps": "derived:fast_2m_detector@4",
+          "controller.leak": "derived:fast_2m_detector@4",
+          "controller.latency_frames": "derived:fast_2m_detector@4",
+          "controller.frame_rate_hz": "derived:fast_2m_detector@4",
+          "science.psf_pad_factor": "derived:fast_2m_detector@4",
+          "random.root_seed": "derived:fast_2m_detector@4",
+          "random.derivation_scheme_id": "derived:fast_2m_detector@4",
+          "scalable": "derived:fast_2m_detector@4"
+        },
+        "det_cmos_2m_synthetic@1": {
+          "backend": "derived:fast_2m_detector@4",
+          "wfs_model": "derived:fast_2m_detector@4",
+          "atmosphere_model": "derived:fast_2m_detector@4",
+          "telescope_diameter_m": "derived:fast_2m_detector@4",
+          "pupil_pixels": "derived:fast_2m_detector@4",
+          "lenslets_across": "derived:fast_2m_detector@4",
+          "actuators_across": "derived:fast_2m_detector@4",
+          "science_wavelengths_m": "derived:fast_2m_detector@4",
+          "atmosphere.r0_m": "derived:fast_2m_detector@4",
+          "atmosphere.r0_reference_wavelength_m": "derived:fast_2m_detector@4",
+          "atmosphere.outer_scale_m": "derived:fast_2m_detector@4",
+          "atmosphere.wind_m_per_s": "derived:fast_2m_detector@4",
+          "atmosphere.target_rms_opd_m": "derived:fast_2m_detector@4",
+          "atmosphere.normalize_rms": "derived:fast_2m_detector@4",
+          "atmosphere.layers": "derived:fast_2m_detector@4",
+          "wfs.min_fill_fraction": "derived:fast_2m_detector@4",
+          "wfs.centroid_estimator": "derived:fast_2m_detector@4",
+          "wfs.threshold_fraction": "derived:fast_2m_detector@4",
+          "wfs.subtract_minimum": "derived:fast_2m_detector@4",
+          "wfs.min_flux_e": "derived:fast_2m_detector@4",
+          "wfs.min_peak_snr": "derived:fast_2m_detector@4",
+          "wfs.max_centroid_sigma_px": "derived:fast_2m_detector@4",
+          "wfs.max_window_clipping_fraction": "derived:fast_2m_detector@4",
+          "wfs.central_obstruction_ratio": "derived:fast_2m_detector@4",
+          "wfs.spider_width_m": "derived:fast_2m_detector@4",
+          "wfs.photon_allocation": "derived:fast_2m_detector@4",
+          "wfs.lenslet_axis": "derived:fast_2m_detector@4",
+          "dm.influence_model": "derived:fast_2m_detector@4",
+          "dm.coupling_width_pitch": "derived:fast_2m_detector@4",
+          "dm.stroke_limit_opd_m": "derived:fast_2m_detector@4",
+          "dm.include_edge_actuators": "derived:fast_2m_detector@4",
+          "dm.actuator_margin_fraction": "derived:fast_2m_detector@4",
+          "dm.dead_actuator_indices": "derived:fast_2m_detector@4",
+          "dm.stuck_actuator_indices": "derived:fast_2m_detector@4",
+          "dm.stuck_command_opd_m": "derived:fast_2m_detector@4",
+          "calibration.source": "derived:fast_2m_detector@4",
+          "calibration.method": "derived:fast_2m_detector@4",
+          "calibration.probe_kind": "derived:fast_2m_detector@4",
+          "calibration.amplitude_m": "derived:fast_2m_detector@4",
+          "calibration.include_noise": "derived:fast_2m_detector@4",
+          "calibration.repeats": "derived:fast_2m_detector@4",
+          "calibration.resource_name": "derived:fast_2m_detector@4",
+          "reconstructor.kind": "derived:fast_2m_detector@4",
+          "reconstructor.rcond": "derived:fast_2m_detector@4",
+          "reconstructor.alpha": "derived:fast_2m_detector@4",
+          "reconstructor.min_rank": "derived:fast_2m_detector@4",
+          "reconstructor.max_cached_masks": "derived:fast_2m_detector@4",
+          "command_projector.kind": "derived:fast_2m_detector@4",
+          "command_projector.mapping_resource": "derived:fast_2m_detector@4",
+          "controller.n_steps": "derived:fast_2m_detector@4",
+          "controller.leak": "derived:fast_2m_detector@4",
+          "controller.latency_frames": "derived:fast_2m_detector@4",
+          "controller.frame_rate_hz": "derived:fast_2m_detector@4",
+          "science.psf_pad_factor": "derived:fast_2m_detector@4",
+          "random.root_seed": "derived:fast_2m_detector@4",
+          "random.derivation_scheme_id": "derived:fast_2m_detector@4",
+          "scalable": "derived:fast_2m_detector@4"
+        },
+        "det_emccd_2m_plane_synthetic@1": {
+          "backend": "derived:fast_2m_detector@4",
+          "wfs_model": "derived:fast_2m_detector@4",
+          "atmosphere_model": "derived:fast_2m_detector@4",
+          "telescope_diameter_m": "derived:fast_2m_detector@4",
+          "pupil_pixels": "derived:fast_2m_detector@4",
+          "lenslets_across": "derived:fast_2m_detector@4",
+          "actuators_across": "derived:fast_2m_detector@4",
+          "science_wavelengths_m": "derived:fast_2m_detector@4",
+          "atmosphere.r0_m": "derived:fast_2m_detector@4",
+          "atmosphere.r0_reference_wavelength_m": "derived:fast_2m_detector@4",
+          "atmosphere.outer_scale_m": "derived:fast_2m_detector@4",
+          "atmosphere.wind_m_per_s": "derived:fast_2m_detector@4",
+          "atmosphere.target_rms_opd_m": "derived:fast_2m_detector@4",
+          "atmosphere.normalize_rms": "derived:fast_2m_detector@4",
+          "atmosphere.layers": "derived:fast_2m_detector@4",
+          "wfs.min_fill_fraction": "derived:fast_2m_detector@4",
+          "wfs.centroid_estimator": "derived:fast_2m_detector@4",
+          "wfs.threshold_fraction": "derived:fast_2m_detector@4",
+          "wfs.subtract_minimum": "derived:fast_2m_detector@4",
+          "wfs.min_flux_e": "derived:fast_2m_detector@4",
+          "wfs.min_peak_snr": "derived:fast_2m_detector@4",
+          "wfs.max_centroid_sigma_px": "derived:fast_2m_detector@4",
+          "wfs.max_window_clipping_fraction": "derived:fast_2m_detector@4",
+          "wfs.central_obstruction_ratio": "derived:fast_2m_detector@4",
+          "wfs.spider_width_m": "derived:fast_2m_detector@4",
+          "wfs.photon_allocation": "derived:fast_2m_detector@4",
+          "wfs.lenslet_axis": "derived:fast_2m_detector@4",
+          "dm.influence_model": "derived:fast_2m_detector@4",
+          "dm.coupling_width_pitch": "derived:fast_2m_detector@4",
+          "dm.stroke_limit_opd_m": "derived:fast_2m_detector@4",
+          "dm.include_edge_actuators": "derived:fast_2m_detector@4",
+          "dm.actuator_margin_fraction": "derived:fast_2m_detector@4",
+          "dm.dead_actuator_indices": "derived:fast_2m_detector@4",
+          "dm.stuck_actuator_indices": "derived:fast_2m_detector@4",
+          "dm.stuck_command_opd_m": "derived:fast_2m_detector@4",
+          "calibration.source": "derived:fast_2m_detector@4",
+          "calibration.method": "derived:fast_2m_detector@4",
+          "calibration.probe_kind": "derived:fast_2m_detector@4",
+          "calibration.amplitude_m": "derived:fast_2m_detector@4",
+          "calibration.include_noise": "derived:fast_2m_detector@4",
+          "calibration.repeats": "derived:fast_2m_detector@4",
+          "calibration.resource_name": "derived:fast_2m_detector@4",
+          "reconstructor.kind": "derived:fast_2m_detector@4",
+          "reconstructor.rcond": "derived:fast_2m_detector@4",
+          "reconstructor.alpha": "derived:fast_2m_detector@4",
+          "reconstructor.min_rank": "derived:fast_2m_detector@4",
+          "reconstructor.max_cached_masks": "derived:fast_2m_detector@4",
+          "command_projector.kind": "derived:fast_2m_detector@4",
+          "command_projector.mapping_resource": "derived:fast_2m_detector@4",
+          "controller.n_steps": "derived:fast_2m_detector@4",
+          "controller.leak": "derived:fast_2m_detector@4",
+          "controller.latency_frames": "derived:fast_2m_detector@4",
+          "controller.frame_rate_hz": "derived:fast_2m_detector@4",
+          "science.psf_pad_factor": "derived:fast_2m_detector@4",
+          "random.root_seed": "derived:fast_2m_detector@4",
+          "random.derivation_scheme_id": "derived:fast_2m_detector@4",
+          "scalable": "derived:fast_2m_detector@4"
+        },
+        "det_emccd_12m_medium_derived@1": {
+          "backend": "derived:eso_scao_medium_12m_derived@2",
+          "wfs_model": "derived:eso_scao_medium_12m_derived@2",
+          "atmosphere_model": "derived:eso_scao_medium_12m_derived@2",
+          "telescope_diameter_m": "derived:eso_scao_medium_12m_derived@2",
+          "pupil_pixels": "derived:eso_scao_medium_12m_derived@2",
+          "lenslets_across": "derived:eso_scao_medium_12m_derived@2",
+          "actuators_across": "derived:eso_scao_medium_12m_derived@2",
+          "science_wavelengths_m": "derived:eso_scao_medium_12m_derived@2",
+          "atmosphere.r0_m": "derived:eso_scao_medium_12m_derived@2",
+          "atmosphere.r0_reference_wavelength_m": "derived:eso_scao_medium_12m_derived@2",
+          "atmosphere.outer_scale_m": "derived:eso_scao_medium_12m_derived@2",
+          "atmosphere.wind_m_per_s": "derived:eso_scao_medium_12m_derived@2",
+          "atmosphere.target_rms_opd_m": "derived:eso_scao_medium_12m_derived@2",
+          "atmosphere.normalize_rms": "derived:eso_scao_medium_12m_derived@2",
+          "atmosphere.layers[*].altitude_m": "derived:eso_scao_medium_12m_derived@2",
+          "atmosphere.layers[*].cn2_fraction": "derived:eso_scao_medium_12m_derived@2",
+          "atmosphere.layers[*].wind_m_per_s": "derived:eso_scao_medium_12m_derived@2",
+          "wfs.min_fill_fraction": "derived:eso_scao_medium_12m_derived@2",
+          "wfs.centroid_estimator": "derived:eso_scao_medium_12m_derived@2",
+          "wfs.threshold_fraction": "derived:eso_scao_medium_12m_derived@2",
+          "wfs.subtract_minimum": "derived:eso_scao_medium_12m_derived@2",
+          "wfs.min_flux_e": "derived:eso_scao_medium_12m_derived@2",
+          "wfs.min_peak_snr": "derived:eso_scao_medium_12m_derived@2",
+          "wfs.max_centroid_sigma_px": "derived:eso_scao_medium_12m_derived@2",
+          "wfs.max_window_clipping_fraction": "derived:eso_scao_medium_12m_derived@2",
+          "wfs.central_obstruction_ratio": "derived:eso_scao_medium_12m_derived@2",
+          "wfs.spider_width_m": "derived:eso_scao_medium_12m_derived@2",
+          "wfs.photon_allocation": "derived:eso_scao_medium_12m_derived@2",
+          "wfs.lenslet_axis": "derived:eso_scao_medium_12m_derived@2",
+          "dm.influence_model": "derived:eso_scao_medium_12m_derived@2",
+          "dm.coupling_width_pitch": "derived:eso_scao_medium_12m_derived@2",
+          "dm.stroke_limit_opd_m": "derived:eso_scao_medium_12m_derived@2",
+          "dm.include_edge_actuators": "derived:eso_scao_medium_12m_derived@2",
+          "dm.actuator_margin_fraction": "derived:eso_scao_medium_12m_derived@2",
+          "dm.dead_actuator_indices": "derived:eso_scao_medium_12m_derived@2",
+          "dm.stuck_actuator_indices": "derived:eso_scao_medium_12m_derived@2",
+          "dm.stuck_command_opd_m": "derived:eso_scao_medium_12m_derived@2",
+          "calibration.source": "derived:eso_scao_medium_12m_derived@2",
+          "calibration.method": "derived:eso_scao_medium_12m_derived@2",
+          "calibration.probe_kind": "derived:eso_scao_medium_12m_derived@2",
+          "calibration.amplitude_m": "derived:eso_scao_medium_12m_derived@2",
+          "calibration.include_noise": "derived:eso_scao_medium_12m_derived@2",
+          "calibration.repeats": "derived:eso_scao_medium_12m_derived@2",
+          "calibration.resource_name": "derived:eso_scao_medium_12m_derived@2",
+          "reconstructor.kind": "derived:eso_scao_medium_12m_derived@2",
+          "reconstructor.rcond": "derived:eso_scao_medium_12m_derived@2",
+          "reconstructor.alpha": "derived:eso_scao_medium_12m_derived@2",
+          "reconstructor.min_rank": "derived:eso_scao_medium_12m_derived@2",
+          "reconstructor.max_cached_masks": "derived:eso_scao_medium_12m_derived@2",
+          "command_projector.kind": "derived:eso_scao_medium_12m_derived@2",
+          "command_projector.mapping_resource": "derived:eso_scao_medium_12m_derived@2",
+          "controller.n_steps": "derived:eso_scao_medium_12m_derived@2",
+          "controller.leak": "derived:eso_scao_medium_12m_derived@2",
+          "controller.latency_frames": "derived:eso_scao_medium_12m_derived@2",
+          "controller.frame_rate_hz": "derived:eso_scao_medium_12m_derived@2",
+          "science.psf_pad_factor": "derived:eso_scao_medium_12m_derived@2",
+          "random.root_seed": "derived:eso_scao_medium_12m_derived@2",
+          "random.derivation_scheme_id": "derived:eso_scao_medium_12m_derived@2",
+          "scalable.dm_operator": "derived:eso_scao_medium_12m_derived@2",
+          "scalable.wfs_geometry": "derived:eso_scao_medium_12m_derived@2",
+          "scalable.calibration_strategy": "derived:eso_scao_medium_12m_derived@2",
+          "scalable.solver": "derived:eso_scao_medium_12m_derived@2",
+          "scalable.solver_atol": "derived:eso_scao_medium_12m_derived@2",
+          "scalable.solver_btol": "derived:eso_scao_medium_12m_derived@2",
+          "scalable.solver_max_iterations": "derived:eso_scao_medium_12m_derived@2",
+          "scalable.nonconverged_policy": "derived:eso_scao_medium_12m_derived@2"
+        },
+        "det_ccd_42m_r3band_derived@1": {
+          "backend": "derived:eso_drm_42m_scao_derived@2",
+          "wfs_model": "derived:eso_drm_42m_scao_derived@2",
+          "atmosphere_model": "derived:eso_drm_42m_scao_derived@2",
+          "telescope_diameter_m": "derived:eso_drm_42m_scao_derived@2",
+          "pupil_pixels": "derived:eso_drm_42m_scao_derived@2",
+          "lenslets_across": "derived:eso_drm_42m_scao_derived@2",
+          "actuators_across": "derived:eso_drm_42m_scao_derived@2",
+          "science_wavelengths_m": "derived:eso_drm_42m_scao_derived@2",
+          "atmosphere.r0_m": "derived:eso_drm_42m_scao_derived@2",
+          "atmosphere.r0_reference_wavelength_m": "derived:eso_drm_42m_scao_derived@2",
+          "atmosphere.outer_scale_m": "derived:eso_drm_42m_scao_derived@2",
+          "atmosphere.wind_m_per_s": "derived:eso_drm_42m_scao_derived@2",
+          "atmosphere.target_rms_opd_m": "derived:eso_drm_42m_scao_derived@2",
+          "atmosphere.normalize_rms": "derived:eso_drm_42m_scao_derived@2",
+          "atmosphere.layers[*].altitude_m": "derived:eso_drm_42m_scao_derived@2",
+          "atmosphere.layers[*].cn2_fraction": "derived:eso_drm_42m_scao_derived@2",
+          "atmosphere.layers[*].wind_m_per_s": "derived:eso_drm_42m_scao_derived@2",
+          "wfs.min_fill_fraction": "derived:eso_drm_42m_scao_derived@2",
+          "wfs.centroid_estimator": "derived:eso_drm_42m_scao_derived@2",
+          "wfs.threshold_fraction": "derived:eso_drm_42m_scao_derived@2",
+          "wfs.subtract_minimum": "derived:eso_drm_42m_scao_derived@2",
+          "wfs.min_flux_e": "derived:eso_drm_42m_scao_derived@2",
+          "wfs.min_peak_snr": "derived:eso_drm_42m_scao_derived@2",
+          "wfs.max_centroid_sigma_px": "derived:eso_drm_42m_scao_derived@2",
+          "wfs.max_window_clipping_fraction": "derived:eso_drm_42m_scao_derived@2",
+          "wfs.central_obstruction_ratio": "derived:eso_drm_42m_scao_derived@2",
+          "wfs.spider_width_m": "derived:eso_drm_42m_scao_derived@2",
+          "wfs.photon_allocation": "derived:eso_drm_42m_scao_derived@2",
+          "wfs.lenslet_axis": "derived:eso_drm_42m_scao_derived@2",
+          "dm.influence_model": "derived:eso_drm_42m_scao_derived@2",
+          "dm.coupling_width_pitch": "derived:eso_drm_42m_scao_derived@2",
+          "dm.stroke_limit_opd_m": "derived:eso_drm_42m_scao_derived@2",
+          "dm.include_edge_actuators": "derived:eso_drm_42m_scao_derived@2",
+          "dm.actuator_margin_fraction": "derived:eso_drm_42m_scao_derived@2",
+          "dm.dead_actuator_indices": "derived:eso_drm_42m_scao_derived@2",
+          "dm.stuck_actuator_indices": "derived:eso_drm_42m_scao_derived@2",
+          "dm.stuck_command_opd_m": "derived:eso_drm_42m_scao_derived@2",
+          "calibration.source": "derived:eso_drm_42m_scao_derived@2",
+          "calibration.method": "derived:eso_drm_42m_scao_derived@2",
+          "calibration.probe_kind": "derived:eso_drm_42m_scao_derived@2",
+          "calibration.amplitude_m": "derived:eso_drm_42m_scao_derived@2",
+          "calibration.include_noise": "derived:eso_drm_42m_scao_derived@2",
+          "calibration.repeats": "derived:eso_drm_42m_scao_derived@2",
+          "calibration.resource_name": "derived:eso_drm_42m_scao_derived@2",
+          "reconstructor.kind": "derived:eso_drm_42m_scao_derived@2",
+          "reconstructor.rcond": "derived:eso_drm_42m_scao_derived@2",
+          "reconstructor.alpha": "derived:eso_drm_42m_scao_derived@2",
+          "reconstructor.min_rank": "derived:eso_drm_42m_scao_derived@2",
+          "reconstructor.max_cached_masks": "derived:eso_drm_42m_scao_derived@2",
+          "command_projector.kind": "derived:eso_drm_42m_scao_derived@2",
+          "command_projector.mapping_resource": "derived:eso_drm_42m_scao_derived@2",
+          "controller.n_steps": "derived:eso_drm_42m_scao_derived@2",
+          "controller.leak": "derived:eso_drm_42m_scao_derived@2",
+          "controller.latency_frames": "derived:eso_drm_42m_scao_derived@2",
+          "controller.frame_rate_hz": "derived:eso_drm_42m_scao_derived@2",
+          "science.psf_pad_factor": "derived:eso_drm_42m_scao_derived@2",
+          "random.root_seed": "derived:eso_drm_42m_scao_derived@2",
+          "random.derivation_scheme_id": "derived:eso_drm_42m_scao_derived@2",
+          "scalable.dm_operator": "derived:eso_drm_42m_scao_derived@2",
+          "scalable.wfs_geometry": "derived:eso_drm_42m_scao_derived@2",
+          "scalable.calibration_strategy": "derived:eso_drm_42m_scao_derived@2",
+          "scalable.solver": "derived:eso_drm_42m_scao_derived@2",
+          "scalable.solver_atol": "derived:eso_drm_42m_scao_derived@2",
+          "scalable.solver_btol": "derived:eso_drm_42m_scao_derived@2",
+          "scalable.solver_max_iterations": "derived:eso_drm_42m_scao_derived@2",
+          "scalable.nonconverged_policy": "derived:eso_drm_42m_scao_derived@2"
+        },
+        "det_emccd_12m_medium_derived@2": {
+          "backend": "derived:det_emccd_12m_medium_derived@1",
+          "wfs_model": "derived:det_emccd_12m_medium_derived@1",
+          "atmosphere_model": "derived:det_emccd_12m_medium_derived@1",
+          "telescope_diameter_m": "derived:det_emccd_12m_medium_derived@1",
+          "pupil_pixels": "derived:det_emccd_12m_medium_derived@1",
+          "lenslets_across": "derived:det_emccd_12m_medium_derived@1",
+          "actuators_across": "derived:det_emccd_12m_medium_derived@1",
+          "science_wavelengths_m": "derived:det_emccd_12m_medium_derived@1",
+          "atmosphere.r0_m": "derived:det_emccd_12m_medium_derived@1",
+          "atmosphere.r0_reference_wavelength_m": "derived:det_emccd_12m_medium_derived@1",
+          "atmosphere.outer_scale_m": "derived:det_emccd_12m_medium_derived@1",
+          "atmosphere.wind_m_per_s": "derived:det_emccd_12m_medium_derived@1",
+          "atmosphere.target_rms_opd_m": "derived:det_emccd_12m_medium_derived@1",
+          "atmosphere.normalize_rms": "derived:det_emccd_12m_medium_derived@1",
+          "atmosphere.layers[*].altitude_m": "derived:det_emccd_12m_medium_derived@1",
+          "atmosphere.layers[*].cn2_fraction": "derived:det_emccd_12m_medium_derived@1",
+          "atmosphere.layers[*].wind_m_per_s": "derived:det_emccd_12m_medium_derived@1",
+          "wfs.min_fill_fraction": "derived:det_emccd_12m_medium_derived@1",
+          "wfs.centroid_estimator": "derived:det_emccd_12m_medium_derived@1",
+          "wfs.threshold_fraction": "derived:det_emccd_12m_medium_derived@1",
+          "wfs.subtract_minimum": "derived:det_emccd_12m_medium_derived@1",
+          "wfs.min_flux_e": "derived:det_emccd_12m_medium_derived@1",
+          "wfs.max_centroid_sigma_px": "derived:det_emccd_12m_medium_derived@1",
+          "wfs.max_window_clipping_fraction": "derived:det_emccd_12m_medium_derived@1",
+          "wfs.central_obstruction_ratio": "derived:det_emccd_12m_medium_derived@1",
+          "wfs.spider_width_m": "derived:det_emccd_12m_medium_derived@1",
+          "wfs.photon_allocation": "derived:det_emccd_12m_medium_derived@1",
+          "wfs.lenslet_axis": "derived:det_emccd_12m_medium_derived@1",
+          "dm.influence_model": "derived:det_emccd_12m_medium_derived@1",
+          "dm.coupling_width_pitch": "derived:det_emccd_12m_medium_derived@1",
+          "dm.stroke_limit_opd_m": "derived:det_emccd_12m_medium_derived@1",
+          "dm.include_edge_actuators": "derived:det_emccd_12m_medium_derived@1",
+          "dm.actuator_margin_fraction": "derived:det_emccd_12m_medium_derived@1",
+          "dm.dead_actuator_indices": "derived:det_emccd_12m_medium_derived@1",
+          "dm.stuck_actuator_indices": "derived:det_emccd_12m_medium_derived@1",
+          "dm.stuck_command_opd_m": "derived:det_emccd_12m_medium_derived@1",
+          "calibration.source": "derived:det_emccd_12m_medium_derived@1",
+          "calibration.method": "derived:det_emccd_12m_medium_derived@1",
+          "calibration.probe_kind": "derived:det_emccd_12m_medium_derived@1",
+          "calibration.amplitude_m": "derived:det_emccd_12m_medium_derived@1",
+          "calibration.include_noise": "derived:det_emccd_12m_medium_derived@1",
+          "calibration.repeats": "derived:det_emccd_12m_medium_derived@1",
+          "calibration.resource_name": "derived:det_emccd_12m_medium_derived@1",
+          "reconstructor.kind": "derived:det_emccd_12m_medium_derived@1",
+          "reconstructor.rcond": "derived:det_emccd_12m_medium_derived@1",
+          "reconstructor.alpha": "derived:det_emccd_12m_medium_derived@1",
+          "reconstructor.min_rank": "derived:det_emccd_12m_medium_derived@1",
+          "reconstructor.max_cached_masks": "derived:det_emccd_12m_medium_derived@1",
+          "command_projector.kind": "derived:det_emccd_12m_medium_derived@1",
+          "command_projector.mapping_resource": "derived:det_emccd_12m_medium_derived@1",
+          "controller.n_steps": "derived:det_emccd_12m_medium_derived@1",
+          "controller.leak": "derived:det_emccd_12m_medium_derived@1",
+          "controller.latency_frames": "derived:det_emccd_12m_medium_derived@1",
+          "controller.frame_rate_hz": "derived:det_emccd_12m_medium_derived@1",
+          "science.psf_pad_factor": "derived:det_emccd_12m_medium_derived@1",
+          "random.root_seed": "derived:det_emccd_12m_medium_derived@1",
+          "random.derivation_scheme_id": "derived:det_emccd_12m_medium_derived@1",
+          "scalable.dm_operator": "derived:det_emccd_12m_medium_derived@1",
+          "scalable.wfs_geometry": "derived:det_emccd_12m_medium_derived@1",
+          "scalable.calibration_strategy": "derived:det_emccd_12m_medium_derived@1",
+          "scalable.solver": "derived:det_emccd_12m_medium_derived@1",
+          "scalable.solver_atol": "derived:det_emccd_12m_medium_derived@1",
+          "scalable.solver_btol": "derived:det_emccd_12m_medium_derived@1",
+          "scalable.solver_max_iterations": "derived:det_emccd_12m_medium_derived@1",
+          "scalable.nonconverged_policy": "derived:det_emccd_12m_medium_derived@1"
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "backend": "derived:det_emccd_12m_medium_derived@2",
+          "wfs_model": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere_model": "derived:det_emccd_12m_medium_derived@2",
+          "telescope_diameter_m": "derived:det_emccd_12m_medium_derived@2",
+          "pupil_pixels": "derived:det_emccd_12m_medium_derived@2",
+          "lenslets_across": "derived:det_emccd_12m_medium_derived@2",
+          "actuators_across": "derived:det_emccd_12m_medium_derived@2",
+          "science_wavelengths_m": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.r0_m": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.r0_reference_wavelength_m": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.outer_scale_m": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.wind_m_per_s": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.target_rms_opd_m": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.normalize_rms": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.layers[*].altitude_m": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.layers[*].cn2_fraction": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.layers[*].wind_m_per_s": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.min_fill_fraction": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.centroid_estimator": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.threshold_fraction": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.subtract_minimum": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.min_flux_e": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.min_peak_snr": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.max_centroid_sigma_px": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.max_window_clipping_fraction": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.central_obstruction_ratio": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.spider_width_m": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.photon_allocation": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.lenslet_axis": "derived:det_emccd_12m_medium_derived@2",
+          "dm.influence_model": "derived:det_emccd_12m_medium_derived@2",
+          "dm.coupling_width_pitch": "derived:det_emccd_12m_medium_derived@2",
+          "dm.stroke_limit_opd_m": "derived:det_emccd_12m_medium_derived@2",
+          "dm.include_edge_actuators": "derived:det_emccd_12m_medium_derived@2",
+          "dm.actuator_margin_fraction": "derived:det_emccd_12m_medium_derived@2",
+          "dm.dead_actuator_indices": "derived:det_emccd_12m_medium_derived@2",
+          "dm.stuck_actuator_indices": "derived:det_emccd_12m_medium_derived@2",
+          "dm.stuck_command_opd_m": "derived:det_emccd_12m_medium_derived@2",
+          "calibration.source": "derived:det_emccd_12m_medium_derived@2",
+          "calibration.method": "derived:det_emccd_12m_medium_derived@2",
+          "calibration.probe_kind": "derived:det_emccd_12m_medium_derived@2",
+          "calibration.amplitude_m": "derived:det_emccd_12m_medium_derived@2",
+          "calibration.include_noise": "derived:det_emccd_12m_medium_derived@2",
+          "calibration.repeats": "derived:det_emccd_12m_medium_derived@2",
+          "calibration.resource_name": "derived:det_emccd_12m_medium_derived@2",
+          "reconstructor.kind": "derived:det_emccd_12m_medium_derived@2",
+          "reconstructor.rcond": "derived:det_emccd_12m_medium_derived@2",
+          "reconstructor.min_rank": "derived:det_emccd_12m_medium_derived@2",
+          "reconstructor.max_cached_masks": "derived:det_emccd_12m_medium_derived@2",
+          "command_projector.kind": "derived:det_emccd_12m_medium_derived@2",
+          "command_projector.mapping_resource": "derived:det_emccd_12m_medium_derived@2",
+          "controller.n_steps": "derived:det_emccd_12m_medium_derived@2",
+          "controller.leak": "derived:det_emccd_12m_medium_derived@2",
+          "controller.latency_frames": "derived:det_emccd_12m_medium_derived@2",
+          "controller.frame_rate_hz": "derived:det_emccd_12m_medium_derived@2",
+          "science.psf_pad_factor": "derived:det_emccd_12m_medium_derived@2",
+          "random.root_seed": "derived:det_emccd_12m_medium_derived@2",
+          "random.derivation_scheme_id": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.dm_operator": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.wfs_geometry": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.calibration_strategy": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.solver": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.solver_atol": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.solver_btol": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.solver_max_iterations": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.nonconverged_policy": "derived:det_emccd_12m_medium_derived@2",
+          "detector_physics.calibration_source_detected_e_per_full_subap_frame": "derived:det_emccd_12m_medium_derived@2"
+        }
+      }
+    }
+  ],
+  "supersedes": "benchmarks/detector_level.assumptions.v1.json",
+  "revisions": [
+    {
+      "from_version": 1,
+      "to_version": 2,
+      "row": "B14",
+      "change": "rationale, limitation and consuming tests describe detector_covariance_v2; the consuming tests add the support-domain gate tests and the calibration-ensemble test",
+      "reason": "v1 described detector_covariance_v1 (2026-10-15), which formed the conditional mean from the ideal background, checked only the upper ADC limit without offsets and applied the quantization rule with the scalar read noise; it was replaced on 2026-10-16 (573f875, review R2 and R4), and the 2026-10-18 correction (GPT audit F-01) made the quantization gate per pixel without changing the identifier",
+      "evidence": [
+        "docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md",
+        "docs/refactor/CLEANUP_REFACTOR_STATUS.md",
+        "src/shwfs_ao/detector/noise_model.py"
+      ]
+    },
+    {
+      "from_version": 1,
+      "to_version": 2,
+      "row": "B18",
+      "change": "the title names the current gating domain; the rationale records that the decision and its evidence were produced under detector_covariance_v1; its consuming tests are its own list (unchanged content), no longer shared with B14",
+      "reason": "roadmap G11: current semantics and historical producer version must be distinct",
+      "evidence": [
+        "docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md"
+      ]
+    }
+  ],
+  "historical_producers": "evidence cited by rows B11 (det09_gain_scan.json), B18 (E3 on @1 and E3 and E4 on @2), B20 (det_excursion_e3_12m_v2.json) and B21 (det_recovery_e3_12m_v2.json) was produced before 573f875, under detector_covariance_v1; those records keep their identities and are not attributed to the current model"
+}

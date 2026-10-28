@@ -107,7 +107,8 @@ _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
     ("det_emccd_12m_medium_derived", 1): "synthetic_presets/det_emccd_12m_medium_derived.v1.json",
     ("det_ccd_42m_r3band_derived", 1): "synthetic_presets/det_ccd_42m_r3band_derived.v1.json",
     # Version 2 after its E3 magnitude scan: bright internal calibration source
-    # and validity gating on the detector_covariance_v1 domain.
+    # and validity gating on the uncertainty-model domain (decided under
+    # detector_covariance_v1; current code gates on detector_covariance_v2).
     ("det_emccd_12m_medium_derived", 2): "synthetic_presets/det_emccd_12m_medium_derived.v2.json",
     # Version 3 after the m_AB = 11 excursion study: Tikhonov damping 0.1 and
     # the reset-to-flat recovery policy.

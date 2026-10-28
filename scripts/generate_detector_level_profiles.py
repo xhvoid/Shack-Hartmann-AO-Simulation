@@ -3,9 +3,12 @@
 Every profile is derived from a packaged base profile by an explicit list of
 replacements, so it differs from its base only where the detector-level
 model says it must.  Every value is traced in
-``benchmarks/detector_level.assumptions.v1.json`` (rows B01-B14) and the
-detector source ledger.  ``--check`` verifies that the packaged files equal
-what this script would write.
+``benchmarks/detector_level.assumptions.v2.json`` (rows B01-B21) and
+``benchmarks/detector_source_ledger.v2.json``.  ``--check`` verifies that the
+packaged profiles, the version-2 assumption ledger and the resource manifest
+equal what this script would write.  The version-1 ledgers are frozen history:
+the profiles keep referencing them, this script no longer writes them, and
+``tests/io/test_detector_level_ledgers.py`` pins their bytes.
 
 Families (new names, never new versions of existing profiles):
 
@@ -19,8 +22,10 @@ Families (new names, never new versions of existing profiles):
 ``det_emccd_12m_medium_derived@1``
     Milestone B on ``eso_scao_medium_12m_derived@2`` (scalable path).
     Version 2 calibrates with a bright internal source and gates on the
-    ``detector_covariance_v1`` domain; version 3 adds Tikhonov damping 0.1
-    and the reset-to-flat recovery policy.
+    uncertainty model's domain instead of the peak-pixel SNR (decided under
+    ``detector_covariance_v1``; current code gates on its successor,
+    ``detector_covariance_v2``); version 3 adds Tikhonov damping 0.1 and the
+    reset-to-flat recovery policy.
 ``det_ccd_42m_r3band_derived@1``
     ``eso_drm_42m_scao_derived@2`` with the R3 band (0.6-0.9 um) and 3 e-
     read noise, and R4's 1e5 photoelectrons per frame per subaperture.
@@ -270,8 +275,11 @@ def build(name: str) -> SystemConfig:
 # whose total SNR is adequate from m_AB ~ 9.5, and that calibrating on the
 # operating-flux reference path makes the system uncalibratable from m_AB = 11
 # (docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md, E3).  @2 calibrates with
-# a bright internal source and gates on the validated detector_covariance_v1
-# domain (SNR_T >= 7, sigma <= 0.5 px) instead of peak-pixel SNR.
+# a bright internal source and gates on the uncertainty model's validated
+# domain (SNR_T >= 7, sigma <= 0.5 px) instead of peak-pixel SNR.  The decision
+# was made under detector_covariance_v1, which its baseline_rationale below
+# records and which stays pinned; current code gates on detector_covariance_v2
+# (ledger rows B14 and B18).
 CALIBRATION_SOURCE_E = 2.5e3
 VERSION_2 = ("det_emccd_12m_medium_derived",)
 
@@ -402,7 +410,51 @@ def main() -> int:
 
 # -- assumption ledger ---------------------------------------------------------------
 
-LEDGER_PATH = OUTPUT_DIR.parent / "benchmarks/detector_level.assumptions.v1.json"
+# Version 2 (roadmap G11) is the ledger this script writes and checks.  Version 1
+# (frozen 2026-10-15, the file every detector-level profile references) is not
+# regenerated: its bytes are pinned by tests/io/test_detector_level_ledgers.py.
+LEDGER_PATH = OUTPUT_DIR.parent / "benchmarks/detector_level.assumptions.v2.json"
+SOURCE_LEDGER_V2 = "benchmarks/detector_source_ledger.v2.json"
+REVISED = "2026-10-20"
+REVISIONS = [
+    {
+        "from_version": 1,
+        "to_version": 2,
+        "row": "B14",
+        "change": (
+            "rationale, limitation and consuming tests describe detector_covariance_v2; the consuming tests add the "
+            "support-domain gate tests and the calibration-ensemble test"
+        ),
+        "reason": (
+            "v1 described detector_covariance_v1 (2026-10-15), which formed the conditional mean from the ideal "
+            "background, checked only the upper ADC limit without offsets and applied the quantization rule with the "
+            "scalar read noise; it was replaced on 2026-10-16 (573f875, review R2 and R4), and the 2026-10-18 "
+            "correction (GPT audit F-01) made the quantization gate per pixel without changing the identifier"
+        ),
+        "evidence": [
+            "docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md",
+            "docs/refactor/CLEANUP_REFACTOR_STATUS.md",
+            "src/shwfs_ao/detector/noise_model.py",
+        ],
+    },
+    {
+        "from_version": 1,
+        "to_version": 2,
+        "row": "B18",
+        "change": (
+            "the title names the current gating domain; the rationale records that the decision and its evidence were "
+            "produced under detector_covariance_v1; its consuming tests are its own list (unchanged content), no "
+            "longer shared with B14"
+        ),
+        "reason": "roadmap G11: current semantics and historical producer version must be distinct",
+        "evidence": ["docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md"],
+    },
+]
+HISTORICAL_PRODUCERS = (
+    "evidence cited by rows B11 (det09_gain_scan.json), B18 (E3 on @1 and E3 and E4 on @2), B20 "
+    "(det_excursion_e3_12m_v2.json) and B21 (det_recovery_e3_12m_v2.json) was produced before 573f875, under "
+    "detector_covariance_v1; those records keep their identities and are not attributed to the current model"
+)
 _TESTS = {
     "camera": [
         "tests/detector/test_physical_camera.py::test_poisson_through_register_has_excess_factor_two",
@@ -434,7 +486,19 @@ _TESTS = {
     "gain": ["tests/control/test_profile_stability.py", "tests/io/test_detector_level_ledgers.py::test_profile_gains_are_the_recorded_scan_selections"],
     "layout": ["tests/detector/test_physical_camera.py::test_maps_follow_physical_pixels_not_order_batch_or_subset"],
     "processing": ["tests/wfs/test_physical_sensor.py::test_noiseless_linear_fixture_recovers_the_input_electron_signal"],
-    "model": ["tests/detector/test_noise_model.py::test_temporal_scatter_matches_the_model_within_ten_percent"],
+    # B14: the uncertainty model's scatter, support domain gates and
+    # calibration-ensemble term.
+    "model": [
+        "tests/detector/test_noise_model.py::test_temporal_scatter_matches_the_model_within_ten_percent",
+        "tests/detector/test_noise_model.py::test_regimes_outside_the_first_order_domain_are_flagged",
+        "tests/detector/test_noise_model.py::test_conditional_mean_is_the_processing_of_the_expected_frame",
+        "tests/detector/test_noise_model.py::test_codes_within_the_noise_headroom_of_code_zero_are_flagged",
+        "tests/detector/test_noise_model.py::test_codes_within_the_noise_headroom_of_the_top_code_are_flagged",
+        "tests/detector/test_noise_model.py::test_a_contributing_pixel_below_half_a_step_unsupports_the_block",
+        "tests/detector/test_noise_model.py::test_calibration_ensemble_matches_the_model",
+    ],
+    # B18: its own list (the version-1 entry, unchanged), no longer shared with B14.
+    "gating": ["tests/detector/test_noise_model.py::test_temporal_scatter_matches_the_model_within_ten_percent"],
     "schema": ["tests/io/test_detector_level_profiles.py::test_malformed_or_unsupported_records_are_rejected_while_parsing"],
 }
 
@@ -529,8 +593,25 @@ def ledger_record() -> dict[str, object]:
         unit="policy", rationale="conversion and EM gain are known engineering inputs applied once (per-pixel CMOS gain applied as known conversion gain, the flat then carries PRNU only); no negative clipping, so the centre of gravity stays first-order",
         limitation="no gain estimation; gain errors are outside the model", tests=_TESTS["processing"])
     row("B14", "Uncertainty-model validity domain; temporal versus persistent calibration error", "software_policy", {},
-        unit="n/a", rationale="detector_covariance_v1 is supported for a plain centre of gravity without clipping, saturation, non-linearity or coarse quantization and with SNR_T >= 7; temporal sigma conditional on fixed masters gates validity, calibration-ensemble sigma is reported separately",
-        limitation="outside the domain the model reports an undefined sigma and the lenslet is invalid", tests=_TESTS["model"], implicit=True)
+        unit="n/a",
+        rationale=(
+            "detector_covariance_v2 (detector.noise_model.UNCERTAINTY_MODEL_ID) is supported only for a plain centre of "
+            "gravity (no threshold, no minimum subtraction), without negative clipping or a declared non-linearity, with "
+            "no expected saturation above 90 % of the pixel, EM-register or ADC capacity, with every block pixel's "
+            "expected ADC code (bias and offset map included) at least 5 temporal noise sigmas inside both ADC limits, "
+            "with read noise of at least half an ADC step on every pixel that enters the centroid (its own read-noise "
+            "and gain maps, ADC on), with a positive window total and with SNR_T >= 7; its conditional mean, Jacobian, "
+            "flux and SNRs subtract what the processing actually removes (the realized masters); the temporal sigma, "
+            "conditional on those fixed masters, gates validity, and the calibration-ensemble sigma, linearized about "
+            "the nominal background, is reported separately (centroid_calibration_sigma_px) as a persistent per-run bias"
+        ),
+        limitation=(
+            "outside the domain the model reports an undefined sigma and the lenslet is invalid; first order, it reads "
+            "low by about 4/SNR_T^2 near the SNR_T floor (E1); its Monte Carlo checks used Gaussian fixture spots (E1, "
+            "tests/detector/test_noise_model.py) and, in open loop, the profiles' own lenslet optics (E2); the formula "
+            "itself assumes no spot shape"
+        ),
+        tests=_TESTS["model"], implicit=True)
     neutral = ["detector.enabled", "detector.photons_per_subap_frame", "detector.read_noise_e", "detector.dark_e_per_s",
                "detector.background_e_per_pixel_frame", "detector.full_well_e", "detector.qe", "detector.prnu_rms",
                "detector.prnu_mode", "detector.bad_pixel_fraction", "detector.exposure_s"]
@@ -542,10 +623,18 @@ def ledger_record() -> dict[str, object]:
     def v2_values(*keys: str) -> dict[str, dict[str, object]]:
         return {pid: {key: paths[pid][key] for key in keys if key in paths[pid]} for pid in v2_only}
 
-    row("B18", "Validity gating on the detector_covariance_v1 domain (version 2, post-hoc)", "engineering_assumption",
+    row("B18", "Validity gating on the uncertainty-model domain instead of the peak-pixel SNR gate (version 2, post-hoc)",
+        "engineering_assumption",
         v2_values("wfs.min_peak_snr"), unit="dimensionless",
-        rationale="E3 on @1 showed the inherited peak-pixel SNR gate (3) rejects lenslets with total SNR ~20 from m_AB ~ 9.5 and collapses the loop at m_AB = 10; @2 sets it to 0 and relies on SNR_T >= 7 (validated domain) and sigma <= 0.5 px; recorded reason, the affected experiments are rerun on @2",
-        limitation="changed after inspecting E3; @1 keeps the predeclared gate and its results stand", tests=_TESTS["model"])
+        rationale=(
+            "E3 on @1 showed the inherited peak-pixel SNR gate (3) rejects lenslets with total SNR ~20 from m_AB ~ 9.5 and "
+            "collapses the loop at m_AB = 10; @2 sets it to 0 and relies on SNR_T >= 7 (validated domain) and sigma <= "
+            "0.5 px; recorded reason, the affected experiments are rerun on @2; the decision, and E3 and E4 on @2, were "
+            "made and produced under detector_covariance_v1 (2026-10-16, before commit 573f875), and those records keep "
+            "that identity; runs of @2, and of @3, which inherits the gate, on current code gate on "
+            "detector_covariance_v2 (B14), whose SNR_T is formed from the conditional mean on the realized masters"
+        ),
+        limitation="changed after inspecting E3; @1 keeps the predeclared gate and its results stand", tests=_TESTS["gating"])
     row("B19", "Bright internal calibration source (version 2)", "engineering_assumption",
         v2_values(f"{physics}.calibration_source_detected_e_per_full_subap_frame"), unit="detected e- per full subaperture per frame",
         rationale="2500 e- (an m_AB = 8 equivalent at 12 m for the EMCCD) for reference centroids and interaction probes, without sky; @1 calibrated at the operating flux and refused to build from m_AB = 11",
@@ -599,11 +688,13 @@ def ledger_record() -> dict[str, object]:
     return {
         "schema_name": "shwfs_ao.assumption_ledger",
         "schema_version": 1,
-        "ledger_id": "detector_level.assumptions",
+        "ledger_id": "detector_level.assumptions.v2",
         "benchmark": "Detector-level SCAO profiles (docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_PROMPT.md)",
-        "source_ledger": "benchmarks/detector_source_ledger.v1.json",
+        "source_ledger": SOURCE_LEDGER_V2,
         "profiles": ids,
+        # The version-1 value-freeze date is kept; the description revision has its own date.
         "frozen": "2026-10-15",
+        "revised": REVISED,
         "classifications": {
             "source_derived": "value taken from a normative source with its locator",
             "source_scale_adapted": "normative value adapted to this repository's topology; the adaptation is stated",
@@ -612,6 +703,9 @@ def ledger_record() -> dict[str, object]:
             "software_policy": "a software convention with no physical content",
         },
         "rows": rows,
+        "supersedes": "benchmarks/detector_level.assumptions.v1.json",
+        "revisions": REVISIONS,
+        "historical_producers": HISTORICAL_PRODUCERS,
     }
 
 
