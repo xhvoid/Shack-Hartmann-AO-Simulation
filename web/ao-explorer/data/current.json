@@ -1,0 +1,8 @@
+{
+ "schema": "ao-explorer.entry.v1",
+ "dataset_id": "series-2m180-b3e1c66-e0d60cbaccc6b",
+ "manifest": "series-2m180-b3e1c66-e0d60cbaccc6b/manifest.json",
+ "manifest_bytes": 49966,
+ "manifest_sha256": "4c0896afc83c84226143055c2c287ea57a655466cd63c971150c7efd05858a3d",
+ "code_build": "7c04e5cefab85e8b"
+}

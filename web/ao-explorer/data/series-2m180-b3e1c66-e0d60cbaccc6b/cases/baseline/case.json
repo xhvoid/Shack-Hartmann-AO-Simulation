@@ -1,0 +1,2022 @@
+{
+ "schema": "ao-explorer.case.v1",
+ "case_id": "baseline",
+ "label": "Baseline",
+ "group": null,
+ "question": "What does this AO loop do?",
+ "override": {},
+ "effective_parameters": {
+  "telescope_diameter_m": 2.0,
+  "pupil_pixels": 52,
+  "lenslets_across": 5,
+  "actuators_across": 5,
+  "wfs_wavelength_m": 7e-07,
+  "profile_science_wavelengths_m": [
+   1.25e-06,
+   1.65e-06,
+   2.2e-06
+  ],
+  "explorer_science_wavelength_m": 1.65e-06,
+  "atmosphere_model": "native_frozen_flow_v2",
+  "r0_m": 0.1263371938263465,
+  "r0_reference_wavelength_m": 5e-07,
+  "outer_scale_m": 25.0,
+  "wind_m_per_s": [
+   10.0,
+   0.0
+  ],
+  "source_kind": "ab_flat_fnu",
+  "source_ab_magnitude": 7.0,
+  "sky_ab_mag_per_arcsec2": 20.5,
+  "throughput_excluding_qe": 0.4,
+  "camera_preset": "synthetic_emccd@1",
+  "detector_noise_in_loop": true,
+  "exposure_s": 0.001,
+  "exposure_subsamples": 1,
+  "controller_gain": 0.2,
+  "controller_leak": 0.02,
+  "queued_latency_frames": 2,
+  "wfs_visible_delay_frames": 3,
+  "delay_semantics": "A reconstruction from frame k is released in the update of frame k + L and first seen by the WFS at frame k + L + 1 (control/controller.py delay queue; control/observation.py FrameObservation).",
+  "frame_rate_hz": 1000.0,
+  "n_steps": 180,
+  "root_seed": 1,
+  "reconstructor": "tsvd rcond=1e-08 min_valid_fraction=0.75",
+  "calibration": "source=build method=central include_noise=False",
+  "dm_stroke_limit_opd_m": 1e-06,
+  "max_pole_modulus": 0.7225795558226926
+ },
+ "time_domain": {
+  "frames": 180,
+  "frame_rate_hz": 1000.0,
+  "frame_period_s": 0.001,
+  "sampling": "one atmosphere sample per frame at its start, t_k = k / f",
+  "burn_in_frames": 40,
+  "analysis_window": [
+   40,
+   180
+  ],
+  "analysis_count": 140,
+  "movie_indices": [
+   0,
+   5,
+   9,
+   14,
+   18,
+   23,
+   28,
+   32,
+   37,
+   40,
+   46,
+   50,
+   55,
+   60,
+   64,
+   69,
+   73,
+   78,
+   83,
+   87,
+   92,
+   96,
+   101,
+   106,
+   110,
+   115,
+   119,
+   124,
+   129,
+   133,
+   138,
+   142,
+   147,
+   151,
+   156,
+   161,
+   165,
+   170,
+   174,
+   179
+  ],
+  "movie_times_s": [
+   0.0,
+   0.005,
+   0.009,
+   0.014,
+   0.018,
+   0.023,
+   0.028,
+   0.032,
+   0.037,
+   0.04,
+   0.046,
+   0.05,
+   0.055,
+   0.06,
+   0.064,
+   0.069,
+   0.073,
+   0.078,
+   0.083,
+   0.087,
+   0.092,
+   0.096,
+   0.101,
+   0.106,
+   0.11,
+   0.115,
+   0.119,
+   0.124,
+   0.129,
+   0.133,
+   0.138,
+   0.142,
+   0.147,
+   0.151,
+   0.156,
+   0.161,
+   0.165,
+   0.17,
+   0.174,
+   0.179
+  ]
+ },
+ "images": {
+  "atmosphere": {
+   "label": "Atmospheric OPD",
+   "source": "movie.npz:atmosphere_opd_m (job case-baseline)",
+   "unit": "nm OPD",
+   "atlas": {
+    "href": "atlas-atmosphere.png",
+    "bytes": 149650,
+    "sha256": "162a1a091f8ff315bfa25fb27f193ca6a4ce65f749b438860e84d875e88219c4",
+    "media_type": "image/png"
+   },
+   "tile_px": [
+    52,
+    52
+   ],
+   "rectangles_xywh": [
+    [
+     0,
+     0,
+     52,
+     52
+    ],
+    [
+     52,
+     0,
+     52,
+     52
+    ],
+    [
+     104,
+     0,
+     52,
+     52
+    ],
+    [
+     156,
+     0,
+     52,
+     52
+    ],
+    [
+     208,
+     0,
+     52,
+     52
+    ],
+    [
+     260,
+     0,
+     52,
+     52
+    ],
+    [
+     312,
+     0,
+     52,
+     52
+    ],
+    [
+     364,
+     0,
+     52,
+     52
+    ],
+    [
+     0,
+     52,
+     52,
+     52
+    ],
+    [
+     52,
+     52,
+     52,
+     52
+    ],
+    [
+     104,
+     52,
+     52,
+     52
+    ],
+    [
+     156,
+     52,
+     52,
+     52
+    ],
+    [
+     208,
+     52,
+     52,
+     52
+    ],
+    [
+     260,
+     52,
+     52,
+     52
+    ],
+    [
+     312,
+     52,
+     52,
+     52
+    ],
+    [
+     364,
+     52,
+     52,
+     52
+    ],
+    [
+     0,
+     104,
+     52,
+     52
+    ],
+    [
+     52,
+     104,
+     52,
+     52
+    ],
+    [
+     104,
+     104,
+     52,
+     52
+    ],
+    [
+     156,
+     104,
+     52,
+     52
+    ],
+    [
+     208,
+     104,
+     52,
+     52
+    ],
+    [
+     260,
+     104,
+     52,
+     52
+    ],
+    [
+     312,
+     104,
+     52,
+     52
+    ],
+    [
+     364,
+     104,
+     52,
+     52
+    ],
+    [
+     0,
+     156,
+     52,
+     52
+    ],
+    [
+     52,
+     156,
+     52,
+     52
+    ],
+    [
+     104,
+     156,
+     52,
+     52
+    ],
+    [
+     156,
+     156,
+     52,
+     52
+    ],
+    [
+     208,
+     156,
+     52,
+     52
+    ],
+    [
+     260,
+     156,
+     52,
+     52
+    ],
+    [
+     312,
+     156,
+     52,
+     52
+    ],
+    [
+     364,
+     156,
+     52,
+     52
+    ],
+    [
+     0,
+     208,
+     52,
+     52
+    ],
+    [
+     52,
+     208,
+     52,
+     52
+    ],
+    [
+     104,
+     208,
+     52,
+     52
+    ],
+    [
+     156,
+     208,
+     52,
+     52
+    ],
+    [
+     208,
+     208,
+     52,
+     52
+    ],
+    [
+     260,
+     208,
+     52,
+     52
+    ],
+    [
+     312,
+     208,
+     52,
+     52
+    ],
+    [
+     364,
+     208,
+     52,
+     52
+    ]
+   ],
+   "frame_indices": [
+    0,
+    5,
+    9,
+    14,
+    18,
+    23,
+    28,
+    32,
+    37,
+    40,
+    46,
+    50,
+    55,
+    60,
+    64,
+    69,
+    73,
+    78,
+    83,
+    87,
+    92,
+    96,
+    101,
+    106,
+    110,
+    115,
+    119,
+    124,
+    129,
+    133,
+    138,
+    142,
+    147,
+    151,
+    156,
+    161,
+    165,
+    170,
+    174,
+    179
+   ],
+   "color_limits_nm": [
+    -1500.0,
+    1500.0
+   ],
+   "colormap": "RdBu_r",
+   "mask": "pupil exterior transparent (not zero OPD)",
+   "piston": "the pupil mean (piston) of each displayed map is removed for display only; the removed value per movie frame is display_piston_nm. A Shack-Hartmann sensor does not sense piston, piston does not change the image, and every RMS on this site is piston-removed. Raw maps keep their piston in the evidence.",
+   "display_piston_nm": [
+    0.0,
+    1.0671281225251028e-13,
+    -1.3339101531563785e-14,
+    -2.401038275681481e-13,
+    -2.667820306312757e-13,
+    4.001730459469135e-14,
+    1.1004758763540121e-13,
+    -1.0004326148672838e-14,
+    9.837587379528291e-14,
+    1.1504975070973766e-13,
+    3.534861905864403e-13,
+    8.336938457227365e-15,
+    1.9508435989912035e-13,
+    1.8674742144189299e-13,
+    1.734083199103292e-13,
+    -1.0671281225251028e-13,
+    -9.337371072094649e-14,
+    8.67041599551646e-14,
+    1.3339101531563785e-14,
+    1.3339101531563785e-14,
+    6.002595689203703e-14,
+    8.67041599551646e-14,
+    1.3339101531563784e-13,
+    -1.734083199103292e-13,
+    -1.3339101531563784e-13,
+    4.001730459469135e-14,
+    -1.0671281225251028e-13,
+    -2.0008652297345677e-13,
+    -9.337371072094649e-14,
+    2.667820306312757e-14,
+    -1.600692183787654e-13,
+    -3.201384367575308e-13,
+    2.667820306312757e-14,
+    2.0008652297345677e-13,
+    -8.00346091893827e-14,
+    -2.1342562450502056e-13,
+    2.401038275681481e-13,
+    9.337371072094649e-14,
+    2.667820306312757e-14,
+    0.0
+   ],
+   "axes": "x right, +y up (raster rows flipped once at encoding); pupil coordinates -1..1 m",
+   "extent_m": [
+    -1.0,
+    1.0,
+    -1.0,
+    1.0
+   ],
+   "resampling": "none (one pupil sample per tile pixel)"
+  },
+  "correction": {
+   "label": "Held DM correction (OPD-equivalent)",
+   "source": "movie.npz:held_correction_opd_m (job case-baseline)",
+   "unit": "nm OPD-equivalent (not mirror surface height)",
+   "atlas": {
+    "href": "atlas-correction.png",
+    "bytes": 82752,
+    "sha256": "261979f78659670dd6783dbf309e46f70ccb207f8a38859f2ee78421247999bc",
+    "media_type": "image/png"
+   },
+   "tile_px": [
+    52,
+    52
+   ],
+   "rectangles_xywh": [
+    [
+     0,
+     0,
+     52,
+     52
+    ],
+    [
+     52,
+     0,
+     52,
+     52
+    ],
+    [
+     104,
+     0,
+     52,
+     52
+    ],
+    [
+     156,
+     0,
+     52,
+     52
+    ],
+    [
+     208,
+     0,
+     52,
+     52
+    ],
+    [
+     260,
+     0,
+     52,
+     52
+    ],
+    [
+     312,
+     0,
+     52,
+     52
+    ],
+    [
+     364,
+     0,
+     52,
+     52
+    ],
+    [
+     0,
+     52,
+     52,
+     52
+    ],
+    [
+     52,
+     52,
+     52,
+     52
+    ],
+    [
+     104,
+     52,
+     52,
+     52
+    ],
+    [
+     156,
+     52,
+     52,
+     52
+    ],
+    [
+     208,
+     52,
+     52,
+     52
+    ],
+    [
+     260,
+     52,
+     52,
+     52
+    ],
+    [
+     312,
+     52,
+     52,
+     52
+    ],
+    [
+     364,
+     52,
+     52,
+     52
+    ],
+    [
+     0,
+     104,
+     52,
+     52
+    ],
+    [
+     52,
+     104,
+     52,
+     52
+    ],
+    [
+     104,
+     104,
+     52,
+     52
+    ],
+    [
+     156,
+     104,
+     52,
+     52
+    ],
+    [
+     208,
+     104,
+     52,
+     52
+    ],
+    [
+     260,
+     104,
+     52,
+     52
+    ],
+    [
+     312,
+     104,
+     52,
+     52
+    ],
+    [
+     364,
+     104,
+     52,
+     52
+    ],
+    [
+     0,
+     156,
+     52,
+     52
+    ],
+    [
+     52,
+     156,
+     52,
+     52
+    ],
+    [
+     104,
+     156,
+     52,
+     52
+    ],
+    [
+     156,
+     156,
+     52,
+     52
+    ],
+    [
+     208,
+     156,
+     52,
+     52
+    ],
+    [
+     260,
+     156,
+     52,
+     52
+    ],
+    [
+     312,
+     156,
+     52,
+     52
+    ],
+    [
+     364,
+     156,
+     52,
+     52
+    ],
+    [
+     0,
+     208,
+     52,
+     52
+    ],
+    [
+     52,
+     208,
+     52,
+     52
+    ],
+    [
+     104,
+     208,
+     52,
+     52
+    ],
+    [
+     156,
+     208,
+     52,
+     52
+    ],
+    [
+     208,
+     208,
+     52,
+     52
+    ],
+    [
+     260,
+     208,
+     52,
+     52
+    ],
+    [
+     312,
+     208,
+     52,
+     52
+    ],
+    [
+     364,
+     208,
+     52,
+     52
+    ]
+   ],
+   "frame_indices": [
+    0,
+    5,
+    9,
+    14,
+    18,
+    23,
+    28,
+    32,
+    37,
+    40,
+    46,
+    50,
+    55,
+    60,
+    64,
+    69,
+    73,
+    78,
+    83,
+    87,
+    92,
+    96,
+    101,
+    106,
+    110,
+    115,
+    119,
+    124,
+    129,
+    133,
+    138,
+    142,
+    147,
+    151,
+    156,
+    161,
+    165,
+    170,
+    174,
+    179
+   ],
+   "color_limits_nm": [
+    -1500.0,
+    1500.0
+   ],
+   "colormap": "RdBu_r",
+   "mask": "pupil exterior transparent (not zero OPD)",
+   "piston": "the pupil mean (piston) of each displayed map is removed for display only; the removed value per movie frame is display_piston_nm. A Shack-Hartmann sensor does not sense piston, piston does not change the image, and every RMS on this site is piston-removed. Raw maps keep their piston in the evidence.",
+   "display_piston_nm": [
+    0.0,
+    -44.338472407066945,
+    -62.80679386436072,
+    -55.60309502083546,
+    -53.630447438279845,
+    -35.70212985427001,
+    4.866643567847675,
+    36.93373823908102,
+    65.93208550073996,
+    61.98222385802305,
+    64.05093701924794,
+    57.11184330315154,
+    71.9663079409495,
+    55.60002608136207,
+    60.48533613906292,
+    41.861199138865096,
+    46.671960230111026,
+    48.217227377126115,
+    54.54470404853881,
+    23.64742320991302,
+    -30.580481414160825,
+    -58.196141291890946,
+    -89.30173861420762,
+    -150.57662448319553,
+    -208.7429837975833,
+    -267.50609897239093,
+    -309.2709673074173,
+    -311.23824246233784,
+    -327.84595335047686,
+    -354.37070127556257,
+    -382.75012967892496,
+    -405.7618808024002,
+    -401.92228604296736,
+    -388.92403898075173,
+    -395.14136343970563,
+    -389.0434628079414,
+    -374.5961812607777,
+    -363.2908245709628,
+    -350.8530159683314,
+    -340.2213568822976
+   ],
+   "axes": "x right, +y up (raster rows flipped once at encoding); pupil coordinates -1..1 m",
+   "extent_m": [
+    -1.0,
+    1.0,
+    -1.0,
+    1.0
+   ],
+   "resampling": "none (one pupil sample per tile pixel)"
+  },
+  "residual": {
+   "label": "Residual seen by the WFS (pre-update)",
+   "source": "movie.npz:pre_update_residual_opd_m (job case-baseline)",
+   "unit": "nm OPD",
+   "atlas": {
+    "href": "atlas-residual.png",
+    "bytes": 143370,
+    "sha256": "4e55ae2b2312cfb1a5ea5981eac3fa2f061a0ff6c76d7096a161b8530bc06387",
+    "media_type": "image/png"
+   },
+   "tile_px": [
+    52,
+    52
+   ],
+   "rectangles_xywh": [
+    [
+     0,
+     0,
+     52,
+     52
+    ],
+    [
+     52,
+     0,
+     52,
+     52
+    ],
+    [
+     104,
+     0,
+     52,
+     52
+    ],
+    [
+     156,
+     0,
+     52,
+     52
+    ],
+    [
+     208,
+     0,
+     52,
+     52
+    ],
+    [
+     260,
+     0,
+     52,
+     52
+    ],
+    [
+     312,
+     0,
+     52,
+     52
+    ],
+    [
+     364,
+     0,
+     52,
+     52
+    ],
+    [
+     0,
+     52,
+     52,
+     52
+    ],
+    [
+     52,
+     52,
+     52,
+     52
+    ],
+    [
+     104,
+     52,
+     52,
+     52
+    ],
+    [
+     156,
+     52,
+     52,
+     52
+    ],
+    [
+     208,
+     52,
+     52,
+     52
+    ],
+    [
+     260,
+     52,
+     52,
+     52
+    ],
+    [
+     312,
+     52,
+     52,
+     52
+    ],
+    [
+     364,
+     52,
+     52,
+     52
+    ],
+    [
+     0,
+     104,
+     52,
+     52
+    ],
+    [
+     52,
+     104,
+     52,
+     52
+    ],
+    [
+     104,
+     104,
+     52,
+     52
+    ],
+    [
+     156,
+     104,
+     52,
+     52
+    ],
+    [
+     208,
+     104,
+     52,
+     52
+    ],
+    [
+     260,
+     104,
+     52,
+     52
+    ],
+    [
+     312,
+     104,
+     52,
+     52
+    ],
+    [
+     364,
+     104,
+     52,
+     52
+    ],
+    [
+     0,
+     156,
+     52,
+     52
+    ],
+    [
+     52,
+     156,
+     52,
+     52
+    ],
+    [
+     104,
+     156,
+     52,
+     52
+    ],
+    [
+     156,
+     156,
+     52,
+     52
+    ],
+    [
+     208,
+     156,
+     52,
+     52
+    ],
+    [
+     260,
+     156,
+     52,
+     52
+    ],
+    [
+     312,
+     156,
+     52,
+     52
+    ],
+    [
+     364,
+     156,
+     52,
+     52
+    ],
+    [
+     0,
+     208,
+     52,
+     52
+    ],
+    [
+     52,
+     208,
+     52,
+     52
+    ],
+    [
+     104,
+     208,
+     52,
+     52
+    ],
+    [
+     156,
+     208,
+     52,
+     52
+    ],
+    [
+     208,
+     208,
+     52,
+     52
+    ],
+    [
+     260,
+     208,
+     52,
+     52
+    ],
+    [
+     312,
+     208,
+     52,
+     52
+    ],
+    [
+     364,
+     208,
+     52,
+     52
+    ]
+   ],
+   "frame_indices": [
+    0,
+    5,
+    9,
+    14,
+    18,
+    23,
+    28,
+    32,
+    37,
+    40,
+    46,
+    50,
+    55,
+    60,
+    64,
+    69,
+    73,
+    78,
+    83,
+    87,
+    92,
+    96,
+    101,
+    106,
+    110,
+    115,
+    119,
+    124,
+    129,
+    133,
+    138,
+    142,
+    147,
+    151,
+    156,
+    161,
+    165,
+    170,
+    174,
+    179
+   ],
+   "color_limits_nm": [
+    -1500.0,
+    1500.0
+   ],
+   "colormap": "RdBu_r",
+   "mask": "pupil exterior transparent (not zero OPD)",
+   "piston": "the pupil mean (piston) of each displayed map is removed for display only; the removed value per movie frame is display_piston_nm. A Shack-Hartmann sensor does not sense piston, piston does not change the image, and every RMS on this site is piston-removed. Raw maps keep their piston in the evidence.",
+   "display_piston_nm": [
+    0.0,
+    44.33847240706706,
+    62.806793864360706,
+    55.60309502083522,
+    53.63044743827959,
+    35.70212985427005,
+    -4.866643567847562,
+    -36.93373823908104,
+    -65.93208550073984,
+    -61.98222385802294,
+    -64.05093701924758,
+    -57.11184330315152,
+    -71.96630794094932,
+    -55.600026081361875,
+    -60.48533613906276,
+    -41.861199138865196,
+    -46.67196023011112,
+    -48.21722737712602,
+    -54.5447040485388,
+    -23.647423209913015,
+    30.580481414160893,
+    58.196141291891024,
+    89.30173861420776,
+    150.57662448319533,
+    208.74298379758318,
+    267.506098972391,
+    309.27096730741727,
+    311.23824246233767,
+    327.84595335047675,
+    354.37070127556257,
+    382.75012967892474,
+    405.76188080239984,
+    401.92228604296724,
+    388.9240389807519,
+    395.1413634397056,
+    389.0434628079412,
+    374.59618126077805,
+    363.2908245709628,
+    350.8530159683315,
+    340.2213568822976
+   ],
+   "axes": "x right, +y up (raster rows flipped once at encoding); pupil coordinates -1..1 m",
+   "extent_m": [
+    -1.0,
+    1.0,
+    -1.0,
+    1.0
+   ],
+   "resampling": "none (one pupil sample per tile pixel)"
+  },
+  "psf_uncorrected": {
+   "label": "Matched uncorrected reference (zero DM)",
+   "source": "movie.npz:psf_uncorrected (job case-baseline)",
+   "unit": "log10 relative intensity",
+   "atlas": {
+    "href": "atlas-psf-uncorrected.png",
+    "bytes": 313064,
+    "sha256": "21b59d417ea3a9fcc8f946255dafeb0c5045da227c395607c2b2e4098104b5db",
+    "media_type": "image/png"
+   },
+   "tile_px": [
+    64,
+    64
+   ],
+   "rectangles_xywh": [
+    [
+     0,
+     0,
+     64,
+     64
+    ],
+    [
+     64,
+     0,
+     64,
+     64
+    ],
+    [
+     128,
+     0,
+     64,
+     64
+    ],
+    [
+     192,
+     0,
+     64,
+     64
+    ],
+    [
+     256,
+     0,
+     64,
+     64
+    ],
+    [
+     320,
+     0,
+     64,
+     64
+    ],
+    [
+     384,
+     0,
+     64,
+     64
+    ],
+    [
+     448,
+     0,
+     64,
+     64
+    ],
+    [
+     0,
+     64,
+     64,
+     64
+    ],
+    [
+     64,
+     64,
+     64,
+     64
+    ],
+    [
+     128,
+     64,
+     64,
+     64
+    ],
+    [
+     192,
+     64,
+     64,
+     64
+    ],
+    [
+     256,
+     64,
+     64,
+     64
+    ],
+    [
+     320,
+     64,
+     64,
+     64
+    ],
+    [
+     384,
+     64,
+     64,
+     64
+    ],
+    [
+     448,
+     64,
+     64,
+     64
+    ],
+    [
+     0,
+     128,
+     64,
+     64
+    ],
+    [
+     64,
+     128,
+     64,
+     64
+    ],
+    [
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     192,
+     128,
+     64,
+     64
+    ],
+    [
+     256,
+     128,
+     64,
+     64
+    ],
+    [
+     320,
+     128,
+     64,
+     64
+    ],
+    [
+     384,
+     128,
+     64,
+     64
+    ],
+    [
+     448,
+     128,
+     64,
+     64
+    ],
+    [
+     0,
+     192,
+     64,
+     64
+    ],
+    [
+     64,
+     192,
+     64,
+     64
+    ],
+    [
+     128,
+     192,
+     64,
+     64
+    ],
+    [
+     192,
+     192,
+     64,
+     64
+    ],
+    [
+     256,
+     192,
+     64,
+     64
+    ],
+    [
+     320,
+     192,
+     64,
+     64
+    ],
+    [
+     384,
+     192,
+     64,
+     64
+    ],
+    [
+     448,
+     192,
+     64,
+     64
+    ],
+    [
+     0,
+     256,
+     64,
+     64
+    ],
+    [
+     64,
+     256,
+     64,
+     64
+    ],
+    [
+     128,
+     256,
+     64,
+     64
+    ],
+    [
+     192,
+     256,
+     64,
+     64
+    ],
+    [
+     256,
+     256,
+     64,
+     64
+    ],
+    [
+     320,
+     256,
+     64,
+     64
+    ],
+    [
+     384,
+     256,
+     64,
+     64
+    ],
+    [
+     448,
+     256,
+     64,
+     64
+    ]
+   ],
+   "frame_indices": [
+    0,
+    5,
+    9,
+    14,
+    18,
+    23,
+    28,
+    32,
+    37,
+    40,
+    46,
+    50,
+    55,
+    60,
+    64,
+    69,
+    73,
+    78,
+    83,
+    87,
+    92,
+    96,
+    101,
+    106,
+    110,
+    115,
+    119,
+    124,
+    129,
+    133,
+    138,
+    142,
+    147,
+    151,
+    156,
+    161,
+    165,
+    170,
+    174,
+    179
+   ],
+   "scale": {
+    "mapping": "log10(I / I_ideal_peak) clipped to [-4, 0]",
+    "ideal_peak_cell_flux": 0.08349769888231426,
+    "ideal_reference": "zero-OPD image of the same native propagator, wavelength and grid (unit total flux)",
+    "colormap": "inferno",
+    "normalization": "common to every frame, case, role, average image, observation and the scene reference; no per-image peak normalization"
+   },
+   "window": {
+    "x_index": [
+     46,
+     110
+    ],
+    "y_index": [
+     46,
+     110
+    ],
+    "x_extent_mas": [
+     -1808.0399422597054,
+     1752.4079440363303
+    ],
+    "y_extent_mas": [
+     -1808.0399422597054,
+     1752.4079440363303
+    ],
+    "cell_mas": 55.63199822337584,
+    "native_extent_mas": [
+     -4367.111860534981,
+     4311.479862311605
+    ],
+    "note": "display crop of the native 156 x 156 grid about exact zero angle; metrics use the full uncropped grid"
+   },
+   "axes": "x right, +y up (raster rows flipped once at encoding)",
+   "zero_angle_cell_in_tile_column_row": [
+    32,
+    31
+   ]
+  },
+  "psf_corrected": {
+   "label": "AO-corrected instantaneous PSF (pre-update residual)",
+   "source": "movie.npz:psf_corrected (job case-baseline)",
+   "unit": "log10 relative intensity",
+   "atlas": {
+    "href": "atlas-psf-corrected.png",
+    "bytes": 315850,
+    "sha256": "3f1f76c85738a10f932b4ecbee6560b03dad4a9d4861def7e58b855ef0a69b76",
+    "media_type": "image/png"
+   },
+   "tile_px": [
+    64,
+    64
+   ],
+   "rectangles_xywh": [
+    [
+     0,
+     0,
+     64,
+     64
+    ],
+    [
+     64,
+     0,
+     64,
+     64
+    ],
+    [
+     128,
+     0,
+     64,
+     64
+    ],
+    [
+     192,
+     0,
+     64,
+     64
+    ],
+    [
+     256,
+     0,
+     64,
+     64
+    ],
+    [
+     320,
+     0,
+     64,
+     64
+    ],
+    [
+     384,
+     0,
+     64,
+     64
+    ],
+    [
+     448,
+     0,
+     64,
+     64
+    ],
+    [
+     0,
+     64,
+     64,
+     64
+    ],
+    [
+     64,
+     64,
+     64,
+     64
+    ],
+    [
+     128,
+     64,
+     64,
+     64
+    ],
+    [
+     192,
+     64,
+     64,
+     64
+    ],
+    [
+     256,
+     64,
+     64,
+     64
+    ],
+    [
+     320,
+     64,
+     64,
+     64
+    ],
+    [
+     384,
+     64,
+     64,
+     64
+    ],
+    [
+     448,
+     64,
+     64,
+     64
+    ],
+    [
+     0,
+     128,
+     64,
+     64
+    ],
+    [
+     64,
+     128,
+     64,
+     64
+    ],
+    [
+     128,
+     128,
+     64,
+     64
+    ],
+    [
+     192,
+     128,
+     64,
+     64
+    ],
+    [
+     256,
+     128,
+     64,
+     64
+    ],
+    [
+     320,
+     128,
+     64,
+     64
+    ],
+    [
+     384,
+     128,
+     64,
+     64
+    ],
+    [
+     448,
+     128,
+     64,
+     64
+    ],
+    [
+     0,
+     192,
+     64,
+     64
+    ],
+    [
+     64,
+     192,
+     64,
+     64
+    ],
+    [
+     128,
+     192,
+     64,
+     64
+    ],
+    [
+     192,
+     192,
+     64,
+     64
+    ],
+    [
+     256,
+     192,
+     64,
+     64
+    ],
+    [
+     320,
+     192,
+     64,
+     64
+    ],
+    [
+     384,
+     192,
+     64,
+     64
+    ],
+    [
+     448,
+     192,
+     64,
+     64
+    ],
+    [
+     0,
+     256,
+     64,
+     64
+    ],
+    [
+     64,
+     256,
+     64,
+     64
+    ],
+    [
+     128,
+     256,
+     64,
+     64
+    ],
+    [
+     192,
+     256,
+     64,
+     64
+    ],
+    [
+     256,
+     256,
+     64,
+     64
+    ],
+    [
+     320,
+     256,
+     64,
+     64
+    ],
+    [
+     384,
+     256,
+     64,
+     64
+    ],
+    [
+     448,
+     256,
+     64,
+     64
+    ]
+   ],
+   "frame_indices": [
+    0,
+    5,
+    9,
+    14,
+    18,
+    23,
+    28,
+    32,
+    37,
+    40,
+    46,
+    50,
+    55,
+    60,
+    64,
+    69,
+    73,
+    78,
+    83,
+    87,
+    92,
+    96,
+    101,
+    106,
+    110,
+    115,
+    119,
+    124,
+    129,
+    133,
+    138,
+    142,
+    147,
+    151,
+    156,
+    161,
+    165,
+    170,
+    174,
+    179
+   ],
+   "scale": {
+    "mapping": "log10(I / I_ideal_peak) clipped to [-4, 0]",
+    "ideal_peak_cell_flux": 0.08349769888231426,
+    "ideal_reference": "zero-OPD image of the same native propagator, wavelength and grid (unit total flux)",
+    "colormap": "inferno",
+    "normalization": "common to every frame, case, role, average image, observation and the scene reference; no per-image peak normalization"
+   },
+   "window": {
+    "x_index": [
+     46,
+     110
+    ],
+    "y_index": [
+     46,
+     110
+    ],
+    "x_extent_mas": [
+     -1808.0399422597054,
+     1752.4079440363303
+    ],
+    "y_extent_mas": [
+     -1808.0399422597054,
+     1752.4079440363303
+    ],
+    "cell_mas": 55.63199822337584,
+    "native_extent_mas": [
+     -4367.111860534981,
+     4311.479862311605
+    ],
+    "note": "display crop of the native 156 x 156 grid about exact zero angle; metrics use the full uncropped grid"
+   },
+   "axes": "x right, +y up (raster rows flipped once at encoding)",
+   "zero_angle_cell_in_tile_column_row": [
+    32,
+    31
+   ]
+  },
+  "psf_average_uncorrected": {
+   "label": "Post-burn-in average, uncorrected reference",
+   "source": "mean_psfs.npz:mean_psf_uncorrected (job case-baseline); equal weights over frames [40, 180)",
+   "image": {
+    "href": "psf-average-uncorrected.png",
+    "bytes": 7373,
+    "sha256": "5df5530210d7e5176ef498b504581c89c0662e53c9a6353dab365a4f406bc535",
+    "media_type": "image/png"
+   },
+   "scale": {
+    "mapping": "log10(I / I_ideal_peak) clipped to [-4, 0]",
+    "ideal_peak_cell_flux": 0.08349769888231426,
+    "ideal_reference": "zero-OPD image of the same native propagator, wavelength and grid (unit total flux)",
+    "colormap": "inferno",
+    "normalization": "common to every frame, case, role, average image, observation and the scene reference; no per-image peak normalization"
+   },
+   "window": {
+    "x_index": [
+     46,
+     110
+    ],
+    "y_index": [
+     46,
+     110
+    ],
+    "x_extent_mas": [
+     -1808.0399422597054,
+     1752.4079440363303
+    ],
+    "y_extent_mas": [
+     -1808.0399422597054,
+     1752.4079440363303
+    ],
+    "cell_mas": 55.63199822337584,
+    "native_extent_mas": [
+     -4367.111860534981,
+     4311.479862311605
+    ],
+    "note": "display crop of the native 156 x 156 grid about exact zero angle; metrics use the full uncropped grid"
+   },
+   "clipping": {
+    "above_display_max_fraction": 0.0,
+    "below_display_min_fraction": 0.269287109375
+   },
+   "sample_count": 140
+  },
+  "psf_average_corrected": {
+   "label": "Post-burn-in average, AO-corrected",
+   "source": "mean_psfs.npz:mean_psf_corrected (job case-baseline); equal weights over frames [40, 180)",
+   "image": {
+    "href": "psf-average-corrected.png",
+    "bytes": 7217,
+    "sha256": "8a8641df9c98064b9be3a5e9fcf97c07db30235ec816b879210f8f6c32b0a907",
+    "media_type": "image/png"
+   },
+   "scale": {
+    "mapping": "log10(I / I_ideal_peak) clipped to [-4, 0]",
+    "ideal_peak_cell_flux": 0.08349769888231426,
+    "ideal_reference": "zero-OPD image of the same native propagator, wavelength and grid (unit total flux)",
+    "colormap": "inferno",
+    "normalization": "common to every frame, case, role, average image, observation and the scene reference; no per-image peak normalization"
+   },
+   "window": {
+    "x_index": [
+     46,
+     110
+    ],
+    "y_index": [
+     46,
+     110
+    ],
+    "x_extent_mas": [
+     -1808.0399422597054,
+     1752.4079440363303
+    ],
+    "y_extent_mas": [
+     -1808.0399422597054,
+     1752.4079440363303
+    ],
+    "cell_mas": 55.63199822337584,
+    "native_extent_mas": [
+     -4367.111860534981,
+     4311.479862311605
+    ],
+    "note": "display crop of the native 156 x 156 grid about exact zero angle; metrics use the full uncropped grid"
+   },
+   "clipping": {
+    "above_display_max_fraction": 0.0,
+    "below_display_min_fraction": 0.263916015625
+   },
+   "sample_count": 140
+  }
+ },
+ "members": {
+  "metrics": {
+   "href": "metrics.json",
+   "bytes": 49552,
+   "sha256": "b48280769fe900989ced65e6b8a09a4a8e3e8aef7187931a56c64da3ee4a71b3",
+   "media_type": "application/json"
+  },
+  "metrics_csv": {
+   "href": "metrics.csv",
+   "bytes": 20482,
+   "sha256": "b98b5b4e0e827e40e52dd741f506976a34aa93bd959a3ff11f23089a1cb79b2b",
+   "media_type": "text/csv"
+  },
+  "config": {
+   "href": "config.json",
+   "bytes": 6878,
+   "sha256": "ec4bcaf971a9e39b03ac7da662fd8b927099e4642df9873bde7c62fe7a56da22",
+   "media_type": "application/json"
+  },
+  "provenance": {
+   "href": "provenance.json",
+   "bytes": 17975,
+   "sha256": "302f9c83710a4947cc12781871b98e738399993bf2825aee7389aa04d40a76e3",
+   "media_type": "application/json"
+  },
+  "observation": {
+   "href": "observation.json",
+   "bytes": 8387,
+   "sha256": "c9d4e0901429995108f7dec5ba4871e5008a24d7ed5dfdcf93ed27f79f682126",
+   "media_type": "application/json"
+  }
+ },
+ "pairing": {
+  "status": "reference",
+  "matching_frames": 180
+ },
+ "validation": {
+  "producer_checks_passed": true
+ },
+ "limitations": [
+  "Short single-realization synthetic SCAO demonstration (one seed, 180 frames); no ensemble uncertainty is shown.",
+  "Science samples are frame-start snapshots; averages are equal-weight means of sampled instantaneous images.",
+  "Recorded nodes only: no interpolation between cases and no unlisted parameter combination.",
+  "The uncorrected image is a zero-DM optical counterfactual of the same recorded atmosphere, not a separate sensor/control trajectory."
+ ]
+}
