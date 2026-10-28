@@ -418,9 +418,30 @@ and LIM-07.
   directory therefore has an unknown code identity, under which a resume
   adds no runs. Version-3 records cannot be continued and are not
   relabelled; no committed record is version 3 (the committed series
-  records are version 2 or carry no protocol). Bytecode is left out of the
-  digest, so a sourceless `.pyc` placed in the package directory itself,
-  which Python would import, is not bound.
+  records are version 2 or carry no protocol).
+- Updated 2026-10-20 (OBS-15–OBS-18, review of the OBS-07 repair): both
+  evidence scripts' code identity now fails closed where the package's
+  files cannot bind the code Python imports from it. A package that is not
+  a directory with `__init__.py` (a zip import, a missing directory), or
+  that holds a symlinked directory (not followed), a sourceless `.pyc`
+  outside `__pycache__` (imported, never digested) or a source whose cache
+  Python would run without checking it against the source (an unchecked
+  hash-based cache, or any hash-based one under `--check-hash-based-pycs
+  never`, wherever this interpreter reads its caches: `__pycache__`, also
+  through a symlink, or under `PYTHONPYCACHEPREFIX`), gets a null package
+  digest and an unknown code identity, so a resume adds no runs
+  under it, and a detector-series resume with nothing to add stops instead
+  of verifying, since every such package has the same identity. Other
+  bytecode caches are not digested: Python reuses a timestamp-based cache
+  while its source keeps the recorded modification second and size, so an
+  edit of the same size within that second could run stale bytecode under
+  the edited source's identity. Git reads the package's paths literally, so
+  an untracked copy whose path holds glob characters (`copy[1]/…` beside a
+  tracked `copy1/…`) no longer takes the tracked copy's HEAD and diff. A
+  normal package's identity is unchanged, so neither the series protocol
+  (4) nor the S3 run protocol (2) changes; as with any edit of a script,
+  its `script_sha256` changes, so runs saved by the earlier scripts are
+  continued only by those scripts.
 - **Consequence / next evidence:** Record profile versions, overrides, seed,
   dependency versions and source revision/patch with results. Treat an
   implementation, a test pass and an accepted baseline as distinct evidence.

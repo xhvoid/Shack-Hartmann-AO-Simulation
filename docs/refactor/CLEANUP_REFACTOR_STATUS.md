@@ -972,3 +972,18 @@ above describes the code identity used up to series protocol 3.
 | Unit | Finding | Change | Behaviour and identity |
 | --- | --- | --- | --- |
 | J | AR-017 (OBS-07, review CR-02; P3) | `scripts/run_detector_level_evidence.py`: `code_identity()` digests the `shwfs_ao` package the process imports (bytecode and hidden files left out) and the runner script, and records the Git HEAD and the diff digest of the package's source directory only where the repository that holds the package tracks it, else null, so the code identity is unknown and a resume adds no runs; a resume refuses a version-3 record, with or without runs to add, before anything runs and leaves it as it was; tests with a throwaway repository: a tracked package, a copy in an ignored directory, a modified copy, fresh interpreters importing each, and resumes across them; the module docstring, LIM-11 and the technical reference's detector-evidence row | series protocol 4: every new run's code identity, and so its protocol hash, differs from version 3; version-3 records are neither continued nor relabelled, and version-2 and older records stay refused as before; no committed record is version 3, and every committed record keeps its hashes, summaries and consistency (tests) |
+
+## Follow-up hardening of the package code identity: OBS-15–OBS-18 (2026-10-20)
+
+The review of unit J (run `2026-10-20-claude-f801cac`, committed as
+`714941c`) confirmed the repair and recorded four P3 issues as observations
+OBS-15–OBS-18; OBS-15 and OBS-16 apply to the S3 driver's code identity too.
+The user asked for their repair. Run `2026-10-20-claude-f801cac-hardening`
+holds the records in
+`outputs/audit_reconciliation/2026-10-20-claude-f801cac-hardening/`; the
+earlier runs' records are unchanged. Until an independent review confirms
+the repair, its ledger keeps it `FIXED_PENDING_VERIFICATION`.
+
+| Unit | Finding | Change | Behaviour and identity |
+| --- | --- | --- | --- |
+| K | OBS-15–OBS-18 (review RV-01–RV-04; P3) | `scripts/run_detector_level_evidence.py` and `scripts/eso_scao_paired_convergence_study.py`: `_package_sha256` returns null, and the code identity is unknown, when the package is not a directory with `__init__.py` or holds a symlinked directory, a sourceless `.pyc` outside `__pycache__` (OBS-15) or a source whose cache, where this interpreter reads it, Python would run unchecked (review RV-05, RV-07; an unreadable cache is skipped, as Python skips it, RV-08); the Git commands read paths literally (`--literal-pathspecs`, OBS-16); the runner's version refusal gives version 3's reason only for version-3 runs (OBS-18), and a runner resume with nothing to add stops instead of verifying when the package has no digest (review RV-06); tests in both test files for each case and for file names in the digest (OBS-17); the docstrings and LIM-11 (with the timestamp-cache race) | a normal package's identity is unchanged (package digest and Git fields equal before and after), so series protocol 4 and S3 run protocol 2 stay; the changed layouts now count as unknown code, under which no runs are added; the scripts' own digests change, as with any edit |
