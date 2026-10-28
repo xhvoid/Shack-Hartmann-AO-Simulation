@@ -609,6 +609,104 @@ class TestPackagedBaseline:
         assert "estimator" in definition
         assert "uncertainty" in definition
 
+    def test_packaged_range_criteria_exceed_the_recorded_dispersion(
+        self,
+        packaged_baseline,
+    ):
+        # The statistical claim is checkable from the artifact alone: each
+        # recorded gating value sits more than three recorded standard
+        # errors inside its range criterion.
+        atmosphere = next(
+            comparison
+            for comparison in packaged_baseline["comparisons"]
+            if comparison["comparison_kind"] == "atmosphere_statistics"
+        )
+        metrics = {
+            metric["name"]: metric for metric in atmosphere["metrics"]
+        }
+        assert "three standard errors" in atmosphere["statistical_definition"]
+        pairs = (
+            ("rms_ratio_hcipy_over_native", "rms_ratio_standard_error"),
+            (
+                "native_structure_function_lag_ratio",
+                "native_structure_function_ratio_standard_error",
+            ),
+            (
+                "hcipy_structure_function_lag_ratio",
+                "hcipy_structure_function_ratio_standard_error",
+            ),
+        )
+        for gating_name, error_name in pairs:
+            gating = metrics[gating_name]
+            standard_error = metrics[error_name]
+            assert standard_error["level"] == "informational"
+            assert standard_error["value"] >= 0.0
+            criterion = gating["pass_criterion"]
+            margin = min(
+                gating["value"] - criterion["low"],
+                criterion["high"] - gating["value"],
+            )
+            assert margin > 3.0 * standard_error["value"], gating_name
+
+    def test_packaged_baseline_consumes_every_recorded_fixture(
+        self,
+        packaged_baseline,
+    ):
+        by_kind = {
+            comparison["comparison_kind"]: {
+                metric["name"]: metric for metric in comparison["metrics"]
+            }
+            for comparison in packaged_baseline["comparisons"]
+        }
+        influence = by_kind["dm_single_actuator_influence"]
+        assert "max_in_pupil_command_surface_abs_diff_m" in influence
+        loop = by_kind["closed_loop_residual"]
+        assert (
+            loop["executed_time_grid_matches_shared_fixture"]["value"] is True
+        )
+
+    def test_packaged_generator_records_verifiable_provenance(
+        self,
+        packaged_baseline,
+    ):
+        generator = packaged_baseline["generator"]
+        assert generator["generator_version"] == "2"
+        assert generator["source_tree_clean"] is True
+        commit = generator["source_commit"]
+        assert len(commit) == 40
+        assert set(commit) <= set("0123456789abcdef")
+
+    def test_packaged_environment_matches_its_named_constraint_profile(
+        self,
+        packaged_baseline,
+    ):
+        # The named profile must be the one that could have produced the
+        # recorded interpreter and library versions.  The constraints tree
+        # exists only in a source checkout, so the wheel-smoke bundle skips.
+        environment = packaged_baseline["environment"]
+        profile = environment["dependency_constraint_file"]
+        repository_root = Path(__file__).resolve().parents[2]
+        profile_path = repository_root / profile
+        if not (repository_root / "constraints").is_dir():
+            pytest.skip("constraints profiles are not part of this bundle")
+        assert profile_path.is_file(), profile
+        payload = profile_path.read_bytes()
+        assert (
+            hashlib.sha256(payload).hexdigest()
+            == environment["dependency_constraint_sha256"]
+        )
+        suffix = profile_path.stem.rsplit("py", 1)[-1]
+        major, minor = suffix[0], suffix[1:]
+        assert environment["python_version"].startswith(f"{major}.{minor}.")
+        pins = {}
+        for raw_line in payload.decode("utf-8").splitlines():
+            line = raw_line.split("#", 1)[0].split(";", 1)[0].strip()
+            if line and "==" in line and not line.startswith("-"):
+                name, _, version = line.partition("==")
+                pins[name.strip().lower().replace("_", "-")] = version.strip()
+        assert pins["numpy"] == environment["numpy_version"]
+        assert pins["hcipy"] == environment["hcipy_version"]
+
     def test_packaged_baseline_evaluates_cleanly_against_itself(
         self,
         packaged_baseline,
