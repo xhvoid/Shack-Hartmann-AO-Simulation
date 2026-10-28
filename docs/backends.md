@@ -488,12 +488,16 @@ weighting each pixel by its own distance from the expected source centroid:
 source-position uncertainty, so a raw-frame estimate that keeps the
 background pedestal scatters less (by `sum(S) / sum(S + B)` for a spot centred
 in the window, somewhat more off centre) while its response to spot motion
-shrinks by that same factor. Negative clipping and thresholding
-usually reduce the scatter further, and PRNU, saturation, and bad pixels are
-not modelled, so the value is a conservative first-order bound. At
-read-noise-dominated low flux it can therefore exceed `max_centroid_sigma_px`
-before the clipped detector frames scatter that much. The frozen legacy
-facades keep the historical spot-width-over-SNR proxy.
+shrinks by that same factor. This is a first-order approximation for the
+plain center of gravity, not a bound for other estimators or preprocessing.
+Negative clipping lowers the raw scatter of faint spots while biasing them
+toward the window centre, so at read-noise-dominated low flux the value can
+exceed `max_centroid_sigma_px` before the clipped detector frames scatter that
+much. Thresholding is not modelled: noise switches pixels near the threshold
+in and out, so a spot with a secondary peak near the threshold level can
+scatter many times the reported value while every frame still passes the
+uncertainty gate. PRNU, saturation, and bad pixels are not modelled either.
+The frozen legacy facades keep the historical spot-width-over-SNR proxy.
 
 ### `detector.CentroidValidity`
 

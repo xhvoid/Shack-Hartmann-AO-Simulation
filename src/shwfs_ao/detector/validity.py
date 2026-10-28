@@ -216,10 +216,14 @@ def centroid_quality(
     bad pixels, expressed in pixels.  A raw-frame estimate that keeps the
     background pedestal scatters less, by ``sum(S) / sum(S + B)`` for a spot
     centred in the window and by somewhat more off centre, but its response
-    to spot motion shrinks by that same factor.  Negative clipping and
-    thresholding are nonlinear and usually reduce the scatter, while PRNU,
-    saturation, and bad pixels are not modelled; the value is therefore a
-    conservative first-order bound rather than an exact estimator variance.
+    to spot motion shrinks by that same factor.  The value is a first-order
+    approximation for that estimator, not a bound for any other.  Negative
+    clipping lowers the raw scatter of faint spots while biasing them toward
+    the window centre.  Thresholding is not modelled at all: noise switches
+    pixels near the threshold in and out, so a spot with structure near the
+    threshold level, such as a secondary peak, can scatter many times the
+    reported value and still pass ``max_centroid_sigma_px``.  PRNU,
+    saturation, and bad pixels are not modelled either.
     For pure photon noise it is the larger per-axis spot RMS width over
     ``sqrt(flux)``: equal to the legacy proxy for a round spot and up to
     ``sqrt(2)`` times larger for an elongated one.
