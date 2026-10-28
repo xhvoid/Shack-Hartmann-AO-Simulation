@@ -641,6 +641,7 @@ def _assert_wheel_layout(
         "shwfs_ao/__init__.py",
         "shwfs_ao/backends/__init__.py",
         "shwfs_ao/backends/hcipy/__init__.py",
+        "shwfs_ao/backends/hcipy/atmosphere.py",
         "shwfs_ao/backends/hcipy/conversion.py",
         "shwfs_ao/backends/native/__init__.py",
         "shwfs_ao/backends/native/atmosphere.py",
