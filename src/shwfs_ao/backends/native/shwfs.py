@@ -15,6 +15,7 @@ import numpy as np
 
 from ...core.hashing import component_config_hash
 from ...core.types import DetectorPlaneSampling, SpotIntensityResult
+from ...core.wavefront import opd_to_phase
 from ...wfs.shack_hartmann.geometry import ShackHartmannGeometry
 from ...wfs.shack_hartmann.optics import (
     make_detector_plane_sampling,
@@ -188,7 +189,7 @@ class NativeShackHartmannOptics:
         """Return one unit-sum noiseless detector-window spot per lenslet."""
 
         opd_m = _validated_residual_opd(residual_opd_m, self._geometry)
-        phase_rad = 2.0 * np.pi * opd_m / self._wfs_wavelength_m
+        phase_rad = opd_to_phase(opd_m, self._wfs_wavelength_m)
         y_slice, x_slice = self._window_slices
         spots: list[np.ndarray] = []
         capture_fractions: list[float] = []
@@ -353,7 +354,7 @@ def lenslet_spot_from_opd(
         raise NativeShackHartmannError(
             "residual_opd_m must be a numeric array."
         ) from exc
-    phase_rad = 2.0 * np.pi * opd_m / wavelength_m
+    phase_rad = opd_to_phase(opd_m, wavelength_m)
     return lenslet_spot_from_phase(
         phase_rad,
         lenslet_mask,

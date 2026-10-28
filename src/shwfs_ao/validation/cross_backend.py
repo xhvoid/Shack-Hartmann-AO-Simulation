@@ -39,7 +39,7 @@ from typing import Any, ClassVar
 import numpy as np
 
 from ..core.hashing import component_config_hash, stable_hash
-from ..core.wavefront import masked_rms
+from ..core.wavefront import masked_rms, opd_to_phase
 from .physical import (
     centroid_xy_px,
     encircled_energy_radius_rad,
@@ -1130,11 +1130,13 @@ def _compare_strehl(context: _ComparisonContext) -> dict[str, Any]:
         ),
     )
     sigma_m = context.config.static_aberration_rms_m
-    marechal = float(
-        np.exp(
-            -((2.0 * np.pi * sigma_m / context.config.science_wavelength_m) ** 2)
+    sigma_phase_rad = float(
+        opd_to_phase(
+            np.asarray(sigma_m, dtype=float),
+            context.config.science_wavelength_m,
         )
     )
+    marechal = float(np.exp(-(sigma_phase_rad**2)))
     return {
         "comparison_kind": "strehl_ratio",
         "attribution": (
