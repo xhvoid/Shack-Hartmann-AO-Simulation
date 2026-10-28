@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it using these metadata."
 title: "Shack-Hartmann Wavefront Sensing and Adaptive Optics Simulations"
-abstract: "A compact Python adaptive-optics simulation portfolio: Shack-Hartmann wavefront sensing, detector-level centroiding, synthetic DM and interaction matrices, TSVD reconstruction, closed-loop SCAO diagnostics, and NIR PSF/Strehl science metrics."
+abstract: "Python adaptive-optics simulations: Shack-Hartmann wavefront sensing, detector-level centroiding, synthetic DM and interaction matrices, TSVD reconstruction, closed-loop SCAO diagnostics, and NIR PSF/Strehl science metrics."
 authors:
   - family-names: Han
     given-names: Xu
