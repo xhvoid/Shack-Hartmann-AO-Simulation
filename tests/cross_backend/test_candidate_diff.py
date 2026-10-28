@@ -1,0 +1,293 @@
+"""Content-completeness of the cross-backend candidate diff and acceptance.
+
+The reviewed machine-readable diff is the acceptance gate: whatever it does
+not cover can be edited after review without detection.  These tests pin
+that the diff covers the complete candidate byte-for-byte — tolerances,
+criteria, rationale, hashes, environment, and formatting alike — and that
+the acceptance command refuses a candidate directory whose contents (or the
+packaged baseline itself) changed after the diff was generated.  They drive
+the script's own functions on copies of the packaged baseline, so no
+comparison suite runs and no packaged resource is touched.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+from pathlib import Path
+import sys
+
+import pytest
+
+from shwfs_ao.validation.regression import (
+    load_cross_backend_baseline,
+    validate_cross_backend_baseline,
+)
+
+
+ROOT = Path(__file__).resolve().parents[2]
+
+_SCRIPT_SPEC = importlib.util.spec_from_file_location(
+    "cross_backend_candidate_script_for_tests",
+    ROOT / "scripts" / "generate_cross_backend_candidate.py",
+)
+assert _SCRIPT_SPEC is not None and _SCRIPT_SPEC.loader is not None
+script = importlib.util.module_from_spec(_SCRIPT_SPEC)
+sys.modules[_SCRIPT_SPEC.name] = script
+_SCRIPT_SPEC.loader.exec_module(script)
+
+
+@pytest.fixture()
+def packaged_tree(tmp_path, monkeypatch):
+    """A throwaway copy of the packaged baseline the script may write to."""
+
+    destination = (
+        tmp_path
+        / "src"
+        / "shwfs_ao"
+        / "resources"
+        / "reference_metrics"
+        / "cross_backend"
+    )
+    destination.mkdir(parents=True)
+    source = (
+        ROOT
+        / "src"
+        / "shwfs_ao"
+        / "resources"
+        / "reference_metrics"
+        / "cross_backend"
+        / "cross_backend_baseline.json"
+    )
+    (destination / "cross_backend_baseline.json").write_bytes(
+        source.read_bytes()
+    )
+    monkeypatch.setattr(script, "ROOT", tmp_path)
+    monkeypatch.setattr(script, "DESTINATION_DIR", destination)
+    return destination
+
+
+def _candidate_document() -> dict:
+    document = json.loads(json.dumps(dict(load_cross_backend_baseline())))
+    del document["acceptance"]
+    document["generator"] = {
+        "generator_name": "scripts/generate_cross_backend_candidate.py",
+        "generator_version": "1",
+        "source_commit": "f" * 40,
+    }
+    return document
+
+
+def _write_candidate(candidate_dir: Path, document: dict) -> dict:
+    """Mimic generation: write candidate bytes plus the reviewed diff."""
+
+    candidate_dir.mkdir(parents=True, exist_ok=True)
+    candidate_bytes = script._canonical_bytes(document)
+    diff = script._build_diff(document, candidate_bytes)
+    (candidate_dir / script.CANDIDATE_FILE).write_bytes(candidate_bytes)
+    (candidate_dir / script.DIFF_JSON).write_bytes(
+        script._canonical_bytes(diff)
+    )
+    (candidate_dir / script.DIFF_MARKDOWN).write_text(
+        script._render_diff_markdown(diff),
+        encoding="utf-8",
+    )
+    return diff
+
+
+class TestDiffContentCompleteness:
+    def test_diff_records_content_hashes_of_candidate_and_baseline(
+        self,
+        packaged_tree,
+        tmp_path,
+    ):
+        document = _candidate_document()
+        candidate_bytes = script._canonical_bytes(document)
+        diff = script._build_diff(document, candidate_bytes)
+        assert diff["schema_name"] == "shwfs_ao.cross_backend_diff"
+        assert diff["baseline_present"] is True
+        import hashlib
+
+        assert diff["candidate_sha256"] == (
+            hashlib.sha256(candidate_bytes).hexdigest()
+        )
+        assert diff["current_baseline_sha256"] == (
+            hashlib.sha256(
+                (packaged_tree / "cross_backend_baseline.json").read_bytes()
+            ).hexdigest()
+        )
+
+    def test_a_tolerance_change_appears_in_the_reviewed_changes(
+        self,
+        packaged_tree,
+    ):
+        document = _candidate_document()
+        metric = next(
+            metric
+            for comparison in document["comparisons"]
+            if comparison["comparison_kind"] == "strehl_ratio"
+            for metric in comparison["metrics"]
+            if metric["name"] == "strehl_abs_difference"
+        )
+        metric["pass_criterion"]["tolerance"] = 0.5
+        diff = script._build_diff(document, script._canonical_bytes(document))
+        tolerance_changes = [
+            entry
+            for entry in diff["changes"]
+            if entry["path"]
+            == (
+                "comparisons[strehl_ratio]"
+                ".metrics[strehl_abs_difference].pass_criterion.tolerance"
+            )
+        ]
+        assert tolerance_changes == [
+            {
+                "path": (
+                    "comparisons[strehl_ratio]"
+                    ".metrics[strehl_abs_difference].pass_criterion.tolerance"
+                ),
+                "old": 0.005,
+                "new": 0.5,
+            }
+        ]
+        rendered = script._render_diff_markdown(diff)
+        assert "pass_criterion.tolerance" in rendered
+
+    def test_an_unchanged_candidate_reports_only_generator_changes(
+        self,
+        packaged_tree,
+    ):
+        # The synthetic candidate differs from the packaged baseline only in
+        # its generator commit, so the complete structural diff must contain
+        # exactly that path: everything else is covered and unchanged.
+        document = _candidate_document()
+        diff = script._build_diff(document, script._canonical_bytes(document))
+        assert [entry["path"] for entry in diff["changes"]] == [
+            "generator.source_commit"
+        ]
+
+
+class TestAcceptanceFreshness:
+    def test_an_untampered_candidate_is_accepted_with_provenance(
+        self,
+        packaged_tree,
+        tmp_path,
+    ):
+        candidate_dir = tmp_path / "candidate"
+        _write_candidate(candidate_dir, _candidate_document())
+        script._accept_reviewed_candidate(
+            candidate_dir,
+            reason="Contract-test acceptance of an unchanged candidate.",
+            review_reference="AO-REF-018-TEST",
+        )
+        accepted = json.loads(
+            (packaged_tree / "cross_backend_baseline.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        validate_cross_backend_baseline(accepted)
+        assert accepted["acceptance"]["reason"] == (
+            "Contract-test acceptance of an unchanged candidate."
+        )
+        assert accepted["acceptance"]["review_reference"] == "AO-REF-018-TEST"
+        assert accepted["acceptance"]["accepted_at_utc"]
+        assert accepted["generator"]["source_commit"] == "f" * 40
+        manifest = json.loads(
+            (
+                packaged_tree.parents[1] / "resource_manifest.json"
+            ).read_text(encoding="utf-8")
+        )
+        names = [record["logical_name"] for record in manifest["resources"]]
+        assert (
+            "reference_metrics/cross_backend/cross_backend_baseline.json"
+            in names
+        )
+
+    def test_a_post_review_tolerance_edit_is_refused(
+        self,
+        packaged_tree,
+        tmp_path,
+    ):
+        # The metric values are untouched, so the pre-fix value-only diff
+        # would have accepted this candidate.
+        candidate_dir = tmp_path / "candidate"
+        _write_candidate(candidate_dir, _candidate_document())
+        tampered = json.loads(
+            (candidate_dir / script.CANDIDATE_FILE).read_text(
+                encoding="utf-8"
+            )
+        )
+        for comparison in tampered["comparisons"]:
+            for metric in comparison["metrics"]:
+                if metric["pass_criterion"]["type"] == "abs_tolerance":
+                    metric["pass_criterion"]["tolerance"] = 1.0e6
+        (candidate_dir / script.CANDIDATE_FILE).write_bytes(
+            script._canonical_bytes(tampered)
+        )
+        with pytest.raises(SystemExit, match="changed after diff generation"):
+            script._accept_reviewed_candidate(
+                candidate_dir,
+                reason="tampered",
+                review_reference="AO-REF-018-TEST",
+            )
+
+    def test_a_formatting_only_edit_is_refused(self, packaged_tree, tmp_path):
+        candidate_dir = tmp_path / "candidate"
+        _write_candidate(candidate_dir, _candidate_document())
+        candidate_path = candidate_dir / script.CANDIDATE_FILE
+        reserialized = json.dumps(
+            json.loads(candidate_path.read_text(encoding="utf-8")),
+            indent=4,
+            sort_keys=True,
+        )
+        candidate_path.write_text(reserialized + "\n", encoding="utf-8")
+        with pytest.raises(SystemExit, match="changed after diff generation"):
+            script._accept_reviewed_candidate(
+                candidate_dir,
+                reason="reformatted",
+                review_reference="AO-REF-018-TEST",
+            )
+
+    def test_a_baseline_change_after_diff_generation_is_refused(
+        self,
+        packaged_tree,
+        tmp_path,
+    ):
+        candidate_dir = tmp_path / "candidate"
+        _write_candidate(candidate_dir, _candidate_document())
+        baseline_path = packaged_tree / "cross_backend_baseline.json"
+        drifted = json.loads(baseline_path.read_text(encoding="utf-8"))
+        drifted["acceptance"]["reason"] = "silently rewritten"
+        baseline_path.write_bytes(script._canonical_bytes(drifted))
+        with pytest.raises(SystemExit, match="changed after diff generation"):
+            script._accept_reviewed_candidate(
+                candidate_dir,
+                reason="baseline drifted",
+                review_reference="AO-REF-018-TEST",
+            )
+
+    def test_a_pre_rewrite_value_only_diff_is_refused(
+        self,
+        packaged_tree,
+        tmp_path,
+    ):
+        # A stale diff generated by the value-only differ must never satisfy
+        # the content-complete acceptance check.
+        candidate_dir = tmp_path / "candidate"
+        document = _candidate_document()
+        _write_candidate(candidate_dir, document)
+        legacy_diff = {
+            "baseline_present": True,
+            "old_config_hash": document["comparison_config"]["config_hash"],
+            "new_config_hash": document["comparison_config"]["config_hash"],
+            "metrics": [],
+        }
+        (candidate_dir / script.DIFF_JSON).write_bytes(
+            script._canonical_bytes(legacy_diff)
+        )
+        with pytest.raises(SystemExit, match="changed after diff generation"):
+            script._accept_reviewed_candidate(
+                candidate_dir,
+                reason="stale diff",
+                review_reference="AO-REF-018-TEST",
+            )
