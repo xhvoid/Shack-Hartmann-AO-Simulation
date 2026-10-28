@@ -17,6 +17,7 @@ jobs:
     timeout-minutes: 30
     env:
       PYTHONPATH: ""
+      PIP_CONSTRAINT: ${{ github.workspace }}/${{ matrix.constraints }}
     strategy:
       fail-fast: false
       matrix:
@@ -47,6 +48,9 @@ jobs:
 
       - name: Check installed dependency consistency
         run: python -m pip check
+
+      - name: Verify the environment is exactly the constraint lock
+        run: python scripts/verify_environment_lock.py --constraints "${{ matrix.constraints }}"
 
       - name: Run tests
         # The hcipy marker is reserved for the dedicated HCIPy lane below;
@@ -95,6 +99,7 @@ jobs:
     env:
       PYTHONPATH: ""
       MPLBACKEND: Agg
+      PIP_CONSTRAINT: ${{ github.workspace }}/${{ matrix.constraints }}
     strategy:
       fail-fast: false
       matrix:
@@ -142,6 +147,9 @@ jobs:
           python -m pip uninstall -y shack-hartmann-ao-simulation
           python -m pip install --no-deps "$RUNNER_TEMP"/dist/*.whl
           python -m pip check
+
+      - name: Verify the environment is exactly the constraint lock
+        run: python scripts/verify_environment_lock.py --constraints "${{ matrix.constraints }}"
 
       - name: Rebuild a wheel from the sdist and inspect distribution contents
         # Clean-directory rebuild; the inspector compares file lists and the
@@ -191,6 +199,7 @@ jobs:
     timeout-minutes: 30
     env:
       PYTHONPATH: ""
+      PIP_CONSTRAINT: ${{ github.workspace }}/constraints/hcipy-py311.txt
       MPLBACKEND: Agg
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -224,6 +233,9 @@ jobs:
           python -m pip uninstall -y shack-hartmann-ao-simulation
           python -m pip install --no-deps "$RUNNER_TEMP"/dist/*.whl
           python -m pip check
+
+      - name: Verify the environment is exactly the constraint lock
+        run: python scripts/verify_environment_lock.py --constraints constraints/hcipy-py311.txt
 
       - name: Prepare the portable wheel-smoke bundle
         run: python scripts/prepare_wheel_smoke_bundle.py --include-hcipy --output "$RUNNER_TEMP/wheel-smoke"
@@ -262,6 +274,7 @@ jobs:
     timeout-minutes: 30
     env:
       PYTHONPATH: ""
+      PIP_CONSTRAINT: ${{ github.workspace }}/constraints/py314.txt
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -296,6 +309,9 @@ jobs:
           python -m pip uninstall -y shack-hartmann-ao-simulation
           python -m pip install --no-deps "$RUNNER_TEMP"/dist/*.whl
           python -m pip check
+
+      - name: Verify the environment is exactly the constraint lock
+        run: python scripts/verify_environment_lock.py --constraints constraints/py314.txt
 
       - name: Run notebook-governance tests
         # Static layout/manifest/rules tests read the checkout, so they run
@@ -338,6 +354,7 @@ jobs:
     timeout-minutes: 15
     env:
       PYTHONPATH: ""
+      PIP_CONSTRAINT: ${{ github.workspace }}/constraints/py314.txt
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -351,6 +368,9 @@ jobs:
 
       - name: Install lint tools
         run: python -m pip install -c constraints/py314.txt ".[lint]"
+
+      - name: Verify the environment is exactly the constraint lock
+        run: python scripts/verify_environment_lock.py --constraints constraints/py314.txt
 
       - name: Ruff correctness gate
         # Ruleset and per-file ignores are documented in [tool.ruff] in

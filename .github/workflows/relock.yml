@@ -1,0 +1,71 @@
+name: relock
+
+# Regenerate the Linux constraint locks on the platform that actually runs
+# them.  Manual dispatch only: each job resolves its profile's extras fresh
+# (no -c pin), emits the complete environment freeze with
+# scripts/verify_environment_lock.py --emit, diffs it against the committed
+# profile, and uploads the freeze as an artifact.  A maintainer reviews the
+# diff and commits the refreshed profile together with the AO-REF-000
+# contract-manifest hash update; nothing is committed automatically.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  relock:
+    name: Relock ${{ matrix.profile }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONPATH: ""
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: constraints/py310.txt
+            python-version: "3.10"
+            extras: ".[test,notebook-test]"
+          - profile: constraints/py314.txt
+            python-version: "3.14"
+            extras: ".[test,notebook-test,lint]"
+          - profile: constraints/hcipy-py311.txt
+            python-version: "3.11"
+            extras: ".[test,hcipy,notebook-test]"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Resolve the profile's dependency set fresh
+        run: |
+          python -m pip install build
+          python -m pip install "${{ matrix.extras }}"
+          python -m pip uninstall -y shack-hartmann-ao-simulation
+          python -m pip check
+
+      - name: Emit the complete environment freeze
+        run: |
+          python scripts/verify_environment_lock.py --emit > "$RUNNER_TEMP/freeze.txt"
+          echo "::group::freeze"
+          cat "$RUNNER_TEMP/freeze.txt"
+          echo "::endgroup::"
+
+      - name: Diff against the committed profile
+        # Informational: relocking exists to change pins.  The diff is the
+        # review surface for the commit that adopts the freeze.
+        run: |
+          grep -v '^#' "${{ matrix.profile }}" | grep -v '^$' | sort > "$RUNNER_TEMP/committed.txt"
+          diff -u "$RUNNER_TEMP/committed.txt" "$RUNNER_TEMP/freeze.txt" || true
+
+      - name: Upload the freeze artifact
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: freeze-${{ matrix.python-version }}
+          path: ${{ runner.temp }}/freeze.txt
