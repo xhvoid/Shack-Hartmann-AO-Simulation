@@ -50,9 +50,10 @@ AO_DEMO_OUTPUT_DIR=readme-smoke-output AO_DEMO_REFERENCE_METRICS=readme-smoke-ou
 ```
 
 `run_fast_integration.py` preserves the frozen fast-integration behavior
-through `shwfs_ao.legacy.ao_integration`, then delegates file creation to the
-canonical `shwfs_ao.io.artifacts` writer. The shared canonical system builder
-and loop are under `shwfs_ao.experiments.scao` and `shwfs_ao.control`.
+through the canonical `shwfs_ao.experiments.integration` facade, then delegates
+file creation to the canonical `shwfs_ao.io.artifacts` writer. The shared
+canonical system builder and loop are under `shwfs_ao.experiments.scao` and
+`shwfs_ao.control`.
 
 For HCIPy, install the `hcipy` extra (or `test,hcipy` for validation). The
 constrained HCIPy CI lane executes this separate wheel-installed block:
