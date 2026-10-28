@@ -31,12 +31,20 @@ Positive DM commands create positive correction OPD. The loop always forms
 
 ## 1. Package dependency diagram
 
-Arrows mean “may import or construct from”; dashed arrows are lazy, optional,
-or compatibility-only paths. `core` has no dependency on a backend, detector,
-experiment, plotting library, resource loader, or artifact writer. Cycles at
-the adapter/factory level are visible rather than hidden: shared contracts
-remain in `core`, while backend builders may import the repository-owned
-geometry, DM, detector, or science configuration they adapt.
+Every arrow is an import that exists in `src/shwfs_ao`, and every import between
+these packages is an arrow: a solid arrow is a module-level import, a dashed one
+is deferred to call time (an optional backend, a factory chosen at build time).
+`tests/docs/test_documentation_contract.py` derives this graph from the source
+and fails if the two disagree, so the diagram cannot drift into describing a
+structure the code does not have.
+
+`shwfs_ao.resources` holds packaged data rather than code, and the clients are
+outside the package, so those two nodes are documentation context; every other
+node is checked. `core` has no dependency on a backend, detector, experiment,
+plotting library, resource loader, or artifact writer. Cycles at the
+adapter/factory level are visible rather than hidden: shared contracts remain in
+`core`, while backend builders may import the repository-owned geometry, DM,
+detector, or science configuration they adapt.
 
 ```mermaid
 flowchart BT
@@ -54,7 +62,7 @@ flowchart BT
     IO["shwfs_ao.io"]
     RESOURCES["shwfs_ao.resources<br/>fixtures · profiles · schemas · baselines"]
     CLIENTS["examples · notebooks · tests"]
-    EXPERIMENTAL["shwfs_ao.experimental.pwfs"]
+    EXPERIMENTAL["shwfs_ao.experimental.pwfs<br/>(NumPy only; imports no other package)"]
     LEGACY["shwfs_ao.legacy + installed root shims<br/>(compatibility only)"]
 
     NATIVE --> CORE
@@ -63,56 +71,61 @@ flowchart BT
     NATIVE --> DM
     NATIVE --> SCIENCE
     HCIPY --> CORE
+    HCIPY --> DETECTOR
     HCIPY --> WFS
     HCIPY --> DM
     HCIPY --> SCIENCE
+    HCIPY -. "deferred actuator layout" .-> NATIVE
     DETECTOR --> CORE
     WFS --> CORE
     WFS --> DETECTOR
-    WFS --> NATIVE
     DM --> CORE
-    DM -. "lazy native builder" .-> NATIVE
+    DM -. "deferred native builder" .-> NATIVE
     CAL --> CORE
     CAL --> DM
     CAL --> NATIVE
     CONTROL --> CORE
     CONTROL --> CAL
     SCIENCE --> CORE
-    SCIENCE -. "lazy propagator selection" .-> NATIVE
+    SCIENCE -. "deferred propagator selection" .-> NATIVE
     SCIENCE -. "optional propagator selection" .-> HCIPY
     EXPERIMENTS --> CORE
-    EXPERIMENTS --> NATIVE
     EXPERIMENTS --> DETECTOR
-    EXPERIMENTS --> WFS
     EXPERIMENTS --> DM
     EXPERIMENTS --> CAL
     EXPERIMENTS --> CONTROL
     EXPERIMENTS --> SCIENCE
     EXPERIMENTS --> IO
+    EXPERIMENTS -. "deferred backend factory" .-> NATIVE
+    EXPERIMENTS -. "deferred backend factory" .-> HCIPY
     VALIDATION --> CORE
-    VALIDATION --> NATIVE
-    VALIDATION --> HCIPY
-    VALIDATION --> DETECTOR
-    VALIDATION --> WFS
-    VALIDATION --> DM
-    VALIDATION --> CAL
-    VALIDATION --> CONTROL
-    VALIDATION --> SCIENCE
     VALIDATION --> IO
+    VALIDATION -. "deferred suite construction" .-> NATIVE
+    VALIDATION -. "deferred suite construction" .-> HCIPY
+    VALIDATION -.-> DETECTOR
+    VALIDATION -.-> WFS
+    VALIDATION -.-> DM
+    VALIDATION -.-> CAL
+    VALIDATION -.-> CONTROL
+    VALIDATION -.-> SCIENCE
     IO --> CORE
-    IO --> RESOURCES
+    IO -. "packaged data, not an import" .-> RESOURCES
     CLIENTS --> EXPERIMENTS
     CLIENTS --> VALIDATION
     CLIENTS --> IO
-    EXPERIMENTAL --> CORE
-    EXPERIMENTS -. "retained error-budget compatibility types" .-> LEGACY
-    LEGACY -. "delegates to canonical owners" .-> CORE
-    LEGACY -.-> DETECTOR
-    LEGACY -.-> WFS
-    LEGACY -.-> DM
-    LEGACY -.-> CAL
-    LEGACY -.-> CONTROL
-    LEGACY -.-> SCIENCE
+    EXPERIMENTS -- "retained error-budget compatibility types" --> LEGACY
+    VALIDATION -- "retained validation compatibility types" --> LEGACY
+    LEGACY -- "delegates to canonical owners" --> CORE
+    LEGACY --> DETECTOR
+    LEGACY --> WFS
+    LEGACY --> DM
+    LEGACY --> CAL
+    LEGACY --> CONTROL
+    LEGACY --> SCIENCE
+    LEGACY --> NATIVE
+    LEGACY --> IO
+    LEGACY --> EXPERIMENTS
+    LEGACY --> EXPERIMENTAL
 ```
 
 `core`, the shared SCAO builder/loop, and new backend-independent components do

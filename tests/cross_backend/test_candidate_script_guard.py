@@ -11,14 +11,29 @@ comparison suite itself.
 
 from __future__ import annotations
 
+import importlib.util
 import os
 from pathlib import Path
 import subprocess
 import sys
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = "scripts/generate_cross_backend_candidate.py"
+
+# scripts/ is a path-addressed tool directory, not an importable package, so the
+# few guards that are cheaper to drive directly than through a subprocess are
+# loaded by file — the same pattern the notebook-runner tests use.
+_GENERATOR_SPEC = importlib.util.spec_from_file_location(
+    "generate_cross_backend_candidate_for_guard_tests",
+    ROOT / SCRIPT,
+)
+assert _GENERATOR_SPEC is not None and _GENERATOR_SPEC.loader is not None
+generator = importlib.util.module_from_spec(_GENERATOR_SPEC)
+sys.modules[_GENERATOR_SPEC.name] = generator
+_GENERATOR_SPEC.loader.exec_module(generator)
 
 
 def _run(*arguments: str, env: dict[str, str] | None = None):
@@ -153,3 +168,83 @@ def test_acceptance_outside_pytest_still_requires_a_reviewed_candidate(
 
     assert result.returncode != 0
     assert "Missing reviewed candidate" in (result.stderr + result.stdout)
+
+
+def test_a_candidate_is_only_generated_by_this_repository_s_own_package(tmp_path):
+    """Provenance names this checkout, so this checkout's code must run.
+
+    ``source_commit`` is read from the repository while the physics is executed
+    by whichever ``shwfs_ao`` the interpreter resolves.  A foreign or stale
+    installed copy shadowing the checkout would therefore produce numbers
+    attributed to a commit that never produced them, and "check out this commit
+    and re-run" would not reproduce the baseline.
+    """
+
+    foreign = tmp_path / "foreign"
+    (foreign / "shwfs_ao").mkdir(parents=True)
+    (foreign / "shwfs_ao" / "__init__.py").write_text("", encoding="utf-8")
+    destination = tmp_path / "candidate"
+
+    for operation in (
+        ("--generate-candidate",),
+        (
+            "--accept-baseline-update",
+            "--reason",
+            "tolerances re-derived",
+            "--review-reference",
+            "AO-REF-018",
+        ),
+    ):
+        result = _run(
+            *operation,
+            "--candidate-dir",
+            str(destination),
+            env={
+                **{
+                    key: value
+                    for key, value in os.environ.items()
+                    if key != "PYTEST_CURRENT_TEST"
+                },
+                "PYTHONPATH": str(foreign),
+            },
+        )
+
+        assert result.returncode != 0
+        message = result.stderr + result.stdout
+        assert "The imported shwfs_ao package is" in message
+        assert str(foreign / "shwfs_ao") in message
+    # The refusal precedes every write, including the candidate directory.
+    assert not destination.exists()
+
+
+def test_the_executed_package_check_accepts_this_checkout():
+    assert generator._require_executed_package_is_this_checkout() == (
+        (ROOT / "src" / "shwfs_ao").resolve()
+    )
+
+
+def test_a_candidate_is_refused_when_head_moves_while_the_suite_runs(monkeypatch):
+    """Two clean commits leave no patch evidence of the switch between them.
+
+    The suite takes minutes.  If HEAD moves during it, the earlier and later
+    parts of the run executed different code, and the candidate would name only
+    the first — with ``source_patch_sha256`` ``None`` on both sides, so nothing
+    else in the record contradicts it.
+    """
+
+    before = "a" * 40
+    after = "b" * 40
+    monkeypatch.setattr(generator, "_source_patch_sha256", lambda: None)
+
+    monkeypatch.setattr(generator, "_source_commit", lambda: after)
+    with pytest.raises(SystemExit, match=f"HEAD moved from {before}"):
+        generator._require_source_unchanged(before, None)
+
+    # A stationary clean checkout passes, and a working tree that changed under
+    # an unmoved HEAD is still caught by the patch hash.
+    monkeypatch.setattr(generator, "_source_commit", lambda: before)
+    generator._require_source_unchanged(before, None)
+
+    monkeypatch.setattr(generator, "_source_patch_sha256", lambda: "c" * 64)
+    with pytest.raises(SystemExit, match="working tree changed"):
+        generator._require_source_unchanged(before, None)

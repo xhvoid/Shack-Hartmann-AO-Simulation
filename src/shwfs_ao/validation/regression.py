@@ -65,6 +65,29 @@ REQUIRED_COMPARISON_KINDS = (
 # acceptance workflow — the only writer of a baseline — could drop it and still
 # satisfy every custom check.
 COMPARISONS_REQUIRING_STATISTICAL_DEFINITION = frozenset({"atmosphere_statistics"})
+# Metrics whose recorded value is a measured magnitude, so a negative one is
+# not a small error but a value of a kind the metric cannot take.  These are all
+# informational, which is precisely why the rule is needed: their values are
+# never gated, so nothing else would notice a standard error of -1.0 sitting
+# under the ratios it is supposed to qualify.
+NONNEGATIVE_METRIC_VALUES: Mapping[str, frozenset[str]] = {
+    "atmosphere_statistics": frozenset(
+        (
+            "rms_ratio_standard_error",
+            "native_structure_function_ratio_standard_error",
+            "hcipy_structure_function_ratio_standard_error",
+        )
+    ),
+    "runtime_and_memory": frozenset(
+        (
+            "native_wfs_propagation_s",
+            "hcipy_wfs_propagation_s",
+            "native_psf_propagation_s",
+            "hcipy_psf_propagation_s",
+            "comparison_peak_traced_memory_mb",
+        )
+    ),
+}
 _CRITERION_TYPES = ("equals", "abs_tolerance", "range", "informational")
 _CONTENT_HASH_64 = re.compile(r"[0-9a-f]{64}")
 _SOURCE_COMMIT_40 = re.compile(r"[0-9a-f]{40}")
@@ -347,6 +370,7 @@ __all__ = (
     "REQUIRED_FIXTURE_HASH_KEYS",
     "REQUIRED_METRIC_NAMES",
     "COMPARISONS_REQUIRING_STATISTICAL_DEFINITION",
+    "NONNEGATIVE_METRIC_VALUES",
     "METRIC_CONTRACT",
     "BaselineContractError",
     "validate_cross_backend_report",
@@ -406,7 +430,14 @@ def _validate_report_structure(
             f"unexpected artifact_schema_name "
             f"{document['artifact_schema_name']!r}."
         )
-    if document["artifact_schema_version"] != CROSS_BACKEND_BASELINE_SCHEMA_VERSION:
+    # ``type`` rather than ``==`` alone: ``True`` equals 1 in Python, so a
+    # document whose version field is a boolean would otherwise be read as
+    # version 1 and validated against a contract it never declared.
+    if (
+        type(document["artifact_schema_version"]) is not int
+        or document["artifact_schema_version"]
+        != CROSS_BACKEND_BASELINE_SCHEMA_VERSION
+    ):
         raise BaselineContractError(
             "unsupported artifact_schema_version "
             f"{document['artifact_schema_version']!r}."
@@ -739,6 +770,34 @@ def evaluate_report_against_baseline(
             f"expected={baseline.get('root_seed')!r}; a different seed yields a "
             "different realization, so metric tolerances do not apply."
         )
+    # An estimated comparison reports averages over realizations, so its numbers
+    # only mean what its estimator and uncertainty definition say they mean.  A
+    # report that estimated them differently is not comparable to the baseline
+    # even when every value lands inside the recorded range: the ranges were
+    # reviewed against one definition, and nothing else in this document would
+    # reveal that the fresh run used another.
+    reported_kinds = {
+        comparison["comparison_kind"] for comparison in report["comparisons"]
+    }
+    for comparison in baseline["comparisons"]:
+        kind = comparison["comparison_kind"]
+        if kind not in COMPARISONS_REQUIRING_STATISTICAL_DEFINITION:
+            continue
+        # A comparison the report does not contain at all is reported below,
+        # metric by metric, with the full context of what is missing.  Failing
+        # here on its absent definition would short-circuit that and leave the
+        # reader with one terse line instead.
+        if kind not in reported_kinds:
+            continue
+        expected = comparison.get("statistical_definition")
+        observed = _statistical_definition(report, kind)
+        if observed != expected:
+            failures.append(
+                f"comparisons[{kind!r}].statistical_definition mismatch: "
+                f"observed={observed!r} expected={expected!r}; the estimator or "
+                "its uncertainty changed, so the reviewed tolerances were not "
+                "set against these numbers."
+            )
     if failures:
         return tuple(failures)
 
@@ -779,7 +838,86 @@ def evaluate_report_against_baseline(
             )
             if failure is not None:
                 failures.append(failure)
+    failures.extend(_inventory_failures(report, baseline))
     return tuple(failures)
+
+
+def _statistical_definition(document: Mapping[str, Any], kind: str) -> Any:
+    for comparison in document["comparisons"]:
+        if comparison["comparison_kind"] == kind:
+            return comparison.get("statistical_definition")
+    return None
+
+
+def _inventory_failures(
+    report: Mapping[str, Any],
+    baseline: Mapping[str, Any],
+) -> list[str]:
+    """Failures for evidence the baseline does not account for.
+
+    The per-metric loop above walks the *baseline's* inventory, so on its own it
+    only ever notices what a report is missing.  Everything a report adds — an
+    extra comparison, an extra metric, or the same comparisons in a different
+    order — passes it untouched, which is how an unreviewed measurement, or a
+    report assembled from a different suite, can evaluate clean.  A baseline
+    gates what it was reviewed against, so anything else in the document is
+    reported here rather than silently ignored.
+
+    Order is part of it: the canonical order is what
+    :func:`validate_cross_backend_report` requires of both documents, so a
+    report whose comparisons are shuffled did not come from a run of this suite.
+
+    Absence is deliberately *not* reported here.  Every metric the baseline
+    records is already surfaced above with its full expected value, tolerance,
+    units, and hashes, and repeating it as a terse inventory line would only
+    bury that.
+    """
+
+    failures: list[str] = []
+    baseline_kinds = [
+        comparison["comparison_kind"] for comparison in baseline["comparisons"]
+    ]
+    report_kinds = [
+        comparison["comparison_kind"] for comparison in report["comparisons"]
+    ]
+    unexpected_kinds = [kind for kind in report_kinds if kind not in set(baseline_kinds)]
+    if unexpected_kinds:
+        failures.append(
+            f"comparisons the baseline does not record: {unexpected_kinds}. An "
+            "unreviewed comparison cannot be presented as covered by an "
+            "accepted baseline."
+        )
+    shared_report_order = [kind for kind in report_kinds if kind in set(baseline_kinds)]
+    shared_baseline_order = [
+        kind for kind in baseline_kinds if kind in set(report_kinds)
+    ]
+    if shared_report_order != shared_baseline_order:
+        failures.append(
+            f"comparisons are out of canonical order: observed="
+            f"{shared_report_order} expected={shared_baseline_order}; one run "
+            "of the suite always emits them in the order the baseline records."
+        )
+    baseline_metrics = {
+        comparison["comparison_kind"]: {
+            metric["name"] for metric in comparison["metrics"]
+        }
+        for comparison in baseline["comparisons"]
+    }
+    for comparison in report["comparisons"]:
+        kind = comparison["comparison_kind"]
+        reviewed = baseline_metrics.get(kind)
+        if reviewed is None:
+            continue
+        unexpected = sorted(
+            {metric["name"] for metric in comparison["metrics"]} - reviewed
+        )
+        if unexpected:
+            failures.append(
+                f"comparison {kind!r} reports metrics the baseline does not "
+                f"record: {unexpected}. An unreviewed measurement cannot be "
+                "presented as covered by an accepted baseline."
+            )
+    return failures
 
 
 def format_metric_failure(
@@ -977,6 +1115,15 @@ def _validate_comparison(comparison: object) -> None:
             raise BaselineContractError(
                 f"metric {metric['name']!r} is exact, so its pass_criterion "
                 f"must be 'equals', not {criterion['type']!r}."
+            )
+        if metric["name"] in NONNEGATIVE_METRIC_VALUES.get(
+            comparison["comparison_kind"], frozenset()
+        ) and (not _finite_number(metric["value"]) or float(metric["value"]) < 0.0):
+            raise BaselineContractError(
+                f"metric {metric['name']!r} in comparison "
+                f"{comparison['comparison_kind']!r} records a measured "
+                "magnitude, so its value must be a finite non-negative number; "
+                f"got {metric['value']!r}."
             )
         if metric["name"] in seen_names:
             raise BaselineContractError(

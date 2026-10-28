@@ -5,11 +5,14 @@ from __future__ import annotations
 import copy
 from dataclasses import FrozenInstanceError, replace
 import inspect
+import json
 import math
+from pathlib import Path
 
 import pytest
 
 from shwfs_ao.core.provenance import Provenance
+from shwfs_ao.io import configs
 from shwfs_ao.io.configs import (
     PROFILE_SCHEMA_NAME,
     PROFILE_SCHEMA_VERSION,
@@ -32,6 +35,8 @@ from shwfs_ao.io.configs import (
     system_config_to_mapping,
 )
 
+
+ROOT = Path(__file__).resolve().parents[2]
 
 # Every published profile version stays packaged and loadable: a result
 # labelled with a v1 profile must remain exactly reproducible after the v2
@@ -114,31 +119,99 @@ def test_v1_profiles_stay_loadable_beside_their_v2_successors() -> None:
         # Distinct published identities never collide.
         assert v1.config_hash != v2.config_hash
 
-        # A v1 profile re-serializes into the current record schema and parses
-        # back equal, still identifying itself as version 1.
+        # A v1 profile re-serializes under its *own* record schema and parses
+        # back equal, still identifying itself as version 1.  Serializing it
+        # under the current schema instead would move a published config_hash.
         record = system_config_to_mapping(v1)
-        assert record["schema_version"] == PROFILE_SCHEMA_VERSION
+        assert record["schema_version"] == 1
         assert record["profile_version"] == 1
+        assert "photon_allocation" not in record["config"]["wfs"]
         assert system_config_from_mapping(record) == v1
+
+        current = system_config_to_mapping(v2)
+        assert current["schema_version"] == PROFILE_SCHEMA_VERSION
+        assert current["config"]["wfs"]["photon_allocation"] == "throughput_scaled"
+        assert system_config_from_mapping(current) == v2
+
+
+def test_canonical_serialization_reproduces_the_packaged_record() -> None:
+    """The hashing basis is the packaged record itself, not a re-rendering.
+
+    ``config_hash`` hashes the canonical serialization, so the two must be the
+    same document: if serialization ever diverged from the reviewed file on
+    disk — a schema version, a field set, a value — the identity every published
+    result cites would silently describe something nobody reviewed.
+    """
+
+    resource_root = ROOT / "src" / "shwfs_ao" / "resources" / "synthetic_presets"
+    for name, version in EXPECTED_PROFILES:
+        packaged = json.loads(
+            (resource_root / f"{name}.v{version}.json").read_text(encoding="utf-8")
+        )
+        assert system_config_to_mapping(load_system_profile(name, version)) == packaged
 
 
 def test_each_record_schema_version_has_an_exact_field_set() -> None:
     """Neither schema version may borrow the other's WFS field set."""
 
     v1_record = copy.deepcopy(system_config_to_mapping(load_system_profile("fast_2m_detector", 1)))
-    v1_record["schema_version"] = 1
+    assert v1_record["schema_version"] == 1
     # A v1 record carrying the v2 field is neither: it is rejected, not upgraded.
+    v1_record["config"]["wfs"]["photon_allocation"] = "throughput_scaled"
     with pytest.raises(SystemConfigError, match="unknown=\\['photon_allocation'\\]"):
         system_config_from_mapping(v1_record)
 
     del v1_record["config"]["wfs"]["photon_allocation"]
     parsed = system_config_from_mapping(v1_record)
     assert parsed.wfs.photon_allocation == "throughput_scaled"
+    assert parsed.record_schema_version == 1
+    # What a v1 record's omission resolves to and what a v1 record is allowed to
+    # hold are the same value; if they ever diverge, a v1 profile would load as
+    # something its own schema forbids.
+    assert (
+        WfsConfig.__dataclass_fields__["photon_allocation"].default
+        == configs._V1_PHOTON_ALLOCATION
+        == parsed.wfs.photon_allocation
+    )
+
+    # A v2 record omitting the field is equally refused: v2 never defaults it.
+    v2_record = copy.deepcopy(system_config_to_mapping(load_system_profile("fast_2m_detector", 2)))
+    del v2_record["config"]["wfs"]["photon_allocation"]
+    with pytest.raises(SystemConfigError, match="missing=\\['photon_allocation'\\]"):
+        system_config_from_mapping(v2_record)
 
     # An unsupported record schema version is refused with the supported set.
     v1_record["schema_version"] = 3
     with pytest.raises(SystemConfigError, match="unsupported profile schema_version"):
         system_config_from_mapping(v1_record)
+
+
+def test_a_configuration_cannot_claim_a_schema_that_cannot_express_it() -> None:
+    """A record schema is a claim about expressibility, not a label.
+
+    Schema v1 has no ``wfs.photon_allocation`` field, so a configuration
+    carrying any other allocation is not a v1 configuration.  Serializing it as
+    one would drop the value; serializing it as v2 instead would move the
+    published ``@1`` identity.  Both are wrong, so the pairing is refused where
+    it is made.
+    """
+
+    v1 = load_system_profile("fast_2m_detector", 1)
+    with pytest.raises(SystemConfigError, match="cannot express"):
+        replace(v1, wfs=replace(v1.wfs, photon_allocation="unit_sum"))
+
+    # The same physics under the schema that *can* state it is accepted, and
+    # keeps the v1 profile's identity from being reused for it.
+    v2 = load_system_profile("fast_2m_detector", 2)
+    modified = replace(v2, wfs=replace(v2.wfs, photon_allocation="unit_sum"))
+    assert modified.record_schema_version == PROFILE_SCHEMA_VERSION
+    assert modified.config_hash != v2.config_hash
+
+    with pytest.raises(SystemConfigError, match="unsupported profile schema_version"):
+        replace(v1, record_schema_version=3)
+    # ``True`` is not a schema version, however conveniently it compares to 1.
+    with pytest.raises(SystemConfigError, match="record_schema_version must be an integer"):
+        replace(v1, record_schema_version=True)
 
 
 def test_a_schema_v1_record_cannot_claim_a_later_profile_identity() -> None:
@@ -153,8 +226,7 @@ def test_a_schema_v1_record_cannot_claim_a_later_profile_identity() -> None:
     record = copy.deepcopy(
         system_config_to_mapping(load_system_profile("fast_2m_detector", 1))
     )
-    record["schema_version"] = 1
-    del record["config"]["wfs"]["photon_allocation"]
+    assert record["schema_version"] == 1
     assert system_config_from_mapping(record).profile.profile_id == "fast_2m_detector@1"
 
     record["profile_version"] = 2
@@ -164,45 +236,52 @@ def test_a_schema_v1_record_cannot_claim_a_later_profile_identity() -> None:
     ):
         system_config_from_mapping(record)
 
-    # The converse is legitimate and must stay accepted: it is exactly what the
-    # serializer emits for a version-1 profile.
-    v1 = load_system_profile("fast_2m_detector", 1)
-    current = system_config_to_mapping(v1)
-    assert (current["schema_version"], current["profile_version"]) == (
+    # The converse pairing — a later record schema carrying a version-1 profile
+    # — stays legal: a future schema may well be introduced while an existing
+    # profile version is still current.
+    upgraded = copy.deepcopy(
+        system_config_to_mapping(load_system_profile("fast_2m_detector", 2))
+    )
+    upgraded["profile_version"] = 1
+    upgraded["provenance"]["source_id"] = "shwfs_ao.system_profile.fast_2m_detector.v1"
+    parsed = system_config_from_mapping(upgraded)
+    assert (parsed.record_schema_version, parsed.profile.profile_version) == (
         PROFILE_SCHEMA_VERSION,
         1,
     )
-    assert system_config_from_mapping(current) == v1
 
 
 def test_every_packaged_profile_identity_is_pinned() -> None:
     """A profile's identity must not move without being noticed.
 
     ``config_hash`` is the hash of the canonical serialization, so it covers
-    more than the physics: ``baseline_rationale`` and the provenance note are in
-    it, and so is ``schema_version``.  An edit to a profile's *prose*, or a bump
-    of the record schema, therefore relabels every result that cites the
-    profile.  These hashes are the tripwire.
+    more than the physics: ``baseline_rationale``, the provenance note, and the
+    record's own ``schema_version`` are all in it.  An edit to a profile's
+    *prose* therefore relabels every result that cites the profile, and these
+    hashes are the tripwire for that.
 
-    They are the *current* identities, not the originally published ones. The
-    ``@1`` identities have already moved twice without a version bump — once
-    when AO-REF-019 rewrote a notebook path inside the provenance references,
-    and once when the record schema went to v2 — so a result labelled ``@1`` by
-    an older checkout will not reproduce the hash recorded here. That history is
-    the reason this test exists; it cannot undo it. Changing a value below is
-    only ever correct alongside a deliberate profile-version bump.
+    What must *not* relabel a result is a change made somewhere else entirely.
+    Serializing every profile under the newest record schema did exactly that:
+    adding schema v2 moved the ``@1`` identities although those five packaged
+    records were untouched.  Each profile is now serialized and hashed under its
+    own record schema, so the values below are the identities the packaged
+    records have always hashed to under their own schema.  (The one genuine move
+    in this history was AO-REF-019 rewriting a notebook path *inside* the v1
+    records: their content changed, so their identity changed with it — the hash
+    doing its job.)  Changing a value below is only ever correct alongside a
+    deliberate edit to the corresponding packaged record.
     """
 
     expected = {
-        ("fast_2m_detector", 1): "52f295fe19e74c80ea01576979c9a03c3698ceb5cea4478e03b1a149d3ed482f",
+        ("fast_2m_detector", 1): "5702e29007fdfd93d4dbd99328ae7097fd5ad49087388bf3aef4011f49cfec21",
         ("fast_2m_detector", 2): "7f225305b5d6e1e1b56ceff73cad945856c13a2b2c4f9d81b725a287d090626b",
-        ("portfolio_2m_detector", 1): "0a104b02ba3d1368c8f5732d12c95f6e993a36e8675318e74edec90a545ce5f6",
+        ("portfolio_2m_detector", 1): "435736e01c720243453e962ef9431287ad05653aa55d5cb048be3311b7e958dc",
         ("portfolio_2m_detector", 2): "ff9d43c343dccb9e22364fa04fc69bedeae96be0578cd5d0e3713dd25946b06e",
-        ("research_2m_detector", 1): "192112852cf6874410f1c7e1a32c041cf5f519a3159a1f8bedf647e06a540ec7",
+        ("research_2m_detector", 1): "6efaf8911d27ccb3cced1fa5168ece4ea6c848084146710353f224a107cf4eb3",
         ("research_2m_detector", 2): "38fc980bddaf60543eb46bb3ac48d9b6b0432e3e978922f8369ec7b607932dcc",
-        ("high_order_10m_geometric", 1): "248b27246b1023235abf96a719dfa49e9d4c22562ce8bde17c5e8fc2db5f375b",
+        ("high_order_10m_geometric", 1): "8159e6c9a854e142e35b8340753b6f770c643deb3d1e90c98b444140f9d8c92c",
         ("high_order_10m_geometric", 2): "f8b6f9da7b42ab42b4ead3d1e17da385dece3b568c196d5251d261e6ae2a4ad2",
-        ("high_order_10m_hcipy", 1): "2a51940f5945e882789e0613172e64470cb760ab39cb9816ce993c235b22f23f",
+        ("high_order_10m_hcipy", 1): "a280a9fa5ceb7d282155b4eb37c81c59f22d5dc9dc459865d583f2a3a8b96a54",
         ("high_order_10m_hcipy", 2): "50a1f9ea0a2abb4a07c7e9a151f76d366e64369f99df7f61c894217c2dd80d4a",
     }
     observed = {

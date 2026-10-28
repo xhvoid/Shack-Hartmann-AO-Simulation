@@ -374,3 +374,146 @@ def test_the_budget_kills_a_hung_notebook(tmp_path):
         )
     # The per-cell timeout (120 s) never fires; the parent's budget does.
     assert time.perf_counter() - start < 60.0
+
+
+def test_network_isolation_is_required_by_default():
+    """The default must be the enforced contract, not the tripwire.
+
+    A lane that quietly degraded to the in-kernel guard would report AO-REF-019
+    offline execution while a ``!curl`` cell, a ``%pip install``, or a direct
+    ``_socket`` call reached the network unimpeded.  CI passes no flag, so the
+    default is what CI enforces.
+    """
+
+    assert set(runner.NETWORK_ISOLATION_MODES) == {"required", "auto", "off"}
+    # The CI lanes invoke the runner with no isolation flag at all.
+    parsed = runner.build_parser().parse_args(["--class", "fast"])
+    assert parsed.network_isolation == "required" == runner.DEFAULT_NETWORK_ISOLATION
+
+
+def test_required_isolation_refuses_where_no_namespace_is_available(monkeypatch, capsys):
+    monkeypatch.setattr(runner, "_network_namespace_prefix", lambda: None)
+
+    with pytest.raises(SystemExit, match="Network isolation is unavailable"):
+        runner._resolve_network_isolation("required")
+
+    # 'auto' is the documented escape hatch, and it must say what was lost
+    # rather than pass silently.
+    assert runner._resolve_network_isolation("auto") == []
+    assert "NOT enforced" in capsys.readouterr().out
+
+    # 'off' never even probes.
+    monkeypatch.setattr(
+        runner,
+        "_network_namespace_prefix",
+        lambda: (_ for _ in ()).throw(AssertionError("probed with isolation off")),
+    )
+    assert runner._resolve_network_isolation("off") == []
+
+
+def test_an_available_namespace_is_used_by_every_mode_that_allows_it(monkeypatch):
+    prefix = ["/usr/bin/unshare", "--user", "--map-root-user", "--net", "--"]
+    monkeypatch.setattr(runner, "_network_namespace_prefix", lambda: list(prefix))
+
+    for mode in ("required", "auto"):
+        assert runner._resolve_network_isolation(mode) == prefix
+
+
+def test_the_runner_command_wraps_the_runner_inside_the_namespace(tmp_path):
+    notebook = tmp_path / "study.ipynb"
+    prefix = ["/usr/bin/unshare", "--user", "--map-root-user", "--net", "--"]
+
+    isolated = runner._runner_command(
+        notebook,
+        cell_timeout_s=90,
+        fast_smoke=True,
+        isolation_prefix=prefix,
+    )
+    plain = runner._runner_command(
+        notebook,
+        cell_timeout_s=90,
+        fast_smoke=True,
+        isolation_prefix=[],
+    )
+
+    assert isolated[: len(prefix)] == prefix
+    # Loopback is brought up inside the namespace, or the kernel's own ZMQ
+    # channels could not connect; the runner then replaces the shell, so no
+    # argument is ever re-parsed and a notebook path may contain anything.
+    assert isolated[len(prefix) : len(prefix) + 3] == ["sh", "-c", runner._NAMESPACE_SHELL]
+    assert "ip link set lo up" in runner._NAMESPACE_SHELL
+    assert isolated[len(prefix) + 3 :] == plain
+    assert plain[0] == sys.executable
+    assert "--single" in plain and str(notebook) in plain and "--fast-smoke" in plain
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="network namespaces are a Linux facility")
+def test_the_namespace_probe_reports_a_loopback_only_namespace():
+    prefix = runner._network_namespace_prefix()
+    if prefix is None:
+        pytest.skip("unprivileged user namespaces are not permitted here")
+    listing = __import__("subprocess").run(
+        [*prefix, "sh", "-c", "ip link set lo up && ip -o link show"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    interfaces = {
+        line.split(":", 2)[1].strip().split("@", 1)[0]
+        for line in listing.splitlines()
+        if line.count(":") >= 2
+    }
+    assert interfaces == {"lo"}
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="network namespaces are a Linux facility")
+def test_the_kernel_really_runs_with_loopback_only(tmp_path):
+    """The contract is about the kernel, not about the runner that starts it.
+
+    Asserting on the interfaces the kernel can see tests the layer the in-kernel
+    guard cannot provide: this holds for a subprocess, a C extension, and a
+    direct ``_socket`` call, none of which the guard sees.
+    """
+
+    nbformat = pytest.importorskip("nbformat")
+    pytest.importorskip("nbclient")
+    pytest.importorskip("ipykernel")
+    prefix = runner._network_namespace_prefix()
+    if prefix is None:
+        pytest.skip("unprivileged user namespaces are not permitted here")
+
+    notebook = nbformat.v4.new_notebook()
+    notebook.cells = [
+        nbformat.v4.new_code_cell(
+            "import socket, subprocess, sys\n"
+            "names = sorted(name for _, name in socket.if_nameindex())\n"
+            "assert names == ['lo'], names\n"
+            # A subprocess walks past the in-kernel guard and must still find
+            # nothing but loopback.
+            "child = subprocess.run(\n"
+            "    [sys.executable, '-c',\n"
+            "     'import socket; print(sorted(n for _, n in socket.if_nameindex()))'],\n"
+            "    capture_output=True, text=True, check=True)\n"
+            "assert child.stdout.strip() == \"['lo']\", child.stdout\n"
+            # Loopback still works, so a notebook may serve or connect locally.
+            "server = socket.socket()\n"
+            "server.bind(('127.0.0.1', 0))\n"
+            "server.listen(1)\n"
+            "client = socket.create_connection(server.getsockname(), 5)\n"
+            "client.close()\n"
+            "server.close()\n"
+        )
+    ]
+    notebook_path = tmp_path / "isolation_contract.ipynb"
+    nbformat.write(notebook, notebook_path)
+
+    assert (
+        runner._run_with_budget(
+            notebook_path,
+            cell_timeout_s=120,
+            budget_s=300,
+            fast_smoke=False,
+            isolation_prefix=prefix,
+        )
+        > 0.0
+    )
