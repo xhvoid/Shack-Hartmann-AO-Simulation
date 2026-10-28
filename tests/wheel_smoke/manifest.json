@@ -303,6 +303,26 @@
       ]
     },
     {
+      "source": "notebooks/studies/mode_order_sampling.ipynb",
+      "kind": "notebook",
+      "requires": []
+    },
+    {
+      "source": "notebooks/studies/high_order_scao.ipynb",
+      "kind": "notebook",
+      "requires": []
+    },
+    {
+      "source": "notebooks/studies/noise_latency_gain.ipynb",
+      "kind": "notebook",
+      "requires": []
+    },
+    {
+      "source": "notebooks/studies/detector_level_2m.ipynb",
+      "kind": "notebook",
+      "requires": []
+    },
+    {
       "source": "notebooks/notebook_manifest.json",
       "kind": "fixture",
       "requires": []
