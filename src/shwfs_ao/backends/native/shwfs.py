@@ -48,7 +48,8 @@ class NativeShackHartmannOptics:
     Parameters are deliberately not inferred from a science wavelength or an
     external backend.  ``wfs_wavelength_m`` converts OPD to phase, and
     ``detector_window_px`` selects the centered square window returned for
-    every retained lenslet.
+    every retained lenslet; an FFT axis no longer than the window is kept
+    whole.
     """
 
     def __init__(
@@ -431,20 +432,19 @@ def _center_slices(
     window_size: int | None,
 ) -> tuple[slice, slice]:
     rows, columns = (int(value) for value in image_shape)
-    if window_size is None or window_size >= min(rows, columns):
-        return slice(0, rows), slice(0, columns)
+    # Each axis is cropped on its own: on a rectangular FFT canvas the longer
+    # axis must still honor a window the shorter axis cannot hold.
+    return _center_slice(rows, window_size), _center_slice(columns, window_size)
+
+
+def _center_slice(length: int, window_size: int | None) -> slice:
+    if window_size is None or window_size >= length:
+        return slice(0, length)
     half = window_size // 2
-    center_y = rows // 2
-    center_x = columns // 2
+    center = length // 2
     if window_size % 2 == 0:
-        return (
-            slice(center_y - half, center_y + half),
-            slice(center_x - half, center_x + half),
-        )
-    return (
-        slice(center_y - half, center_y + half + 1),
-        slice(center_x - half, center_x + half + 1),
-    )
+        return slice(center - half, center + half)
+    return slice(center - half, center + half + 1)
 
 
 def _positive_integer(value: object, *, label: str) -> int:

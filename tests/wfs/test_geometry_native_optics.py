@@ -253,6 +253,44 @@ def test_relative_throughput_is_window_capture_not_spot_normalization() -> None:
     )
 
 
+def test_square_detector_window_is_honored_on_a_rectangular_fft_canvas() -> None:
+    # 8x12-sample lenslets padded 8x give every lenslet a 64x96 FFT canvas.
+    geometry = build_shack_hartmann_geometry(
+        telescope_diameter_m=1.0,
+        pupil_shape=(64, 96),
+        n_lenslets_across=8,
+        min_fill_fraction=0.35,
+    )
+    flat_opd_m = np.zeros(geometry.pupil_shape)
+    for window, expected_shape in (
+        (64, (64, 64)),
+        (80, (64, 80)),
+        (None, (64, 96)),
+    ):
+        backend = NativeShackHartmannOptics(
+            geometry,
+            700.0e-9,
+            pad_factor=8,
+            detector_window_px=window,
+        )
+        result = backend.spot_intensities(flat_opd_m)
+        rows, columns = expected_shape
+
+        assert backend.sampling.window_shape_px == expected_shape
+        assert {spot.shape for spot in result.unit_sum_spots} == {expected_shape}
+        assert backend.sampling.reference_pixel_xy == (columns // 2, rows // 2)
+        if window is None:
+            np.testing.assert_allclose(
+                result.relative_throughput,
+                1.0,
+                atol=1.0e-12,
+                rtol=0.0,
+            )
+        else:
+            # The cropped long axis loses its diffraction wings.
+            assert np.all(result.relative_throughput < 1.0 - 1.0e-3)
+
+
 def test_explicit_opd_wavelength_and_positive_tilts_have_detector_axis_sign() -> None:
     backend = _backend(detector_window_px=None)
     geometry = backend.geometry
