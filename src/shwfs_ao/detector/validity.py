@@ -1,9 +1,11 @@
 """Centroid-quality diagnostics and independent validity policy.
 
 The diagnostic calculation preserves the repository's existing CCD signal to
-noise, centroid-uncertainty, and detector-window clipping formulas.  Policy is
-applied separately so optical spot generation remains independent of detector
-quality thresholds.
+noise and detector-window clipping formulas.  Centroid uncertainty is the
+first-order center-of-gravity error propagation over every window pixel; the
+historical spot-width proxy is retained only as a frozen legacy policy.  Policy
+is applied separately so optical spot generation remains independent of
+detector quality thresholds.
 """
 
 from __future__ import annotations
@@ -27,6 +29,8 @@ __all__ = (
 )
 
 UNDEFINED_CENTROID_SIGMA_PX = 1.0e6
+
+_UNCERTAINTY_MODELS = frozenset({"first_order", "legacy_spot_width"})
 
 
 @dataclass(frozen=True)
@@ -183,13 +187,14 @@ def centroid_quality(
     detector: DetectorConfig,
     *,
     source_spot_norm: np.ndarray | None = None,
+    uncertainty_model: str = "first_order",
 ) -> CentroidQuality:
     """Calculate expected-photon-budget diagnostics for one lenslet spot.
 
     The CCD equations are evaluated from expected source signal, detector
     background, and read noise rather than a noisy frame realization.  A
     detector with ``photons_per_subap_frame=None`` denotes an ideal reference
-    path: flux and SNR are not applicable (NaN), while the uncertainty proxy is
+    path: flux and SNR are not applicable (NaN), while the uncertainty is
     zero.  Window clipping remains diagnostic in both modes.
 
     Window clipping always compares ``cropped_spot_norm`` with
@@ -197,8 +202,39 @@ def centroid_quality(
     image defaults to ``cropped_spot_norm``; ``source_spot_norm`` supplies it
     separately when the photon budget is allocated independently of that
     capture, as a unit-sum allocation does.
+
+    With the default ``uncertainty_model="first_order"``, ``centroid_sigma_px``
+    linearizes the center of gravity about the expected source image ``S``.
+    Every window pixel carries variance ``S_i + B + RN**2`` (source and
+    background/dark shot noise plus read noise), so per axis::
+
+        Var(c_x) = sum_i (x_i - c_x)**2 * (S_i + B + RN**2) / sum_i(S_i)**2
+
+    and the reported value is the larger of the two per-axis standard
+    deviations.  It is the source-position uncertainty of a plain,
+    unthresholded center of gravity without negative clipping, saturation, or
+    bad pixels, expressed in pixels.  A raw-frame estimate that keeps the
+    background pedestal scatters less, by ``sum(S) / sum(S + B)`` for a spot
+    centred in the window and by somewhat more off centre, but its response
+    to spot motion shrinks by that same factor.  Negative clipping and
+    thresholding are nonlinear and usually reduce the scatter, while PRNU,
+    saturation, and bad pixels are not modelled; the value is therefore a
+    conservative first-order bound rather than an exact estimator variance.
+    For pure photon noise it is the larger per-axis spot RMS width over
+    ``sqrt(flux)``: equal to the legacy proxy for a round spot and up to
+    ``sqrt(2)`` times larger for an elongated one.
+
+    ``uncertainty_model="legacy_spot_width"`` is the frozen historical proxy,
+    the intensity-weighted spot RMS divided by ``total_snr``.  It applies the
+    spot lever arm to window-wide read and background noise and is retained
+    only for the bit-pinned legacy facades.
     """
 
+    if uncertainty_model not in _UNCERTAINTY_MODELS:
+        raise ValueError(
+            "uncertainty_model must be 'first_order' or 'legacy_spot_width'; "
+            f"got {uncertainty_model!r}."
+        )
     cropped = _validated_spot(cropped_spot_norm, label="cropped_spot_norm")
     full = _validated_spot(full_spot_norm, label="full_spot_norm")
     if source_spot_norm is None:
@@ -297,12 +333,16 @@ def centroid_quality(
         )
     )
     total_snr = total_flux_e / total_noise_e if total_noise_e > 0.0 else 0.0
-    sigma_spot_px = _intensity_weighted_rms_px(signal_per_pixel_e)
-    centroid_sigma_px = (
-        sigma_spot_px / total_snr
-        if total_snr > 1.0e-9
-        else UNDEFINED_CENTROID_SIGMA_PX
-    )
+    if total_snr <= 1.0e-9:
+        centroid_sigma_px = UNDEFINED_CENTROID_SIGMA_PX
+    elif uncertainty_model == "legacy_spot_width":
+        sigma_spot_px = _intensity_weighted_rms_px(signal_per_pixel_e)
+        centroid_sigma_px = sigma_spot_px / total_snr
+    else:
+        centroid_sigma_px = _first_order_cog_sigma_px(
+            signal_per_pixel_e,
+            background_per_pixel_e + read_noise_e**2,
+        )
     centroid_sigma_px = float(
         min(centroid_sigma_px, UNDEFINED_CENTROID_SIGMA_PX)
     )
@@ -377,6 +417,42 @@ def evaluate_centroid_validity(
         centroid_sigma_px=quality.centroid_sigma_px,
         clipping_fraction=quality.clipping_fraction,
     )
+
+
+def _first_order_cog_sigma_px(
+    signal_e: np.ndarray,
+    floor_variance_e2: float,
+) -> float:
+    """Return the larger per-axis first-order center-of-gravity sigma.
+
+    ``floor_variance_e2`` is the signal-independent per-pixel variance, the
+    background/dark expectation plus the read-noise variance.  Each pixel is
+    weighted by its own lever arm about the source centroid, so distant
+    pixels dominate the read and background terms.
+    """
+
+    total = float(np.sum(signal_e, dtype=np.float64))
+    if total <= 0.0:
+        return UNDEFINED_CENTROID_SIGMA_PX
+    rows, columns = signal_e.shape
+    y_px = np.arange(rows, dtype=float)[:, None]
+    x_px = np.arange(columns, dtype=float)[None, :]
+    centroid_x = float(np.sum(signal_e * x_px, dtype=np.float64) / total)
+    centroid_y = float(np.sum(signal_e * y_px, dtype=np.float64) / total)
+    pixel_variance_e2 = signal_e + floor_variance_e2
+    variance_x = float(
+        np.sum(
+            pixel_variance_e2 * (x_px - centroid_x) ** 2,
+            dtype=np.float64,
+        )
+    ) / total / total
+    variance_y = float(
+        np.sum(
+            pixel_variance_e2 * (y_px - centroid_y) ** 2,
+            dtype=np.float64,
+        )
+    ) / total / total
+    return math.sqrt(max(variance_x, variance_y, 0.0))
 
 
 def _intensity_weighted_rms_px(image: np.ndarray) -> float:

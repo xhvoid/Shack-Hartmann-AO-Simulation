@@ -73,6 +73,25 @@ def test_canonical_centroid_is_strict_while_legacy_nan_adapter_is_compatible() -
     assert shwfs_detector.centroid(image) == pytest.approx((0.25, -0.25))
 
 
+def test_legacy_centroid_quality_keeps_the_frozen_spot_width_proxy() -> None:
+    spot = np.zeros((24, 24), dtype=float)
+    spot[11:13, 11:13] = 0.25
+    config = DetectorConfig(photons_per_subap_frame=1.0e4, read_noise_e=3.0)
+
+    legacy = synthetic_instrument_data.centroid_quality(spot, spot, config)
+    canonical = detector.centroid_quality(spot, spot, config)
+
+    # Historical proxy: per-axis spot RMS (0.5 px) over the CCD total SNR.
+    total_snr = 1.0e4 / np.sqrt(1.0e4 + spot.size * 9.0)
+    assert legacy["total_snr"] == pytest.approx(total_snr, rel=1.0e-12)
+    assert legacy["centroid_sigma_px"] == pytest.approx(
+        0.5 / total_snr,
+        rel=1.0e-12,
+    )
+    # The canonical owner propagates read noise from every window pixel.
+    assert canonical.centroid_sigma_px > 5.0 * legacy["centroid_sigma_px"]
+
+
 def test_legacy_detector_modules_no_longer_own_draw_or_validity_implementations() -> None:
     paths = (
         ROOT / "src/shwfs_ao/legacy/shwfs_detector.py",
