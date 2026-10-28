@@ -129,6 +129,59 @@ never changed the DM command, so its residual histories are open-loop:
 `shwfs_ao.control.ControlLoopWarning` naming the observed valid-measurement
 range and, when the reconstructor exposes it, its `min_valid_fraction`.
 
+### Opt-in recovery supervisor
+
+With zero leak, a run of rejected frames holds the DM in its last shape. If
+that shape keeps the spots outside the validity domain, the loop never
+recovers. This is the 12 m detector-level latch-up at m_AB = 11.
+
+`run_closed_loop(..., recovery=...)` accepts an optional
+`shwfs_ao.control.ClosedLoopRecoveryPolicy`, the loop supervisor of the
+schema-7 `controller.recovery` block. With `recovery=None`, the default, the
+loop, its telemetry and its run hash are unchanged.
+
+**Knobs.** Each is off unless set, and at least one must be set.
+- **Decay.** After `rejected_frames_before_decay` consecutive frames with
+  no usable increment, every further such frame multiplies the requested
+  command by `1 - decay_per_rejected_frame`. A decay of `1` resets the DM
+  to flat.
+- **Fallback.** A frame the reconstructor rejects is solved from its usable
+  rows alone, if their fraction is at least `fallback_min_valid_fraction`
+  (AO-REF-008, subset solve). `fallback_min_actuator_coverage` restricts
+  that solve to actuators the usable rows still see.
+- **Gain schedule.** Every used increment is scaled by
+  `min(1, valid_fraction / gain_full_valid_fraction)`.
+
+**Order within a frame.** The supervisor adds three steps:
+1. after reconstruction, the fallback, for a rejected frame only;
+2. after command projection, the gain schedule;
+3. after the controller update, the decay.
+
+The controller then accepts the command the DM applied, as on every frame,
+so its integrator state follows the decay. The supervisor owns no latency.
+`reset()` runs at the start of every run.
+
+**Identity and telemetry.**
+- The policy's `config_hash` joins the run's component hashes as
+  `"recovery"`, and so the run hash.
+- `metadata["recovery"]` records that hash and the run's
+  `fallback_frames` and `decayed_frames`.
+- A fallback reconstructor must carry the loop's interaction-matrix hash;
+  otherwise the run raises `ControlLoopError`.
+
+**Evidence.** Measured on the 12 m detector-level profile at m_AB = 11:
+- Resetting to flat after two rejected frames recovers lock (1.9 µm →
+  377 nm).
+- The subset fallback and the gain schedule do not.
+- The remaining excursions came from an under-regularized reconstructor,
+  not from this policy (AO-REF-008, damping).
+- `det_emccd_12m_medium_derived@3` keeps the reset as a safety net
+  alongside the stronger damping.
+
+See the [detector-level status record](DETECTOR_LEVEL_DEVELOPMENT_STATUS.md),
+sections "Closed-loop recovery policy" and "Excursion trigger at
+m_AB = 11".
+
 Runtime WFS operating points may deliberately vary read noise, or the photon
 budget of a detector without pedestal or full well, while reusing one response
 calibration: neither changes the noiseless response. `per_frame_legacy` PRNU
