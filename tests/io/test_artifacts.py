@@ -421,6 +421,51 @@ def test_generic_runtime_writers_preserve_historical_field_order(tmp_path) -> No
     assert tuple(read_runtime_table(written[1])[0]) == RUNTIME_V2_HEADER
 
 
+def test_integration_runtime_record_labels_the_reference_preset(tmp_path) -> None:
+    # A physical-workflow result keeps mode="fast" (its numerical instrument
+    # scale) while its reference metrics carry the real preset; the runtime
+    # JSON and CSV must agree with the reference JSON written beside them.
+    result = _result()
+    result.reference_metrics = {
+        **result.reference_metrics,
+        "workflow": "physical_integration",
+        "preset": "physical_2m",
+    }
+    write_integration_artifacts(
+        result,
+        ArtifactConfig(
+            output_dir=tmp_path,
+            prefix="physical",
+            write_figures=False,
+            write_runtime=True,
+        ),
+    )
+    reference = json.loads(
+        (tmp_path / "physical_reference_metrics.json").read_text(encoding="utf-8")
+    )
+    runtime = json.loads((tmp_path / "physical_runtime.json").read_text(encoding="utf-8"))
+    (row,) = read_runtime_table(tmp_path / "physical_runtime.csv")
+    assert result.mode == "fast"
+    assert reference["preset"] == runtime["preset"] == row["preset"] == "physical_2m"
+    assert reference["workflow"] == runtime["workflow"] == row["workflow"]
+
+    # Without a reference preset the instrument scale remains the label.
+    del result.reference_metrics["preset"]
+    write_integration_artifacts(
+        result,
+        ArtifactConfig(
+            output_dir=tmp_path / "bare",
+            prefix="bare",
+            write_figures=False,
+            write_reference_metrics=False,
+            write_runtime=True,
+            runtime_formats=("json",),
+        ),
+    )
+    bare = json.loads((tmp_path / "bare" / "bare_runtime.json").read_text(encoding="utf-8"))
+    assert bare["preset"] == "fast"
+
+
 def test_v2_reader_uses_packaged_compatibility_name() -> None:
     payload = read_v2("data/reference_metrics/fast_reference_metrics.json")
     assert payload["schema_version"] == 2

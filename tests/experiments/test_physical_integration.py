@@ -116,6 +116,60 @@ def test_physical_error_budget_table_covers_every_required_scenario() -> None:
         assert 0.0 <= float(row["valid_centroid_frac"]) <= 1.0
 
 
+def test_physical_runtime_record_is_labelled_with_the_physical_preset(tmp_path) -> None:
+    """Replay the packaged physical artifacts through the runtime writer.
+
+    ``run_physical_integration`` reports the fast instrument scale as its
+    ``mode``; the runtime record must still name the physical preset, exactly
+    as the reference JSON written beside it does.
+    """
+
+    from types import SimpleNamespace
+
+    from shwfs_ao.experiments.physical_integration import _instrument_config
+    from shwfs_ao.io.artifacts import read_runtime_table
+
+    class _Row:
+        def __init__(self, payload: dict) -> None:
+            self._payload = payload
+
+        def as_dict(self) -> dict:
+            return dict(self._payload)
+
+    def _rows(path: Path) -> tuple[_Row, ...]:
+        with path.open(newline="", encoding="utf-8") as handle:
+            return tuple(_Row(row) for row in csv.DictReader(handle))
+
+    reference = json.loads(
+        (REFERENCE_DIR / "physical_reference_metrics.json").read_text(encoding="utf-8")
+    )
+    config = PhysicalIntegrationConfig()
+    result = SimpleNamespace(
+        mode=_instrument_config(config).mode,
+        scenario_results=_rows(ERROR_BUDGET_BASELINE),
+        validation_results=_rows(VALIDATION_BASELINE),
+        reference_metrics=reference,
+        runtime_s=1.0,
+        source_class=reference["source_class"],
+        config_hash=reference["config_hash"],
+    )
+    write_integration_artifacts(
+        result,
+        ArtifactConfig(
+            output_dir=tmp_path,
+            prefix="physical",
+            write_figures=False,
+            write_runtime=True,
+        ),
+    )
+    runtime = json.loads((tmp_path / "physical_runtime.json").read_text(encoding="utf-8"))
+    (row,) = read_runtime_table(tmp_path / "physical_runtime.csv")
+
+    assert result.mode == "fast"
+    assert runtime["workflow"] == row["workflow"] == PHYSICAL_WORKFLOW
+    assert runtime["preset"] == row["preset"] == PHYSICAL_PRESET
+
+
 def test_acceptance_record_documents_why_the_baseline_moved() -> None:
     record = json.loads(ACCEPTANCE_RECORD.read_text(encoding="utf-8"))
 
