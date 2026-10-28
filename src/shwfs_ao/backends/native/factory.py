@@ -26,6 +26,10 @@ from ...detector.config import DetectorConfig
 from ...detector.validity import CentroidValidityConfig
 from ...dm import DMConfig, build_native_deformable_mirror
 from ...science.propagation import PsfSampling
+from ...wfs.shack_hartmann.compact_geometry import (
+    CompactShackHartmannGeometry,
+    build_compact_shack_hartmann_geometry,
+)
 from ...wfs.shack_hartmann.geometric import (
     NativeGeometricShackHartmannSensor,
 )
@@ -48,6 +52,7 @@ from .layered_atmosphere import (
 )
 from .propagation import NativeSciencePropagator
 from .shwfs import NativeShackHartmannOptics
+from .shwfs_batched import DEFAULT_LENSLET_BATCH_SIZE, BatchedNativeShackHartmannOptics
 
 
 __all__ = (
@@ -84,7 +89,29 @@ class NativeScaoComponentFactory:
         min_fill_fraction: float,
         central_obstruction_ratio: float,
         spider_width_m: float,
-    ) -> ShackHartmannGeometry:
+        representation: Literal["dense", "compact_cells"] = "dense",
+    ) -> ShackHartmannGeometry | CompactShackHartmannGeometry:
+        """Build the lenslet geometry.
+
+        ``representation="compact_cells"`` (schema-v5 scalable profiles) stores
+        per-lenslet cell bounds instead of a full-pupil mask per lenslet; it is
+        passed only for such profiles, so the default dense geometry and every
+        published identity are unchanged.
+        """
+
+        if representation == "compact_cells":
+            return build_compact_shack_hartmann_geometry(
+                telescope_diameter_m=telescope_diameter_m,
+                pupil_shape=(pupil_pixels, pupil_pixels),
+                n_lenslets_across=lenslets_across,
+                min_fill_fraction=min_fill_fraction,
+                central_obstruction_ratio=central_obstruction_ratio,
+                spider_width_m=spider_width_m,
+            )
+        if representation != "dense":
+            raise NativeScaoFactoryError(
+                f"unknown geometry representation {representation!r}."
+            )
         return build_shack_hartmann_geometry(
             telescope_diameter_m=telescope_diameter_m,
             pupil_shape=(pupil_pixels, pupil_pixels),
@@ -108,6 +135,7 @@ class NativeScaoComponentFactory:
         normalize_rms: bool,
         static_opd_rms_m: float,
         layers: Sequence[Any] = (),
+        band_coefficient_storage: str = "materialized",
     ) -> AtmosphereModel:
         builders: dict[str, Callable[[], AtmosphereModel]] = {
             "static": lambda: StaticOpdAtmosphere(
@@ -185,6 +213,7 @@ class NativeScaoComponentFactory:
                 target_rms_rad=target_rms_rad,
                 normalize_rms=normalize_rms,
                 layers=layers,
+                band_coefficient_storage=band_coefficient_storage,
             ),
         }
         try:
@@ -221,17 +250,33 @@ class NativeScaoComponentFactory:
             "throughput_scaled"
         ),
         clip_negative_pixels: bool = True,
+        lenslet_batch_size: int = DEFAULT_LENSLET_BATCH_SIZE,
     ) -> WavefrontSensor:
         def geometric() -> WavefrontSensor:
+            if isinstance(geometry, CompactShackHartmannGeometry):
+                raise NativeScaoFactoryError(
+                    "the compact lenslet geometry supports the detector_level WFS only."
+                )
             return NativeGeometricShackHartmannSensor(geometry)
 
         def detector_level() -> WavefrontSensor:
-            optics = NativeShackHartmannOptics(
-                geometry,
-                wfs_wavelength_m,
-                pad_factor=pad_factor,
-                detector_window_px=detector_window_px,
-            )
+            optics: NativeShackHartmannOptics | BatchedNativeShackHartmannOptics
+            if isinstance(geometry, CompactShackHartmannGeometry):
+                # Batch size is an execution setting outside the identity.
+                optics = BatchedNativeShackHartmannOptics(
+                    geometry,
+                    wfs_wavelength_m,
+                    pad_factor=pad_factor,
+                    detector_window_px=detector_window_px,
+                    batch_size=lenslet_batch_size,
+                )
+            else:
+                optics = NativeShackHartmannOptics(
+                    geometry,
+                    wfs_wavelength_m,
+                    pad_factor=pad_factor,
+                    detector_window_px=detector_window_px,
+                )
             return DetectorShackHartmannSensor.calibrate(
                 geometry,
                 optics,
@@ -320,6 +365,7 @@ def _layered_atmosphere(
     target_rms_rad: float | None,
     normalize_rms: bool,
     layers: Sequence[Any],
+    band_coefficient_storage: str = "materialized",
 ) -> LayeredFrozenFlowAtmosphere:
     if normalize_rms or target_rms_rad is not None:
         raise NativeScaoFactoryError(
@@ -346,4 +392,5 @@ def _layered_atmosphere(
         ),
         pupil_mask=geometry.pupil_mask,
         random_streams=random_streams.scoped("native-atmosphere"),
+        band_coefficient_storage=band_coefficient_storage,
     )

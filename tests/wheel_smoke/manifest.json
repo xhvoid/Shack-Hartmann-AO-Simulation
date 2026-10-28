@@ -293,6 +293,46 @@
       "requires": []
     },
     {
+      "source": "tests/control/test_frame_observation.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/science/test_long_exposure.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/dm/test_linear_spline_operator.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/wfs/test_compact_geometry.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/calibration/test_sparse_calibration.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/backends/native/test_layered_band_storage.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/io/test_eso_scao_profiles.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
+      "source": "tests/experiments/test_eso_scao_benchmark.py",
+      "kind": "test",
+      "requires": []
+    },
+    {
       "source": "examples/run_fast_integration.py",
       "kind": "example",
       "requires": []

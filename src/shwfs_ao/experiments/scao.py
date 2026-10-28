@@ -21,8 +21,15 @@ from ..calibration import (
     TsvdReconstructor,
     calibrate_interaction_matrix,
 )
+from ..calibration.sparse import (
+    LocalDmProbeBasis,
+    SparseInteractionMatrix,
+    SparseLsmrReconstructor,
+    calibrate_sparse_interaction_matrix,
+)
 from ..control import (
     ControlledSubsetCommandProjector,
+    FrameObserver,
     IdentityCommandProjector,
     LeakyIntegratorController,
     LoopConfig,
@@ -52,6 +59,7 @@ from ..science.propagation import PsfSampling
 
 __all__ = (
     "ScaoConstructionError",
+    "ScaoExecutionOptions",
     "ScaoBackendComponentFactory",
     "ScaoSystem",
     "register_scao_backend_factory",
@@ -62,6 +70,36 @@ __all__ = (
 
 class ScaoConstructionError(ValueError):
     """Raised when a serialized SCAO configuration cannot be assembled safely."""
+
+
+@dataclass(frozen=True)
+class ScaoExecutionOptions:
+    """Execution settings that never change a configuration's identity.
+
+    ``lenslet_batch_size`` bounds how many lenslets the compact native optics
+    transform at once; ``calibration_cache`` (a
+    :class:`~shwfs_ao.experiments.calibration_cache.SparseCalibrationCache`)
+    enables verified reuse of a scalable calibration.  Both apply only to
+    schema-v5 scalable profiles and leave every result bit-identical.
+    """
+
+    lenslet_batch_size: int = 512
+    calibration_cache: Any = None
+    # "regenerate" redraws the native layered atmosphere's band coefficients
+    # each frame (bit-identical frames, ~16 * n_layers * (2N)**2 bytes not held).
+    atmosphere_band_storage: str = "materialized"
+
+    def __post_init__(self) -> None:
+        if (
+            isinstance(self.lenslet_batch_size, bool)
+            or not isinstance(self.lenslet_batch_size, int)
+            or self.lenslet_batch_size < 1
+        ):
+            raise ScaoConstructionError("lenslet_batch_size must be a positive integer.")
+        if self.atmosphere_band_storage not in ("materialized", "regenerate"):
+            raise ScaoConstructionError(
+                "atmosphere_band_storage must be 'materialized' or 'regenerate'."
+            )
 
 
 @runtime_checkable
@@ -198,6 +236,7 @@ class _BuildAttestation:
     source_config: SystemConfig
     supplied_matrix_identity: tuple[str, str] | None
     component_hashes: Mapping[str, str]
+    calibration_reused: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -215,7 +254,7 @@ class ScaoSystem:
     atmosphere: AtmosphereModel
     wfs: WavefrontSensor
     dm: DeformableMirrorModel
-    interaction_matrix: InteractionMatrix
+    interaction_matrix: InteractionMatrix | SparseInteractionMatrix
     reconstructor: Reconstructor
     command_projector: CommandProjector
     controller: Controller
@@ -427,7 +466,8 @@ def register_scao_backend_factory(
 def build_scao_system(
     config: SystemConfig,
     *,
-    interaction_matrix: InteractionMatrix | None = None,
+    interaction_matrix: InteractionMatrix | SparseInteractionMatrix | None = None,
+    execution: ScaoExecutionOptions | None = None,
 ) -> ScaoSystem:
     """Build one complete system from a reviewed, unit-explicit configuration.
 
@@ -435,10 +475,20 @@ def build_scao_system(
     the only mode that calibrates. ``source='resource'`` must load its exact
     resource, and ``source='supplied'`` requires ``interaction_matrix`` here;
     neither mode silently falls back to an expensive rebuild.
+
+    A schema-v5 profile with a ``scalable`` block builds the compact lenslet
+    geometry, the sparse linear-spline DM, a grouped local sparse calibration
+    and the LSMR reconstructor through the same factory and preflight.
+    ``execution`` carries identity-neutral settings for that path (lenslet
+    batch size, an explicit calibration cache).
     """
 
     if not isinstance(config, SystemConfig):
         raise ScaoConstructionError("config must be a SystemConfig.")
+    options = ScaoExecutionOptions() if execution is None else execution
+    if not isinstance(options, ScaoExecutionOptions):
+        raise ScaoConstructionError("execution must be a ScaoExecutionOptions.")
+    scalable = config.scalable is not None
     # One observation, not two: an attestation must name the epoch the factory
     # it used stood at, so a replacement landing while this build runs retires
     # what this build produced instead of being silently absorbed into it, and a
@@ -451,6 +501,11 @@ def build_scao_system(
             "random derivation scheme does not match the serialized profile."
         )
 
+    # The representation keyword is passed only for scalable profiles, so a
+    # factory written before it existed keeps building every dense profile.
+    geometry_keywords: dict[str, Any] = (
+        {"representation": "compact_cells"} if scalable else {}
+    )
     geometry = factory.build_geometry(
         telescope_diameter_m=config.telescope_diameter_m,
         pupil_pixels=config.pupil_pixels,
@@ -458,10 +513,17 @@ def build_scao_system(
         min_fill_fraction=config.wfs.min_fill_fraction,
         central_obstruction_ratio=config.wfs.central_obstruction_ratio,
         spider_width_m=config.wfs.spider_width_m,
+        **geometry_keywords,
     )
     layer_keywords: dict[str, Any] = (
         {"layers": config.atmosphere.layers} if config.atmosphere.layers else {}
     )
+    if options.atmosphere_band_storage != "materialized":
+        if config.atmosphere_model != "native_layered":
+            raise ScaoConstructionError(
+                "atmosphere_band_storage applies to the native_layered atmosphere only."
+            )
+        layer_keywords["band_coefficient_storage"] = options.atmosphere_band_storage
     atmosphere = factory.build_atmosphere(
         model=config.atmosphere_model,
         geometry=geometry,
@@ -498,19 +560,36 @@ def build_scao_system(
         random_streams=streams,
         photon_allocation=config.wfs.photon_allocation,
         clip_negative_pixels=config.wfs.clip_negative_pixels,
+        **({"lenslet_batch_size": options.lenslet_batch_size} if scalable else {}),
     )
     science_propagator = factory.build_science_propagator(
         geometry=geometry,
         sampling=PsfSampling(pad_factor=config.science.psf_pad_factor),
     )
 
-    matrix = _resolve_interaction_matrix(
-        config,
-        dm=dm,
-        wfs=wfs,
-        random_streams=streams,
-        supplied=interaction_matrix,
-    )
+    calibration_reused = False
+    matrix: InteractionMatrix | SparseInteractionMatrix
+    if scalable:
+        matrix, calibration_reused = _resolve_sparse_interaction_matrix(
+            config,
+            dm=dm,
+            wfs=wfs,
+            random_streams=streams,
+            supplied=interaction_matrix,
+            cache=options.calibration_cache,
+        )
+    else:
+        if isinstance(interaction_matrix, SparseInteractionMatrix):
+            raise ScaoConstructionError(
+                "a sparse interaction matrix requires a scalable profile."
+            )
+        matrix = _resolve_interaction_matrix(
+            config,
+            dm=dm,
+            wfs=wfs,
+            random_streams=streams,
+            supplied=interaction_matrix,
+        )
     if matrix.geometry_hash != geometry.geometry_hash:
         raise ScaoConstructionError(
             "interaction-matrix geometry_hash must match the constructed WFS "
@@ -566,6 +645,7 @@ def build_scao_system(
         source_config=config,
         supplied_matrix_identity=_supplied_matrix_identity(interaction_matrix),
         component_hashes=component_hashes,
+        calibration_reused=calibration_reused,
     )
     _MINTED_ATTESTATIONS.add(attestation)
     return ScaoSystem(
@@ -589,10 +669,17 @@ def run_closed_loop(
     config: SystemConfig,
     *,
     system: ScaoSystem | None = None,
-    interaction_matrix: InteractionMatrix | None = None,
+    interaction_matrix: InteractionMatrix | SparseInteractionMatrix | None = None,
     realization_index: int = 0,
+    observers: Sequence[FrameObserver] = (),
+    execution: ScaoExecutionOptions | None = None,
 ):
-    """Execute either detector-level or geometric profiles through one runner."""
+    """Execute either detector-level or geometric profiles through one runner.
+
+    ``observers`` are passive :class:`~shwfs_ao.control.FrameObserver`
+    consumers forwarded unchanged to the canonical loop; they receive
+    immutable per-frame OPD snapshots and cannot change the returned history.
+    """
 
     if not isinstance(config, SystemConfig):
         raise ScaoConstructionError("config must be a SystemConfig.")
@@ -601,7 +688,9 @@ def run_closed_loop(
             "interaction_matrix cannot accompany an already-built system."
         )
     resolved = (
-        build_scao_system(config, interaction_matrix=interaction_matrix)
+        build_scao_system(
+            config, interaction_matrix=interaction_matrix, execution=execution
+        )
         if system is None
         else system
     )
@@ -625,6 +714,7 @@ def run_closed_loop(
         controller=resolved.controller,
         include_noise=config.controller.include_noise,
         realization_index=realization_index,
+        observers=observers,
     )
 
 
@@ -725,7 +815,7 @@ def _mismatched_keys(left: Mapping[str, str], right: Mapping[str, str]) -> list[
 
 
 def _supplied_matrix_identity(
-    supplied: InteractionMatrix | None,
+    supplied: InteractionMatrix | SparseInteractionMatrix | None,
 ) -> tuple[str, str] | None:
     # A supplied matrix is an input to the build, not a product of it, so the
     # identity a build yields is only reusable for that same matrix.
@@ -736,7 +826,7 @@ def _supplied_matrix_identity(
 
 def _attested_build_identity(
     system: ScaoSystem,
-    supplied: InteractionMatrix | None,
+    supplied: InteractionMatrix | SparseInteractionMatrix | None,
 ) -> dict[str, str] | None:
     """The attested identities of ``system``, or ``None`` if it has none usable.
 
@@ -942,9 +1032,90 @@ def _resolve_interaction_matrix(
     return resolver()
 
 
+def _resolve_sparse_interaction_matrix(
+    config: SystemConfig,
+    *,
+    dm: DeformableMirrorModel,
+    wfs: WavefrontSensor,
+    random_streams: RandomStreams,
+    supplied: InteractionMatrix | SparseInteractionMatrix | None,
+    cache: Any,
+) -> tuple[SparseInteractionMatrix, bool]:
+    """Grouped local calibration of every eligible actuator (scalable path)."""
+
+    from ..dm import DeformableMirror
+
+    calibration = config.calibration
+    if not isinstance(dm, DeformableMirror) or not dm.is_scalable:
+        raise ScaoConstructionError("the scalable path needs the sparse DM operator.")
+    geometry = getattr(wfs, "geometry", None)
+    label_map = getattr(geometry, "lenslet_label_map", None)
+    if not callable(label_map):
+        raise ScaoConstructionError("the scalable path needs the compact lenslet geometry.")
+    try:
+        basis = LocalDmProbeBasis(dm, lenslet_label_map=label_map())
+    except ValueError as exc:
+        raise ScaoConstructionError(f"cannot build the local probe basis: {exc}") from exc
+    if calibration.source == "supplied":
+        if not isinstance(supplied, SparseInteractionMatrix):
+            raise ScaoConstructionError(
+                "calibration.source='supplied' on a scalable profile requires a "
+                "SparseInteractionMatrix."
+            )
+        if supplied.coordinate_ids != basis.coordinate_ids:
+            raise ScaoConstructionError(
+                "supplied sparse matrix coordinates differ from the eligible actuators."
+            )
+        return supplied, False
+    if supplied is not None:
+        raise ScaoConstructionError(
+            "an interaction_matrix may only be supplied when calibration.source='supplied'."
+        )
+    scoped = random_streams.scoped("scao-interaction-calibration")
+    key = None
+    if cache is not None:
+        from .calibration_cache import SparseCalibrationCache, SparseCalibrationCacheError
+
+        if not isinstance(cache, SparseCalibrationCache):
+            raise ScaoConstructionError("calibration_cache must be a SparseCalibrationCache.")
+        key = cache.key(
+            probe_basis=basis,
+            sensor=wfs,
+            amplitude_m=calibration.amplitude_m,
+            method=calibration.method,
+            random_streams=scoped,
+        )
+        try:
+            cached = cache.load(
+                key,
+                probe_basis=basis,
+                sensor=wfs,
+                amplitude_m=calibration.amplitude_m,
+                method=calibration.method,
+                root_seed=random_streams.root_seed,
+            )
+        except SparseCalibrationCacheError as exc:
+            raise ScaoConstructionError(str(exc)) from exc
+        if cached is not None:
+            return cached, True
+    try:
+        matrix = calibrate_sparse_interaction_matrix(
+            basis,
+            wfs,
+            calibration.amplitude_m,
+            random_streams=scoped,
+            method=calibration.method,
+        )
+    except ValueError as exc:
+        raise ScaoConstructionError(f"scalable calibration failed: {exc}") from exc
+    if cache is not None and key is not None:
+        cache.store(key, matrix)
+    return matrix, False
+
+
 def _validate_matrix_response(
     config: SystemConfig,
-    matrix: InteractionMatrix,
+    matrix: InteractionMatrix | SparseInteractionMatrix,
     wfs: WavefrontSensor,
 ) -> None:
     """Fail closed unless a supplied or resource matrix fits this WFS response.
@@ -1020,10 +1191,34 @@ def _require_reconstructor_parameter(
 
 def _build_reconstructor(
     config: SystemConfig,
-    matrix: InteractionMatrix,
+    matrix: InteractionMatrix | SparseInteractionMatrix,
 ) -> Reconstructor:
     reconstructor = config.reconstructor
     kind = reconstructor.kind
+    if kind == "sparse_lsmr_tikhonov":
+        scalable = config.scalable
+        if scalable is None or not isinstance(matrix, SparseInteractionMatrix):
+            raise ScaoConstructionError(
+                "sparse_lsmr_tikhonov needs a scalable profile and a sparse matrix."
+            )
+        try:
+            return SparseLsmrReconstructor(
+                matrix,
+                damping_relative=_require_reconstructor_parameter(
+                    reconstructor.alpha, kind, "alpha"
+                ),
+                atol=scalable.solver_atol,
+                btol=scalable.solver_btol,
+                max_iterations=scalable.solver_max_iterations,
+                min_valid_fraction=reconstructor.min_valid_fraction,
+                nonconverged_policy=scalable.nonconverged_policy,
+            )
+        except (TypeError, ValueError) as exc:
+            raise ScaoConstructionError(f"cannot build reconstructor {kind!r}: {exc}") from exc
+    if isinstance(matrix, SparseInteractionMatrix):
+        raise ScaoConstructionError(
+            f"reconstructor kind {kind!r} needs a dense InteractionMatrix."
+        )
     builders: Mapping[str, Callable[[], Reconstructor]] = {
         "least_squares": lambda: LeastSquaresReconstructor(
             matrix,
@@ -1064,7 +1259,7 @@ def _build_reconstructor(
 
 def _build_command_projector(
     config: SystemConfig,
-    matrix: InteractionMatrix,
+    matrix: InteractionMatrix | SparseInteractionMatrix,
     dm: DeformableMirrorModel,
 ) -> CommandProjector:
     projector = config.command_projector
@@ -1204,7 +1399,7 @@ def _expected_component_hashes(
     atmosphere: AtmosphereModel,
     wfs: WavefrontSensor,
     dm: DeformableMirrorModel,
-    interaction_matrix: InteractionMatrix,
+    interaction_matrix: InteractionMatrix | SparseInteractionMatrix,
     reconstructor: Reconstructor,
     command_projector: CommandProjector,
     controller: Controller,

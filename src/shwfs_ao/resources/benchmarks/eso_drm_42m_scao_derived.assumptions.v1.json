@@ -1,0 +1,383 @@
+{
+  "schema_name": "shwfs_ao.assumption_ledger",
+  "schema_version": 1,
+  "ledger_id": "eso_drm_42m_scao_derived.assumptions",
+  "benchmark": "ESO-derived SCAO benchmark (eso_drm_42m_scao_derived family)",
+  "source_ledger": "benchmarks/eso_scao_source_ledger.v1.json",
+  "profiles": [
+    "eso_scao_smoke_5m_software@1",
+    "eso_scao_medium_12m_derived@1",
+    "eso_scao_medium_12m_weak_gate@1",
+    "eso_drm_42m_scao_derived@1"
+  ],
+  "frozen": "2026-10-15",
+  "classifications": {
+    "source_derived": "value taken from a normative source (R1/R2) with its locator",
+    "source_scale_adapted": "normative scale or convention adapted to the one-NGS SCAO topology or to this repository's frame semantics; the adaptation is stated",
+    "engineering_assumption": "value no source supplies, chosen for a stated engineering reason and not tuned to a literature Strehl",
+    "declared_experiment_choice": "a choice that defines the experiment (tier size, science wavelength, weak gate atmosphere), declared before running",
+    "software_policy": "a software convention with no physical content"
+  },
+  "rows": [
+    {
+      "id": "S01", "title": "Primary diameter", "classification": "source_derived",
+      "applies_to": ["eso_drm_42m_scao_derived@1"],
+      "values": {"telescope_diameter_m": 42.0}, "unit": "m",
+      "authority_sources": ["R2"], "locator": "R2 'Photon collecting area'",
+      "rationale": "historical E-ELT DRM primary", "transformation": "none",
+      "limitation": "the current ELT is 39 m; this is the historical DRM design",
+      "consuming_tests": ["tests/io/test_eso_scao_profiles.py::test_ledger_values_match_every_tier_profile"]
+    },
+    {
+      "id": "S02", "title": "Central-obstruction diameter ratio", "classification": "source_derived",
+      "applies_to": "all",
+      "values": {"wfs.central_obstruction_ratio": 0.28}, "unit": "dimensionless",
+      "authority_sources": ["R2"], "locator": "R2 'Photon collecting area'",
+      "rationale": "annular pupil, area pi/4 D^2 (1 - 0.28^2)", "transformation": "none",
+      "limitation": "applied unchanged to the 5 m and 12 m tiers, whose obstruction is therefore a declared tier choice rather than a source value",
+      "consuming_tests": ["tests/science/test_long_exposure.py::test_ideal_image_matches_the_analytic_annular_pattern_and_converges", "tests/dm/test_linear_spline_operator.py::test_zero_illuminated_support_is_classified_against_the_real_pupil"]
+    },
+    {
+      "id": "S03", "title": "Segmentation and spiders omitted", "classification": "source_derived",
+      "applies_to": "all",
+      "values": {"wfs.spider_width_m": 0.0}, "unit": "m",
+      "authority_sources": ["R2"], "locator": "R2 annular collecting-area description",
+      "rationale": "first reference case is the pure annulus", "transformation": "segmentation, gaps and spiders omitted",
+      "limitation": "no segment piston, gap diffraction or spider island effects",
+      "consuming_tests": ["tests/io/test_eso_scao_profiles.py::test_ledger_values_match_every_tier_profile"]
+    },
+    {
+      "id": "S04", "title": "Integrated Fried parameter", "classification": "source_derived",
+      "applies_to": ["eso_scao_smoke_5m_software@1", "eso_scao_medium_12m_derived@1", "eso_drm_42m_scao_derived@1"],
+      "values": {"atmosphere.r0_m": 0.13, "atmosphere.r0_reference_wavelength_m": 5e-07}, "unit": "m",
+      "authority_sources": ["R1"], "locator": "R1 'Atmosphere' table",
+      "rationale": "packaged literature profile literature_profiles/eso_elt_drm_ten_layer.json", "transformation": "none",
+      "limitation": "zenith profile; seeing 0.8 arcsec is the rounded Kolmogorov value",
+      "consuming_tests": ["tests/io/test_turbulence_profiles.py", "tests/backends/native/test_layered_atmosphere.py"]
+    },
+    {
+      "id": "S05", "title": "Outer scale and absolute normalization", "classification": "source_derived",
+      "applies_to": "all",
+      "values": {"atmosphere.outer_scale_m": 25.0, "atmosphere_model": "native_layered", "atmosphere.target_rms_opd_m": null, "atmosphere.normalize_rms": false, "atmosphere.wind_m_per_s": [0.0, 0.0]},
+      "unit": "m",
+      "authority_sources": ["R1"], "locator": "R1 'Atmosphere' table (von Karman, L0 = 25 m)",
+      "rationale": "absolutely normalized von Karman layers, no RMS rescaling; block-level wind is zero because each layer carries its own",
+      "transformation": "periodic FFT band (2x pupil) plus analytic low-frequency quadrature (layered_atmosphere.py)",
+      "limitation": "the periodic band repeats after one screen period of travel; reported per run",
+      "consuming_tests": ["tests/backends/native/test_layered_atmosphere.py"]
+    },
+    {
+      "id": "S06", "title": "Ten layers: altitudes, Cn2 fractions, wind speeds", "classification": "source_derived",
+      "applies_to": "all",
+      "values": {"atmosphere.layers[*].altitude_m": "derived:R1 table", "atmosphere.layers[*].cn2_fraction": "derived:R1 fractions / 1.001", "atmosphere.layers[*].wind_m_per_s": "derived:R1 speeds along +x (A02)"},
+      "unit": "m, dimensionless, m/s",
+      "authority_sources": ["R1"], "locator": "R1 'Parameters of layers' table",
+      "rationale": "verbatim packaged table", "transformation": "fractions divided by their printed sum 1.001 (normalized sum exactly 1)",
+      "limitation": "altitudes are recorded but unused on axis",
+      "consuming_tests": ["tests/io/test_eso_scao_profiles.py::test_ledger_values_match_every_tier_profile", "tests/io/test_turbulence_profiles.py"]
+    },
+    {
+      "id": "S08", "title": "84x84 SH and 85x85 ground DM", "classification": "source_scale_adapted",
+      "applies_to": ["eso_drm_42m_scao_derived@1"],
+      "values": {"lenslets_across": 84, "actuators_across": 85}, "unit": "count",
+      "authority_sources": ["R1"], "locator": "R1 system parameter table",
+      "rationale": "the R1 high-order scale", "transformation": "borrowed into a one-NGS, on-axis SCAO topology (A01)",
+      "limitation": "R1 used these scales in LGS/MCAO-type studies; nominal square-grid counts, not active counts",
+      "consuming_tests": ["tests/wfs/test_compact_geometry.py::test_nominal_84_across_partition_at_1008_and_1024_samples"]
+    },
+    {
+      "id": "S11", "title": "Loop rate", "classification": "source_derived",
+      "applies_to": "all",
+      "values": {"controller.frame_rate_hz": 500.0}, "unit": "Hz",
+      "authority_sources": ["R1"], "locator": "R1 simulation parameters",
+      "rationale": "R1 500 Hz", "transformation": "none", "limitation": "none",
+      "consuming_tests": ["tests/io/test_eso_scao_profiles.py::test_ledger_values_match_every_tier_profile"]
+    },
+    {
+      "id": "S12", "title": "Reference run length", "classification": "source_derived",
+      "applies_to": ["eso_drm_42m_scao_derived@1"],
+      "values": {"controller.n_steps": 2000}, "unit": "frames",
+      "authority_sources": ["R1"], "locator": "R1 simulation parameters (2000 iterations, 4 s)",
+      "rationale": "the long reference run", "transformation": "science exposure excludes the declared burn-in (A11)",
+      "limitation": "the full-scale capability tier overrides this to 20 frames, which is not a converged performance result",
+      "consuming_tests": ["tests/experiments/test_eso_scao_benchmark.py::test_tiers_declare_their_frame_counts_and_large_runs_are_refused"]
+    },
+    {
+      "id": "S13", "title": "Delayed command: three iteration intervals", "classification": "source_scale_adapted",
+      "applies_to": "all",
+      "values": {"controller.latency_frames": 2}, "unit": "frames",
+      "authority_sources": ["R1"], "locator": "R1 simulation parameters (3-iteration delay)",
+      "rationale": "the canonical loop already contributes one frame (frame k's update is first seen at frame k+1), so a total measured-to-applied delay of three intervals is latency_frames = 2",
+      "transformation": "R1 'three iteration intervals' = latency_frames + 1",
+      "limitation": "no fractional delay and no finite-exposure integration (A10)",
+      "consuming_tests": ["tests/control/test_frame_observation.py::test_latency_two_correction_is_first_seen_three_frames_after_its_measurement"]
+    },
+    {
+      "id": "S14", "title": "Deterministic noiseless sensing", "classification": "source_scale_adapted",
+      "applies_to": "all",
+      "values": {"detector.read_noise_e": 0.0, "detector.dark_e_per_s": 0.0, "detector.background_e_per_pixel_frame": 0.0, "detector.full_well_e": null, "detector.prnu_rms": 0.0, "detector.bad_pixel_fraction": 0.0, "controller.include_noise": false, "calibration.include_noise": false},
+      "unit": "e-, e-/s, dimensionless",
+      "authority_sources": ["R1"], "locator": "R1 idealized-noise simulation parameters",
+      "rationale": "R1 idealized-noise limit adapted to the one-NGS case", "transformation": "no photon, read, dark or background noise in calibration or loop",
+      "limitation": "no noise propagation or aliasing-with-noise term; not R3's 3 e- or R4's photon budget",
+      "consuming_tests": ["tests/experiments/test_eso_scao_benchmark.py::test_noiseless_slopes_are_invariant_to_the_electron_scale"]
+    },
+    {
+      "id": "A01", "title": "One on-axis natural guide star", "classification": "engineering_assumption",
+      "applies_to": "all", "implicit_model_property": true,
+      "values": {}, "unit": "n/a",
+      "authority_sources": [], "context_sources": ["R1", "R4"], "locator": "",
+      "rationale": "SCAO topology: one NGS at infinity on axis; no off-axis propagation, cone effect or finite source range",
+      "transformation": "layer altitudes are recorded but have no effect on axis",
+      "limitation": "no anisoplanatism, no LGS",
+      "consuming_tests": ["tests/backends/native/test_layered_atmosphere.py"]
+    },
+    {
+      "id": "A02", "title": "Wind azimuths", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"atmosphere.layers[*].wind_m_per_s": "derived:(speed_i, 0) for every layer"},
+      "unit": "m/s",
+      "authority_sources": [], "context_sources": ["R1"], "locator": "",
+      "rationale": "R1 publishes no directions; every layer toward +x as in the other packaged profiles; on-axis SCAO statistics depend on speeds",
+      "transformation": "speed placed on +x", "limitation": "a common direction is a worst case for temporal correlation of layers",
+      "consuming_tests": ["tests/io/test_eso_scao_profiles.py::test_ledger_values_match_every_tier_profile"]
+    },
+    {
+      "id": "A03", "title": "WFS wavelength", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"wfs_wavelength_m": 7e-07}, "unit": "m",
+      "authority_sources": [], "context_sources": ["R3"], "locator": "",
+      "rationale": "monochromatic 700 nm sensing, the repository's existing convention; inside R3's 0.6-0.9 um band but not a claim about any published bandpass",
+      "transformation": "none", "limitation": "monochromatic sensing, no chromatic effects",
+      "consuming_tests": ["tests/io/test_eso_scao_profiles.py::test_ledger_values_match_every_tier_profile"]
+    },
+    {
+      "id": "A04", "title": "Science wavelengths", "classification": "declared_experiment_choice",
+      "applies_to": "all",
+      "values_by_profile": {
+        "eso_scao_smoke_5m_software@1": {"science_wavelengths_m": [1.65e-06, 2.2e-06]},
+        "eso_scao_medium_12m_derived@1": {"science_wavelengths_m": [2.2e-06]},
+        "eso_scao_medium_12m_weak_gate@1": {"science_wavelengths_m": [2.2e-06]},
+        "eso_drm_42m_scao_derived@1": {"science_wavelengths_m": [2.2e-06]}
+      },
+      "unit": "m",
+      "authority_sources": [], "locator": "",
+      "rationale": "the required 2.2 um monochromatic example; the smoke tier adds 1.65 um to exercise multi-wavelength accumulation",
+      "transformation": "none", "limitation": "monochromatic images only; no broadband coaddition",
+      "consuming_tests": ["tests/science/test_long_exposure.py::test_streaming_average_matches_a_materialized_weighted_stack"]
+    },
+    {
+      "id": "A05a", "title": "Pupil raster", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values_by_profile": {
+        "eso_scao_smoke_5m_software@1": {"pupil_pixels": 120},
+        "eso_scao_medium_12m_derived@1": {"pupil_pixels": 288},
+        "eso_scao_medium_12m_weak_gate@1": {"pupil_pixels": 288},
+        "eso_drm_42m_scao_derived@1": {"pupil_pixels": 1008}
+      },
+      "unit": "samples",
+      "authority_sources": [], "locator": "",
+      "rationale": "12 pupil samples per lenslet in every tier (pixel spacing D/(N-1) = 41.7 mm at full scale); lenslet edges then coincide with actuator rows",
+      "transformation": "samples span the diameter end to end (build_pupil_geometry)",
+      "limitation": "sampling convergence must be checked (ESO-08); 1024 samples is supported without rounding",
+      "consuming_tests": ["tests/wfs/test_compact_geometry.py::test_compact_partition_equals_the_dense_partition"]
+    },
+    {
+      "id": "A05b", "title": "Atmospheric high-frequency cutoff", "classification": "engineering_assumption",
+      "applies_to": "all", "implicit_model_property": true,
+      "values": {}, "unit": "1/m",
+      "authority_sources": [], "context_sources": ["R1"], "locator": "",
+      "rationale": "carries forward the packaged atmosphere's convention: no power above the pupil grid's Nyquist frequency (R1 'inner scale = pixel size')",
+      "transformation": "none", "limitation": "sub-pixel turbulence is absent; the per-lenslet sampling (12 samples) bounds intra-subaperture structure",
+      "consuming_tests": ["tests/backends/native/test_layered_atmosphere.py"]
+    },
+    {
+      "id": "A05c", "title": "SH focal sampling and detector window", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"wfs.pad_factor": 2, "wfs.detector_window_px": 24, "wfs.photon_allocation": "throughput_scaled"},
+      "unit": "dimensionless, pixels",
+      "authority_sources": [], "context_sources": ["R1"], "locator": "",
+      "rationale": "pad 2 gives Nyquist sampling (pixel lambda/(2d) = 0.144 arcsec at 700 nm, d = 0.5 m); the 24-pixel window is the whole FFT canvas, so nothing is cropped",
+      "transformation": "pupil samples per lenslet (12) and detector pixels per spot canvas (24) are separate quantities",
+      "limitation": "no field stop or spatial filter; canvas periodicity aliases far spot wings; not R1's '6' CCD sampling",
+      "consuming_tests": ["tests/wfs/test_compact_geometry.py::test_batched_spots_equal_the_dense_backend"]
+    },
+    {
+      "id": "A05d", "title": "Lenslet illumination threshold", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"wfs.min_fill_fraction": 0.5}, "unit": "dimensionless",
+      "authority_sources": [], "locator": "",
+      "rationale": "retain lenslets at least half illuminated; partial edge lenslets above the cut keep their real partial masks",
+      "transformation": "none", "limitation": "a different cut changes the retained count and edge correction",
+      "consuming_tests": ["tests/wfs/test_compact_geometry.py::test_compact_partition_equals_the_dense_partition"]
+    },
+    {
+      "id": "A05e", "title": "Centroiding and validity policy", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"wfs.centroid_estimator": "center_of_gravity", "wfs.threshold_fraction": 0.0, "wfs.subtract_minimum": false, "wfs.min_flux_e": 100.0, "wfs.min_peak_snr": 3.0, "wfs.max_centroid_sigma_px": 0.5, "wfs.max_window_clipping_fraction": 0.15, "wfs.clip_negative_pixels": true},
+      "unit": "e-, dimensionless, pixels",
+      "authority_sources": [], "locator": "",
+      "rationale": "plain center of gravity over the whole canvas; validity thresholds as in the repository's detector profiles, which noiseless sensing at the A09 scale passes",
+      "transformation": "none", "limitation": "thresholds are engineering values; usable fractions are reported, never relaxed to close the loop",
+      "consuming_tests": ["tests/experiments/test_eso_scao_benchmark.py::test_ci_tier_runs_end_to_end_and_records_its_evidence"]
+    },
+    {
+      "id": "A06a", "title": "Linear-spline basis", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"dm.influence_model": "linear_spline", "dm.coupling_width_pitch": 1.0, "scalable.dm_operator": "linear_spline_local_sparse"},
+      "unit": "dimensionless",
+      "authority_sources": [], "context_sources": ["R1"], "locator": "",
+      "rationale": "R1 names a linear-spline family; implemented as the separable bilinear tent w = L((x-xi)/p) L((y-yi)/p), L(t) = max(0, 1-|t|), support one pitch, unit value at the actuator centre with no sampled renormalization (partition of unity)",
+      "transformation": "sampled at pupil-sample centres, zero outside the pupil",
+      "limitation": "a declared interpretation, not a proven ESO implementation; not the radial pyramid_like family",
+      "consuming_tests": ["tests/dm/test_linear_spline_operator.py::test_forward_matches_an_independently_assembled_dense_cube", "tests/dm/test_linear_spline_operator.py::test_tents_form_a_partition_of_unity_inside_the_actuator_hull"]
+    },
+    {
+      "id": "A06b", "title": "Actuator pitch and alignment", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"dm.include_edge_actuators": true},
+      "unit": "dimensionless",
+      "authority_sources": [], "locator": "",
+      "rationale": "actuators at linspace(-D/2, D/2, N): pitch D/(N-1) equals the lenslet pitch and actuators sit on lenslet corners (Fried geometry)",
+      "transformation": "none", "limitation": "no misregistration",
+      "consuming_tests": ["tests/calibration/test_sparse_calibration.py::test_grouped_calibration_equals_dense_per_actuator_differences"]
+    },
+    {
+      "id": "A06c", "title": "Retained physical actuator layout", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values_by_profile": {
+        "eso_scao_smoke_5m_software@1": {"dm.actuator_margin_fraction": "derived:2*sqrt(2)/(11-1)"},
+        "eso_scao_medium_12m_derived@1": {"dm.actuator_margin_fraction": "derived:2*sqrt(2)/(25-1)"},
+        "eso_scao_medium_12m_weak_gate@1": {"dm.actuator_margin_fraction": "derived:2*sqrt(2)/(25-1)"},
+        "eso_drm_42m_scao_derived@1": {"dm.actuator_margin_fraction": "derived:2*sqrt(2)/(85-1)"}
+      },
+      "unit": "dimensionless",
+      "authority_sources": [], "locator": "",
+      "rationale": "retain every nominal actuator whose support square can reach the pupil disk (centre radius <= R + sqrt(2) p); physical IDs keep their nominal grid indices",
+      "transformation": "margin = 2 sqrt(2)/(N - 1)", "limitation": "retained counts are reported separately from illuminated and calibrated counts",
+      "consuming_tests": ["tests/experiments/test_eso_scao_benchmark.py::test_ci_tier_runs_end_to_end_and_records_its_evidence"]
+    },
+    {
+      "id": "A06d", "title": "Zero-support exclusion and controlled subset", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"command_projector.kind": "controlled_subset", "dm.dead_actuator_indices": [], "dm.stuck_actuator_indices": [], "dm.stuck_command_opd_m": 0.0},
+      "unit": "m",
+      "authority_sources": [], "locator": "",
+      "rationale": "actuators with no illuminated support (central obstruction, outside the disk) or no retained-lenslet support stay in the layout and are excluded with their reason; every other actuator is calibrated and solved",
+      "transformation": "controlled-subset projection back to the full layout", "limitation": "no hardware faults in the reference case",
+      "consuming_tests": ["tests/calibration/test_sparse_calibration.py::test_every_eligible_actuator_participates_and_exclusions_are_explained"]
+    },
+    {
+      "id": "A07a", "title": "Integrator gain and leak", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"controller.gain": 0.4, "controller.leak": 0.0}, "unit": "dimensionless",
+      "authority_sources": [], "locator": "",
+      "rationale": "a pure integrator with a gain inside the stability region of a three-interval delay; not optimized against Strehl",
+      "transformation": "none", "limitation": "no modal gain optimization, no predictive control",
+      "consuming_tests": ["tests/experiments/test_eso_scao_benchmark.py::test_ci_tier_runs_end_to_end_and_records_its_evidence"]
+    },
+    {
+      "id": "A07b", "title": "Reconstruction objective", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"reconstructor.kind": "sparse_lsmr_tikhonov", "reconstructor.alpha": 0.001, "reconstructor.rcond": null, "reconstructor.min_valid_fraction": 0.5, "reconstructor.min_rank": 1, "reconstructor.max_cached_masks": 0},
+      "unit": "dimensionless",
+      "authority_sources": [], "locator": "",
+      "rationale": "Tikhonov least squares on the usable rows, damping 1e-3 of the RMS response column norm: suppresses unseen (piston, waffle) combinations while leaving the lowest seen modes essentially undamped; initial guess zero",
+      "transformation": "damp = alpha * rms(column norms)", "limitation": "not a turbulence-prior MMSE estimator",
+      "consuming_tests": ["tests/calibration/test_sparse_calibration.py::test_lsmr_matches_the_dense_tikhonov_solution", "tests/calibration/test_sparse_calibration.py::test_rank_deficiency_and_piston_get_the_minimum_norm_damped_solution"]
+    },
+    {
+      "id": "A07c", "title": "Calibration probes", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"calibration.source": "build", "calibration.method": "central", "calibration.probe_kind": "dm_actuator", "calibration.amplitude_m": 2e-08, "calibration.repeats": 1, "calibration.resource_name": null, "scalable.calibration_strategy": "grouped_local_noiseless"},
+      "unit": "m",
+      "authority_sources": [], "locator": "",
+      "rationale": "20 nm OPD central differences of every eligible actuator, grouped so no two probes share a lenslet",
+      "transformation": "grouping is exact for local optics and noiseless sensing",
+      "limitation": "linearity checked at 5-40 nm; noise-on scalable calibration is refused",
+      "consuming_tests": ["tests/calibration/test_sparse_calibration.py::test_probe_amplitude_linearity"]
+    },
+    {
+      "id": "A08", "title": "Stroke semantics", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"dm.stroke_limit_opd_m": 0.0001}, "unit": "m OPD",
+      "authority_sources": [], "locator": "",
+      "rationale": "a finite engineering limit (100 um OPD) standing in for an unbounded DM; every run reports its measured saturation fraction, which must be exactly zero for the approximation to hold",
+      "transformation": "none", "limitation": "infinity is not encoded; a run with any saturation is not an unbounded-stroke result",
+      "consuming_tests": ["tests/experiments/test_eso_scao_benchmark.py::test_ci_tier_runs_end_to_end_and_records_its_evidence"]
+    },
+    {
+      "id": "A09", "title": "Numerical electron scale", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"detector.enabled": true, "detector.photons_per_subap_frame": 100000.0, "detector.qe": 1.0, "detector.prnu_mode": "persistent", "wfs_model": "detector_level"},
+      "unit": "e- per subaperture per frame",
+      "authority_sources": [], "context_sources": ["R4"], "locator": "",
+      "rationale": "a numerical scale for the noiseless image-based SH; normalized slopes are invariant to it within the validity range; not a measured guide-star flux",
+      "transformation": "none", "limitation": "it sets validity diagnostics (flux, SNR proxies), not noise",
+      "consuming_tests": ["tests/experiments/test_eso_scao_benchmark.py::test_noiseless_slopes_are_invariant_to_the_electron_scale"]
+    },
+    {
+      "id": "A10", "title": "Timing model", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"detector.exposure_s": 0.002}, "unit": "s",
+      "authority_sources": [], "context_sources": ["R1", "R3"], "locator": "",
+      "rationale": "frame k is one instantaneous atmosphere sample at k/500 Hz; detector.exposure_s = 1/f is recorded, not integrated; frame k's increment is released in the update of frame k + latency_frames and first seen at frame k + 3; science uses the pre-update residual",
+      "transformation": "rectangle-rule temporal quadrature of instantaneous snapshots",
+      "limitation": "no finite-exposure WFS integration, no fractional latency, no DM settling",
+      "consuming_tests": ["tests/control/test_frame_observation.py::test_event_maps_match_a_hand_recursion_with_latency_faults_and_dropouts"]
+    },
+    {
+      "id": "A11", "title": "Science selection, grid and metrics", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"science.psf_pad_factor": 2}, "unit": "dimensionless",
+      "authority_sources": [], "locator": "",
+      "rationale": "burn-in per tier (ci 8, medium 50, medium-gate 30, full 5, reference 200 frames), stride 1, equal weights, pre-update residual; pad 2 gives lambda/(2D) pixels over the full uncropped FFT grid; Strehl = final-image peak / ideal peak; FWHM, EE and radial profile about the final-image peak; flux denominator = normalized source grid",
+      "transformation": "intensity averaging of instantaneous images, no recentring",
+      "limitation": "burn-in is set before inspecting results; the 20-frame full tier is not a settled long exposure",
+      "consuming_tests": ["tests/science/test_long_exposure.py::test_opposite_tilts_broaden_the_image_instead_of_cancelling"]
+    },
+    {
+      "id": "A12", "title": "Numerical settings that can change results", "classification": "engineering_assumption",
+      "applies_to": "all",
+      "values": {"scalable.solver": "lsmr", "scalable.solver_atol": 1e-08, "scalable.solver_btol": 1e-08, "scalable.solver_max_iterations": 5000, "scalable.nonconverged_policy": "reject", "scalable.wfs_geometry": "compact_cells"},
+      "unit": "dimensionless",
+      "authority_sources": [], "locator": "",
+      "rationale": "LSMR from x0 = 0 to 1e-8 relative tolerances agrees with a direct Tikhonov solve to ~1e-8 on an 84x84 Fried operator in ~270 iterations; a non-converged solve is rejected; float64 throughout; lenslet batch size and thread counts are execution settings outside the identity",
+      "transformation": "none", "limitation": "solver tolerance enters the command at the 1e-8 relative level",
+      "consuming_tests": ["tests/calibration/test_sparse_calibration.py::test_nonconvergence_is_rejected_or_explicitly_accepted", "tests/wfs/test_compact_geometry.py::test_noise_draws_and_validity_do_not_depend_on_batch_size"]
+    },
+    {
+      "id": "T01", "title": "Lower-order tier geometry and lengths", "classification": "declared_experiment_choice",
+      "applies_to": ["eso_scao_smoke_5m_software@1", "eso_scao_medium_12m_derived@1", "eso_scao_medium_12m_weak_gate@1"],
+      "values_by_profile": {
+        "eso_scao_smoke_5m_software@1": {"telescope_diameter_m": 5.0, "lenslets_across": 10, "actuators_across": 11, "controller.n_steps": 32},
+        "eso_scao_medium_12m_derived@1": {"telescope_diameter_m": 12.0, "lenslets_across": 24, "actuators_across": 25, "controller.n_steps": 200},
+        "eso_scao_medium_12m_weak_gate@1": {"telescope_diameter_m": 12.0, "lenslets_across": 24, "actuators_across": 25, "controller.n_steps": 120}
+      },
+      "unit": "m, count, frames",
+      "authority_sources": [], "locator": "",
+      "rationale": "distinct lower-order experiments that keep the full tier's 0.5 m pitch and 12 samples per lenslet; the smoke tier is a software-smoke label",
+      "transformation": "none", "limitation": "not rescaled ESO results; changing aperture at fixed pitch changes the physical experiment",
+      "consuming_tests": ["tests/experiments/test_eso_scao_benchmark.py::test_tiers_declare_their_frame_counts_and_large_runs_are_refused"]
+    },
+    {
+      "id": "T02", "title": "Predeclared weak atmosphere for the control gate", "classification": "declared_experiment_choice",
+      "applies_to": ["eso_scao_medium_12m_weak_gate@1"],
+      "values": {"atmosphere.r0_m": 0.4, "atmosphere.r0_reference_wavelength_m": 5e-07}, "unit": "m",
+      "authority_sources": [], "locator": "",
+      "rationale": "r0 = 0.40 m at 500 nm, declared before any gate run; layers, L0 and winds are the R1 ones",
+      "transformation": "none", "limitation": "an engineering gate, not an ESO condition",
+      "consuming_tests": ["tests/experiments/test_eso_scao_benchmark.py::test_tiers_declare_their_frame_counts_and_large_runs_are_refused"]
+    },
+    {
+      "id": "P01", "title": "Software conventions", "classification": "software_policy",
+      "applies_to": "all",
+      "values": {"backend": "native", "command_projector.mapping_resource": null, "random.root_seed": 1, "random.derivation_scheme_id": "shwfs_ao.random.sha256-json-pcg64-v1"},
+      "unit": "n/a",
+      "authority_sources": [], "locator": "",
+      "rationale": "native NumPy backend; the root seed is a declared reproducibility input",
+      "transformation": "none", "limitation": "other realizations use realization_index",
+      "consuming_tests": ["tests/experiments/test_eso_scao_benchmark.py::test_repeated_ci_runs_reproduce_their_outputs"]
+    }
+  ]
+}

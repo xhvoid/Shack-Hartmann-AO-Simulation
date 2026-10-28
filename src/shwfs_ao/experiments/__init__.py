@@ -35,6 +35,7 @@ from .public_data_conditioned import (
 from .scao import (
     ScaoBackendComponentFactory,
     ScaoConstructionError,
+    ScaoExecutionOptions,
     ScaoSystem,
     build_scao_system,
     register_scao_backend_factory,
@@ -72,6 +73,7 @@ __all__ = (
     "r0_from_seeing_arcsec",
     "theta0_rad_from_arcsec",
     "ScaoConstructionError",
+    "ScaoExecutionOptions",
     "ScaoBackendComponentFactory",
     "ScaoSystem",
     "register_scao_backend_factory",

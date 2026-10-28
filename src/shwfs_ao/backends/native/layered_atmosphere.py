@@ -45,7 +45,7 @@ from dataclasses import asdict, dataclass
 import math
 from numbers import Integral, Real
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import Any, Iterator, Mapping
 
 import numpy as np
 
@@ -68,6 +68,15 @@ LAYERED_SPECTRUM_MODEL = "periodic_band_analytic_low_frequency_v1"
 
 _BACKEND_NAME = "native"
 _METADATA_SCHEMA_VERSION = 1
+BAND_COEFFICIENT_STORAGE = ("materialized", "regenerate")
+"""Execution modes for the periodic band's per-layer Fourier coefficients.
+
+``materialized`` (the default) keeps every layer's ``screen_size**2`` complex
+coefficients in memory.  ``regenerate`` redraws them each frame from the
+layer's keyed random generator with the identical arithmetic, so every frame
+is bit-identical while about ``16 * n_layers * screen_size**2`` bytes are not
+held; it costs one regeneration per layer and frame.  The mode is not part of
+the atmosphere's identity."""
 _QUADRATURE_SUBSAMPLES = 4
 
 
@@ -210,11 +219,17 @@ class LayeredFrozenFlowAtmosphere:
         *,
         pupil_mask: np.ndarray | None = None,
         random_streams: RandomStreams | None = None,
+        band_coefficient_storage: str = "materialized",
     ) -> None:
         if not isinstance(config, LayeredFrozenFlowAtmosphereConfig):
             raise NativeAtmosphereError(
                 "config must be a LayeredFrozenFlowAtmosphereConfig instance."
             )
+        if band_coefficient_storage not in BAND_COEFFICIENT_STORAGE:
+            raise NativeAtmosphereError(
+                f"band_coefficient_storage must be one of {BAND_COEFFICIENT_STORAGE}."
+            )
+        self._band_storage = band_coefficient_storage
         self._config = config
         shape = (config.grid_size, config.grid_size)
         pupil = _circular_pupil(config) if pupil_mask is None else _validated_pupil(
@@ -301,6 +316,12 @@ class LayeredFrozenFlowAtmosphere:
         return self._max_travel_m
 
     @property
+    def band_coefficient_storage(self) -> str:
+        """Execution mode of the periodic-band coefficients (not identity)."""
+
+        return self._band_storage
+
+    @property
     def periodic_band_repeated(self) -> bool:
         """True once some layer has travelled a full periodic-band period."""
 
@@ -313,16 +334,18 @@ class LayeredFrozenFlowAtmosphere:
         config = self._config
         band: list[np.ndarray] = []
         blocks: list[tuple[_LowFrequencyBlock, ...]] = []
-        size = config.screen_size
         for layer_index, layer_r0 in enumerate(config.layer_r0_m):
             rng = self._random_streams.keyed_generator(
                 "atmosphere", key=("realization", index, "layer", layer_index)
             )
             # The tabulated powers are for r0 = 1 m; Phi scales as r0**(-5/3).
             amplitude = layer_r0 ** (-5.0 / 6.0)
-            draws = rng.normal(size=(size, size)) + 1j * rng.normal(size=(size, size))
-            # numpy's inverse FFT divides by size**2; fold that back in here.
-            band.append(draws * (np.sqrt(self._band_power_rad2) * amplitude * size**2))
+            # Drawn in either storage mode, so the generator reaches the
+            # low-frequency draws below in the same state.
+            coefficients = self._band_draw(rng, amplitude)
+            if self._band_storage == "materialized":
+                band.append(coefficients)
+            del coefficients
             layer_blocks = []
             for nodes, power in self._low_frequency_tables:
                 coefficients = (
@@ -346,6 +369,27 @@ class LayeredFrozenFlowAtmosphere:
         self._max_travel_m = 0.0
         self._refresh_metadata()
 
+    def _band_draw(self, rng: np.random.Generator, amplitude: float) -> np.ndarray:
+        """One layer's periodic-band coefficients from its keyed generator."""
+
+        size = self._config.screen_size
+        draws = rng.normal(size=(size, size)) + 1j * rng.normal(size=(size, size))
+        # numpy's inverse FFT divides by size**2; fold that back in here.
+        return draws * (np.sqrt(self._band_power_rad2) * amplitude * size**2)
+
+    def _layer_band_coefficients(self) -> Iterator[np.ndarray]:
+        """Yield each layer's band coefficients, stored or regenerated."""
+
+        if self._band_storage == "materialized":
+            yield from self._band_coefficients
+            return
+        for layer_index, layer_r0 in enumerate(self._config.layer_r0_m):
+            rng = self._random_streams.keyed_generator(
+                "atmosphere",
+                key=("realization", self._realization_index, "layer", layer_index),
+            )
+            yield self._band_draw(rng, layer_r0 ** (-5.0 / 6.0))
+
     def opd_at(self, time_s: float) -> np.ndarray:
         """Return piston-removed OPD metres at an absolute simulation time."""
 
@@ -367,10 +411,11 @@ class LayeredFrozenFlowAtmosphere:
         config = self._config
         n = config.grid_size
         frequencies = self._frequencies_per_m
-        spectrum = np.zeros_like(self._band_coefficients[0])
+        size = config.screen_size
+        spectrum = np.zeros((size, size), dtype=complex)
         work = np.empty_like(spectrum)
         shifts = []
-        for layer, coefficients in zip(config.layers, self._band_coefficients):
+        for layer, coefficients in zip(config.layers, self._layer_band_coefficients()):
             shift_x = layer.wind_m_per_s[0] * time_s
             shift_y = layer.wind_m_per_s[1] * time_s
             shifts.append((shift_x, shift_y))
@@ -447,6 +492,7 @@ class LayeredFrozenFlowAtmosphere:
                 "realization_rms_rescaled": False,
                 "frozen_flow_discretization": "exact_fourier_subpixel_unbounded_travel",
                 "wind_convention": "pattern_advects_with_positive_wind",
+                "band_coefficient_storage": self._band_storage,
             }
         )
 

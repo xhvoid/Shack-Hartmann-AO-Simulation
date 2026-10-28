@@ -1,0 +1,15 @@
+full peak at (x,y) lambda/D = 0.5 0.5 ideal peak at 0.0 0.0 peak/idealpeak 0.4256 axis/idealpeak 0.0992
+  core centroid lambda/D: 0.514 0.459  core flux (r<3 lambda/D about peak): 0.5124  ideal core flux: 0.904
+  pixel scale lambda/D: 0.4995
+reference peak at (x,y) lambda/D = 0.5 0.5 ideal peak at 0.0 0.0 peak/idealpeak 0.7781 axis/idealpeak 0.2049
+  core centroid lambda/D: 0.482 0.457  core flux (r<3 lambda/D about peak): 0.7141  ideal core flux: 0.904
+  pixel scale lambda/D: 0.4995
+manifest peak offset rad: [2.6164493575208676e-08, 2.6164493575208676e-08]
+{'time_s': (2000,), 'open_loop_opd_rms_m': (2000,), 'pre_update_residual_opd_rms_m': (2000,), 'post_update_residual_opd_rms_m': (2000,), 'command_norm_m': (2000,), 'delta_command_norm_m': (2000,), 'saturation_fraction': (2000,), 'valid_measurement_fraction': (2000,), 'valid_subaperture_fraction': (2000,), 'reconstruction_usable': (2000,), 'applied_command_history_opd_m': (2000, 5873)}
+frames 0-20: open 1625 nm, residual 747 nm
+frames 20-100: open 1607 nm, residual 407 nm
+frames 100-200: open 1591 nm, residual 409 nm
+frames 200-600: open 1547 nm, residual 417 nm
+frames 600-1000: open 1691 nm, residual 428 nm
+frames 1000-1400: open 1578 nm, residual 418 nm
+frames 1400-2000: open 1839 nm, residual 409 nm

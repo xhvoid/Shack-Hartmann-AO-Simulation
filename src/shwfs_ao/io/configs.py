@@ -45,8 +45,14 @@ PROFILE_SCHEMA_NAME = "shwfs_ao.system_profile"
 # counterpart "hcipy_layered").  A single-layer block states an empty list;
 # v1-v3 records predate the field and can only describe single-layer
 # atmospheres.
-PROFILE_SCHEMA_VERSION = 4
-SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2, 3, 4)
+# Schema v5 adds the optional ``scalable`` block (the sparse/compact
+# high-order execution path: local linear-spline DM operator, compact lenslet
+# geometry, grouped noiseless calibration, and an LSMR Tikhonov solver), the
+# ``linear_spline`` DM influence model, and the ``sparse_lsmr_tikhonov``
+# reconstructor kind.  All three are expressible only in a v5 record, so no
+# v1-v4 record can carry them and no published identity moves.
+PROFILE_SCHEMA_VERSION = 5
+SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2, 3, 4, 5)
 # The WFS photon allocation the schema-v1 profiles were reviewed and published
 # under.  A v1 record omits the field entirely, so this is the only allocation a
 # configuration claiming record schema 1 can legitimately hold.  It must stay
@@ -78,6 +84,20 @@ _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
     ("high_order_10m_hcipy", 2): "synthetic_presets/high_order_10m_hcipy.v2.json",
     ("high_order_10m_hcipy", 3): "synthetic_presets/high_order_10m_hcipy.v3.json",
     ("eso_turbulence_2m_detector", 1): "synthetic_presets/eso_turbulence_2m_detector.v1.json",
+    # ESO-derived SCAO benchmark tiers (docs/eso_scao_benchmark.md).  The smoke
+    # tier is a software check, the medium tiers a distinct lower-order
+    # experiment, and eso_drm_42m_scao_derived the full nominal spatial scale.
+    ("eso_scao_smoke_5m_software", 1): "synthetic_presets/eso_scao_smoke_5m_software.v1.json",
+    ("eso_scao_medium_12m_derived", 1): "synthetic_presets/eso_scao_medium_12m_derived.v1.json",
+    ("eso_scao_medium_12m_weak_gate", 1): "synthetic_presets/eso_scao_medium_12m_weak_gate.v1.json",
+    ("eso_drm_42m_scao_derived", 1): "synthetic_presets/eso_drm_42m_scao_derived.v1.json",
+    # Version 2 of each tier: a detector window symmetric about the optical
+    # axis (23 instead of 24 pixels) removes a centre-of-gravity bias that left
+    # a static tilt in version 1's corrected wavefront.
+    ("eso_scao_smoke_5m_software", 2): "synthetic_presets/eso_scao_smoke_5m_software.v2.json",
+    ("eso_scao_medium_12m_derived", 2): "synthetic_presets/eso_scao_medium_12m_derived.v2.json",
+    ("eso_scao_medium_12m_weak_gate", 2): "synthetic_presets/eso_scao_medium_12m_weak_gate.v2.json",
+    ("eso_drm_42m_scao_derived", 2): "synthetic_presets/eso_drm_42m_scao_derived.v2.json",
 }
 
 BackendName = Literal["native", "hcipy"]
@@ -620,7 +640,9 @@ class WfsConfig:
 
 @dataclass(frozen=True, slots=True)
 class DmSystemConfig:
-    influence_model: Literal["gaussian", "compact_gaussian", "pyramid_like"]
+    influence_model: Literal[
+        "gaussian", "compact_gaussian", "pyramid_like", "linear_spline"
+    ]
     coupling_width_pitch: float
     stroke_limit_opd_m: float
     include_edge_actuators: bool
@@ -630,8 +652,18 @@ class DmSystemConfig:
     stuck_command_opd_m: float
 
     def __post_init__(self) -> None:
-        if self.influence_model not in {"gaussian", "compact_gaussian", "pyramid_like"}:
+        if self.influence_model not in {
+            "gaussian",
+            "compact_gaussian",
+            "pyramid_like",
+            "linear_spline",
+        }:
             raise SystemConfigError("unsupported influence_model.")
+        if self.influence_model == "linear_spline" and self.coupling_width_pitch != 1.0:
+            raise SystemConfigError(
+                "linear_spline influences have a one-pitch support; "
+                "coupling_width_pitch must be 1.0."
+            )
         object.__setattr__(self, "coupling_width_pitch", _positive(self.coupling_width_pitch, "coupling_width_pitch"))
         stroke = _positive(self.stroke_limit_opd_m, "stroke_limit_opd_m")
         object.__setattr__(self, "stroke_limit_opd_m", stroke)
@@ -693,7 +725,15 @@ class CalibrationConfig:
 
 @dataclass(frozen=True, slots=True)
 class ReconstructorConfig:
-    kind: Literal["least_squares", "tsvd", "tikhonov"]
+    """Reconstruction objective.
+
+    ``alpha`` is the absolute Tikhonov parameter (matrix units) for
+    ``tikhonov``.  For ``sparse_lsmr_tikhonov`` it is *dimensionless*: the
+    damping relative to the RMS column norm of the calibration-valid response,
+    solved by LSMR with the tolerances of the profile's ``scalable`` block.
+    """
+
+    kind: Literal["least_squares", "tsvd", "tikhonov", "sparse_lsmr_tikhonov"]
     rcond: float | None
     alpha: float | None
     min_valid_fraction: float
@@ -701,7 +741,7 @@ class ReconstructorConfig:
     max_cached_masks: int
 
     def __post_init__(self) -> None:
-        if self.kind not in {"least_squares", "tsvd", "tikhonov"}:
+        if self.kind not in {"least_squares", "tsvd", "tikhonov", "sparse_lsmr_tikhonov"}:
             raise SystemConfigError("unsupported reconstructor kind.")
         rcond = _optional_positive(self.rcond, "rcond")
         alpha = _optional_nonnegative(self.alpha, "alpha")
@@ -709,10 +749,11 @@ class ReconstructorConfig:
             raise SystemConfigError("tsvd requires rcond.")
         if self.kind != "tsvd" and rcond is not None:
             raise SystemConfigError("rcond is valid only for tsvd.")
-        if self.kind == "tikhonov" and alpha is None:
-            raise SystemConfigError("tikhonov requires alpha.")
-        if self.kind != "tikhonov" and alpha is not None:
-            raise SystemConfigError("alpha is valid only for tikhonov.")
+        uses_alpha = self.kind in {"tikhonov", "sparse_lsmr_tikhonov"}
+        if uses_alpha and alpha is None:
+            raise SystemConfigError(f"{self.kind} requires alpha.")
+        if not uses_alpha and alpha is not None:
+            raise SystemConfigError("alpha is valid only for Tikhonov reconstructors.")
         object.__setattr__(self, "rcond", rcond)
         object.__setattr__(self, "alpha", alpha)
         object.__setattr__(self, "min_valid_fraction", _fraction(self.min_valid_fraction, "min_valid_fraction"))
@@ -722,6 +763,62 @@ class ReconstructorConfig:
     @property
     def config_hash(self) -> str:
         return component_config_hash("scao.reconstructor_config", self)
+
+
+@dataclass(frozen=True, slots=True)
+class ScalablePathConfig:
+    """Opt-in high-order execution path (schema v5).
+
+    Every field changes what a run computes and is part of the configuration
+    identity.  Pure execution settings -- lenslet batch size, probe chunking,
+    thread counts -- are runtime arguments and deliberately absent.
+
+    ``dm_operator``
+        ``linear_spline_local_sparse``: the sparse bilinear-tent operator of
+        ``shwfs_ao.backends.native.dm_operator``; no influence cube.
+    ``wfs_geometry``
+        ``compact_cells``: per-lenslet cell bounds and local masks with
+        batched native lenslet FFTs; no full-pupil mask per lenslet.
+    ``calibration_strategy``
+        ``grouped_local_noiseless``: disjoint-lenslet probe groups with one
+        zero reference, equal to per-actuator central differences; noiseless
+        only.
+    ``solver``
+        ``lsmr`` on the usable rows with ``solver_atol``/``solver_btol``,
+        at most ``solver_max_iterations``, from ``x0 = 0``; a solve that does
+        not converge is rejected (``nonconverged_policy="reject"``) or used.
+    """
+
+    dm_operator: Literal["linear_spline_local_sparse"]
+    wfs_geometry: Literal["compact_cells"]
+    calibration_strategy: Literal["grouped_local_noiseless"]
+    solver: Literal["lsmr"]
+    solver_atol: float
+    solver_btol: float
+    solver_max_iterations: int
+    nonconverged_policy: Literal["reject", "accept"]
+
+    def __post_init__(self) -> None:
+        for name, allowed in (
+            ("dm_operator", {"linear_spline_local_sparse"}),
+            ("wfs_geometry", {"compact_cells"}),
+            ("calibration_strategy", {"grouped_local_noiseless"}),
+            ("solver", {"lsmr"}),
+            ("nonconverged_policy", {"reject", "accept"}),
+        ):
+            if getattr(self, name) not in allowed:
+                raise SystemConfigError(f"unsupported scalable.{name}.")
+        object.__setattr__(self, "solver_atol", _positive(self.solver_atol, "solver_atol"))
+        object.__setattr__(self, "solver_btol", _positive(self.solver_btol, "solver_btol"))
+        object.__setattr__(
+            self,
+            "solver_max_iterations",
+            _integer(self.solver_max_iterations, "solver_max_iterations", minimum=1),
+        )
+
+    @property
+    def config_hash(self) -> str:
+        return component_config_hash("scao.scalable_path_config", self)
 
 
 @dataclass(frozen=True, slots=True)
@@ -828,6 +925,9 @@ class SystemConfig:
     # because a later schema version was added.  Configurations built in code
     # rather than read from a record belong to the current schema.
     record_schema_version: int = PROFILE_SCHEMA_VERSION
+    # Schema v5: the opt-in scalable high-order path, or None for the dense
+    # reference path every earlier profile uses.
+    scalable: ScalablePathConfig | None = None
 
     def __post_init__(self) -> None:
         if self.backend not in {"native", "hcipy"}:
@@ -940,6 +1040,27 @@ class SystemConfig:
                 "layers would be lost. Record this configuration under schema "
                 f"{PROFILE_SCHEMA_VERSION} instead."
             )
+        # Schema v5 alone can express the scalable path and its two new
+        # vocabulary items; an older record carrying any of them would lose it.
+        if record_version < 5:
+            if self.scalable is not None:
+                raise SystemConfigError(
+                    f"record_schema_version={record_version} cannot express the "
+                    "scalable block; record this configuration under schema 5."
+                )
+            if self.dm.influence_model == "linear_spline":
+                raise SystemConfigError(
+                    f"record_schema_version={record_version} cannot express "
+                    "dm.influence_model='linear_spline'."
+                )
+            if self.reconstructor.kind == "sparse_lsmr_tikhonov":
+                raise SystemConfigError(
+                    f"record_schema_version={record_version} cannot express "
+                    "reconstructor.kind='sparse_lsmr_tikhonov'."
+                )
+        if self.scalable is not None and not isinstance(self.scalable, ScalablePathConfig):
+            raise SystemConfigError("scalable has the wrong configuration type.")
+        _validate_scalable_pairing(self)
         object.__setattr__(self, "record_schema_version", record_version)
 
     @property
@@ -980,8 +1101,7 @@ class SystemConfig:
         their plain ``config_hash`` is already the published value.
         """
 
-        return MappingProxyType(
-            {
+        hashes = {
                 "profile": self.profile.config_hash,
                 "atmosphere": self.atmosphere.config_hash,
                 "detector": self.detector.config_hash,
@@ -995,7 +1115,45 @@ class SystemConfig:
                 "controller": self.controller.config_hash,
                 "science": self.science.config_hash,
                 "random": self.random.config_hash,
-            }
+        }
+        # The key exists only for schema-v5 records, so earlier records keep
+        # exactly the identity map they were published with.
+        if self.record_schema_version >= 5:
+            hashes["scalable"] = (
+                component_config_hash("scao.scalable_path_config", None)
+                if self.scalable is None
+                else self.scalable.config_hash
+            )
+        return MappingProxyType(hashes)
+
+
+def _validate_scalable_pairing(config: SystemConfig) -> None:
+    """The scalable path is all-or-nothing and native, detector-level only."""
+
+    scalable = config.scalable
+    sparse_solver = config.reconstructor.kind == "sparse_lsmr_tikhonov"
+    linear_spline = config.dm.influence_model == "linear_spline"
+    if scalable is None:
+        if sparse_solver or linear_spline:
+            raise SystemConfigError(
+                "linear_spline DMs and the sparse_lsmr_tikhonov reconstructor "
+                "require the scalable block."
+            )
+        return
+    requirements = (
+        (config.backend == "native", "backend='native'"),
+        (config.wfs_model == "detector_level", "wfs_model='detector_level'"),
+        (linear_spline, "dm.influence_model='linear_spline'"),
+        (config.calibration.probe_kind == "dm_actuator", "calibration.probe_kind='dm_actuator'"),
+        (not config.calibration.include_noise, "calibration.include_noise=false"),
+        (config.calibration.source in {"build", "supplied"}, "calibration.source build or supplied"),
+        (sparse_solver, "reconstructor.kind='sparse_lsmr_tikhonov'"),
+        (config.command_projector.kind == "controlled_subset", "command_projector.kind='controlled_subset'"),
+    )
+    missing = [label for ok, label in requirements if not ok]
+    if missing:
+        raise SystemConfigError(
+            "the scalable path requires " + ", ".join(missing) + "."
         )
 
 
@@ -1080,7 +1238,12 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
     # :meth:`SystemConfig.__post_init__` owns that rule, because it must hold
     # for a configuration however it was made, not only for a parsed record.
     values = _mapping(root["config"], "config")
-    _keys(values, _SYSTEM_FIELDS, "config")
+    _keys(
+        values,
+        _SYSTEM_FIELDS | {"scalable"} if schema_version >= 5 else _SYSTEM_FIELDS,
+        "config",
+    )
+    scalable_record = values.get("scalable") if schema_version >= 5 else None
     return SystemConfig(
         backend=cast(BackendName, values["backend"]),
         wfs_model=cast(WfsModel, values["wfs_model"]),
@@ -1114,6 +1277,11 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
         random=_construct(RandomSeedConfig, values["random"], _RANDOM_FIELDS, "random"),
         profile=profile,
         record_schema_version=schema_version,
+        scalable=(
+            None
+            if scalable_record is None
+            else _construct(ScalablePathConfig, scalable_record, _SCALABLE_FIELDS, "scalable")
+        ),
     )
 
 
@@ -1152,7 +1320,7 @@ def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
         atmosphere_fields["layers"] = [
             _dataclass_mapping(layer) for layer in config.atmosphere.layers
         ]
-    return {
+    record: dict[str, object] = {
         "schema_name": PROFILE_SCHEMA_NAME,
         "schema_version": config.record_schema_version,
         "profile_name": profile.profile_name,
@@ -1181,6 +1349,13 @@ def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
             "random": _dataclass_mapping(config.random),
         },
     }
+    if config.record_schema_version >= 5:
+        config_record = record["config"]
+        assert isinstance(config_record, dict)
+        config_record["scalable"] = (
+            None if config.scalable is None else _dataclass_mapping(config.scalable)
+        )
+    return record
 
 
 _SYSTEM_FIELDS = {"backend", "wfs_model", "atmosphere_model", "telescope_diameter_m", "pupil_pixels", "lenslets_across", "actuators_across", "wfs_wavelength_m", "science_wavelengths_m", "atmosphere", "detector", "wfs", "dm", "calibration", "reconstructor", "command_projector", "controller", "science", "random"}
@@ -1205,6 +1380,7 @@ _RECONSTRUCTOR_FIELDS = {"kind", "rcond", "alpha", "min_valid_fraction", "min_ra
 _PROJECTOR_FIELDS = {"kind", "mapping_resource"}
 _CONTROLLER_FIELDS = {"n_steps", "gain", "leak", "latency_frames", "frame_rate_hz", "include_noise"}
 _SCIENCE_FIELDS = {"psf_pad_factor"}
+_SCALABLE_FIELDS = {"dm_operator", "wfs_geometry", "calibration_strategy", "solver", "solver_atol", "solver_btol", "solver_max_iterations", "nonconverged_policy"}
 _RANDOM_FIELDS = {"root_seed", "derivation_scheme_id"}
 
 
@@ -1427,6 +1603,7 @@ __all__ = (
     "CalibrationConfig",
     "ReconstructorConfig",
     "CommandProjectorConfig",
+    "ScalablePathConfig",
     "ControllerConfig",
     "ScienceConfig",
     "RandomSeedConfig",

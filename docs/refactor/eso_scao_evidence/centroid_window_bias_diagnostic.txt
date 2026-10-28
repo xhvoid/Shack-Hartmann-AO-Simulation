@@ -1,0 +1,12 @@
+window 24: symmetric local defocus -> mean slope (px)
+   defocus scale     0 nm: mean sx +0.00000  sy +0.00000  valid 1.00
+   defocus scale   100 nm: mean sx -0.00024  sy -0.00024  valid 1.00
+   defocus scale   200 nm: mean sx -0.00100  sy -0.00100  valid 1.00
+   defocus scale   400 nm: mean sx -0.00505  sy -0.00505  valid 1.00
+window 23: symmetric local defocus -> mean slope (px)
+   defocus scale     0 nm: mean sx +0.00000  sy +0.00000  valid 1.00
+   defocus scale   100 nm: mean sx +0.00000  sy +0.00000  valid 1.00
+   defocus scale   200 nm: mean sx +0.00000  sy +0.00000  valid 1.00
+   defocus scale   400 nm: mean sx +0.00000  sy +0.00000  valid 1.00
+window 24: closed-loop residual tilt after burn-in (rad): mean x +2.623e-08 y +1.828e-08  std x 1.73e-08 y 1.21e-08; residual 188.6 nm, usable 1.00, valid sub 1.000
+window 23: closed-loop residual tilt after burn-in (rad): mean x +6.065e-10 y -6.636e-09  std x 1.74e-08 y 1.19e-08; residual 183.7 nm, usable 1.00, valid sub 1.000

@@ -1,0 +1,249 @@
+{
+  "atmosphere": {
+    "max_travel_m": 2.0894000000000004,
+    "periodic_band_repeated": false,
+    "screen_period_m": 10.084033613445342
+  },
+  "calibration": {
+    "cache_key": "4b911a5c56b335d77cfeea98fc494d525741ebfbbd54db2775f84ac66927e775",
+    "calibration_hash": "8eb818711b1ecd4758e3f6fc22b21089b500008c3c68c396e803f706a644a1d4",
+    "nnz": 576,
+    "probe_group_count": 5,
+    "reused_from_cache": false,
+    "sensor_call_count": 11,
+    "stored_bytes": 10376,
+    "strategy": "grouped_local_noiseless_v1"
+  },
+  "claim_boundary": "software correctness and agreement with the declared ESO-derived model only; not an ESO instrument model, not validated against ESO SCAO data, and not comparable to the R1 GLAO/LTAO PSF files",
+  "config_hash": "cad92b4db22b3050c041bc2bf30e3ecd6565034e91880666a4b5ee15eeaff48c",
+  "counts": {
+    "actuators": {
+      "calibrated_coordinates": 96,
+      "controllable": 117,
+      "excluded_by_reason": {
+        "no_retained_lenslet_support": 12,
+        "zero_illuminated_support": 9
+      },
+      "illuminated": 108,
+      "nominal": 121,
+      "retained_layout": 117
+    },
+    "lenslets": {
+      "calibration_valid": 72,
+      "nominal": 100,
+      "retained": 72
+    }
+  },
+  "execution": {
+    "host": {
+      "available_bytes": 4352327680,
+      "available_source": "psutil.virtual_memory",
+      "cpu_count": 8,
+      "machine": "arm64",
+      "physical_bytes": 17179869184,
+      "platform": "darwin",
+      "pressure_level": "normal",
+      "pressure_raw": "1",
+      "pressure_source": "sysctl:kern.memorystatus_vm_pressure_level",
+      "reliable": true,
+      "timestamp_unix_s": 1792018182.2627
+    },
+    "lenslet_batch_size": 512,
+    "numpy": "2.5.0",
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "process_peak_rss_bytes": 138182656,
+    "python": "3.14.3",
+    "thread_environment": {
+      "MKL_NUM_THREADS": "2",
+      "NUMEXPR_NUM_THREADS": "2",
+      "OMP_NUM_THREADS": "2",
+      "OPENBLAS_NUM_THREADS": "2",
+      "VECLIB_MAXIMUM_THREADS": "2"
+    }
+  },
+  "gates": {},
+  "label": "ESO-derived SCAO benchmark",
+  "ledgers": {
+    "benchmarks/eso_drm_42m_scao_derived.assumptions.v1.json": "adc5e93d97b2db8a29850eb05c63bcad0ec5c14e8881d7128438f21b5318b15d",
+    "benchmarks/eso_scao_source_ledger.v1.json": "abbfd14af06f38a9296723a7c5e2a2fede7faa3472d3a3fe5e9b2ac88ba2b522"
+  },
+  "loop": {
+    "final_post_update_residual_rms_nm": 177.3648861518777,
+    "loop_hash": "cf7ea9af87fcd7d11f77b9d027ebfbe161d210cd3a29c794191bf716eb8b435c",
+    "max_saturation_fraction": 0.0,
+    "mean_open_loop_rms_nm": 1434.795599509017,
+    "mean_post_burn_in_residual_rms_nm": 239.98355802799873,
+    "reconstruction_usable_fraction": 1.0,
+    "usable_nonzero_updates": 32
+  },
+  "n_steps": 32,
+  "observer_neutrality": {
+    "arrays_equal": {
+      "applied_command_history_opd_m": true,
+      "measurement_row_masks": true,
+      "post_update_residual_opd_rms_m": true,
+      "pre_update_residual_opd_rms_m": true,
+      "requested_command_history_opd_m": true
+    },
+    "loop_hash_equal": true,
+    "passed": true
+  },
+  "observing_conditions_hash": "fd9e333437a45d7f9399b0ad08b9f48c4df4789902537241b9c922348f4e0e7c",
+  "profile": "eso_scao_smoke_5m_software@1",
+  "profile_component_config_hashes": {
+    "atmosphere": "a20950bcc29f4d1a7f8634a1a22e940a4137c53769d980735a296669195d93af",
+    "calibration": "410d850f4fa10ad67d1aa9c61d60ccdb15fdeafb8077a9a26ce480a9422a48f5",
+    "command_projector": "f4985996c70388a4a777684c16bde99947e3ef552b389bd012cfc6d6f04c84cb",
+    "controller": "87c35f4bebcd2489db6a583959d2995eb9b4a44c6449623b7c2f971f73626871",
+    "detector": "f9c7f6db3ba5cccbbe6870d7ea685b834b9f98cb2586e658c60a9ceb40089438",
+    "dm": "c4458122b83b83e4e8ef8dcfcbe5aa1fa4d400656cc71eec2d039bc85bd15665",
+    "profile": "595786bf9debd982b1170be139e0671f6091823448c1348a13e9d08c60a993a4",
+    "random": "02bced068b5fe270ac9e8f27bb3e4e79b054b08ef941de956fb5d94ecac55c76",
+    "reconstructor": "5592550a7c9b0c82aad62103e14820abb8116d9b73663bdc7058ba5c7055f0e2",
+    "scalable": "d9b37f0f18f753b172a4c540790d061a79e9b9934495c0c2eb7fd1afbc47350a",
+    "science": "1c5bdbe967a97b4a8709a5a8116b0be1ce8691d56a94231b7e0d5f6d2721745f",
+    "wfs": "a1d51021742aee68894e73cfe203b00f9d508a9bc5af4ac161b2ce8ae7cbc175"
+  },
+  "profile_n_steps": 32,
+  "purpose": "software smoke: numerical behaviour and regression (desktop safe)",
+  "realization_index": 0,
+  "root_seed": 1,
+  "schema": "shwfs_ao.eso_scao_benchmark_result.v1",
+  "science": {
+    "config_hash": "69f8d1f817f75500c73825b452c6e0ecabfa840bd26e30d2377f59faba1b0afb",
+    "flux_denominator": "normalized_source_grid_flux",
+    "metadata": {
+      "coaddition": "intensity",
+      "flux_denominator": "normalized_source_grid_flux",
+      "recentering": "none",
+      "temporal_quadrature": "instantaneous_snapshot_rectangle_rule"
+    },
+    "metrics": [
+      {
+        "centering": "final_image_peak_for_fwhm_ee_profile_optical_axis_for_on_axis_strehl",
+        "ee50_radius_rad": 5.162114430868049e-07,
+        "ee80_radius_rad": 2.295347164628089e-06,
+        "flux_denominator": "normalized_source_grid_flux",
+        "fwhm_lambda_over_d": 1.0512995726621515,
+        "fwhm_rad": 3.4692885897851e-07,
+        "ideal_ee50_radius_rad": 2.0259165222051455e-07,
+        "ideal_ee80_radius_rad": 5.490926273740306e-07,
+        "ideal_fwhm_rad": 3.0751330071286635e-07,
+        "lambda_over_d_rad": 3.3e-07,
+        "on_axis_strehl": 0.4876254811916933,
+        "peak_offset_xy_rad": [
+          0.0,
+          0.0
+        ],
+        "peak_strehl": 0.4876254811916933,
+        "wavelength_m": 1.65e-06
+      },
+      {
+        "centering": "final_image_peak_for_fwhm_ee_profile_optical_axis_for_on_axis_strehl",
+        "ee50_radius_rad": 4.31831167724627e-07,
+        "ee80_radius_rad": 2.05026524869827e-06,
+        "flux_denominator": "normalized_source_grid_flux",
+        "fwhm_lambda_over_d": 1.012792521421601,
+        "fwhm_rad": 4.456287094255044e-07,
+        "ideal_ee50_radius_rad": 2.7012220296068606e-07,
+        "ideal_ee80_radius_rad": 7.321235031653742e-07,
+        "ideal_fwhm_rad": 4.100177342838216e-07,
+        "lambda_over_d_rad": 4.4e-07,
+        "on_axis_strehl": 0.6426941003528724,
+        "peak_offset_xy_rad": [
+          0.0,
+          0.0
+        ],
+        "peak_strehl": 0.6426941003528724,
+        "wavelength_m": 2.2e-06
+      }
+    ],
+    "propagator_backend": "native",
+    "propagator_config_hash": "40224c19472f1478cf0733c5cdb34d795e68f9d39f16207b2ec68fd13c751cef",
+    "reset_count": 0,
+    "residual": "pre_update",
+    "schema": "shwfs_ao.science.long_exposure_result.v1",
+    "selection": {
+      "burn_in_frames": 8,
+      "first_frame": 8,
+      "first_time_s": 0.016,
+      "frame_period_s": 0.002,
+      "last_frame": 31,
+      "last_time_s": 0.062,
+      "quadrature_exposure_s": 0.048,
+      "residual": "pre_update",
+      "residual_description": "pre-update residual measured by the WFS at each selected frame",
+      "sample_center_span_s": 0.046,
+      "sample_count": 24,
+      "sample_interval_s": 0.002,
+      "stride": 1,
+      "temporal_quadrature": "instantaneous_snapshot_rectangle_rule",
+      "uniform_weights": true,
+      "weight_sum": 24.0
+    },
+    "wavelengths_m": [
+      1.65e-06,
+      2.2e-06
+    ]
+  },
+  "science_files": {
+    "1650nm": "science_1650nm.npz",
+    "2200nm": "science_2200nm.npz"
+  },
+  "science_sha256": {
+    "1650nm": "4b8cce3b031a128b8f9b2b1b01e32c69fa19e09438c912ca92dcbbb774a80baf",
+    "2200nm": "53fd3f31c152e773b93f4d3976dff617cb80448ff4c97085cc834cb811ba0c6d"
+  },
+  "solver": {
+    "atol": 1e-08,
+    "btol": 1e-08,
+    "converged": 64,
+    "damping_absolute": 3382.548014510574,
+    "damping_relative": 0.001,
+    "initial_guess": "zero",
+    "iterations": 3466,
+    "max_iterations": 5000,
+    "max_iterations_used": 56,
+    "min_valid_fraction": 0.5,
+    "nonconverged_policy": "reject",
+    "rejected": 0,
+    "solver": "lsmr",
+    "solves": 64
+  },
+  "system_component_hashes": {
+    "atmosphere": "1a22db13b4672afded177c2044d6087a7abfcb109248c660ee40e681dfa68a11",
+    "command_projector": "160ec7cdd0c9f098af1dc5a193e85c494fd59e9b2ca4cdc6869d72b8e589ec6d",
+    "controller": "4f75e9023a663acc66883a5ebe2808e6874688916f38362570ad6c6aa0147641",
+    "dm": "3e740eb9d7b24fe3219c74182d4bdb3015f99f3be8d3619e9d3612506c231827",
+    "interaction_matrix": "8eb818711b1ecd4758e3f6fc22b21089b500008c3c68c396e803f706a644a1d4",
+    "pupil_geometry": "bd99e39156a1355cd3baf6e8a66d4c1206f082e100edb6f661768195bd361be5",
+    "random_streams": "2750dcfb47cd886b8f42c20ef4006e356a8463baa3ca7f9eaba28bb24c9f27ca",
+    "reconstructor": "129ee5c3df9116887186d55d60bf8b427a5a8f4738c9af9e0c983b5483b154d9",
+    "science_propagator": "40224c19472f1478cf0733c5cdb34d795e68f9d39f16207b2ec68fd13c751cef",
+    "wfs": "687c548f5318d313f04fde370701a29c2d49f2f99e4c52bf1144367a58c754e3"
+  },
+  "telemetry_file": "telemetry.npz",
+  "telemetry_sha256": {
+    "applied_command_history_opd_m": "4cf8ee9207162595a4f81882534b9c055db079762dc22b2598c4179898280bc1",
+    "pre_update_residual_opd_rms_m": "9edea331bb56f90b259fef6bdef6d88126c163573af53b60c96ed88149352691"
+  },
+  "tier": "ci",
+  "timing_semantics": {
+    "command_release": "controller queue releases frame k's increment in the update of frame k + latency_frames",
+    "detector_exposure_field_s": 0.002,
+    "detector_integration": "none: instantaneous snapshot (exposure_s is recorded, not integrated)",
+    "frame_period_s": 0.002,
+    "frame_timestamp": "k / frame_rate_hz; one instantaneous atmosphere sample per frame",
+    "latency_frames": 2,
+    "measured_to_first_seen_delay_frames": 3,
+    "science_residual": "pre-update residual measured by the WFS at each selected frame",
+    "science_temporal_quadrature": "instantaneous_snapshot_rectangle_rule"
+  },
+  "timings_s": {
+    "build_including_calibration_s": 0.2189124170690775,
+    "closed_loop_with_science_s": 0.8112992905080318,
+    "observer_free_rerun_s": 0.7508700843900442,
+    "per_frame_mean_s": 0.025353102828375995,
+    "science_metrics_s": 0.08636491745710373
+  }
+}

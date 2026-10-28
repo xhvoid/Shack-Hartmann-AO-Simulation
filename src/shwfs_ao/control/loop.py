@@ -7,7 +7,7 @@ their repository-owned protocols.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 import math
 from numbers import Integral, Real
 from typing import Any, Final, Protocol, cast, runtime_checkable
@@ -16,6 +16,7 @@ import warnings
 import numpy as np
 
 from ..calibration.interaction import InteractionMatrix
+from ..calibration.sparse import SparseInteractionMatrix
 from ..core.hashing import component_config_hash
 from ..core.protocols import (
     AtmosphereModel,
@@ -35,6 +36,13 @@ from ..core.types import (
 )
 from ..core.wavefront import masked_rms
 from .config import LoopConfig
+from .observation import (
+    FrameObservation,
+    FrameObservationError,
+    FrameObserver,
+    immutable_snapshot,
+    validate_frame_observers,
+)
 from .history import (
     LoopHistory,
     _COMMAND_SIGN_CONVENTION,
@@ -115,12 +123,13 @@ def run_closed_loop(
     atmosphere: AtmosphereModel,
     wfs: WavefrontSensor,
     dm: DeformableMirrorModel,
-    interaction_matrix: InteractionMatrix,
+    interaction_matrix: InteractionMatrix | SparseInteractionMatrix,
     reconstructor: Reconstructor,
     command_projector: CommandProjector,
     controller: Controller,
     include_noise: bool,
     realization_index: int = 0,
+    observers: Sequence[FrameObserver] = (),
 ) -> LoopHistory:
     """Run one deterministic, fixed-length canonical AO control sequence.
 
@@ -128,6 +137,12 @@ def run_closed_loop(
     ``k / config.frame_rate_hz``.  Both residual metrics for that frame use
     that same sample.  The controller is the only component that delays
     reconstructed command increments.
+
+    ``observers`` receive a read-only :class:`FrameObservation` of every frame
+    after its DM update (see :mod:`shwfs_ao.control.observation`).  They are
+    passive: the returned history, including its ``config_hash``, is the same
+    with or without them.  An observer exception aborts the run as a
+    :class:`ControlLoopError` naming the frame.
     """
 
     validate_closed_loop_components(
@@ -143,6 +158,10 @@ def run_closed_loop(
         include_noise=include_noise,
         realization_index=realization_index,
     )
+    try:
+        frame_observers, observed_fields = validate_frame_observers(observers)
+    except FrameObservationError as exc:
+        raise ControlLoopError(str(exc)) from exc
     include_noise = bool(include_noise)
     realization_index = int(realization_index)
     component_hashes = _component_hashes(
@@ -366,6 +385,20 @@ def run_closed_loop(
         reconstruction_usable[frame_index] = usable
         measurement_row_masks[frame_index] = effective_rows
         current_correction = next_correction
+        if frame_observers:
+            _notify_observers(
+                frame_observers,
+                observed_fields,
+                frame_index=frame_index,
+                time_s=float(frame_time_s),
+                frame_period_s=1.0 / config.frame_rate_hz,
+                latency_frames=config.latency_frames,
+                reconstruction_usable=usable,
+                saturation_fraction=float(synthesis.saturation_fraction),
+                atmosphere_opd_m=atmospheric_opd,
+                pre_update_residual_opd_m=residual_before,
+                post_update_residual_opd_m=residual_after,
+            )
 
     assert expected_subaperture_count is not None
     usable_frames = int(np.count_nonzero(reconstruction_usable))
@@ -457,7 +490,7 @@ def validate_closed_loop_components(
     atmosphere: AtmosphereModel,
     wfs: WavefrontSensor,
     dm: DeformableMirrorModel,
-    interaction_matrix: InteractionMatrix,
+    interaction_matrix: InteractionMatrix | SparseInteractionMatrix,
     reconstructor: Reconstructor,
     command_projector: CommandProjector,
     controller: Controller,
@@ -522,8 +555,11 @@ def _preflight(
     reconstructor = cast(Reconstructor, reconstructor)
     command_projector = cast(CommandProjector, command_projector)
     controller = cast(Controller, controller)
-    if not isinstance(interaction_matrix, InteractionMatrix):
-        raise ControlLoopError("interaction_matrix must be an InteractionMatrix.")
+    if not isinstance(interaction_matrix, (InteractionMatrix, SparseInteractionMatrix)):
+        raise ControlLoopError(
+            "interaction_matrix must be an InteractionMatrix or a "
+            "SparseInteractionMatrix."
+        )
     if not isinstance(include_noise, (bool, np.bool_)):
         raise ControlLoopError("include_noise must be a boolean.")
     if (
@@ -641,6 +677,49 @@ def _preflight(
             )
 
 
+def _notify_observers(
+    observers: tuple[FrameObserver, ...],
+    fields: frozenset[str],
+    *,
+    frame_index: int,
+    time_s: float,
+    frame_period_s: float,
+    latency_frames: int,
+    reconstruction_usable: bool,
+    saturation_fraction: float,
+    atmosphere_opd_m: np.ndarray,
+    pre_update_residual_opd_m: np.ndarray,
+    post_update_residual_opd_m: np.ndarray,
+) -> None:
+    """Hand one immutable frame record to every observer, in order."""
+
+    maps = {
+        "atmosphere_opd_m": atmosphere_opd_m,
+        "pre_update_residual_opd_m": pre_update_residual_opd_m,
+        "post_update_residual_opd_m": post_update_residual_opd_m,
+    }
+    observation = FrameObservation(
+        frame_index=frame_index,
+        time_s=time_s,
+        frame_period_s=frame_period_s,
+        latency_frames=latency_frames,
+        reconstruction_usable=reconstruction_usable,
+        saturation_fraction=saturation_fraction,
+        **{
+            name: immutable_snapshot(values) if name in fields else None
+            for name, values in maps.items()
+        },
+    )
+    for index, observer in enumerate(observers):
+        try:
+            observer.observe(observation)
+        except Exception as exc:
+            raise ControlLoopError(
+                f"frame observer {index} ({type(observer).__qualname__}) failed "
+                f"at frame {frame_index} (t = {time_s:.9g} s): {exc}"
+            ) from exc
+
+
 def _atmospheric_opd(
     value: object,
     *,
@@ -687,7 +766,7 @@ def _measurement(
 def _estimate(
     value: object,
     *,
-    interaction_matrix: InteractionMatrix,
+    interaction_matrix: InteractionMatrix | SparseInteractionMatrix,
     effective_rows: np.ndarray,
 ) -> ReconstructionEstimate:
     if not isinstance(value, ReconstructionEstimate):
@@ -842,7 +921,7 @@ def _component_hashes(
     atmosphere: AtmosphereModel,
     wfs: WavefrontSensor,
     dm: DeformableMirrorModel,
-    interaction_matrix: InteractionMatrix,
+    interaction_matrix: InteractionMatrix | SparseInteractionMatrix,
     reconstructor: Reconstructor,
     command_projector: CommandProjector,
     controller: Controller,

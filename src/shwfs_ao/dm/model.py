@@ -30,6 +30,7 @@ from .config import DMConfig, actuator_ids_from_grid_indices
 __all__ = (
     "COMMAND_UNIT",
     "DmBackend",
+    "ScalableDmBackend",
     "DeformableMirrorError",
     "DeformableMirror",
     "build_native_deformable_mirror",
@@ -51,6 +52,58 @@ class DmBackend(Protocol):
 
     def opd_from_commands(self, commands_opd_m: np.ndarray) -> np.ndarray:
         ...
+
+
+@runtime_checkable
+class ScalableDmBackend(Protocol):
+    """Opt-in spatial operator that never needs a dense influence cube.
+
+    A backend declaring ``spatial_operator_kind == "local_sparse"`` exposes its
+    actuator count, output geometry, and immutable identity directly, plus a
+    forward map, its adjoint, local influence access, and the actuators whose
+    support has no illuminated sample.  :class:`DeformableMirror` then never
+    calls ``influence_functions()`` to learn a shape or a hash; the dense cube
+    remains available only through a size-guarded compatibility method.
+    """
+
+    @property
+    def spatial_operator_kind(self) -> str:
+        ...
+
+    @property
+    def config_hash(self) -> str:
+        ...
+
+    @property
+    def n_actuators(self) -> int:
+        ...
+
+    @property
+    def output_shape(self) -> tuple[int, int]:
+        ...
+
+    @property
+    def zero_support_mask(self) -> np.ndarray:
+        ...
+
+    def opd_from_commands(self, commands_opd_m: np.ndarray) -> np.ndarray:
+        ...
+
+    def adjoint(self, opd_m: np.ndarray) -> np.ndarray:
+        ...
+
+    def local_influence(self, index: int) -> tuple[np.ndarray, np.ndarray]:
+        ...
+
+    def dense_influence_functions(self, *, max_bytes: int = ...) -> np.ndarray:
+        ...
+
+
+def _is_scalable_backend(backend: object) -> bool:
+    return (
+        getattr(backend, "spatial_operator_kind", None) == "local_sparse"
+        and isinstance(backend, ScalableDmBackend)
+    )
 
 
 class DeformableMirrorError(ValueError):
@@ -105,14 +158,31 @@ class DeformableMirror:
             )
         if len(actuator_ids) != len(set(actuator_ids)):
             raise DeformableMirrorError("actuator_ids must not contain duplicates.")
-        if not isinstance(backend, DmBackend):
+        scalable = _is_scalable_backend(backend)
+        if not scalable and not isinstance(backend, DmBackend):
             raise DeformableMirrorError(
                 "backend must implement influence_functions() and "
                 "opd_from_commands()."
             )
 
-        influences = _backend_influence_functions(backend)
-        count = int(influences.shape[0])
+        influences: np.ndarray | None
+        if scalable:
+            # The scalable path learns count, shape and identity from the
+            # operator itself and never materializes the influence cube.
+            influences = None
+            operator = backend
+            count = int(operator.n_actuators)  # type: ignore[attr-defined]
+            output_shape = tuple(
+                int(value) for value in operator.output_shape  # type: ignore[attr-defined]
+            )
+            if count < 1 or len(output_shape) != 2 or min(output_shape) < 1:
+                raise DeformableMirrorError(
+                    "scalable DM operator must report positive count and shape."
+                )
+        else:
+            influences = _backend_influence_functions(backend)
+            count = int(influences.shape[0])
+            output_shape = (int(influences.shape[1]), int(influences.shape[2]))
         if len(actuator_ids) != count:
             raise DeformableMirrorError(
                 f"actuator_ids length {len(actuator_ids)} != backend actuator "
@@ -132,7 +202,7 @@ class DeformableMirror:
             x_m,
             y_m,
             pupil_mask,
-            output_shape=(int(influences.shape[1]), int(influences.shape[2])),
+            output_shape=(output_shape[0], output_shape[1]),
         )
 
         dead_mask = np.zeros(count, dtype=bool)
@@ -157,14 +227,19 @@ class DeformableMirror:
             "backend_name",
             fallback=backend_identity,
         )
-        backend_config_hash = _optional_backend_string(
-            backend,
-            "config_hash",
-            fallback=stable_hash(
-                influences,
-                namespace="dm_backend_influence_functions",
-            ),
-        )
+        if influences is None:
+            backend_config_hash = _optional_backend_string(
+                backend, "config_hash", fallback=""
+            )
+        else:
+            backend_config_hash = _optional_backend_string(
+                backend,
+                "config_hash",
+                fallback=stable_hash(
+                    influences,
+                    namespace="dm_backend_influence_functions",
+                ),
+            )
         self._config = config
         self._backend = backend
         self._actuator_ids = actuator_ids
@@ -173,7 +248,11 @@ class DeformableMirror:
         self._x_m = x_grid
         self._y_m = y_grid
         self._pupil_mask = pupil
-        self._influence_functions = _readonly_array(influences, dtype=float)
+        self._output_shape = (output_shape[0], output_shape[1])
+        self._influence_functions = (
+            None if influences is None else _readonly_array(influences, dtype=float)
+        )
+        self._scalable = scalable
         self._dead_actuator_mask = _readonly_array(dead_mask, dtype=bool)
         self._stuck_actuator_mask = _readonly_array(stuck_mask, dtype=bool)
         controllable = ~(dead_mask | stuck_mask)
@@ -189,27 +268,49 @@ class DeformableMirror:
         self._backend_name = backend_name
         self._backend_config_hash = backend_config_hash
 
-        self._config_hash = component_config_hash(
-            "deformable_mirror",
-            {
-                "config": config,
-                "sampled_x_m": x_grid,
-                "sampled_y_m": y_grid,
-                "pupil_mask": pupil,
-                "actuator_ids": actuator_ids,
-                "actuator_centers_m": centers,
-                "actuator_pitch_m": pitch,
-                "dead_actuator_mask": dead_mask,
-                "stuck_actuator_mask": stuck_mask,
-                "command_unit": COMMAND_UNIT,
-                "command_convention": _COMMAND_CONVENTION,
-                "synthesis_convention": _SYNTHESIS_CONVENTION,
-                "backend_identity": backend_identity,
-                "backend_name": backend_name,
-                "backend_config_hash": backend_config_hash,
-                "influence_functions": influences,
-            },
-        )
+        identity_payload: dict[str, Any] = {
+            "config": config,
+            "sampled_x_m": x_grid,
+            "sampled_y_m": y_grid,
+            "pupil_mask": pupil,
+            "actuator_ids": actuator_ids,
+            "actuator_centers_m": centers,
+            "actuator_pitch_m": pitch,
+            "dead_actuator_mask": dead_mask,
+            "stuck_actuator_mask": stuck_mask,
+            "command_unit": COMMAND_UNIT,
+            "command_convention": _COMMAND_CONVENTION,
+            "synthesis_convention": _SYNTHESIS_CONVENTION,
+            "backend_identity": backend_identity,
+            "backend_name": backend_name,
+            "backend_config_hash": backend_config_hash,
+        }
+        if influences is None:
+            # The operator's own content hash binds ordered support indices,
+            # weights, sampled geometry, basis version and zero-support
+            # classification; no dense cube is reconstructed to hash it.
+            zero_support = np.asarray(
+                backend.zero_support_mask,  # type: ignore[attr-defined]
+                dtype=np.bool_,
+            )
+            if zero_support.shape != (count,):
+                raise DeformableMirrorError(
+                    "zero_support_mask must have one entry per actuator."
+                )
+            identity_payload["spatial_operator_kind"] = "local_sparse"
+            identity_payload["zero_illuminated_support"] = zero_support
+            self._zero_support = _readonly_array(zero_support, dtype=bool)
+            self._config_hash = component_config_hash(
+                "deformable_mirror.scalable_operator", identity_payload
+            )
+        else:
+            identity_payload["influence_functions"] = influences
+            self._zero_support = _readonly_array(
+                ~np.any(influences != 0.0, axis=(1, 2)), dtype=bool
+            )
+            self._config_hash = component_config_hash(
+                "deformable_mirror", identity_payload
+            )
         self._actuator_metadata = _build_actuator_metadata(
             actuator_ids,
             centers,
@@ -256,10 +357,56 @@ class DeformableMirror:
 
     @property
     def output_shape(self) -> tuple[int, int]:
-        return (
-            int(self._influence_functions.shape[1]),
-            int(self._influence_functions.shape[2]),
+        return self._output_shape
+
+    @property
+    def is_scalable(self) -> bool:
+        """True when a sparse local operator, not a dense stack, synthesizes."""
+
+        return self._scalable
+
+    @property
+    def spatial_operator(self) -> ScalableDmBackend | None:
+        """The scalable spatial operator, or ``None`` on the dense path."""
+
+        return self._backend if self._scalable else None  # type: ignore[return-value]
+
+    @property
+    def zero_support_mask(self) -> np.ndarray:
+        """True for actuators whose influence has no nonzero sampled value.
+
+        Such an actuator stays in the full layout (its ID is physical) but has
+        no geometric effect; it is a geometric exclusion, not a fault.
+        """
+
+        return self._zero_support
+
+    @property
+    def geometric_exclusion_ids(self) -> tuple[str, ...]:
+        return tuple(
+            identifier
+            for identifier, excluded in zip(
+                self._actuator_ids, self._zero_support, strict=True
+            )
+            if excluded
         )
+
+    def adjoint_opd(self, opd_m: np.ndarray) -> np.ndarray:
+        """Adjoint of the raw linear synthesis: commands from an OPD map."""
+
+        values = np.asarray(opd_m, dtype=float)
+        if values.shape != self._output_shape:
+            raise DeformableMirrorError(
+                f"opd_m shape {values.shape} != {self._output_shape}."
+            )
+        if self._scalable:
+            return np.asarray(
+                self._backend.adjoint(values),  # type: ignore[attr-defined]
+                dtype=float,
+            )
+        assert self._influence_functions is not None
+        masked = np.where(np.isfinite(values), values, 0.0)
+        return np.tensordot(self._influence_functions, masked, axes=([1, 2], [0, 1]))
 
     @property
     def actuator_ids(self) -> tuple[str, ...]:
@@ -291,6 +438,18 @@ class DeformableMirror:
 
     @property
     def influence_functions(self) -> np.ndarray:
+        """Dense influence stack.
+
+        On the scalable path this is a size-guarded compatibility view for
+        small problems; it raises rather than silently allocating a large cube.
+        """
+
+        if self._influence_functions is None:
+            try:
+                dense = self._backend.dense_influence_functions()  # type: ignore[attr-defined]
+            except ValueError as exc:
+                raise DeformableMirrorError(str(exc)) from exc
+            return _readonly_array(dense, dtype=float)
         return _readonly_array(self._influence_functions, dtype=float)
 
     @property
@@ -402,6 +561,23 @@ def build_native_deformable_mirror(
         include_edge_actuators=resolved_config.include_edge_actuators,
         actuator_margin_fraction=resolved_config.actuator_margin_fraction,
     )
+    if resolved_config.influence_model == "linear_spline":
+        from ..backends.native.dm_operator import LinearSplineDmOperator
+
+        try:
+            operator = LinearSplineDmOperator(x_m, y_m, pupil_mask, centers, pitch)
+        except ValueError as exc:
+            raise DeformableMirrorError(str(exc)) from exc
+        return DeformableMirror(
+            resolved_config,
+            operator,
+            actuator_ids=actuator_ids_from_grid_indices(grid_indices_rc),
+            actuator_centers_m=centers,
+            actuator_pitch_m=pitch,
+            x_m=x_m,
+            y_m=y_m,
+            pupil_mask=pupil_mask,
+        )
     influences = build_influence_functions(
         x_m,
         y_m,
