@@ -691,6 +691,15 @@ def band_average_scalar_metrics(
         }
     )
     averaged = _weighted_scalar_fields(rows, normalized, scalar_names)
+    # A convex combination of per-wavelength values is bounded by the largest
+    # input, but the float summation can overshoot that bound by round-off
+    # (e.g. averaging exact 1.0 Marechal Strehls), which the constructed
+    # result would then reject.  Clamp to the tightest input-proven bound.
+    for name in ("marechal_strehl", "halo_fraction"):
+        averaged[name] = min(
+            averaged[name],
+            max(getattr(row, name) for row in rows),
+        )
     return PsfScalarMetrics(
         **averaged,
         telescope_diameter_m=first.telescope_diameter_m,

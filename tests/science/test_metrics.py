@@ -512,6 +512,41 @@ def test_band_average_is_normalized_scalar_only_summary() -> None:
     )
 
 
+def test_band_average_round_off_never_overshoots_validated_bounds() -> None:
+    # These eleven weights are chosen so the normalized weighted sum of an
+    # exactly-1.0 field computes to 1 + 2**-52 in float arithmetic; without
+    # the input-proven clamp the perfectly valid average of perfect
+    # diffraction-limited rows would be rejected by the result validator.
+    weights = (
+        0.25068733928511167,
+        0.596791393469411,
+        0.44231403369907896,
+        0.17481948445144113,
+        0.47162541509628797,
+        0.40990539565755457,
+        0.5691127395242802,
+        0.5086001300626332,
+        0.3114460010002068,
+        0.35715168259026286,
+        0.837661174368979,
+    )
+    perfect = replace(
+        _metric_row(),
+        peak_strehl=1.0,
+        marechal_strehl=1.0,
+        marechal_abs_difference=0.0,
+    )
+    normalized = np.asarray(weights, dtype=float) / float(
+        np.sum(np.asarray(weights, dtype=float))
+    )
+    assert float(sum(float(w) * 1.0 for w in normalized)) > 1.0
+
+    result = band_average_scalar_metrics((perfect,) * len(weights), weights)
+
+    assert result.marechal_strehl == 1.0
+    assert result.halo_fraction == perfect.halo_fraction
+
+
 @pytest.mark.parametrize(
     ("rows", "weights", "message"),
     (
