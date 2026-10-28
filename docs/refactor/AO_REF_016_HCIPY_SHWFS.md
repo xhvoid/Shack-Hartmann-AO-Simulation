@@ -67,9 +67,12 @@ the backend config hash.
   length, per axis; the window reference pixel is the nominal window centre
   `((w−1)/2, (w−1)/2)`. Each lenslet's true optical axis sits at a
   deterministic subpixel offset from that reference (the cell centres are
-  not pixel-block centres); exactly as for the native backend, the
-  repository zero-phase reference calibration absorbs it, and a test checks
-  interior zero-phase spots sit on the predicted axes.
+  not pixel-block centres); the repository zero-phase reference calibration
+  absorbs it for the flat spot, and a test checks interior zero-phase spots
+  sit on the predicted axes. It does not absorb the window asymmetry that
+  the offset leaves for broadened spots, which a closed loop holds as static
+  focus; AO-REF-016A (`AO_REF_016A_HCIPY_LENSLET_AXIS.md`) adds the opt-in
+  block-centred axes that remove it.
 - The repository phase convention `phase = 2π · OPD / λ` is applied through
   the AO-REF-013 conversion layer, and HCIPy's measured chain satisfies the
   repository detector orientation directly: increasing positive x-tilt

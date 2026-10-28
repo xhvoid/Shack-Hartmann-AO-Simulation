@@ -9,19 +9,26 @@ parabolic microlens array and the Fresnel propagation to its focal plane:
   subaperture ID, in the exact geometry order, with relative lenslet
   throughput reported separately.  Detector noise, centroiding, and validity
   remain the repository detector chain.
-- The microlens array is built at the repository's nominal lenslet cell
-  centres — including cells the geometry rejected, so their light is still
-  focused by a lens instead of leaking unphysically — and HCIPy's
-  closest-centre lenslet assignment provably reproduces the repository
-  index-block partition; construction verifies that equivalence and fails
-  loudly on any drift.
+- The microlens array has one lens per nominal lenslet cell — including
+  cells the geometry rejected, so their light is still focused by a lens
+  instead of leaking unphysically — and HCIPy's closest-centre lenslet
+  assignment provably reproduces the repository index-block partition;
+  construction verifies that equivalence and fails loudly on any drift.
 - The detector plane is the pupil-sampled focal plane: each retained
   subaperture's window is its own pixel block, ``pixel_scale_rad`` is the
   detector pixel pitch divided by the lenslet focal length, and the window
-  reference pixel is the nominal window centre.  The per-lenslet subpixel
-  offset of each optical axis is real, deterministic, and absorbed by the
-  repository zero-phase reference calibration, exactly as for the native
-  backend.
+  reference pixel is the nominal window centre.
+- ``lenslet_axis`` places the lens vertices, and with them the spot axes.
+  ``"geometry_cell_center"`` (the published behaviour) uses the geometry's
+  continuous cell centres.  Those cells span the first to the last pixel
+  *centre*, so they are ``(N - 1)/n`` pixels wide on ``N/n``-pixel blocks
+  and the axis drifts across its block by up to half a pixel.  The zero-phase
+  reference absorbs that offset for a flat spot only.  As the spot broadens,
+  the window's asymmetry about the drifted axis becomes a slope bias, opposite
+  on opposite sides of the pupil, that a closed loop holds as static focus.
+  ``"pixel_block_center"`` puts each vertex at the mean of its block's sample
+  coordinates, so every window is symmetric about its axis
+  (``docs/refactor/AO_REF_016A_HCIPY_LENSLET_AXIS.md``).
 - The repository phase convention ``phase = 2π · OPD / λ`` and detector
   orientation are preserved: increasing positive x-tilt moves the reported
   spot toward increasing detector column x, and positive y-tilt toward
@@ -41,6 +48,7 @@ from __future__ import annotations
 
 import math
 from numbers import Real
+from typing import Literal
 import warnings
 
 import numpy as np
@@ -73,6 +81,15 @@ _WINDOW_MAPPING_ID = "nominal-index-block-windows-center-reference-v1"
 _THROUGHPUT_SEMANTICS = "window_flux_over_lenslet_input_flux_clipped"
 """Meaning of ``relative_throughput``: detector-window capture fraction."""
 
+LensletAxis = Literal["geometry_cell_center", "pixel_block_center"]
+_PUBLISHED_LENSLET_AXIS: LensletAxis = "geometry_cell_center"
+"""Lens vertices of every published HCIPy profile (``high_order_10m_hcipy@1-3``)."""
+
+_LENSLET_AXES: tuple[LensletAxis, ...] = (
+    "geometry_cell_center",
+    "pixel_block_center",
+)
+
 __all__ = (
     "HcipyShackHartmannError",
     "HcipyShackHartmannOptics",
@@ -100,6 +117,11 @@ class HcipyShackHartmannOptics:
         Lenslet focal ratio.  The focal length is ``f_number`` times the
         lenslet pitch, and the diffraction-limited spot then spans
         ``λ · f_number / pixel_pitch`` detector pixels.
+    lenslet_axis:
+        Where each lens vertex, and so each spot axis, sits:
+        ``"geometry_cell_center"`` (default, published behaviour) or
+        ``"pixel_block_center"``, which centres every axis in its window.
+        See the module notes.
 
     Notes
     -----
@@ -114,6 +136,7 @@ class HcipyShackHartmannOptics:
         wfs_wavelength_m: float,
         *,
         f_number: float,
+        lenslet_axis: LensletAxis = _PUBLISHED_LENSLET_AXIS,
     ) -> None:
         if not isinstance(geometry, ShackHartmannGeometry):
             raise HcipyShackHartmannError(
@@ -121,6 +144,11 @@ class HcipyShackHartmannOptics:
             )
         wavelength_m = _positive("wfs_wavelength_m", wfs_wavelength_m)
         focal_ratio = _positive("f_number", f_number)
+        if lenslet_axis not in _LENSLET_AXES:
+            raise HcipyShackHartmannError(
+                f"lenslet_axis must be one of {list(_LENSLET_AXES)}; got "
+                f"{lenslet_axis!r}."
+            )
 
         rows, columns = geometry.pupil_shape
         count = geometry.n_lenslets_across
@@ -152,31 +180,47 @@ class HcipyShackHartmannOptics:
             window_rows=window_rows,
             window_columns=window_columns,
         )
-        nominal_centers_xy_m = _nominal_cell_centers_xy_m(geometry)
-        _validate_retained_centers(geometry, nominal_centers_xy_m)
+        if lenslet_axis == _PUBLISHED_LENSLET_AXIS:
+            nominal_centers_xy_m = _nominal_cell_centers_xy_m(geometry)
+            _validate_retained_centers(geometry, nominal_centers_xy_m)
+        else:
+            nominal_centers_xy_m = _pixel_block_centers_xy_m(
+                geometry,
+                window_rows=window_rows,
+                window_columns=window_columns,
+            )
+            _validate_block_centers_in_cells(geometry, nominal_centers_xy_m)
 
         self._geometry = geometry
         self._wfs_wavelength_m = wavelength_m
         self._f_number = focal_ratio
         self._focal_length_m = focal_length_m
+        self._lenslet_axis = lenslet_axis
+        self._lenslet_vertices_xy_m = _readonly_copy(nominal_centers_xy_m)
         self._sampling = sampling
         self._window_slices = window_slices
         self._lenslet_input_flux = lenslet_input_flux
+        hash_payload: dict[str, object] = {
+            "geometry_hash": geometry.geometry_hash,
+            "wfs_wavelength_m": wavelength_m,
+            "f_number": focal_ratio,
+            "focal_length_m": focal_length_m,
+            "window_shape_px": (window_rows, window_columns),
+            "detector_sampling_hash": sampling.sampling_hash,
+            "nominal_lenslet_centers_xy_m": nominal_centers_xy_m,
+            "propagation": _PROPAGATION_ID,
+            "window_mapping": _WINDOW_MAPPING_ID,
+            "relative_throughput_semantics": _THROUGHPUT_SEMANTICS,
+            "remove_local_piston": False,
+        }
+        # The published convention keeps its historical payload byte for
+        # byte, so @1-3 optics identities do not move; any other convention
+        # is named in its own.
+        if lenslet_axis != _PUBLISHED_LENSLET_AXIS:
+            hash_payload["lenslet_axis"] = lenslet_axis
         self._config_hash = component_config_hash(
             "hcipy.shack_hartmann_optics",
-            {
-                "geometry_hash": geometry.geometry_hash,
-                "wfs_wavelength_m": wavelength_m,
-                "f_number": focal_ratio,
-                "focal_length_m": focal_length_m,
-                "window_shape_px": (window_rows, window_columns),
-                "detector_sampling_hash": sampling.sampling_hash,
-                "nominal_lenslet_centers_xy_m": nominal_centers_xy_m,
-                "propagation": _PROPAGATION_ID,
-                "window_mapping": _WINDOW_MAPPING_ID,
-                "relative_throughput_semantics": _THROUGHPUT_SEMANTICS,
-                "remove_local_piston": False,
-            },
+            hash_payload,
         )
 
         # Resolving the optional dependency is the last construction step, so
@@ -237,6 +281,22 @@ class HcipyShackHartmannOptics:
     @property
     def focal_length_m(self) -> float:
         return self._focal_length_m
+
+    @property
+    def lenslet_axis(self) -> LensletAxis:
+        """Lens-vertex convention; see the module notes."""
+
+        return self._lenslet_axis
+
+    @property
+    def lenslet_vertices_xy_m(self) -> np.ndarray:
+        """Read-only ``(n_lenslets_across**2, 2)`` lens vertices, nominal-index order.
+
+        Row ``row * n_lenslets_across + column`` is the ``(x, y)`` optical
+        axis of that lenslet, including cells the geometry rejected.
+        """
+
+        return self._lenslet_vertices_xy_m
 
     @property
     def hcipy_backend_version(self) -> str:
@@ -420,6 +480,72 @@ def _nominal_cell_centers_xy_m(geometry: ShackHartmannGeometry) -> np.ndarray:
         for column in range(count)
     ]
     return np.asarray(centers, dtype=float)
+
+
+def _pixel_block_centers_xy_m(
+    geometry: ShackHartmannGeometry,
+    *,
+    window_rows: int,
+    window_columns: int,
+) -> np.ndarray:
+    """Return every lenslet's pixel-block centre in nominal-index order.
+
+    The centre is the mean of the block's sample coordinates.  That is the
+    midpoint of a cell whose edges lie on pixel edges, so the axis falls on
+    the window's geometric centre ``((W - 1)/2, (W - 1)/2)``.
+    """
+
+    count = geometry.n_lenslets_across
+    x_axis_m = np.asarray(geometry.x_m[0, :], dtype=float)
+    y_axis_m = np.asarray(geometry.y_m[:, 0], dtype=float)
+    x_centers_m = [
+        float(np.mean(x_axis_m[column * window_columns:(column + 1) * window_columns]))
+        for column in range(count)
+    ]
+    y_centers_m = [
+        float(np.mean(y_axis_m[row * window_rows:(row + 1) * window_rows]))
+        for row in range(count)
+    ]
+    centers = [
+        (x_centers_m[column], y_centers_m[row])
+        for row in range(count)
+        for column in range(count)
+    ]
+    return np.asarray(centers, dtype=float)
+
+
+def _validate_block_centers_in_cells(
+    geometry: ShackHartmannGeometry,
+    block_centers_xy_m: np.ndarray,
+) -> None:
+    """Require each retained vertex inside its cell, within half a pixel of it.
+
+    The block-centred vertex replaces the geometry's cell centre as the
+    optical axis.  It must still label the same lenslet, so it may move by
+    less than half a pupil pixel, which is the most the ``(N - 1)/n`` cells
+    can drift against ``N/n``-pixel blocks.
+    """
+
+    count = geometry.n_lenslets_across
+    half_pixel_m = (
+        0.5 * float(geometry.x_m[0, 1] - geometry.x_m[0, 0]),
+        0.5 * float(geometry.y_m[1, 0] - geometry.y_m[0, 0]),
+    )
+    for identifier, cell_xy_m in zip(
+        geometry.subaperture_ids,
+        geometry.subaperture_centers_m,
+    ):
+        row, column = lenslet_indices_from_id(identifier)
+        offset_xy_m = np.abs(
+            block_centers_xy_m[row * count + column]
+            - np.asarray(cell_xy_m, dtype=float)
+        )
+        if not (offset_xy_m[0] < half_pixel_m[0] and offset_xy_m[1] < half_pixel_m[1]):
+            raise HcipyShackHartmannError(
+                f"Pixel-block centre of {identifier!r} lies half a pixel or "
+                "more from its geometry cell centre; the block-centred lenslet "
+                "axis cannot represent this geometry."
+            )
 
 
 def _validate_retained_centers(

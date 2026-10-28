@@ -238,6 +238,44 @@ def test_stronger_seeing_changes_measurements_but_not_identities() -> None:
     assert baseline.config_hash != perturbed.config_hash
 
 
+def test_profile_lenslet_axis_reaches_the_hcipy_optics() -> None:
+    """``wfs.lenslet_axis`` moves the lens vertices and nothing else.
+
+    A profile that opts into block-centred axes builds the same pupil
+    geometry, DM and observing conditions; only the WFS identity and what
+    follows from it (calibration, reconstructor) change (AO-REF-016A).
+    """
+
+    config = _tiny_hcipy_system_config()
+    block = replace(
+        config, wfs=replace(config.wfs, lenslet_axis="pixel_block_center")
+    )
+    published = scao.build_scao_system(config)
+    centred = scao.build_scao_system(block)
+
+    assert published.wfs.optics_backend.lenslet_axis == "geometry_cell_center"
+    assert centred.wfs.optics_backend.lenslet_axis == "pixel_block_center"
+    changed = {
+        key
+        for key, value in centred.component_hashes.items()
+        if value != published.component_hashes[key]
+    }
+    assert "wfs" in changed
+    assert changed.isdisjoint(
+        {"random_streams", "pupil_geometry", "atmosphere", "dm", "science_propagator"}
+    )
+    # 18 px on 3 lenslets: 17/3-pixel cells on 6-pixel blocks, so the
+    # published edge axes sit a third of a pixel off their window centres.
+    published_reference = np.asarray(
+        published.wfs.calibration.reference_centroids_px, dtype=float
+    ).reshape(-1, 2)
+    centred_reference = np.asarray(
+        centred.wfs.calibration.reference_centroids_px, dtype=float
+    ).reshape(-1, 2)
+    assert np.ptp(published_reference[:, 0]) > 0.3
+    assert np.ptp(centred_reference[:, 0]) < np.ptp(published_reference[:, 0])
+
+
 def test_native_layered_profiles_are_refused_rather_than_flattened() -> None:
     """``native_layered`` names the native generator; HCIPy never builds it."""
 

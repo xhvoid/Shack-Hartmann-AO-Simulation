@@ -51,8 +51,13 @@ PROFILE_SCHEMA_NAME = "shwfs_ao.system_profile"
 # ``linear_spline`` DM influence model, and the ``sparse_lsmr_tikhonov``
 # reconstructor kind.  All three are expressible only in a v5 record, so no
 # v1-v4 record can carry them and no published identity moves.
-PROFILE_SCHEMA_VERSION = 5
-SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2, 3, 4, 5)
+# Schema v6 adds wfs.lenslet_axis, where the HCIPy microlens vertices sit.
+# Every earlier record ran with "geometry_cell_center", whose axes drift
+# across their detector windows; "pixel_block_center" centres them
+# (docs/refactor/AO_REF_016A_HCIPY_LENSLET_AXIS.md).  v1-v5 records omit the
+# field and keep the vertices they were published with.
+PROFILE_SCHEMA_VERSION = 6
+SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2, 3, 4, 5, 6)
 # The WFS photon allocation the schema-v1 profiles were reviewed and published
 # under.  A v1 record omits the field entirely, so this is the only allocation a
 # configuration claiming record schema 1 can legitimately hold.  It must stay
@@ -64,6 +69,10 @@ _V1_PHOTON_ALLOCATION = "throughput_scaled"
 # configuration claiming either schema can hold; like the allocation above it
 # must equal :class:`WfsConfig`'s default.
 _PRE_V3_CLIP_NEGATIVE_PIXELS = True
+# The lens-vertex convention every schema-v1 to v5 profile ran with, on the same
+# terms: those records omit wfs.lenslet_axis, so this is the only value a
+# configuration claiming any of those schemas can hold.
+_PRE_V6_LENSLET_AXIS = "geometry_cell_center"
 _PROFILE_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
     ("fast_2m_detector", 1): "synthetic_presets/fast_2m_detector.v1.json",
@@ -426,6 +435,37 @@ class _WfsConfigSchemaV2:
 
 
 @dataclass(frozen=True, slots=True)
+class _WfsConfigSchemaV3:
+    """The exact :class:`WfsConfig` shape the schema-v3 to v5 records published under.
+
+    Schema v6 added ``lenslet_axis``, which moves the declared field list
+    the nested WFS hash walks (see :class:`_WfsConfigSchemaV1`).  These
+    fourteen fields, in their published order and under the schema id those
+    digests were published with, keep every v3, v4 and v5 record's
+    ``component_config_hashes["wfs"]`` at its published value.
+    """
+
+    __hash_schema_id__ = "shwfs_ao.io.configs.WfsConfig"
+
+    min_fill_fraction: float
+    pad_factor: int | None
+    detector_window_px: int | None
+    centroid_estimator: Literal[
+        "center_of_gravity", "thresholded_center_of_gravity"
+    ]
+    threshold_fraction: float
+    subtract_minimum: bool
+    min_flux_e: float
+    min_peak_snr: float
+    max_centroid_sigma_px: float
+    max_window_clipping_fraction: float
+    central_obstruction_ratio: float
+    spider_width_m: float
+    photon_allocation: Literal["throughput_scaled", "unit_sum"]
+    clip_negative_pixels: bool
+
+
+@dataclass(frozen=True, slots=True)
 class WfsConfig:
     min_fill_fraction: float
     pad_factor: int | None
@@ -451,6 +491,17 @@ class WfsConfig:
     # bias and leaves it approximately unbiased.  True is the behaviour every
     # published profile ran with.
     clip_negative_pixels: bool = True
+    # Where the HCIPy backend puts each microlens vertex, and so each spot
+    # axis.  "geometry_cell_center" uses the geometry's continuous cell
+    # centres, which drift across the 8-pixel block windows by up to half a
+    # pixel and leave a static focus in closed loop.  "pixel_block_center"
+    # centres each axis in its window.  Only the HCIPy detector-level sensor
+    # places lens vertices; every other sensor must keep the default, which it
+    # never consults.  The default is the behaviour every published profile
+    # ran with.
+    lenslet_axis: Literal["geometry_cell_center", "pixel_block_center"] = (
+        "geometry_cell_center"
+    )
 
     def __post_init__(self) -> None:
         fill = _fraction(self.min_fill_fraction, "min_fill_fraction")
@@ -496,6 +547,11 @@ class WfsConfig:
             "clip_negative_pixels",
             _boolean(self.clip_negative_pixels, "clip_negative_pixels"),
         )
+        if self.lenslet_axis not in {"geometry_cell_center", "pixel_block_center"}:
+            raise SystemConfigError(
+                "lenslet_axis must be 'geometry_cell_center' or "
+                "'pixel_block_center'."
+            )
 
     @property
     def config_hash(self) -> str:
@@ -519,10 +575,11 @@ class WfsConfig:
 
         The schema version lives on :class:`SystemConfig`, not here, so the
         caller must state it; a :class:`WfsConfig` cannot infer which record it
-        was parsed out of.  Schemas v1 and v2 need payloads of their own,
-        because they predate ``photon_allocation`` and ``clip_negative_pixels``
-        respectively — see :class:`_WfsConfigSchemaV1` for why the historical
-        bytes have to be reproduced rather than recomputed.
+        was parsed out of.  Schemas v1, v2 and v3-v5 need payloads of their
+        own, because they predate ``photon_allocation``,
+        ``clip_negative_pixels`` and ``lenslet_axis`` respectively — see
+        :class:`_WfsConfigSchemaV1` for why the historical bytes have to be
+        reproduced rather than recomputed.
 
         Refusing an unknown version matters as much as reproducing the known
         ones: treating an unrecognized schema as "probably the newest" would
@@ -539,8 +596,50 @@ class WfsConfig:
                 f"unsupported profile schema_version={record_schema_version!r}; "
                 f"supported={list(SUPPORTED_PROFILE_SCHEMA_VERSIONS)}."
             )
-        if version >= 3:
+        if version >= 6:
             return component_config_hash("scao.wfs_config", self)
+        # No earlier schema has a field for the lens-vertex convention, so a
+        # block-centred sensor hashed under one would lose that change.
+        if self.lenslet_axis != _PRE_V6_LENSLET_AXIS:
+            raise SystemConfigError(
+                f"record_schema_version={version} cannot express "
+                f"wfs.lenslet_axis={self.lenslet_axis!r}: that schema has no "
+                "such field, so the value would be missing from the hash "
+                f"rather than recorded in it. Hash this block under schema "
+                f"{PROFILE_SCHEMA_VERSION} instead."
+            )
+        if version >= 3:
+            historical_v3 = tuple(_WfsConfigSchemaV3.__dataclass_fields__)
+            declared_v3 = tuple(
+                name for name in self.__dataclass_fields__ if name != "lenslet_axis"
+            )
+            if declared_v3 != historical_v3:
+                raise SystemConfigError(
+                    f"WfsConfig declares {list(declared_v3)} beside "
+                    "lenslet_axis, but the frozen schema-3 hash payload "
+                    f"declares {list(historical_v3)}; a schema that changes the "
+                    "WFS field set needs its own payload, because editing the "
+                    "schema-3 one moves every published v3-v5 nested WFS hash."
+                )
+            return component_config_hash(
+                "scao.wfs_config",
+                _WfsConfigSchemaV3(
+                    min_fill_fraction=self.min_fill_fraction,
+                    pad_factor=self.pad_factor,
+                    detector_window_px=self.detector_window_px,
+                    centroid_estimator=self.centroid_estimator,
+                    threshold_fraction=self.threshold_fraction,
+                    subtract_minimum=self.subtract_minimum,
+                    min_flux_e=self.min_flux_e,
+                    min_peak_snr=self.min_peak_snr,
+                    max_centroid_sigma_px=self.max_centroid_sigma_px,
+                    max_window_clipping_fraction=self.max_window_clipping_fraction,
+                    central_obstruction_ratio=self.central_obstruction_ratio,
+                    spider_width_m=self.spider_width_m,
+                    photon_allocation=self.photon_allocation,
+                    clip_negative_pixels=self.clip_negative_pixels,
+                ),
+            )
         # Neither earlier schema has a field to keep negative pixels, so such a
         # block would hash as a clipping sensor; refuse it, as for the
         # allocation below.
@@ -557,7 +656,7 @@ class WfsConfig:
             declared_v2 = tuple(
                 name
                 for name in self.__dataclass_fields__
-                if name != "clip_negative_pixels"
+                if name not in {"clip_negative_pixels", "lenslet_axis"}
             )
             if declared_v2 != historical_v2:
                 raise SystemConfigError(
@@ -609,7 +708,7 @@ class WfsConfig:
         declared = tuple(
             name
             for name in self.__dataclass_fields__
-            if name not in {"photon_allocation", "clip_negative_pixels"}
+            if name not in {"photon_allocation", "clip_negative_pixels", "lenslet_axis"}
         )
         if declared != historical:
             raise SystemConfigError(
@@ -1031,6 +1130,30 @@ class SystemConfig:
                 f"Record this configuration under schema {PROFILE_SCHEMA_VERSION} "
                 "instead."
             )
+        # Schemas v1-v5 have no wfs.lenslet_axis field, so a record under one
+        # of them would present a block-centred HCIPy sensor as a published
+        # cell-centred one; refuse it by the same rule.
+        if (
+            record_version < 6
+            and self.wfs.lenslet_axis != _PRE_V6_LENSLET_AXIS
+        ):
+            raise SystemConfigError(
+                f"record_schema_version={record_version} cannot express "
+                f"wfs.lenslet_axis={self.wfs.lenslet_axis!r}: that schema has "
+                "no such field, so the value would be lost. Record this "
+                f"configuration under schema {PROFILE_SCHEMA_VERSION} instead."
+            )
+        # Only the HCIPy detector-level sensor places lens vertices.  Any other
+        # sensor would ignore a non-default convention while its identity
+        # claimed it, so the pairing is refused.
+        if self.wfs.lenslet_axis != _PRE_V6_LENSLET_AXIS and (
+            self.backend != "hcipy" or self.wfs_model != "detector_level"
+        ):
+            raise SystemConfigError(
+                f"wfs.lenslet_axis={self.wfs.lenslet_axis!r} applies to the "
+                "HCIPy detector-level sensor only; the native optics centre "
+                "every spot on its own FFT canvas and never consult it."
+            )
         # Schemas v1-v3 have no atmosphere.layers field: a record under one of
         # them can describe only a single-layer atmosphere.
         if record_version < 4 and self.atmosphere.layers:
@@ -1201,7 +1324,9 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
     ``wfs.clip_negative_pixels``, which v1 and v2 records omit, taking the
     clipping they were published with.  Schema v4 requires
     ``atmosphere.layers`` (an empty list for a single-layer atmosphere), which
-    v1-v3 records omit.  Each version's field set is exact in both directions,
+    v1-v3 records omit.  Schema v6 requires ``wfs.lenslet_axis``, which v1-v5
+    records omit, taking the ``geometry_cell_center`` vertices they were
+    published with.  Each version's field set is exact in both directions,
     so an older record can neither carry a later field nor be silently
     upgraded, and a newer record can never omit one.
     """
@@ -1261,6 +1386,8 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
             values["wfs"],
             (
                 _WFS_FIELDS
+                if schema_version >= 6
+                else _WFS_FIELDS_V5
                 if schema_version >= 3
                 else _WFS_FIELDS_V2
                 if schema_version == 2
@@ -1309,6 +1436,8 @@ def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
     wfs_fields = _dataclass_mapping(config.wfs)
     # Earlier schemas lack these fields, and __post_init__ has already refused
     # any configuration whose value an omission would lose.
+    if config.record_schema_version < 6:
+        del wfs_fields["lenslet_axis"]
     if config.record_schema_version < 3:
         del wfs_fields["clip_negative_pixels"]
     if config.record_schema_version < 2:
@@ -1364,10 +1493,13 @@ _ATMOSPHERE_FIELDS = {"r0_m", "r0_reference_wavelength_m", "outer_scale_m", "win
 _ATMOSPHERE_FIELDS_V3 = _ATMOSPHERE_FIELDS - {"layers"}
 _ATMOSPHERE_LAYER_FIELDS = {"altitude_m", "cn2_fraction", "wind_m_per_s"}
 _DETECTOR_FIELDS = {"enabled", "photons_per_subap_frame", "read_noise_e", "dark_e_per_s", "background_e_per_pixel_frame", "full_well_e", "qe", "prnu_rms", "exposure_s", "prnu_mode", "bad_pixel_fraction"}
-_WFS_FIELDS = {"min_fill_fraction", "pad_factor", "detector_window_px", "centroid_estimator", "threshold_fraction", "subtract_minimum", "min_flux_e", "min_peak_snr", "max_centroid_sigma_px", "max_window_clipping_fraction", "central_obstruction_ratio", "spider_width_m", "photon_allocation", "clip_negative_pixels"}
+_WFS_FIELDS = {"min_fill_fraction", "pad_factor", "detector_window_px", "centroid_estimator", "threshold_fraction", "subtract_minimum", "min_flux_e", "min_peak_snr", "max_centroid_sigma_px", "max_window_clipping_fraction", "central_obstruction_ratio", "spider_width_m", "photon_allocation", "clip_negative_pixels", "lenslet_axis"}
+# Schema v6 requires lenslet_axis: it moves every HCIPy spot axis, so a v6
+# record states it.  Schemas v3-v5 predate it.
+_WFS_FIELDS_V5 = _WFS_FIELDS - {"lenslet_axis"}
 # Schema v3 requires clip_negative_pixels for the same reason: whether negative
 # pixels are clipped changes every noisy centroid, so a v3 record states it.
-_WFS_FIELDS_V2 = _WFS_FIELDS - {"clip_negative_pixels"}
+_WFS_FIELDS_V2 = _WFS_FIELDS_V5 - {"clip_negative_pixels"}
 # Schema v2 requires photon_allocation in every profile: it materially affects
 # the WFS photon budget and therefore the recorded identity, so a v2 record
 # never defaults it silently.  Schema v1 predates the field, so a v1 record must
