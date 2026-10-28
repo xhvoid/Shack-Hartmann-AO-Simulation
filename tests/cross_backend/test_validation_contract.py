@@ -620,6 +620,47 @@ class TestDocumentContract:
             ):
                 validate_cross_backend_baseline(baseline)
 
+    def test_both_gates_refuse_whitespace_where_prose_is_required(self):
+        """The schema must refuse exactly what the application validator does.
+
+        Acceptance runs both, and the schema is documented as mirroring the
+        application rules.  ``minLength: 1`` alone does not: it admits "   ",
+        which every application check rejects by reading the value through
+        ``str.strip()``.  That divergence made the packaged schema the weaker
+        of the two gates while claiming to be the same one, so an all-
+        whitespace estimator, rationale or acceptance reason — documenting
+        nothing — passed it.
+        """
+
+        def refused_by_both(document, label):
+            with pytest.raises(BaselineContractError):
+                validate_cross_backend_baseline(document)
+            with pytest.raises(BaselineContractError):
+                validate_baseline_against_schema(document)
+
+        for field in ("estimator", "uncertainty_method", "narrative"):
+            baseline = _minimal_baseline()
+            for comparison in baseline["comparisons"]:
+                if comparison["comparison_kind"] != "atmosphere_statistics":
+                    continue
+                comparison["statistical_definition"][field] = "   "
+            refused_by_both(baseline, field)
+
+        baseline = _minimal_baseline()
+        for comparison in baseline["comparisons"]:
+            if comparison["comparison_kind"] != "atmosphere_statistics":
+                continue
+            comparison["statistical_definition"]["bins_or_lags"]["kind"] = "  "
+        refused_by_both(baseline, "bins_or_lags.kind")
+
+        # The same shared definition guards the acceptance evidence, which is
+        # the other place an all-whitespace string would document nothing.
+        for field in ("reason", "review_reference"):
+            baseline = _minimal_baseline()
+            baseline["acceptance"][field] = "   "
+            with pytest.raises(BaselineContractError):
+                validate_baseline_against_schema(baseline)
+
     def test_a_measured_magnitude_cannot_be_recorded_as_negative(self):
         """Standard errors, runtimes and peak memory are magnitudes.
 
