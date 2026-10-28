@@ -17,8 +17,16 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 import sys
-import tomllib
 import zipfile
+
+# The wheel matrix runs this inspector on Python 3.10, whose standard library
+# has no ``tomllib``; the matrix pins ``tomli`` there instead.  A
+# ``sys.version_info`` guard (rather than try/except) keeps the fallback
+# understood as version-exclusive by static checkers on every interpreter.
+if sys.version_info >= (3, 11):
+    import tomllib
+else:  # Python 3.10
+    import tomli as tomllib
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 RESOURCE_MANIFEST_NAME = "shwfs_ao/resources/resource_manifest.json"
