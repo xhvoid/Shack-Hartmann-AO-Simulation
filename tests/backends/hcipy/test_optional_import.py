@@ -32,6 +32,11 @@ from shwfs_ao.backends.hcipy.dm import (
     HcipyDmError,
     build_hcipy_deformable_mirror,
 )
+from shwfs_ao.backends.hcipy.propagation import (
+    HcipyFocalSampling,
+    HcipySciencePropagationError,
+    HcipySciencePropagator,
+)
 from shwfs_ao.backends.hcipy.shwfs import (
     HcipyShackHartmannError,
     HcipyShackHartmannOptics,
@@ -46,6 +51,7 @@ _HCIPY_MARKED_TEST_FILES = (
     Path(__file__).with_name("test_hcipy_atmosphere.py"),
     Path(__file__).with_name("test_hcipy_dm.py"),
     Path(__file__).with_name("test_hcipy_shwfs.py"),
+    Path(__file__).with_name("test_hcipy_propagation.py"),
 )
 
 
@@ -70,9 +76,12 @@ def test_importing_shwfs_ao_never_imports_hcipy_eagerly():
         "import shwfs_ao.backends.hcipy.atmosphere\n"
         "import shwfs_ao.backends.hcipy.dm\n"
         "import shwfs_ao.backends.hcipy.shwfs\n"
+        "import shwfs_ao.backends.hcipy.propagation\n"
+        "import shwfs_ao.science.propagation\n"
         "from shwfs_ao.backends.hcipy import HcipyAtmosphereConfig\n"
         "from shwfs_ao.backends.hcipy import HcipyDmError\n"
         "from shwfs_ao.backends.hcipy import HcipyShackHartmannOptics\n"
+        "from shwfs_ao.backends.hcipy import HcipySciencePropagator\n"
         "import shwfs_ao.experiments.scao\n"
         "import shwfs_ao.io.configs\n"
         "raise SystemExit(1 if 'hcipy' in sys.modules else 0)\n"
@@ -115,7 +124,10 @@ def test_hcipy_marked_tests_never_enter_the_native_selection(test_file):
     assert "::" not in result.stdout
 
 
-@pytest.mark.parametrize("module_name", ("atmosphere", "dm", "shwfs"))
+@pytest.mark.parametrize(
+    "module_name",
+    ("atmosphere", "dm", "shwfs", "propagation"),
+)
 def test_hcipy_backend_modules_never_import_legacy_code(module_name):
     import importlib
 
@@ -265,3 +277,54 @@ class TestWithoutHcipy:
             match="integer multiple",
         ):
             HcipyShackHartmannOptics(geometry, 700.0e-9, f_number=100.0)
+
+    def test_science_propagator_raises_optional_dependency_error(self):
+        pupil = build_pupil_geometry(
+            telescope_diameter_m=1.0,
+            pupil_shape=(8, 8),
+        )
+        with pytest.raises(OptionalDependencyError) as excinfo:
+            HcipySciencePropagator(pupil, HcipyFocalSampling())
+        assert "pip install 'shack-hartmann-ao-simulation[hcipy]'" in str(
+            excinfo.value
+        )
+
+    def test_science_registry_requires_the_dependency_for_hcipy(self):
+        from shwfs_ao.science.propagation import (
+            PsfSampling,
+            monochromatic_psf,
+        )
+
+        pupil = build_pupil_geometry(
+            telescope_diameter_m=1.0,
+            pupil_shape=(8, 8),
+        )
+        with pytest.raises(OptionalDependencyError):
+            monochromatic_psf(
+                np.zeros(pupil.pupil_shape),
+                pupil,
+                700.0e-9,
+                backend="hcipy",
+                sampling=PsfSampling(),
+            )
+
+    def test_science_validation_precedes_the_dependency_requirement(self):
+        pupil = build_pupil_geometry(
+            telescope_diameter_m=1.0,
+            pupil_shape=(8, 8),
+        )
+        with pytest.raises(
+            HcipySciencePropagationError,
+            match="PupilGeometry",
+        ):
+            HcipySciencePropagator(object())
+        with pytest.raises(
+            HcipySciencePropagationError,
+            match="HcipyFocalSampling",
+        ):
+            HcipySciencePropagator(pupil, sampling=object())
+        with pytest.raises(
+            HcipySciencePropagationError,
+            match="pixels_per_resolution_element",
+        ):
+            HcipyFocalSampling(pixels_per_resolution_element=-2.0)
