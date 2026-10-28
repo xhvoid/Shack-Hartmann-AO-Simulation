@@ -21,7 +21,8 @@
 
 import { BundleError, fetchVerified, fetchVerifiedImage, fetchVerifiedJson, isFiniteOrNull, require } from "./integrity.js";
 import { PALETTE, lineChart, redrawWhenResized } from "./charts.js";
-import { renderResults } from "./results.js";
+import { renderResults, renderProjectEvidence } from "./results.js";
+import { initReplay42 } from "./replay42.js";
 import { initGalaxy, showGalaxyCase } from "./galaxy.js";
 import * as playback from "./playback.js";
 
@@ -388,13 +389,13 @@ function commitCase(data) {
 }
 
 function updateButtons() {
-  for (const button of document.querySelectorAll(".node")) {
+  for (const button of document.querySelectorAll("#groups .node")) {
     button.setAttribute("aria-pressed", String(button.dataset.case === state.case?.id));
   }
 }
 
 function setBusy(id, busy) {
-  for (const button of document.querySelectorAll(".node")) button.setAttribute("aria-busy", String(busy && button.dataset.case === id));
+  for (const button of document.querySelectorAll("#groups .node")) button.setAttribute("aria-busy", String(busy && button.dataset.case === id));
 }
 
 // ---------------------------------------------------------------------------
@@ -730,12 +731,12 @@ function escapeHtml(text) { return String(text).replace(/[&<>"]/g, (c) => ({ "&"
 // "#results", "#methods" and deep links such as "#result-R6" load the
 // Research Results; a deep link is scrolled into view once rendered
 // (review round 1, R1-F12).
-function wantsResults() { return location.hash === "#results" || location.hash === "#methods" || location.hash.startsWith("#result-"); }
+function wantsResults() { return ["#project", "#appendix", "#results", "#methods"].includes(location.hash) || location.hash.startsWith("#result-"); }
 
 function revealHash() {
-  if (!location.hash.startsWith("#result-")) return;
+  if (!location.hash.startsWith("#result-") && location.hash !== "#methods") return;
   const target = document.getElementById(location.hash.slice(1));
-  if (target) target.scrollIntoView({ behavior: "instant", block: "start" });
+  if (target) { if (target.tagName === "DETAILS") target.open = true; target.scrollIntoView({ behavior: "instant", block: "start" }); }
 }
 
 async function loadResults() {
@@ -748,6 +749,7 @@ async function loadResults() {
     require(value.schema === "ao-explorer.research-results.v1", `unsupported research schema ${value.schema}`);
     require(value.groups.length === 8 && value.groups.every((g, i) => g.id === `R${i + 1}`), "Research Results must contain groups R1-R8");
     await renderResults(value, url, $("results-body"), $("results-index"), buffer);
+    renderProjectEvidence(value);
     renderMethodsStatus(value);
     state.resultsLoaded = true;
     revealHash();
@@ -840,19 +842,25 @@ function bindControls() {
   const redrawCharts = () => state.case && renderCharts(frameIndex());
   const observed = ["chart-rms", "chart-strehl", "chart-valid"].map((id) => redrawWhenResized($(id), redrawCharts)).every(Boolean);
   if (!observed) window.addEventListener("resize", redrawCharts);
-  const results = $("results");
+  document.querySelectorAll('[data-topic]').forEach(button => button.addEventListener('click', () => {
+    document.querySelectorAll('[data-topic]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
+    document.querySelectorAll('.topic-panel').forEach(panel => { panel.hidden = panel.id !== `topic-${button.dataset.topic}`; });
+  }));
   if ("IntersectionObserver" in window) {
-    new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) loadResults(); }, { rootMargin: "200px" }).observe(results);
+    const observer = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) loadResults(); }, { rootMargin: "200px" });
+    observer.observe($("project")); observer.observe($("appendix"));
   }
   window.addEventListener("hashchange", () => { if (wantsResults()) loadResults(); });
 }
 
 async function start() {
+  const initialHash = location.hash;
   bindControls();
   for (const id of ["btn-restart", "btn-prev", "btn-play", "btn-next", "seek", "duration"]) $(id).disabled = true;
   try {
     const { manifest, manifestUrl, entry, entryUrl: galaxyEntryUrl } = await loadEntry();
     state.manifest = manifest; state.manifestUrl = manifestUrl;
+    initReplay42(entry, galaxyEntryUrl);
     const [display, scene, diagnostics, blocks] = await Promise.all([
       fetchVerifiedJson(manifest.display, manifestUrl),
       fetchVerifiedJson(manifest.scene, manifestUrl),
@@ -889,7 +897,11 @@ async function start() {
       if (manifest.cases[requested]) await selectCase(requested);
       else showError(`The requested case “${requested}” is not a recorded case of this dataset.`, " Only the listed scenario buttons exist; the baseline is shown.");
     }
-    if (wantsResults()) loadResults();
+    if (wantsResults()) await loadResults();
+    // Restore a direct section link after the asynchronous 2 m tables settle.
+    if (location.hash === initialHash && ["#project", "#replay42", "#appendix", "#results"].includes(initialHash)) {
+      document.getElementById(initialHash.slice(1))?.scrollIntoView({ behavior: "instant", block: "start" });
+    }
   } catch (error) {
     setStatus("The dataset could not be loaded.");
     showError(`The 2 m experiment could not be loaded: ${error.message}`, " Nothing from an unverified or incomplete bundle is shown.");

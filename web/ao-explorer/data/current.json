@@ -4,7 +4,7 @@
  "manifest": "series-2m1000-s624-c7241e4190d5-ef74a541b0e60/manifest.json",
  "manifest_bytes": 42464,
  "manifest_sha256": "a151da4b84b21029c03a9f373c586a8203781807e52cb0f9bedddef4ae1719ee",
- "code_build": "720a6b68c5ce6a84",
+ "code_build": "939923757a47dbc6",
  "galaxy": {
   "schema": "ao-explorer.galaxy-entry.v3",
   "derived_id": "ngc1705-f814w-2m1000-s624-c7241e4190d5-gda93ed5af026-m4adb5a4af111",
@@ -18,5 +18,12 @@
   "manifest": "../derived/rms-2m1000-s624-c7241e4190d5-d7fafecb6f7ec/manifest.json",
   "manifest_bytes": 13189,
   "manifest_sha256": "3ce30fa20c68ad02ac80ebe98a4df7414b1b16ada9e54a2142004c2b249784e2"
+ },
+ "replay42": {
+  "schema": "ao-explorer.recording42-entry.v1",
+  "recording_id": "42m-500-31024b173527b7a6",
+  "manifest": "../recordings/42m-500-31024b173527b7a6/manifest.json",
+  "manifest_bytes": 20171,
+  "manifest_sha256": "cc706d634a243c8b85312006c9e62f8f99b47adabe688f3aef9acef65d620122"
  }
 }
