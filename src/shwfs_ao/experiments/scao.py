@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 from pathlib import PurePosixPath
 from types import MappingProxyType
 from typing import Any, Literal, Protocol, cast, runtime_checkable
+import weakref
 
 import numpy as np
 
@@ -141,6 +142,52 @@ class ScaoBackendComponentFactory(Protocol):
         ...
 
 
+# The attestations this process actually minted, held weakly so an entry lives
+# exactly as long as the system carrying it — no eviction policy, and nothing to
+# grow.  Membership is by identity (``eq=False`` below), which is the whole
+# point: an attestation reached by ``dataclasses.replace`` is a *different*
+# object, so restating a build's hashes produces something this set has never
+# seen and verification falls back to the rebuild.
+_MINTED_ATTESTATIONS: weakref.WeakSet[_BuildAttestation] = weakref.WeakSet()
+
+
+@dataclass(frozen=True, eq=False)
+class _BuildAttestation:
+    """Evidence that a real build produced one set of component identities.
+
+    What a configuration builds can only be learned by building it, and the
+    build already knows the answer.  Recording it *on the system it produced*
+    means verifying that system later costs a comparison rather than a second
+    build — and, for every profile that calibrates on build, rather than a
+    second interaction-matrix calibration.
+
+    The attestation is not a credential and grants nothing on its own.  Two
+    things must hold before it is spent.  It must be one this process minted —
+    membership in :data:`_MINTED_ATTESTATIONS`, by identity, so an instance
+    built or ``replace``d by a caller is simply unknown rather than trusted.
+    And it must describe the system presenting it: the configuration it names
+    must be that system's ``source_config``, the supplied-matrix identity must
+    be the one that build was given, and the hashes it records must be exactly
+    the system's ``component_hashes``.  A system assembled by swapping a
+    component and restating its hashes therefore contradicts any attestation it
+    was given, and one carrying no usable attestation is verified the slow way,
+    by rebuilding its configuration.  The rebuild is what makes this safe: the
+    attestation can only ever save work, never widen what is accepted.
+    """
+
+    factory_epoch: int
+    source_config: SystemConfig
+    supplied_matrix_identity: tuple[str, str] | None
+    component_hashes: Mapping[str, str]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "component_hashes",
+            MappingProxyType(dict(sorted(self.component_hashes.items()))),
+        )
+
+
 @dataclass(frozen=True)
 class ScaoSystem:
     """A complete, identity-validated collection of SCAO protocol components."""
@@ -157,6 +204,15 @@ class ScaoSystem:
     component_hashes: Mapping[str, str]
     config_hash: str
     source_config: SystemConfig
+    # Set by :func:`build_scao_system` for the system it just built.  ``None``
+    # means "not built here", which costs a rebuild at verification time and
+    # never buys acceptance.  It is evidence about how this system came to be,
+    # not part of what it is, so it stays out of equality and repr.
+    build_attestation: _BuildAttestation | None = field(
+        default=None,
+        compare=False,
+        repr=False,
+    )
 
     def __post_init__(self) -> None:
         if not isinstance(self.component_hashes, Mapping):
@@ -210,6 +266,12 @@ class ScaoSystem:
                 "component_hashes must equal the hashes recomputed from the "
                 f"live components; mismatched keys: {drifted}."
             )
+        if self.build_attestation is not None and not isinstance(
+            self.build_attestation, _BuildAttestation
+        ):
+            raise ScaoConstructionError(
+                "build_attestation must be a BuildAttestation or None."
+            )
         object.__setattr__(
             self,
             "component_hashes",
@@ -218,6 +280,9 @@ class ScaoSystem:
 
 
 _FACTORIES: dict[str, ScaoBackendComponentFactory] = {}
+# Moves whenever a registered factory is replaced, retiring every attestation
+# minted against the superseded registry.  See register_scao_backend_factory.
+_FACTORY_EPOCH = 0
 
 
 def _load_native_factory() -> ScaoBackendComponentFactory:
@@ -271,20 +336,24 @@ def register_scao_backend_factory(
             f"a SCAO backend factory is already registered for {name!r}."
         )
     # The registry is an input to what a configuration builds, so replacing a
-    # factory invalidates every remembered identity: keeping them would let
-    # verification answer from a build that can no longer happen — accepting a
-    # system this registry would not build, and rejecting one it would.
+    # factory invalidates every attestation minted before it: keeping them would
+    # let verification answer from a build that can no longer happen — accepting
+    # a system this registry would not build, and rejecting one it would.  Every
+    # earlier attestation is retired at once by moving the registry epoch, so a
+    # system built against the superseded factory is re-verified by rebuilding.
     #
     # Only a genuine replacement invalidates anything.  Registering a backend
     # for the first time — which is how the built-in factories are loaded,
-    # lazily, on first use — cannot invalidate a remembered identity, because
-    # no configuration could have been built against a backend that was not yet
-    # registered.  Clearing there would throw away the memo mid-session and put
-    # back exactly the rebuild-and-recalibrate cost it exists to avoid.
+    # lazily, on first use — cannot invalidate an attestation, because no
+    # configuration could have been built against a backend that was not yet
+    # registered.  Moving the epoch there would retire every attestation
+    # mid-session and put back exactly the rebuild-and-recalibrate cost they
+    # exist to avoid.
+    global _FACTORY_EPOCH
     superseded = _FACTORIES.get(name)
     _FACTORIES[name] = factory
     if superseded is not None and superseded is not factory:
-        _BUILD_IDENTITY_MEMO.clear()
+        _FACTORY_EPOCH += 1
 
 
 def build_scao_system(
@@ -407,10 +476,18 @@ def build_scao_system(
         science_propagator=science_propagator,
     )
     # Building is the authoritative — and only — way to learn which component
-    # identities a configuration produces, so record the answer while it is in
-    # hand: verifying a supplied system then costs a hash comparison instead of
-    # a second build and its interaction-matrix calibration.
-    _remember_build_identity(config, interaction_matrix, component_hashes)
+    # identities a configuration produces, so record the answer on the system
+    # while it is in hand: verifying that system then costs a comparison instead
+    # of a second build and its interaction-matrix calibration.  The record
+    # travels with the system rather than sitting in a process-wide cache, so it
+    # cannot be evicted out from under a long-running study.
+    attestation = _BuildAttestation(
+        factory_epoch=_FACTORY_EPOCH,
+        source_config=config,
+        supplied_matrix_identity=_supplied_matrix_identity(interaction_matrix),
+        component_hashes=component_hashes,
+    )
+    _MINTED_ATTESTATIONS.add(attestation)
     return ScaoSystem(
         random_streams=streams,
         atmosphere=atmosphere,
@@ -424,6 +501,7 @@ def build_scao_system(
         component_hashes=component_hashes,
         config_hash=config.config_hash,
         source_config=config,
+        build_attestation=attestation,
     )
 
 
@@ -493,9 +571,11 @@ def _verify_supplied_system(config: SystemConfig, system: ScaoSystem) -> None:
     atmosphere carrying its own valid component hash while the retained
     ``config_hash`` still names a 30 nm profile).  What a configuration builds is
     deterministic, so it is learned by building once — in
-    :func:`build_scao_system`, which records it — and only rebuilt here when this
-    process has no record of that configuration.  Verifying a run therefore never
-    recalibrates an interaction matrix that has already been calibrated.
+    :func:`build_scao_system`, which attests the answer on the system it returns
+    — and rebuilt here only for a system that carries no attestation matching
+    what it claims to be.  Verifying a system this process built therefore never
+    recalibrates an interaction matrix that has already been calibrated,
+    however many other configurations have been built since.
     """
 
     if system.source_config != config:
@@ -525,7 +605,7 @@ def _verify_supplied_system(config: SystemConfig, system: ScaoSystem) -> None:
         if system.source_config.calibration.source == "supplied"
         else None
     )
-    expected = _recall_build_identity(system.source_config, supplied)
+    expected = _attested_build_identity(system, supplied)
     if expected is None:
         expected = dict(
             build_scao_system(
@@ -547,54 +627,42 @@ def _mismatched_keys(left: Mapping[str, str], right: Mapping[str, str]) -> list[
     )
 
 
-# What a configuration builds is a deterministic function of that configuration,
-# so it is derived once and remembered for the life of the process.  The key is
-# a hash, but the remembered configuration itself is the authority on a hit, so
-# the memo can never widen verification into accepting a different config.  The
-# entry count is capped because a long-running process may build many
-# configurations; eviction only costs a rebuild, never correctness.
-_BUILD_IDENTITY_MEMO: dict[
-    tuple[str, str | None],
-    tuple[SystemConfig, dict[str, str]],
-] = {}
-_BUILD_IDENTITY_MEMO_LIMIT = 64
-
-
-def _build_identity_key(
-    config: SystemConfig,
+def _supplied_matrix_identity(
     supplied: InteractionMatrix | None,
-) -> tuple[str, str | None]:
-    if supplied is None:
-        return (config.config_hash, None)
+) -> tuple[str, str] | None:
     # A supplied matrix is an input to the build, not a product of it, so the
-    # identity it yields is only reusable for that same matrix.
-    return (config.config_hash, f"{supplied.geometry_hash}:{supplied.matrix_hash}")
+    # identity a build yields is only reusable for that same matrix.
+    if supplied is None:
+        return None
+    return (supplied.geometry_hash, supplied.matrix_hash)
 
 
-def _remember_build_identity(
-    config: SystemConfig,
-    supplied: InteractionMatrix | None,
-    component_hashes: Mapping[str, str],
-) -> None:
-    memo = _BUILD_IDENTITY_MEMO
-    key = _build_identity_key(config, supplied)
-    if key not in memo:
-        while memo and len(memo) >= _BUILD_IDENTITY_MEMO_LIMIT:
-            del memo[next(iter(memo))]
-    memo[key] = (config, dict(component_hashes))
-
-
-def _recall_build_identity(
-    config: SystemConfig,
+def _attested_build_identity(
+    system: ScaoSystem,
     supplied: InteractionMatrix | None,
 ) -> dict[str, str] | None:
-    entry = _BUILD_IDENTITY_MEMO.get(_build_identity_key(config, supplied))
-    if entry is None:
+    """The attested identities of ``system``, or ``None`` if it has none usable.
+
+    Every field of the attestation is checked against the system presenting it,
+    so the answer is only reused for the build it actually describes: the same
+    configuration, the same supplied matrix, and the same component identities.
+    Anything else returns ``None`` and falls back to the rebuild, which is the
+    authority in every case.
+    """
+
+    attestation = system.build_attestation
+    if attestation is None or attestation not in _MINTED_ATTESTATIONS:
         return None
-    remembered_config, component_hashes = entry
-    if remembered_config != config:
+    if attestation.factory_epoch != _FACTORY_EPOCH:
         return None
-    return dict(component_hashes)
+    if attestation.source_config != system.source_config:
+        return None
+    if attestation.supplied_matrix_identity != _supplied_matrix_identity(supplied):
+        return None
+    attested = dict(attestation.component_hashes)
+    if attested != dict(system.component_hashes):
+        return None
+    return attested
 
 
 def _factory_for(name: str) -> ScaoBackendComponentFactory:

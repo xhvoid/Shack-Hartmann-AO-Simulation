@@ -351,13 +351,17 @@ class TestDocumentContract:
         report["artifact_schema_name"] = "shwfs_ao.other_artifact"
         with pytest.raises(BaselineContractError, match="artifact_schema_name"):
             validate_cross_backend_report(report)
-        report = _minimal_report()
-        report["artifact_schema_version"] = 999
-        with pytest.raises(
-            BaselineContractError,
-            match="artifact_schema_version",
-        ):
-            validate_cross_backend_report(report)
+        for version in (999, "1", 1.0, True):
+            # ``True`` is the interesting one: it equals 1, so a plain equality
+            # check reads a boolean field as "version 1" and validates the
+            # document against a contract it never declared.
+            report = _minimal_report()
+            report["artifact_schema_version"] = version
+            with pytest.raises(
+                BaselineContractError,
+                match="artifact_schema_version",
+            ):
+                validate_cross_backend_report(report)
 
     def test_report_rejects_a_config_without_hash_and_short_hashes(self):
         report = _minimal_report()
@@ -519,6 +523,33 @@ class TestDocumentContract:
                 match="must record its statistical_definition",
             ):
                 validate_cross_backend_baseline(baseline)
+
+    def test_a_measured_magnitude_cannot_be_recorded_as_negative(self):
+        """Standard errors, runtimes and peak memory are magnitudes.
+
+        Every one of them is informational, so no gate ever reads its value:
+        without a domain rule a standard error of -1.0 sits under the ratios it
+        is supposed to qualify and nothing in the document objects, while a
+        reader takes the uncertainty at face value.
+        """
+
+        for kind, name in (
+            ("atmosphere_statistics", "rms_ratio_standard_error"),
+            ("runtime_and_memory", "native_wfs_propagation_s"),
+            ("runtime_and_memory", "comparison_peak_traced_memory_mb"),
+        ):
+            for value in (-1.0, -1e-12):
+                baseline = _minimal_baseline()
+                _set_metric_value(baseline, kind, name, value)
+                with pytest.raises(
+                    BaselineContractError,
+                    match="finite non-negative number",
+                ):
+                    validate_cross_backend_baseline(baseline)
+            # Zero is a legitimate measurement and must stay accepted.
+            baseline = _minimal_baseline()
+            _set_metric_value(baseline, kind, name, 0.0)
+            validate_cross_backend_baseline(baseline)
 
     def test_metric_contract_forbids_gating_an_identity_on_the_wrong_value(self):
         # both_loops_consumed_shared_opd_cube is a pinned exact/equals(True)
@@ -1323,6 +1354,133 @@ class TestEvaluationSemantics:
         assert len(failures) == 1
         assert "fixture_hashes['static_opd_m'] mismatch" in failures[0]
         assert "shared inputs drifted" in failures[0]
+
+    def test_evaluation_flags_a_changed_statistical_definition(
+        self,
+        packaged_baseline,
+    ):
+        """The estimated comparison's numbers mean what its estimator says.
+
+        Its ranges were reviewed against one estimator and one uncertainty
+        model.  A report that averaged a different number of realizations, or
+        measured the structure function at different lags, can land inside those
+        ranges while not being the quantity they were set for — and every hash in
+        the document would still match, because none of them covers the prose.
+        """
+
+        report = _report_copy(packaged_baseline)
+        for comparison in report["comparisons"]:
+            if comparison["comparison_kind"] == "atmosphere_statistics":
+                comparison["statistical_definition"] = (
+                    "1 realization per backend; estimator: unspecified."
+                )
+        failures = evaluate_report_against_baseline(report, packaged_baseline)
+        assert any(
+            "atmosphere_statistics'].statistical_definition mismatch" in failure
+            for failure in failures
+        )
+
+        # Dropping it entirely never becomes a silent pass either: the report is
+        # then structurally invalid, which evaluation refuses outright.
+        dropped = _report_copy(packaged_baseline)
+        for comparison in dropped["comparisons"]:
+            comparison.pop("statistical_definition", None)
+        with pytest.raises(
+            BaselineContractError,
+            match="must record its statistical_definition",
+        ):
+            evaluate_report_against_baseline(dropped, packaged_baseline)
+
+        # A report missing the whole estimated comparison is a different fact,
+        # and it must not be flattened into "the definition differs": the
+        # per-metric failures below carry the expected ranges and hashes, and
+        # this check runs before them, so it must stay silent here.
+        absent = _report_copy(packaged_baseline)
+        absent["comparisons"] = [
+            comparison
+            for comparison in absent["comparisons"]
+            if comparison["comparison_kind"] != "atmosphere_statistics"
+        ]
+        failures = evaluate_report_against_baseline(absent, packaged_baseline)
+        assert failures
+        assert not any("statistical_definition" in failure for failure in failures)
+        assert all(
+            "<absent: missing from the fresh report>" in failure
+            for failure in failures
+        )
+
+    def test_evaluation_flags_reordered_and_unreviewed_inventory(
+        self,
+        packaged_baseline,
+    ):
+        """A baseline gates exactly the evidence it was reviewed against.
+
+        Walking only the baseline's inventory notices what a report is missing
+        and nothing it adds, so an extra comparison, an extra metric, or a
+        different comparison order evaluated clean — the report could carry
+        measurements no reviewer ever saw and still be reported as covered.
+        """
+
+        reordered = _report_copy(packaged_baseline)
+        reordered["comparisons"] = list(reversed(reordered["comparisons"]))
+        failures = evaluate_report_against_baseline(reordered, packaged_baseline)
+        assert any("out of canonical order" in f for f in failures)
+
+        added = _report_copy(packaged_baseline)
+        added["comparisons"].append(
+            {
+                "comparison_kind": "unreviewed_comparison",
+                "attribution": "Not in the accepted baseline.",
+                "metrics": [
+                    {
+                        "name": "unreviewed_metric",
+                        "level": "informational",
+                        "units": "ratio",
+                        "value": 1.0,
+                        "rationale": "Not reviewed.",
+                        "pass_criterion": {"type": "informational"},
+                    }
+                ],
+            }
+        )
+        failures = evaluate_report_against_baseline(added, packaged_baseline)
+        assert any(
+            "unreviewed_comparison" in failure
+            and "comparisons the baseline does not record" in failure
+            for failure in failures
+        )
+
+        # Dropping a comparison stays a rich per-metric report, not a terse
+        # inventory line: the evidence for what is missing is more useful than
+        # a second statement that it is missing.
+        dropped = _report_copy(packaged_baseline)
+        dropped["comparisons"] = [
+            comparison
+            for comparison in dropped["comparisons"]
+            if comparison["comparison_kind"] != "runtime_and_memory"
+        ]
+        failures = evaluate_report_against_baseline(dropped, packaged_baseline)
+        assert all("<absent: missing from the fresh report>" in f for f in failures)
+
+        extra_metric = _report_copy(packaged_baseline)
+        for comparison in extra_metric["comparisons"]:
+            if comparison["comparison_kind"] == "strehl_ratio":
+                comparison["metrics"].append(
+                    {
+                        "name": "unreviewed_strehl_variant",
+                        "level": "informational",
+                        "units": "ratio",
+                        "value": 1.0,
+                        "rationale": "Not reviewed.",
+                        "pass_criterion": {"type": "informational"},
+                    }
+                )
+        failures = evaluate_report_against_baseline(extra_metric, packaged_baseline)
+        assert any(
+            "reports metrics the baseline does not record" in failure
+            and "unreviewed_strehl_variant" in failure
+            for failure in failures
+        )
 
 
 class TestSuiteEntryPoint:

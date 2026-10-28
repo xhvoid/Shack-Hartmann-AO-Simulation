@@ -642,7 +642,8 @@
                       "name",
                       "level",
                       "units",
-                      "pass_criterion"
+                      "pass_criterion",
+                      "value"
                     ],
                     "properties": {
                       "name": {
@@ -664,6 +665,10 @@
                             "const": "informational"
                           }
                         }
+                      },
+                      "value": {
+                        "type": "number",
+                        "minimum": 0
                       }
                     }
                   }
@@ -708,7 +713,8 @@
                       "name",
                       "level",
                       "units",
-                      "pass_criterion"
+                      "pass_criterion",
+                      "value"
                     ],
                     "properties": {
                       "name": {
@@ -730,6 +736,10 @@
                             "const": "informational"
                           }
                         }
+                      },
+                      "value": {
+                        "type": "number",
+                        "minimum": 0
                       }
                     }
                   }
@@ -774,7 +784,8 @@
                       "name",
                       "level",
                       "units",
-                      "pass_criterion"
+                      "pass_criterion",
+                      "value"
                     ],
                     "properties": {
                       "name": {
@@ -796,6 +807,10 @@
                             "const": "informational"
                           }
                         }
+                      },
+                      "value": {
+                        "type": "number",
+                        "minimum": 0
                       }
                     }
                   }
@@ -2190,7 +2205,8 @@
                       "name",
                       "level",
                       "units",
-                      "pass_criterion"
+                      "pass_criterion",
+                      "value"
                     ],
                     "properties": {
                       "name": {
@@ -2212,6 +2228,10 @@
                             "const": "informational"
                           }
                         }
+                      },
+                      "value": {
+                        "type": "number",
+                        "minimum": 0
                       }
                     }
                   }
@@ -2223,7 +2243,8 @@
                       "name",
                       "level",
                       "units",
-                      "pass_criterion"
+                      "pass_criterion",
+                      "value"
                     ],
                     "properties": {
                       "name": {
@@ -2245,6 +2266,10 @@
                             "const": "informational"
                           }
                         }
+                      },
+                      "value": {
+                        "type": "number",
+                        "minimum": 0
                       }
                     }
                   }
@@ -2256,7 +2281,8 @@
                       "name",
                       "level",
                       "units",
-                      "pass_criterion"
+                      "pass_criterion",
+                      "value"
                     ],
                     "properties": {
                       "name": {
@@ -2278,6 +2304,10 @@
                             "const": "informational"
                           }
                         }
+                      },
+                      "value": {
+                        "type": "number",
+                        "minimum": 0
                       }
                     }
                   }
@@ -2289,7 +2319,8 @@
                       "name",
                       "level",
                       "units",
-                      "pass_criterion"
+                      "pass_criterion",
+                      "value"
                     ],
                     "properties": {
                       "name": {
@@ -2311,6 +2342,10 @@
                             "const": "informational"
                           }
                         }
+                      },
+                      "value": {
+                        "type": "number",
+                        "minimum": 0
                       }
                     }
                   }
@@ -2322,7 +2357,8 @@
                       "name",
                       "level",
                       "units",
-                      "pass_criterion"
+                      "pass_criterion",
+                      "value"
                     ],
                     "properties": {
                       "name": {
@@ -2344,6 +2380,10 @@
                             "const": "informational"
                           }
                         }
+                      },
+                      "value": {
+                        "type": "number",
+                        "minimum": 0
                       }
                     }
                   }

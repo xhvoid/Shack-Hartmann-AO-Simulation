@@ -382,6 +382,7 @@ loop/result types.
 | `interaction_matrix`, `reconstructor`, `command_projector`, `controller` | calibrated inverse and real-time-control chain |
 | `science_propagator` | configured physical-axis PSF backend |
 | `component_hashes`, `config_hash`, `source_config` | immutable component map, serialized profile identity, and the `SystemConfig` the system was built from (`config_hash` equals `source_config.config_hash`) |
+| `build_attestation` | evidence that `build_scao_system` produced exactly these component identities from exactly this configuration and supplied matrix, so verifying the system before a run costs a comparison instead of a second build and its interaction-matrix calibration. It is checked against the system carrying it and never widens what is accepted: a system with no matching attestation is verified by rebuilding its configuration, which stays the authority |
 
 The detector layer also returns detector-state and detector-local records;
 `DetectorTelemetry` is their backend-neutral aggregate.

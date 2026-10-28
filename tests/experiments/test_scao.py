@@ -315,19 +315,32 @@ def test_running_a_supplied_system_never_rebuilds_or_recalibrates_it(
     scao.run_closed_loop(config, system=system)
     assert len(calibrations) == 1
 
-    # A configuration this process has never built is still verified — by
-    # building it — so the memo is an optimization, never the trust boundary.
+    # The evidence travels with the system, so nothing a *later* build does can
+    # take it away.  Building many other configurations in between used to evict
+    # this system's entry from a bounded process-wide memo and charge its next
+    # run a second calibration.
+    for index in range(80):
+        scao.build_scao_system(
+            replace(config, controller=replace(config.controller, n_steps=2 + index))
+        )
+    calibrations.clear()
+    scao.run_closed_loop(config, system=system)
+    assert calibrations == []
+
+    # A system this process did not build carries no evidence, so it is still
+    # verified — by building its configuration.  The attestation is an
+    # optimization, never the trust boundary.
     other_config = replace(
         config,
         atmosphere=replace(config.atmosphere, target_rms_opd_m=45.0e-9),
     )
     other = scao.build_scao_system(other_config)
-    monkeypatch.setattr(scao, "_BUILD_IDENTITY_MEMO", {})
-    scao.run_closed_loop(other_config, system=other)
-    assert len(calibrations) == 3  # the build above, plus one cold-memo rebuild
+    calibrations.clear()
+    scao.run_closed_loop(other_config, system=replace(other, build_attestation=None))
+    assert len(calibrations) == 1  # the unattested rebuild
 
-    # And a forged system is rejected on that cold path exactly as on the warm
-    # one: the rebuild remains the authority when nothing is remembered.
+    # And a forged system is rejected on that unattested path exactly as on the
+    # attested one: the rebuild remains the authority when nothing is attested.
     stronger = scao.build_scao_system(
         replace(config, atmosphere=replace(config.atmosphere, target_rms_opd_m=60.0e-9))
     )
@@ -337,8 +350,8 @@ def test_running_a_supplied_system_never_rebuilds_or_recalibrates_it(
         system,
         atmosphere=stronger.atmosphere,
         component_hashes=forged_hashes,
+        build_attestation=None,
     )
-    monkeypatch.setattr(scao, "_BUILD_IDENTITY_MEMO", {})
     with pytest.raises(
         scao.ScaoConstructionError,
         match="do not match the components its source configuration rebuilds",
@@ -346,12 +359,90 @@ def test_running_a_supplied_system_never_rebuilds_or_recalibrates_it(
         scao.run_closed_loop(config, system=forged)
 
 
-def test_a_supplied_interaction_matrix_is_part_of_the_remembered_identity() -> None:
+def test_a_build_attestation_cannot_be_minted_or_retargeted_by_a_caller() -> None:
+    """The attestation is evidence of a build, not a licence to skip one.
+
+    Three forgeries have to fail for it to be safe to trust: constructing one
+    for component identities no build produced, deriving one from a genuine
+    attestation with the hashes restated, and moving a genuine one onto a system
+    whose components it does not describe.  None of them raises — each simply
+    produces something this process never minted, so verification falls back to
+    the rebuild that was always the authority.
+    """
+
+    config = _tiny_system_config()
+    system = scao.build_scao_system(config)
+    stronger = scao.build_scao_system(
+        replace(config, atmosphere=replace(config.atmosphere, target_rms_opd_m=60.0e-9))
+    )
+
+    # Constructed by a caller rather than minted by a build.
+    handmade = scao._BuildAttestation(
+        factory_epoch=scao._FACTORY_EPOCH,
+        source_config=config,
+        supplied_matrix_identity=None,
+        component_hashes=dict(system.component_hashes),
+    )
+    assert handmade not in scao._MINTED_ATTESTATIONS
+    assert scao._attested_build_identity(
+        replace(system, build_attestation=handmade), None
+    ) is None
+
+    # Derived from a genuine one with dataclasses.replace: a new object, so the
+    # minted set has never seen it, however faithfully it copies the original.
+    assert system.build_attestation is not None
+    derived = replace(system.build_attestation)
+    assert derived not in scao._MINTED_ATTESTATIONS
+    assert scao._attested_build_identity(
+        replace(system, build_attestation=derived), None
+    ) is None
+    # The honest system is unaffected and still spends its own attestation.
+    assert scao._attested_build_identity(system, None) == dict(system.component_hashes)
+
+    # A genuine attestation carried by a system whose components it does not
+    # describe is unusable, so verification falls back to the rebuild and the
+    # swap is caught there.
+    forged_hashes = dict(system.component_hashes)
+    forged_hashes["atmosphere"] = stronger.component_hashes["atmosphere"]
+    forged = replace(
+        system,
+        atmosphere=stronger.atmosphere,
+        component_hashes=forged_hashes,
+    )
+    assert forged.build_attestation is system.build_attestation
+    assert scao._attested_build_identity(forged, None) is None
+    with pytest.raises(
+        scao.ScaoConstructionError,
+        match="do not match the components its source configuration rebuilds",
+    ):
+        scao.run_closed_loop(config, system=forged)
+
+    # The complete forgery: swap the component, restate the hashes, and restate
+    # the attestation to agree with them, so every self-consistency check inside
+    # the system passes.  It is still not a build that happened.
+    restated = replace(
+        forged,
+        build_attestation=replace(
+            system.build_attestation, component_hashes=forged_hashes
+        ),
+    )
+    with pytest.raises(
+        scao.ScaoConstructionError,
+        match="do not match the components its source configuration rebuilds",
+    ):
+        scao.run_closed_loop(config, system=restated)
+
+    # A ScaoSystem never accepts a foreign object in the attestation slot.
+    with pytest.raises(scao.ScaoConstructionError, match="must be a BuildAttestation"):
+        replace(system, build_attestation="trust me")
+
+
+def test_a_supplied_interaction_matrix_is_part_of_the_attested_identity() -> None:
     """A supplied matrix is an input to the build, not a product of it.
 
     Two systems can share a configuration and differ only in the matrix handed
-    to them, so the remembered identity is only reusable for the same matrix —
-    otherwise the memo would answer for a build that never happened.
+    to them, so an attested identity is only reusable for the same matrix —
+    otherwise it would answer for a build that never happened.
     """
 
     build_config = _tiny_system_config()
@@ -371,17 +462,16 @@ def test_a_supplied_interaction_matrix_is_part_of_the_remembered_identity() -> N
     first = scao.build_scao_system(supplied_config, interaction_matrix=first_matrix)
     second = scao.build_scao_system(supplied_config, interaction_matrix=other_matrix)
 
-    # Same configuration, different supplied matrix, therefore different keys
-    # and different remembered identities.
-    assert scao._build_identity_key(supplied_config, first_matrix) != (
-        scao._build_identity_key(supplied_config, other_matrix)
-    )
-    assert scao._recall_build_identity(supplied_config, first_matrix) == dict(
+    # Same configuration, different supplied matrix, therefore different
+    # attested identities that answer only for their own matrix.
+    assert scao._attested_build_identity(first, first_matrix) == dict(
         first.component_hashes
     )
-    assert scao._recall_build_identity(supplied_config, other_matrix) == dict(
+    assert scao._attested_build_identity(second, other_matrix) == dict(
         second.component_hashes
     )
+    assert scao._attested_build_identity(first, other_matrix) is None
+    assert scao._attested_build_identity(first, None) is None
     assert first.component_hashes["interaction_matrix"] != (
         second.component_hashes["interaction_matrix"]
     )
@@ -391,54 +481,47 @@ def test_a_supplied_interaction_matrix_is_part_of_the_remembered_identity() -> N
     scao.run_closed_loop(supplied_config, system=second)
 
 
-def test_a_remembered_identity_is_only_reused_for_an_equal_configuration() -> None:
-    """The memo key is a hash; the remembered configuration is the authority.
+def test_an_attested_identity_is_only_reused_for_an_equal_configuration() -> None:
+    """The attestation names a configuration, and that name is checked.
 
-    A hit that did not re-compare the configuration would make a hash the sole
-    basis for reusing an identity, so this guard is what keeps the memo an
-    optimization rather than a second, weaker trust path.
+    A system whose ``source_config`` was replaced after the build carries
+    evidence about a different configuration, so the evidence must not be
+    spent on it; verification falls back to the rebuild instead.
     """
 
     config = _tiny_system_config()
     system = scao.build_scao_system(config)
-    assert scao._recall_build_identity(config, None) == dict(system.component_hashes)
+    assert scao._attested_build_identity(system, None) == dict(system.component_hashes)
 
-    # Poison the entry under the honest key with a different configuration.
-    key = scao._build_identity_key(config, None)
     stranger = replace(
         config,
         atmosphere=replace(config.atmosphere, target_rms_opd_m=90.0e-9),
     )
-    scao._BUILD_IDENTITY_MEMO[key] = (stranger, dict(system.component_hashes))
-    assert scao._recall_build_identity(config, None) is None
+    # Same components and same recorded hashes, a different claimed source.
+    retargeted = replace(
+        system,
+        source_config=stranger,
+        config_hash=stranger.config_hash,
+    )
+    assert scao._attested_build_identity(retargeted, None) is None
 
-    # A miss falls back to the rebuild, so the honest system still runs.
+    # The fallback rebuild is the authority, and it refuses the retargeted
+    # system because that configuration builds a different atmosphere.
+    with pytest.raises(
+        scao.ScaoConstructionError,
+        match="do not match the components its source configuration rebuilds",
+    ):
+        scao.run_closed_loop(stranger, system=retargeted)
+
+    # The honest system still runs.
     scao.run_closed_loop(config, system=system)
 
 
-def test_the_build_identity_memo_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
-    # A long-running process may build many configurations; eviction costs a
-    # rebuild, never correctness.
-    monkeypatch.setattr(scao, "_BUILD_IDENTITY_MEMO", {})
-    monkeypatch.setattr(scao, "_BUILD_IDENTITY_MEMO_LIMIT", 3)
-    base = _tiny_system_config()
-    keys = []
-    for index in range(6):
-        config = replace(
-            base, controller=replace(base.controller, n_steps=2 + index)
-        )
-        scao._remember_build_identity(config, None, {"probe": "x" * 8})
-        keys.append(scao._build_identity_key(config, None))
-    assert len(scao._BUILD_IDENTITY_MEMO) == 3
-    assert keys[0] not in scao._BUILD_IDENTITY_MEMO
-    assert keys[-1] in scao._BUILD_IDENTITY_MEMO
-
-
-def test_replacing_a_backend_factory_invalidates_the_build_identity_memo() -> None:
+def test_replacing_a_backend_factory_invalidates_every_build_attestation() -> None:
     """The factory registry is an input to what a configuration builds.
 
-    It is not part of the memo key, so a remembered identity outlives the
-    factory set that produced it.  Serving it afterwards answers verification
+    It is not named by an attestation, so attested identities outlive the
+    factory set that produced them.  Serving one afterwards answers verification
     from a build that can no longer happen — in both directions: accepting a
     system this registry would not build, and rejecting one it would.
     """
@@ -472,24 +555,26 @@ def test_replacing_a_backend_factory_invalidates_the_build_identity_memo() -> No
 
     # Registering a backend for the FIRST time invalidates nothing: no
     # configuration could have been built against a backend that was not yet
-    # registered, and clearing there would put back the rebuild-and-recalibrate
-    # cost the memo exists to avoid.
-    remembered = dict(scao._BUILD_IDENTITY_MEMO)
-    assert remembered
+    # registered, and retiring attestations there would put back the
+    # rebuild-and-recalibrate cost they exist to avoid.
+    epoch = scao._FACTORY_EPOCH
     scao._factory_for("hcipy")
-    assert dict(scao._BUILD_IDENTITY_MEMO) == remembered
+    assert scao._FACTORY_EPOCH == epoch
+    assert scao._attested_build_identity(system, None) == dict(system.component_hashes)
 
     try:
         scao.register_scao_backend_factory("native", StrongerAberration(), replace=True)
-        # The system on hand is no longer what this registry builds, so it must
-        # be refused rather than accepted from the pre-replacement memory.
+        assert scao._FACTORY_EPOCH != epoch
+        # The system on hand is no longer what this registry builds, so its
+        # attestation is retired and it must be refused by the rebuild.
+        assert scao._attested_build_identity(system, None) is None
         with pytest.raises(
             scao.ScaoConstructionError,
             match="do not match the components its source configuration rebuilds",
         ):
             scao.run_closed_loop(config, system=system)
 
-        # And the converse: an identity remembered under the replaced factory
+        # And the converse: an attestation minted under the replaced factory
         # must not outlive it and reject an honest system afterwards.
         scao.build_scao_system(config)
         scao.register_scao_backend_factory("native", honest_factory, replace=True)
