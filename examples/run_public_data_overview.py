@@ -24,7 +24,7 @@ from shwfs_ao.io.resources import open_text_resource
 
 PUBLIC = Path("data/public")
 GENERATED = Path(
-    os.environ.get("AO_DEMO_OUTPUT_DIR", ROOT / "figures" / "detector_level_SCAO")
+    os.environ.get("AO_DEMO_OUTPUT_DIR", ROOT / "outputs" / "examples" / "detector_level_SCAO")
 )
 
 SVO_FILTER_PATHS = {

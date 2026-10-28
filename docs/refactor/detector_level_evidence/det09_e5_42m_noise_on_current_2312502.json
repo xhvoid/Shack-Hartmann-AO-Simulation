@@ -1,0 +1,81 @@
+{
+  "command": "e5",
+  "argv": [
+    "/Users/xuhan/Documents/AO Simulation/.claude/worktrees/large-experiments-2312502/scripts/run_detector_level_evidence.py",
+    "--output",
+    "det09_e5_42m_noise_on_current_2312502.json",
+    "--enabled-by-user",
+    "2026-10-18: the user wrote 'Conduct the large experiments.' in chat, enabling roadmap S1, S2 and S3 (one run at a time)",
+    "e5"
+  ],
+  "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+  "numpy": "2.5.0",
+  "scipy": "1.18.0",
+  "machine": "arm64",
+  "started_unix_s": 1792342278.8490539,
+  "enabled_by_user": "2026-10-18: the user wrote 'Conduct the large experiments.' in chat, enabling roadmap S1, S2 and S3 (one run at a time)",
+  "n_steps": 2000,
+  "burn_in_frames": 200,
+  "series_protocol_version": 2,
+  "code_identity": {
+    "git_head": "23125024e77769d067f53d837e035b340fc2139a",
+    "source_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "runs": [
+    {
+      "config_hash": "1ebaf8f35f977e01e2d65a496cf9d4ea06a5a0bc79362852df97646090db8b4f",
+      "root_seed": 1,
+      "n_steps": 2000,
+      "burn_in_frames": 200,
+      "build_s": 27.531364457681775,
+      "loop_s": 3594.6562244594097,
+      "per_frame_s": 1.797328112229705,
+      "process_peak_rss_bytes": 1718272000,
+      "post_update_rms_m": 1.7319477128890864e-07,
+      "post_update_mean_square_m2": 3.000864303289392e-14,
+      "open_loop_rms_m": 1.6831505469862892e-06,
+      "final_post_update_rms_m": 1.690835271479216e-07,
+      "valid_measurement_fraction": 0.9992167666492785,
+      "min_valid_measurement_fraction": 0.9943270735524257,
+      "reconstruction_usable_fraction": 1.0,
+      "lost_lock": false,
+      "science": [
+        {
+          "wavelength_m": 2.2e-06,
+          "peak_strehl": 0.7533179658694708,
+          "on_axis_strehl": 0.7533179658694708,
+          "fwhm_lambda_over_d": 0.9292401081026002
+        }
+      ],
+      "label": "det_ccd_42m_r3band_derived@1",
+      "protocol_hash": "bfd15e6b5fb4dca3dbbcddf90116c8d46282bdd53c486ef73a8b615200e6e2de",
+      "protocol": {
+        "label": "det_ccd_42m_r3band_derived@1",
+        "root_seed": 1,
+        "config_hash": "1ebaf8f35f977e01e2d65a496cf9d4ea06a5a0bc79362852df97646090db8b4f",
+        "series_protocol_version": 2,
+        "n_steps": 2000,
+        "burn_in_frames": 200,
+        "execution": "ScaoExecutionOptions(lenslet_batch_size=512, calibration_cache=None, atmosphere_band_storage='regenerate', telemetry_level='summary')",
+        "code": {
+          "git_head": "23125024e77769d067f53d837e035b340fc2139a",
+          "source_changes_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    }
+  ],
+  "summary": {
+    "det_ccd_42m_r3band_derived@1": {
+      "runs": 1,
+      "post_update_rms_mean_m": 1.7319477128890864e-07,
+      "post_update_rms_seed_std_m": 0.0,
+      "valid_fraction_mean": 0.9992167666492785,
+      "valid_fraction_seed_std": 0.0,
+      "peak_strehl_mean": 0.7533179658694708,
+      "peak_strehl_seed_std": 0.0,
+      "lost_lock_runs": 0
+    }
+  },
+  "refused": [],
+  "wall_s": 3638.5639102458954
+}

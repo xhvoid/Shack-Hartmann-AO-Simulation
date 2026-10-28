@@ -1,5 +1,12 @@
 # AO-REF-005 Canonical Shack-Hartmann Domain
 
+> **Status of this page (2026-10-18).** This is a ticket record of the refactor
+> that produced the `shwfs_ao` package. Its contract statements (units,
+> identities, protocols, tolerances) still describe the code unless the
+> [technical reference](../technical_reference.md) says otherwise; its status
+> lines, dates and next steps are historical. Open work is in the
+> [roadmap](../roadmap.md).
+
 AO-REF-005 separates Shack-Hartmann geometry, noiseless optics, deterministic
 reference calibration, detector-level measurement, and geometric measurement.
 The stable API is available from `shwfs_ao.wfs.shack_hartmann` and is re-exported

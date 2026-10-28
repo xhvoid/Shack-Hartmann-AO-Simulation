@@ -1,5 +1,12 @@
 # AO-REF-010: science propagation, bandpasses, and physical-grid metrics
 
+> **Status of this page (2026-10-18).** This is a ticket record of the refactor
+> that produced the `shwfs_ao` package. Its contract statements (units,
+> identities, protocols, tolerances) still describe the code unless the
+> [technical reference](../technical_reference.md) says otherwise; its status
+> lines, dates and next steps are historical. Open work is in the
+> [roadmap](../roadmap.md).
+
 `shwfs_ao.science` is the canonical owner of science-band spectral sampling,
 the backend-independent propagation construction contract, and scalar
 image-quality metrics. `shwfs_ao.backends.native.propagation` is the one owner

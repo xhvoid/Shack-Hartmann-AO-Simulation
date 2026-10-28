@@ -1,5 +1,10 @@
 # ESO SCAO development status
 
+> **Dated execution record (2026-10-18).** Each section records what was done
+> on its date; later sections supersede earlier ones where they say so. The
+> current implementation is explained in the [technical reference](../technical_reference.md),
+> and open work is in the [roadmap](../roadmap.md).
+
 Requirements reference: [ESO_SCAO_DEVELOPMENT_PROMPT.md](ESO_SCAO_DEVELOPMENT_PROMPT.md).
 This file is the execution record. It lists only evidence that was actually
 produced; a resource-deferred gate is not a passed gate.

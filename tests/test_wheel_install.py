@@ -728,6 +728,7 @@ def _assert_wheel_layout(
         for name in expected_resources
     }
     expected_package_code = {
+        "shwfs_ao/DATA_LICENSES.md",
         "shwfs_ao/__init__.py",
         "shwfs_ao/_deprecation.py",
         "shwfs_ao/backends/__init__.py",
@@ -792,6 +793,7 @@ def _assert_wheel_layout(
         "shwfs_ao/experimental/__init__.py",
         "shwfs_ao/experimental/pwfs.py",
         "shwfs_ao/experiments/__init__.py",
+        "shwfs_ao/experiments/_component_configs.py",
         "shwfs_ao/experiments/atmospheric_disturbance.py",
         "shwfs_ao/experiments/calibration_cache.py",
         "shwfs_ao/experiments/detector_level.py",
@@ -804,6 +806,7 @@ def _assert_wheel_layout(
         "shwfs_ao/experiments/scao.py",
         "shwfs_ao/experiments/scenario_instrument.py",
         "shwfs_ao/io/__init__.py",
+        "shwfs_ao/io/_profile_schema.py",
         "shwfs_ao/io/artifacts.py",
         "shwfs_ao/io/benchmark_ledgers.py",
         "shwfs_ao/io/camera_presets.py",
@@ -1588,6 +1591,7 @@ def test_direct_wheel_and_sdist_wheel_have_identical_installed_contract(tmp_path
             + name.removeprefix("ao_simulation_data/")
             for name in expected_resource_hashes
         ),
+        "src/shwfs_ao/DATA_LICENSES.md",
         "src/shwfs_ao/__init__.py",
         "src/shwfs_ao/_deprecation.py",
         "src/shwfs_ao/backends/__init__.py",
@@ -1645,6 +1649,7 @@ def test_direct_wheel_and_sdist_wheel_have_identical_installed_contract(tmp_path
         "src/shwfs_ao/experimental/__init__.py",
         "src/shwfs_ao/experimental/pwfs.py",
         "src/shwfs_ao/experiments/__init__.py",
+        "src/shwfs_ao/experiments/_component_configs.py",
         "src/shwfs_ao/experiments/atmospheric_disturbance.py",
         "src/shwfs_ao/experiments/calibration_cache.py",
         "src/shwfs_ao/experiments/detector_level.py",
@@ -1657,6 +1662,7 @@ def test_direct_wheel_and_sdist_wheel_have_identical_installed_contract(tmp_path
         "src/shwfs_ao/experiments/scao.py",
         "src/shwfs_ao/experiments/scenario_instrument.py",
         "src/shwfs_ao/io/__init__.py",
+        "src/shwfs_ao/io/_profile_schema.py",
         "src/shwfs_ao/io/artifacts.py",
         "src/shwfs_ao/io/benchmark_ledgers.py",
         "src/shwfs_ao/io/camera_presets.py",

@@ -1,6 +1,7 @@
 include README.md
 include LICENSE
 include DATA_LICENSES.md
+include src/shwfs_ao/DATA_LICENSES.md
 include pyproject.toml
 include MANIFEST.in
 

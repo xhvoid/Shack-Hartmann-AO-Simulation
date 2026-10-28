@@ -1,6 +1,6 @@
 # AO detector-level extension parameter-source inventory
 
-Prepared: 2026-07-20 22:42
+Prepared: 2026-10-18 06:49
 
 Scope: tracked public caches, derived calculations, synthetic model parameters, and derived result artifacts used by the detector-level AO extension. Direct public data are separated from synthetic AO proxies.
 
@@ -22,7 +22,7 @@ Scope: tracked public caches, derived calculations, synthetic model parameters, 
 | --- | --- | --- | --- | --- |
 | Fried r0 conversion | r0_500_m = 0.98 * 500e-9 / seeing_rad | ESO ASM median DIMM seeing at 500 nm | 0.139695715 m | Fried parameter; DOI 10.1364/JOSA.56.001372 |
 | SVO J/H/Ks effective wavelengths | lambda_eff = integral(lambda*T dlambda) / integral(T dlambda) | SVO 2MASS/2MASS.J, H, Ks transmission samples | J=1.241052 micron; H=1.651366 micron; Ks=2.165631 micron | SVO FPS direct caches; 2MASS canonical paper DOI 10.1086/498708 |
-| Pan-STARRS 700 nm WFS photon estimate | AB fnu=3631 Jy*10^(-0.4*m); bandwidth=150 nm; D=2 m; throughput=0.25; exposure=1 ms; n_subap=25 | PS1_101500836297539800 m700=18.871053 | 0.010434989 photons/subap/frame | MAST Pan-STARRS DR2 cache; AB magnitude convention from Oke & Gunn DOI 10.1086/113325; engineering estimate, not WFS telemetry |
+| Pan-STARRS 700 nm WFS photon estimate | AB fnu=3631 Jy*10^(-0.4*m); bandwidth=150 nm; D=2 m; throughput=0.25; exposure=1 ms; n_subap=25 | PS1_101500836297539800 m700=18.871053 | 0.010434989 photons/subap/frame | MAST Pan-STARRS DR2 cache; AB magnitude convention from Oke & Gunn DOI 10.1086/160817; engineering estimate, not WFS telemetry |
 | Public-data-informed phase amplitude | phase_amplitude_nm = 260 nm * seeing_arcsec / 0.80 arcsec | ESO ASM seeing=0.7235 arcsec | 235.1375 nm for paranal_night_asm | Synthetic scaling anchored to ESO ASM; not a measured wavefront sequence |
 | Science Strehl metric | Marechal proxy Strehl = exp(-(2*pi*OPD_rms/lambda)^2) | Synthetic residual OPD RMS and direct SVO J/H/Ks effective wavelengths | J/H/Ks Strehl columns in the science, error-budget, fast-integration, and public-data-informed result CSVs | Analytical AO diagnostic formula; no on-sky PSF calibration is used |
 
@@ -144,7 +144,7 @@ Scope: tracked public caches, derived calculations, synthetic model parameters, 
 | SVO FPS | SVO Filter Profile Service | https://svo2.cab.inta-csic.es/theory/fps/ | direct public 2MASS J/H/Ks filter curves |
 | 2MASS | IRSA 2MASS PSC | https://irsa.ipac.caltech.edu/Missions/2mass.html ; DOI 10.1086/498708 | direct public J/H/Ks catalog photometry and filter identity |
 | Pan-STARRS | MAST Pan-STARRS DR2 mean catalog | arXiv:1612.05560 and arXiv:1612.05243 | direct public optical photometry substitute for Gaia |
-| AB magnitude | AB photon-budget convention | Oke & Gunn DOI 10.1086/113325 | 700 nm WFS photon estimate from Pan-STARRS magnitudes |
+| AB magnitude | AB photon-budget convention | Oke & Gunn DOI 10.1086/160817 | 700 nm WFS photon estimate from Pan-STARRS magnitudes |
 | Fried r0 | Fried parameter conversion | DOI 10.1364/JOSA.56.001372 | r0 derived from ESO ASM seeing |
 | DM influence | Gaussian synthetic DM influence functions | arXiv:2306.10803 | literature-inspired DM shape choice |
 | Noll | Zernike/statistical aberration background | DOI 10.1364/JOSA.66.000207 | background reference for modal aberration vocabulary |

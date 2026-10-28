@@ -43,7 +43,7 @@ from shwfs_ao.io.artifacts import (
 from shwfs_ao.io.resources import resource_exists
 
 
-GENERATED = Path(os.environ.get("AO_DEMO_OUTPUT_DIR", ROOT / "figures" / "detector_level_SCAO"))
+GENERATED = Path(os.environ.get("AO_DEMO_OUTPUT_DIR", ROOT / "outputs" / "examples" / "detector_level_SCAO"))
 PUBLIC = Path("data/public")
 PUBLIC_SUMMARY = GENERATED / "public_data_summary.csv"
 PUBLIC_PHOTON_BUDGET = GENERATED / "public_data_photon_budget.csv"
@@ -56,6 +56,12 @@ def main() -> None:
     run_started_perf = time.perf_counter()
     GENERATED.mkdir(parents=True, exist_ok=True)
 
+    missing = [path.name for path in (PUBLIC_SUMMARY, PUBLIC_PHOTON_BUDGET) if not path.is_file()]
+    if missing:
+        raise RuntimeError(
+            f"{', '.join(missing)} not found in {_display_path(GENERATED)}. Run "
+            "examples/run_public_data_overview.py with the same AO_DEMO_OUTPUT_DIR first."
+        )
     public_summary = _read_metric_rows(PUBLIC_SUMMARY)
     photon_rows = _read_rows(PUBLIC_PHOTON_BUDGET)
     if not photon_rows:

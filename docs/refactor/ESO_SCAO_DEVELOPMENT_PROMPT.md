@@ -1,5 +1,10 @@
 # Development prompt: ESO-derived SCAO benchmark, long-exposure science, and high-order scaling
 
+> **Historical assignment (2026-10-18).** This prompt was carried out; its
+> outcome is recorded in [`ESO_SCAO_DEVELOPMENT_STATUS.md`](ESO_SCAO_DEVELOPMENT_STATUS.md). It is not the current plan:
+> the implementation is explained in the [technical reference](../technical_reference.md)
+> and open work is in the [roadmap](../roadmap.md).
+
 Prepared: 2026-10-14 (Europe/Berlin)  
 Repository: https://github.com/xhvoid/Shack-Hartmann-AO-Simulation  
 Planning snapshot: e55754f4221a69f4765249c63f39cd081348a955  

@@ -2,6 +2,10 @@
 
 # Validation Notes
 
+> **Historical component note (2026-10-18).** Written during an earlier stage
+> of the repository and kept as implementation history. The current
+> implementation is explained in the [technical reference](technical_reference.md).
+
 The installed `ao_validation` surface preserves its frozen compatibility
 checks for notebook 11 and unit tests. Control-loop checks use the canonical
 `shwfs_ao.control` timing and replay contracts rather than maintaining a

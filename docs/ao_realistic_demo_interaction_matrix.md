@@ -1,5 +1,9 @@
 # Interaction Matrix Notes
 
+> **Historical component note (2026-10-18).** Written during an earlier stage
+> of the repository and kept as implementation history. The current
+> implementation is explained in the [technical reference](technical_reference.md).
+
 The repository-level calibration owner is
 `shwfs_ao.calibration.calibrate_interaction_matrix`. It accepts either a
 unit-pupil-RMS `ModalProbeBasis` or a canonical-DM

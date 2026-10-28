@@ -2,6 +2,10 @@
 
 # DM Model Notes
 
+> **Historical component note (2026-10-18).** Written during an earlier stage
+> of the repository and kept as implementation history. The current
+> implementation is explained in the [technical reference](technical_reference.md).
+
 The synthetic DM has one repository-level policy owner in
 `shwfs_ao.dm.DeformableMirror`. The transparent NumPy spatial implementation
 lives in `shwfs_ao.backends.native.dm`. The installed top-level `dm_model`

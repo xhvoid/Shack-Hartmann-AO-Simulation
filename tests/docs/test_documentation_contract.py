@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 from dataclasses import fields, is_dataclass
 import importlib.util
+import json
 from pathlib import Path
 import re
 import sys
@@ -307,6 +308,46 @@ def test_every_readme_bash_command_has_a_clean_wheel_ci_owner():
         assert f"--section {section} --require-wheel-bundle" in workflow
 
 
+def test_the_packaged_data_license_copy_matches_the_repository_file():
+    # The relocated resource READMEs are frozen byte for byte (AO-REF-001);
+    # their relative DATA_LICENSES.md links resolve to this package copy, in
+    # the checkout and in an installed wheel, so it must equal the root file.
+    copy = ROOT / "src" / "shwfs_ao" / "DATA_LICENSES.md"
+    assert copy.read_bytes() == (ROOT / "DATA_LICENSES.md").read_bytes()
+    resources = ROOT / "src" / "shwfs_ao" / "resources"
+    for readme, link in (
+        (resources / "README.md", "../DATA_LICENSES.md"),
+        (resources / "public" / "README.md", "../../DATA_LICENSES.md"),
+    ):
+        assert f"]({link})" in readme.read_text(encoding="utf-8")
+        assert (readme.parent / link).resolve() == copy.resolve()
+
+
+def test_every_file_a_readme_command_runs_is_in_the_wheel_smoke_bundle():
+    # The README smoke executes inside the portable bundle, so each example,
+    # script, notebook or test a README command names must be a manifest
+    # entry, and a native command must not need the optional backend.
+    manifest = json.loads(
+        (ROOT / "tests" / "wheel_smoke" / "manifest.json").read_text(encoding="utf-8")
+    )
+    entries = {entry["source"]: entry for entry in manifest["entries"]}
+    named = 0
+    for section, commands in parse_readme_commands(README).items():
+        for command in commands:
+            for path in re.findall(
+                r"(?:examples|scripts|notebooks|tests)/[\w./-]+\.(?:py|ipynb)", command.source
+            ):
+                named += 1
+                assert path in entries, (
+                    f"README line {command.line_number}: {path} is not in the wheel-smoke bundle"
+                )
+                if section == "native":
+                    assert "hcipy" not in entries[path]["requires"], (
+                        f"README line {command.line_number}: native command needs HCIPy"
+                    )
+    assert named > 0
+
+
 # The package dependency diagram is a claim about the code, so it is checked
 # against the code.  ``resources`` is packaged data rather than a code package
 # and the clients live outside ``src/``, so those two nodes carry no derivable
@@ -465,6 +506,25 @@ def test_the_package_dependency_diagram_matches_the_real_import_graph():
     assert not wrong_kind, (
         "solid means a module-level import and dashed means one deferred to "
         f"call time; these disagree (edge, documented, actual): {wrong_kind}"
+    )
+
+
+def test_the_technical_reference_repeats_the_checked_dependency_diagram():
+    """The reference's copy of the package graph is the one checked above.
+
+    ``docs/technical_reference.md`` repeats the package dependency diagram so
+    it reads on its own.  A second copy that nothing compares goes stale the
+    first time the checked one changes, so the two must stay identical.
+    """
+
+    def package_diagram(path: Path) -> str:
+        text = path.read_text(encoding="utf-8")
+        match = re.search(r"```mermaid\nflowchart BT\n.*?```", text, flags=re.S)
+        assert match is not None, f"no package dependency diagram in {path}"
+        return match.group(0)
+
+    assert package_diagram(ROOT / "docs" / "technical_reference.md") == package_diagram(
+        ROOT / "docs" / "architecture.md"
     )
 
 

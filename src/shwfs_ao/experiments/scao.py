@@ -33,13 +33,11 @@ from ..control import (
     FrameObserver,
     IdentityCommandProjector,
     LeakyIntegratorController,
-    LoopConfig,
     ModalToActuatorCommandProjector,
     validate_closed_loop_components,
 )
 from ..control.loop import run_closed_loop as _run_component_loop
 from ..core.hashing import component_config_hash
-from ..core.wavefront import opd_to_phase
 from ..core.protocols import (
     AtmosphereModel,
     CommandProjector,
@@ -57,6 +55,15 @@ from ..dm import DMConfig
 from ..io.configs import AtmosphereLayerConfig, SystemConfig
 from ..io.resources import read_text_resource
 from ..science.propagation import PsfSampling
+from ._component_configs import (
+    centroid_config as _centroid_config,
+    detector_config as _detector_config,
+    dm_config as _dm_config,
+    exposure_keywords as _exposure_keywords,
+    loop_config as _loop_config,
+    target_rms_rad as _target_rms_rad,
+    validity_config as _validity_config,
+)
 
 
 __all__ = (
@@ -755,18 +762,6 @@ def run_closed_loop(
     )
 
 
-def _exposure_keywords(config: SystemConfig) -> dict[str, Any]:
-    """DET-08 time quadrature, passed only when a profile asks for it."""
-
-    physics = config.detector_physics
-    if physics is None or physics.exposure_subsamples == 1:
-        return {}
-    return {
-        "exposure_subsamples": int(physics.exposure_subsamples),
-        "exposure_s": float(config.detector.exposure_s),
-    }
-
-
 def _verify_supplied_system(config: SystemConfig, system: ScaoSystem) -> None:
     """Reject a supplied system whose components do not match its own source.
 
@@ -931,40 +926,6 @@ def _factory_for(name: str) -> ScaoBackendComponentFactory:
     return _factory_and_epoch(name)[0]
 
 
-def _target_rms_rad(config: SystemConfig) -> float | None:
-    if config.atmosphere.target_rms_opd_m is None:
-        return None
-    return float(
-        opd_to_phase(
-            config.atmosphere.target_rms_opd_m,
-            config.atmosphere.r0_reference_wavelength_m,
-        )
-    )
-
-
-def _detector_config(config: SystemConfig) -> DetectorConfig:
-    detector = config.detector
-    source_note = (
-        f"SCAO profile {config.profile.profile_name}@"
-        f"{config.profile.profile_version}; detector settings are serialized "
-        "profile inputs, not backend defaults."
-    )
-    return DetectorConfig(
-        photons_per_subap_frame=detector.photons_per_subap_frame,
-        read_noise_e=detector.read_noise_e,
-        dark_e_per_s=detector.dark_e_per_s,
-        background_e_per_pixel_frame=detector.background_e_per_pixel_frame,
-        full_well_e=detector.full_well_e,
-        qe=detector.qe,
-        prnu_rms=detector.prnu_rms,
-        exposure_s=detector.exposure_s,
-        source_class=config.profile.provenance.source_class,
-        source_note=source_note,
-        prnu_mode=detector.prnu_mode,
-        bad_pixel_fraction=detector.bad_pixel_fraction,
-    )
-
-
 def physical_detector_config(config: SystemConfig) -> PhysicalDetectorConfig:
     """The detector-layer configuration of a schema-v7 ``detector_physics`` block."""
 
@@ -983,46 +944,6 @@ def physical_detector_config(config: SystemConfig) -> PhysicalDetectorConfig:
         exposure_subsamples=physics.exposure_subsamples,
         calibration_source_detected_e_per_full_subap_frame=(
             physics.calibration_source_detected_e_per_full_subap_frame
-        ),
-    )
-
-
-def _centroid_config(config: SystemConfig) -> CentroidConfig:
-    return CentroidConfig(
-        estimator=config.wfs.centroid_estimator,
-        threshold_fraction=config.wfs.threshold_fraction,
-        subtract_minimum=config.wfs.subtract_minimum,
-    )
-
-
-def _validity_config(config: SystemConfig) -> CentroidValidityConfig:
-    return CentroidValidityConfig(
-        min_flux_e=config.wfs.min_flux_e,
-        min_peak_snr=config.wfs.min_peak_snr,
-        max_centroid_sigma_px=config.wfs.max_centroid_sigma_px,
-        max_window_clipping_fraction=(
-            config.wfs.max_window_clipping_fraction
-        ),
-    )
-
-
-def _dm_config(config: SystemConfig) -> DMConfig:
-    dm = config.dm
-    return DMConfig(
-        telescope_diameter_m=config.telescope_diameter_m,
-        n_actuators_across=config.actuators_across,
-        influence_model=dm.influence_model,
-        coupling_width_pitch=dm.coupling_width_pitch,
-        stroke_limit_nm=dm.stroke_limit_opd_m * 1.0e9,
-        include_edge_actuators=dm.include_edge_actuators,
-        actuator_margin_fraction=dm.actuator_margin_fraction,
-        dead_actuator_indices=dm.dead_actuator_indices,
-        stuck_actuator_indices=dm.stuck_actuator_indices,
-        stuck_command_nm=dm.stuck_command_opd_m * 1.0e9,
-        source_class=config.profile.provenance.source_class,
-        source_note=(
-            f"SCAO profile {config.profile.profile_name}@"
-            f"{config.profile.profile_version}; DM values are explicit."
         ),
     )
 
@@ -1443,18 +1364,6 @@ def _build_command_projector(
         raise ScaoConstructionError(
             f"cannot build command projector {projector.kind!r}: {exc}"
         ) from exc
-
-
-def _loop_config(config: SystemConfig) -> LoopConfig:
-    controller = config.controller
-    return LoopConfig(
-        n_steps=controller.n_steps,
-        gain=controller.gain,
-        leak=controller.leak,
-        latency_frames=controller.latency_frames,
-        frame_rate_hz=controller.frame_rate_hz,
-        root_seed=config.random.root_seed,
-    )
 
 
 def _json_resource(resource_name: str) -> Mapping[str, object]:

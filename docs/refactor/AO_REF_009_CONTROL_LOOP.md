@@ -1,5 +1,12 @@
 # AO-REF-009: backend-independent control loop
 
+> **Status of this page (2026-10-18).** This is a ticket record of the refactor
+> that produced the `shwfs_ao` package. Its contract statements (units,
+> identities, protocols, tolerances) still describe the code unless the
+> [technical reference](../technical_reference.md) says otherwise; its status
+> lines, dates and next steps are historical. Open work is in the
+> [roadmap](../roadmap.md).
+
 `shwfs_ao.control` is the canonical owner of command projection, controller
 state, frame latency, loop sequencing, fixed-length telemetry, and replay-safe
 control sweeps. WFS optics, reconstruction, DM spatial synthesis, and science

@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 import math
 from numbers import Integral, Real
-from typing import Any, Literal, overload
+from typing import Literal, overload
 
 import numpy as np
 import numpy.typing as npt

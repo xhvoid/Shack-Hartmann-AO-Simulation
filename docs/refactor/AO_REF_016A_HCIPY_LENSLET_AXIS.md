@@ -1,5 +1,12 @@
 # AO-REF-016A — HCIPy lenslet axes on their detector windows
 
+> **Status of this page (2026-10-18).** This is a ticket record of the refactor
+> that produced the `shwfs_ao` package. Its contract statements (units,
+> identities, protocols, tolerances) still describe the code unless the
+> [technical reference](../technical_reference.md) says otherwise; its status
+> lines, dates and next steps are historical. Open work is in the
+> [roadmap](../roadmap.md).
+
 Date: 2026-10-15. Committed on `public-clean-main`: the fix in `9352f6c`,
 its tests reworked on measured margins in `394d175`, and the lower-memory
 HCIPy build in `da189f3`. The fix is opt-in. No published profile, pinned

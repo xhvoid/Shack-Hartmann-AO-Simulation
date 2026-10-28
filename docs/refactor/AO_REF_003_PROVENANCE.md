@@ -1,5 +1,12 @@
 # AO-REF-003 Core Provenance and Public-Data Boundary
 
+> **Status of this page (2026-10-18).** This is a ticket record of the refactor
+> that produced the `shwfs_ao` package. Its contract statements (units,
+> identities, protocols, tolerances) still describe the code unless the
+> [technical reference](../technical_reference.md) says otherwise; its status
+> lines, dates and next steps are historical. Open work is in the
+> [roadmap](../roadmap.md).
+
 AO-REF-003 makes provenance a shared domain record rather than a taxonomy
 owned by a data loader. Canonical code imports `Provenance`, `SourceClass`, and
 `ALLOWED_SOURCE_CLASSES` from `shwfs_ao.core.provenance`. Physical components

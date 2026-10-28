@@ -6,6 +6,15 @@ This directory documents the installed `shwfs_ao` framework. The
 [repository README](../README.md) is the primary entry point for installation,
 wheel-verified quick-start commands, scope, results, and limitations.
 
+## Start here
+
+- [Technical reference](technical_reference.md) — the single current account of
+  the implementation: scope, architecture, units, every model family and mode
+  compared, compatible routes, assumptions, evidence, references and costs.
+- [Roadmap](roadmap.md) — open scientific questions and engineering tasks, with
+  the evidence each needs and its cost category.
+- [Current simulation limitations](current_limitations.md) — living record of model boundaries, known issues, validation gaps and evidence needed to revisit them.
+
 ## Overview and reproducibility
 
 - [Getting started](getting_started.md) — installation, notebook entry points and optional dependencies.
@@ -26,10 +35,17 @@ wheel-verified quick-start commands, scope, results, and limitations.
   schema 3, sidecars/manifests, upgrades, and baseline acceptance.
 - [Migration](migration.md) — deprecated import/resource replacements,
   release clock, and serialized compatibility paths.
+- [Cleanup and refactoring execution prompt](refactor/CLEANUP_REFACTOR_EXECUTION_PROMPT.md) — staged agent assignment, preservation contracts, technical-reference requirements and resource estimates.
+- [Independent cleanup review prompt](refactor/CLEANUP_REFACTOR_REVIEW_PROMPT.md) — source, scientific-behavior, documentation, packaging and resource-cost acceptance review.
+- [Cleanup execution record](refactor/CLEANUP_REFACTOR_STATUS.md) — what the consolidation changed and verified, ticket by ticket.
 - [Parameter-source inventory (Markdown)](ao_realistic_demo_parameter_source_inventory.md) — tracked public caches, derived quantities, synthetic parameters, and result provenance.
 - [Parameter-source inventory (PDF)](ao_realistic_demo_parameter_source_inventory.pdf) — formatted version of the source inventory.
 
-## Canonical API contracts
+## Component contracts (AO-REF ticket records)
+
+These ticket records still state the component contracts; their status lines
+and next steps are historical.
+
 
 - [AO-REF-007 interaction-matrix calibration](refactor/AO_REF_007_INTERACTION_MATRIX.md)
 - [AO-REF-008 mask-aware reconstructors](refactor/AO_REF_008_RECONSTRUCTORS.md)
@@ -43,12 +59,19 @@ wheel-verified quick-start commands, scope, results, and limitations.
 - [AO-REF-016 HCIPy Shack-Hartmann optics](refactor/AO_REF_016_HCIPY_SHWFS.md)
 - [AO-REF-017 HCIPy science propagation](refactor/AO_REF_017_HCIPY_SCIENCE.md)
 
-## Simulation components
+## Current model notes
+
+- [Detector model](detector_model.md) — the compatibility and physical camera chains, units, camera presets, calibration products, the `detector_covariance_v2` uncertainty model and its supported domain ([execution record](refactor/DETECTOR_LEVEL_DEVELOPMENT_STATUS.md))
+- [ESO E-ELT ten-layer turbulence model](eso_elt_turbulence_model.md) — source table, `native_layered` atmosphere, validation, the HCIPy `hcipy_layered` cross-check and the `eso_turbulence_2m_detector@1` profile
+- [ESO-derived SCAO benchmark](eso_scao_benchmark.md) — 42 m, 84×84 SH / 85×85 DM benchmark tiers, source and assumption ledgers, the sparse high-order path, streamed long-exposure science, and the desktop resource policy ([execution record](refactor/ESO_SCAO_DEVELOPMENT_STATUS.md))
+
+## Historical component notes
+
+These notes were written for earlier stages of the repository and are kept
+as implementation history.
 
 - [Data-source interface](ao_realistic_demo_data_interface.md)
 - [Atmosphere profiles](ao_realistic_demo_atmosphere_profile_builder.md)
-- [ESO E-ELT ten-layer turbulence model](eso_elt_turbulence_model.md) — source table, `native_layered` atmosphere, validation, the HCIPy `hcipy_layered` cross-check and the `eso_turbulence_2m_detector@1` profile
-- [ESO-derived SCAO benchmark](eso_scao_benchmark.md) — 42 m, 84×84 SH / 85×85 DM benchmark tiers, source and assumption ledgers, the sparse high-order path, streamed long-exposure science, and the desktop resource policy ([execution record](refactor/ESO_SCAO_DEVELOPMENT_STATUS.md))
 - [Detector-level Shack-Hartmann WFS](ao_realistic_demo_detector_shwfs.md)
 - [Synthetic deformable-mirror model](ao_realistic_demo_dm_model.md)
 - [Interaction matrix](ao_realistic_demo_interaction_matrix.md)
@@ -59,7 +82,10 @@ wheel-verified quick-start commands, scope, results, and limitations.
 - [Fast integration run](ao_realistic_demo_integration.md)
 
 The component notes preserve detailed implementation history. Current
-architecture is defined by the package-level pages above and current notebooks
-under `notebooks/tutorials`, `notebooks/studies`, and
-`notebooks/experimental`; archived numbered notebooks are migration evidence,
-not the primary design description.
+architecture is defined by the [technical reference](technical_reference.md),
+the package-level pages above and current notebooks under
+`notebooks/tutorials`, `notebooks/studies`, and `notebooks/experimental`;
+archived numbered notebooks are migration evidence, not the primary design
+description. Earlier plans (`AO_REFACTOR_MASTER_TICKETS_REVISED.md`,
+[`repository_optimization_ticket.md`](repository_optimization_ticket.md)) describe earlier repository
+states; the [roadmap](roadmap.md) is the current plan.

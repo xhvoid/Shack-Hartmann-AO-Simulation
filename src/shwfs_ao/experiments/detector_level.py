@@ -637,7 +637,7 @@ def paired_noise_run(
     """
 
     from ..control.loop import run_closed_loop as run_component_loop
-    from .scao import _exposure_keywords, _loop_config
+    from ._component_configs import exposure_keywords, loop_config
 
     run_config = replace(
         config,
@@ -661,7 +661,7 @@ def paired_noise_run(
         wfs = system.wfs if arm == "noise_on" else _OperatingExpectationSensor(system.wfs)
         recorders[arm] = _PupilResidualRecorder(int(burn_in_frames))
         history = run_component_loop(
-            _loop_config(run_config),
+            loop_config(run_config),
             random_streams=system.random_streams,
             atmosphere=system.atmosphere,
             wfs=wfs,
@@ -673,7 +673,7 @@ def paired_noise_run(
             include_noise=arm == "noise_on",
             recovery=system.recovery_policy,
             observers=(recorders[arm],),
-            **_exposure_keywords(run_config),
+            **exposure_keywords(run_config),
         )
         post = np.asarray(history.post_update_residual_opd_rms_m, dtype=float)[window]
         open_loop = np.asarray(history.open_loop_opd_rms_m, dtype=float)[window]

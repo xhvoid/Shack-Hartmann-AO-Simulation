@@ -2,6 +2,10 @@
 
 # Atmosphere Profile Builder Notes
 
+> **Historical component note (2026-10-18).** Written during an earlier stage
+> of the repository and kept as implementation history. The current
+> implementation is explained in the [technical reference](technical_reference.md).
+
 The atmosphere builder is currently implemented in `src/shwfs_ao/legacy/atmosphere_profiles.py` and re-exported through the installed `atmosphere_profiles` compatibility module. It consumes the literature-profile object and produces an `AtmosphereConfig` shared across the simulation modules:
 
 ```text

@@ -1,5 +1,12 @@
 # AO-REF-000 Compatibility and Regression Contract
 
+> **Status of this page (2026-10-18).** This is a ticket record of the refactor
+> that produced the `shwfs_ao` package. Its contract statements (units,
+> identities, protocols, tolerances) still describe the code unless the
+> [technical reference](../technical_reference.md) says otherwise; its status
+> lines, dates and next steps are historical. Open work is in the
+> [roadmap](../roadmap.md).
+
 Status: implementation freeze, locally green and independently reviewable; exact constrained Python 3.10/3.14 CI evidence is pending, and AO-REF-001 remains gated.
 
 ## Scope and authority

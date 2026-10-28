@@ -1,5 +1,10 @@
 # Detector-level development: execution record
 
+> **Dated execution record (2026-10-18).** Each section records what was done
+> on its date; later sections supersede earlier ones where they say so. The
+> current implementation is explained in the [technical reference](../technical_reference.md),
+> and open work is in the [roadmap](../roadmap.md).
+
 Prompt: [`DETECTOR_LEVEL_DEVELOPMENT_PROMPT.md`](DETECTOR_LEVEL_DEVELOPMENT_PROMPT.md).
 Started 2026-10-15 (Europe/Berlin). This file is the durable execution record.
 Each ticket states its status, evidence, commands, limitations, and next

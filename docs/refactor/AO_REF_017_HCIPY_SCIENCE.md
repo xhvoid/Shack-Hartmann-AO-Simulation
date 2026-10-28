@@ -1,5 +1,12 @@
 # AO-REF-017 — HCIPy science propagation backend
 
+> **Status of this page (2026-10-18).** This is a ticket record of the refactor
+> that produced the `shwfs_ao` package. Its contract statements (units,
+> identities, protocols, tolerances) still describe the code unless the
+> [technical reference](../technical_reference.md) says otherwise; its status
+> lines, dates and next steps are historical. Open work is in the
+> [roadmap](../roadmap.md).
+
 AO-REF-017 adds `shwfs_ao.backends.hcipy.propagation`: HCIPy Fraunhofer
 (perfect-lens) propagation behind the canonical `SciencePropagator`
 protocol. `psf_from_opd(opd_m, wavelength_m)` builds the pupil wavefront

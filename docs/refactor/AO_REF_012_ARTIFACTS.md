@@ -1,5 +1,12 @@
 # AO-REF-012 — Artifact and resource boundary
 
+> **Status of this page (2026-10-18).** This is a ticket record of the refactor
+> that produced the `shwfs_ao` package. Its contract statements (units,
+> identities, protocols, tolerances) still describe the code unless the
+> [technical reference](../technical_reference.md) says otherwise; its status
+> lines, dates and next steps are historical. Open work is in the
+> [roadmap](../roadmap.md).
+
 AO experiments now finish in memory before any file is created. The canonical
 writer is `shwfs_ao.io.artifacts.write_integration_artifacts`; its
 `ArtifactConfig` names a caller-owned output directory and, when needed, an
