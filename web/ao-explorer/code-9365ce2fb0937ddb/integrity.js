@@ -52,9 +52,11 @@ export async function fetchVerifiedJson(ref, definingUrl, options = {}) {
 }
 
 export async function fetchVerifiedImage(ref, definingUrl, options = {}) {
-  const { url, buffer } = await fetchVerified(ref, definingUrl, { ...options, expectType: "image/png" });
+  const type = options.expectType || "image/png";
+  require(["image/png", "image/webp"].includes(type), "Unsupported verified image type");
+  const { url, buffer } = await fetchVerified(ref, definingUrl, { ...options, expectType: type });
   try {
-    const bitmap = await createImageBitmap(new Blob([buffer], { type: "image/png" }));
+    const bitmap = await createImageBitmap(new Blob([buffer], { type }));
     return { url, bitmap, buffer };
   } catch (error) {
     throw new BundleError(`${ref.href} could not be decoded as an image`);
