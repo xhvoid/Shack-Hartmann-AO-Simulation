@@ -15,6 +15,7 @@ explicit flux-conserving resampling onto a common angular grid.
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
+import functools
 import math
 from typing import Final, Literal, Sequence, cast
 
@@ -462,6 +463,10 @@ def _encircled_energy_radius_from_discrete_flux(
         y_axis,
         center_angle_rad=center_angle_rad,
     )
+    if sort_kind not in {"stable", "quicksort", "legacy_quicksort"}:
+        raise ScienceMetricsError(
+            "sort_kind must be 'stable', 'quicksort', or 'legacy_quicksort'."
+        )
     if sort_kind == "legacy_quicksort":
         x_spacing = float(np.median(np.diff(x_axis)))
         y_spacing = float(np.median(np.diff(y_axis)))
@@ -484,27 +489,24 @@ def _encircled_energy_radius_from_discrete_flux(
         x_offsets = np.rint((x_axis - center_x) / x_spacing)
         y_offsets = np.rint((y_axis - center_y) / y_spacing)
         y_grid, x_grid = np.meshgrid(y_offsets, x_offsets, indexing="ij")
-        radius = (np.hypot(x_grid, y_grid) * x_spacing).ravel()
+        # Squares and sums of integer offsets below 2**26 are exact, and IEEE
+        # sqrt is correctly rounded, so equal-radius pixels stay exactly tied
+        # on every platform.  ``np.hypot`` defers to the platform libm, which
+        # need not be correctly rounded (glibc 2.39 is one ULP off for some
+        # integer pairs and splits tie classes).  On the macOS arm64
+        # development machine, hypot equals this sqrt bit for bit for every
+        # integer pair with |x|, |y| <= 1024, and the frozen fast references
+        # reproduce unchanged.
+        radius = (np.sqrt(x_grid * x_grid + y_grid * y_grid) * x_spacing).ravel()
+        order = _legacy_quicksort_order(x_offsets, y_offsets)
     else:
         y_grid, x_grid = np.meshgrid(y_axis, x_axis, indexing="ij")
         radius = np.hypot(x_grid - center_x, y_grid - center_y).ravel()
-    values = flux.ravel()
-    if sort_kind not in {"stable", "quicksort", "legacy_quicksort"}:
-        raise ScienceMetricsError(
-            "sort_kind must be 'stable', 'quicksort', or 'legacy_quicksort'."
+        order = np.argsort(
+            radius,
+            kind=cast('Literal["quicksort", "stable"]', sort_kind),
         )
-    numpy_sort_kind = "quicksort" if sort_kind == "legacy_quicksort" else sort_kind
-    # NumPy's x86 SIMD argsort has an unstable tie order that differs from
-    # scalar quicksort, and interpolation at the first
-    # pixel of a new radius can therefore change even for an identical PSF.
-    # Object comparisons select the generic scalar implementation on every
-    # CPU, preserving the reviewed historical ordering without changing the
-    # public metric's stable sort or rounding physical radii.
-    sort_values = radius.astype(object) if sort_kind == "legacy_quicksort" else radius
-    order = np.argsort(
-        sort_values,
-        kind=cast('Literal["quicksort", "stable"]', numpy_sort_kind),
-    )
+    values = flux.ravel()
     radius_sorted = radius[order]
     cumulative = np.cumsum(values[order])
     total = float(cumulative[-1])
@@ -523,6 +525,52 @@ def _encircled_energy_radius_from_discrete_flux(
         float(cumulative[index]),
         target,
     )
+
+
+def _legacy_quicksort_order(
+    x_offsets: np.ndarray,
+    y_offsets: np.ndarray,
+) -> np.ndarray:
+    """Return the frozen facade's tied-radius pixel order for integer offsets.
+
+    NumPy's x86 SIMD argsort has an unstable tie order that differs from
+    scalar quicksort, and interpolation at the first pixel of a new radius can
+    therefore change even for an identical PSF.  Object comparisons select the
+    generic scalar quicksort on every CPU, preserving the reviewed historical
+    ordering without changing the public metric's stable sort or rounding
+    physical radii.  That sort costs eight to ten times a float sort on the
+    156- to 320-pixel facade grids, so its permutation is computed once per
+    integer offset grid and reused for every PSF, fraction and spacing.
+    """
+
+    return _cached_legacy_quicksort_order(
+        np.ascontiguousarray(x_offsets, dtype=np.float64).tobytes(),
+        np.ascontiguousarray(y_offsets, dtype=np.float64).tobytes(),
+    )
+
+
+@functools.lru_cache(maxsize=32)
+def _cached_legacy_quicksort_order(x_key: bytes, y_key: bytes) -> np.ndarray:
+    # The key bytes are the complete float64 offset vectors.  Scalar
+    # quicksort is a comparison sort, so its permutation depends only on the
+    # outcome of every pairwise comparison.  The caller's radii are
+    # ``sqrt(k) * spacing`` for exact integers ``k``: equal ``k`` gives equal
+    # radii, and distinct ``k`` give square roots about ``1/(2k)`` apart in
+    # relative terms (at least 2.4e-6 on a 320-pixel grid), far above the
+    # rounding of a product with a positive spacing.  Unit-spacing radii
+    # therefore order and tie exactly as the physical radii do for any
+    # spacing whose products stay normal floating-point numbers; the centre
+    # enters only through the integer offsets.  The read-only result is
+    # shared between callers.  A fast integration touches three offset grids
+    # and a physical scenario four, so 32 entries (each under 1 MB up to
+    # 320 x 320 pixels) leave ample headroom.
+    x_offsets = np.frombuffer(x_key, dtype=np.float64)
+    y_offsets = np.frombuffer(y_key, dtype=np.float64)
+    y_grid, x_grid = np.meshgrid(y_offsets, x_offsets, indexing="ij")
+    unit_radius = np.sqrt(x_grid * x_grid + y_grid * y_grid).ravel()
+    order = np.argsort(unit_radius.astype(object), kind="quicksort")
+    order.flags.writeable = False
+    return order
 
 
 def halo_fraction_from_discrete_flux(

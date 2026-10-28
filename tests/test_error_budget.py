@@ -6,12 +6,14 @@ import numpy as np
 import pytest
 
 from shwfs_ao.science.bandpass import top_hat_bandpass
+from shwfs_ao.experiments import error_budget as error_budget_module
 from shwfs_ao.experiments.error_budget import (
     AOErrorBudgetError,
     REQUIRED_SCENARIO_NAMES,
     ScenarioConfig,
     build_control_space_phase_sequence,
     default_error_budget_scenarios,
+    run_error_budget_scenario,
     run_error_budget_scenarios,
     scenario_results_as_dicts,
 )
@@ -226,6 +228,34 @@ def test_all_effects_and_ncpa_degrade_relative_to_ideal_static(error_budget_rows
     assert by_name["all_effects"].strehl_H < by_name["ideal_static"].strehl_H
     assert by_name["ncpa"].closed_rms_nm > by_name["dynamic_multilayer_proxy"].closed_rms_nm
     assert by_name["stroke_limit"].saturated_actuator_frac > 0.0
+
+
+def test_summary_evaluates_the_open_loop_only_for_the_reported_h_band(error_budget_system, monkeypatch):
+    calibration, dm_model, poke = error_budget_system
+    bandpasses = (
+        top_hat_bandpass("J", 1.10e-6, 1.40e-6, n_samples=3, source_note="Test synthetic J fallback."),
+        top_hat_bandpass("H", 1.50e-6, 1.80e-6, n_samples=3, source_note="Test synthetic H fallback."),
+        top_hat_bandpass("K", 2.00e-6, 2.35e-6, n_samples=3, source_note="Test synthetic K fallback."),
+    )
+    facade = error_budget_module.band_averaged_psf_metrics_from_opd
+    calls = []
+
+    def recording_facade(opd_nm, pupil_mask, bandpass, **kwargs):
+        metrics = facade(opd_nm, pupil_mask, bandpass, **kwargs)
+        calls.append((kwargs["case_name"].endswith("_open"), bandpass.name, metrics.strehl_peak))
+        return metrics
+
+    monkeypatch.setattr(error_budget_module, "band_averaged_psf_metrics_from_opd", recording_facade)
+    scenario = default_error_budget_scenarios(n_steps=4, phase_amplitude_nm=260.0)[0]
+    row = run_error_budget_scenario(
+        calibration, dm_model, poke, scenario, bandpasses, telescope_diameter_m=2.0, pad_factor=3
+    )
+
+    # Two tail frames: closed loop in every band, open loop only where it is reported.
+    open_calls = [(band, strehl) for is_open, band, strehl in calls if is_open]
+    assert [band for band, _ in open_calls] == ["H", "H"]
+    assert sorted(band for is_open, band, _ in calls if not is_open) == ["H", "H", "J", "J", "K", "K"]
+    assert row.open_strehl_H == float(np.median([strehl for _, strehl in open_calls]))
 
 
 def test_rejects_non_eight_scenario_matrix():

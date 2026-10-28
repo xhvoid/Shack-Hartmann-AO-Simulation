@@ -239,7 +239,12 @@ address the validation and execution contracts:
 
 - The frozen science facade uses scalar quicksort for equal-radius pixels.
   NumPy's x86 SIMD tie ordering changed one legacy EE80 interpolation despite
-  an unchanged PSF. The canonical stable-sort estimator and all four frozen
+  an unchanged PSF. Its radii are exact square roots of integer pixel offsets:
+  the platform `hypot` need not be correctly rounded, and glibc 2.39 is one
+  ULP off for some integer pairs, which splits tie classes. The
+  object-comparison quicksort permutation depends only on the integer offset
+  grid, so it is computed once per grid and reused for every PSF, fraction and
+  angular spacing. The canonical stable-sort estimator and all four frozen
   fast-reference files remain unchanged. Ring-crossing regressions exercise
   three fractions at three angular spacings.
 - Frozen DM and experimental pyramid-sensor tests retain the original full
