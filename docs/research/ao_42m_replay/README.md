@@ -210,3 +210,26 @@ Direct section links are restored after the asynchronous 2 m content loads.
 No browser warning/error logs were reported. The publication check result is
 saved alongside this document in `PUBLICATION_CHECKS.json`. No CI was run;
 publication uses the existing Pages workflow with validation disabled.
+
+## Viewer enhancement and C1 explanation — 2026-10-26
+
+The integrated section was reorganized around the existing recording; no data,
+image or manifest of `42m-500-31024b173527b7a6` changed. The section now opens
+with what the recording is, puts the viewer first and the parameter card after
+the binary panel, keeps its title clear of the sticky header, and adds a
+per-frame readout, first/final-frame buttons, presentation speeds (10×, 20×,
+40× slower; presentation only), keyboard shortcuts, reduced-motion defaults and
+loading, missing-data and integrity-error states. Mean-intensity mode is named
+for its window (frames 100–499). The 186.727 nm mean residual is the
+pre-update mean over frames 100–499 of this 500-frame run; it is not the
+historical 173 nm post-update result of the 2000-frame runs and not a C1 value.
+
+A new panel explains the separate static C1 noise assessment (stage N15 of the
+S6 investigation; see `docs/research/s6_42m_regularization/README.md`): at the
+production photon budget its selected comparator changes the predicted
+stationary detector-noise component from about 1.1113 to 1.1071 nm, below the
+trigger for a closed-loop damping experiment. C1 produced no images; the panel
+draws a small zero-based chart from a hash-verified summary
+(`scripts/ao_explorer/c1_noise_bundle.py`). The replay, its images and its
+manifest are unchanged. Browser checks of this change are recorded with the
+private assignment export; no CI was run and nothing was deployed.

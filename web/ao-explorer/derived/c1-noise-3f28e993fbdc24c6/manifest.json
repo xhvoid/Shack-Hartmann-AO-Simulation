@@ -1,0 +1,16 @@
+{
+  "schema": "ao-explorer.c1-noise-manifest.v1",
+  "id": "c1-noise-3f28e993fbdc24c6",
+  "files": {
+    "README.md": {
+      "bytes": 1888,
+      "sha256": "ea78a242edf01261d639941b64cf493a8d0e4e3c429252cf958665bb67523747",
+      "media_type": "text/markdown"
+    },
+    "summary.json": {
+      "bytes": 4259,
+      "sha256": "22ee75b6d70e7c6d3ba37cd75108f5988243be0e2651ec1e0e4da4ce749126d5",
+      "media_type": "application/json"
+    }
+  }
+}

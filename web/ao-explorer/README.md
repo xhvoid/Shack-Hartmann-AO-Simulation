@@ -194,6 +194,27 @@ the resolving power of a real 42 m telescope. All three panels retain one
 angular scale and brightness mapping. Provenance and linear arrays are
 available through verified downloads.
 
+The section opens with what the recording is (500 frames at 500 Hz, 126 saved
+snapshots, the 100–499 analysis window, pre-update metrics), then the viewer.
+A per-frame strip shows the selected frame's number, simulated time, window,
+pre-update residual and atmosphere RMS and peak Strehl, and switches to the
+mean-PSF Strehl in mean-intensity mode. Transport: first frame, step, play,
+pause, final frame and seek (its value text names the frame and time). A
+presentation speed of 10×, 20× or 40× slower changes only how fast saved
+frames are shown; with reduced motion the slowest is preselected and nothing
+plays until Play is pressed. With a 42 m control focused, ← and → step,
+Home and End jump to the first and final frame and K plays or pauses. A
+frame that takes longer than 200 ms to verify is announced as loading; at
+most the next two snapshots are prefetched and at most 24 atlases are cached.
+
+"What the numerical checks establish" (`#c1-noise`) explains the separate
+static C1 noise assessment from the `c1Noise` entry, which binds
+`derived/c1-noise-<id>/` (a two-member summary written by
+`scripts/ao_explorer/c1_noise_bundle.py` from the accepted C1 records, verified
+by SHA-256; no simulation and no images). Its highlight control redraws only
+its zero-based chart; it never touches the replay. If the entry is absent or
+fails verification, the panel says so and the replay is unaffected.
+
 See `docs/research/ao_42m_replay/README.md` for production, packaging and the
 independent publication checker `scripts/ao_explorer/portfolio_validate.py`.
 It verifies this integration against the completed local recording and the
