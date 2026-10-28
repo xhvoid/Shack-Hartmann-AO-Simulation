@@ -222,3 +222,13 @@ def test_derivation_is_stable_across_process_hash_seeds():
         outputs.append(json.loads(completed.stdout))
 
     assert outputs[0] == outputs[1]
+
+
+def test_legacy_sequential_child_seeds_require_an_explicit_recorded_root():
+    from shwfs_ao.core.random import _legacy_sequential_child_seeds
+
+    replay = _legacy_sequential_child_seeds(11, 4)
+    assert replay == _legacy_sequential_child_seeds(11, 4)
+    assert len(replay) == 4
+    with pytest.raises(RandomStreamError):
+        _legacy_sequential_child_seeds(None, 4)

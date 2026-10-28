@@ -192,7 +192,51 @@ def test_persistent_effects_consume_only_named_shot_and_read_domains() -> None:
     }
 
 
-def test_legacy_without_explicit_seed_uses_only_labeled_local_rng() -> None:
+def test_legacy_without_explicit_seed_replays_from_the_provider() -> None:
+    config = DetectorConfig(
+        photons_per_subap_frame=100.0,
+        read_noise_e=1.0,
+        prnu_rms=0.1,
+        prnu_mode="per_frame_legacy",
+    )
+
+    def run(root_seed):
+        tracking = _TrackingStreams(root_seed)
+        realization = DetectorRealization.create(
+            config,
+            (2, 2),
+            random_streams=tracking,
+        )
+        tracking.calls.clear()
+        frame = apply_detector_effects(
+            np.full((2, 2), 0.25),
+            config,
+            realization,
+            random_streams=tracking,
+        )
+        return frame, tracking
+
+    frame, tracking = run(91)
+    assert ("generator", "detector.shot_noise") in tracking.calls
+    assert set(frame.random_stream_ids) == {
+        "detector.prnu",
+        "detector.shot_noise",
+        "detector.read_noise",
+    }
+    identities = set(frame.random_stream_ids.values())
+    assert len(identities) == 1
+    (identity,) = identities
+    assert identity.startswith("per_frame_legacy:")
+    assert "seed=None" not in identity
+
+    replayed, _ = run(91)
+    np.testing.assert_array_equal(replayed.image_e, frame.image_e)
+    assert replayed.random_stream_ids == frame.random_stream_ids
+    different_root, _ = run(92)
+    assert not np.array_equal(different_root.image_e, frame.image_e)
+
+
+def test_legacy_with_explicit_seed_never_touches_the_provider() -> None:
     config = DetectorConfig(
         photons_per_subap_frame=100.0,
         read_noise_e=1.0,
@@ -212,16 +256,12 @@ def test_legacy_without_explicit_seed_uses_only_labeled_local_rng() -> None:
         config,
         realization,
         random_streams=tracking,
+        legacy_seed=123,
     )
 
     assert tracking.calls == []
-    assert set(frame.random_stream_ids) == {
-        "detector.prnu",
-        "detector.shot_noise",
-        "detector.read_noise",
-    }
     assert set(frame.random_stream_ids.values()) == {
-        "per_frame_legacy:numpy.default_rng(seed=None)"
+        "per_frame_legacy:numpy.default_rng(seed=123)"
     }
 
 
