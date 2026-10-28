@@ -1,9 +1,0 @@
-ci derivation of scripts/detector_level_convergence_study.py (eso_scao_smoke_5m_software@2 geometry with det_emccd_12m_medium_derived@3 physics), m_AB 9, DIAGNOSTIC reconstructor alpha 0.1 False
-patched shwfs_ao.calibration.reconstructors _MaskedSvdReconstructor
-patched shwfs_ao.calibration.reconstructors _TypedReconstructor
-patched shwfs_ao.calibration.sparse SparseLsmrReconstructor
-wall 60.14703879800072
-arm_order ['noise_on', 'operating_expectation']
-result keys ['arms', 'block_frames', 'burn_in_frames', 'config_hash', 'detected_e_full_subap', 'mean_square_difference_m2', 'mean_square_difference_standard_error_m2', 'n_steps', 'noise_variance_m2', 'noise_variance_standard_error_m2', 'operating_state', 'predicted_centroid_variance_px2', 'root_seed', 'supported_lenslet_fraction', 'trace_summary', 'wall_s']
-reconstructor instances [139659592084752, 139659883267280] controller instances [139659598099344, 139659607709200] calls 944 802 800
-saved
