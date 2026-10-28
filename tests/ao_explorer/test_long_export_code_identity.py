@@ -84,7 +84,9 @@ def _identity_of(copy: Path, monkeypatch) -> dict:
 
 
 def test_the_rule_reads_what_the_review_traced():
-    assert rule_sources() == ["long_series.py", "observer.py", "protocol.py", "web_contract.py"]
+    # producer.py joined the parsed sources when the rule gained the v1 contract (producer_checks_v1); it was already
+    # in CODE_FILES as a numerical producer source.
+    assert rule_sources() == ["long_series.py", "observer.py", "producer.py", "protocol.py", "web_contract.py"]
 
 
 def test_the_export_identity_lists_and_hashes_every_rule_source():
