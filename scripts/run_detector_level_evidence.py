@@ -44,8 +44,10 @@ resume every saved run must carry the protocol identity this invocation would
 give it (configuration hash with seed and frame count, burn-in, execution
 options, and the code identity: git HEAD plus a digest of uncommitted source
 changes); a mismatch stops the command, and a record without identities
-cannot be resumed.  Arms of ``e3-recovery`` and ``e3-excursion`` append to
-one record with ``--resume``.
+cannot be resumed.  Every retained run, including the runs of other arms,
+must share the record's series protocol (version, frames, burn-in, execution
+options and code), so arms of ``e3-recovery`` and ``e3-excursion`` append to
+one record with ``--resume`` only under the same protocol.
 """
 
 from __future__ import annotations
@@ -142,6 +144,18 @@ def code_identity() -> dict[str, Any]:
     return {"git_head": head, "source_changes_sha256": digest.hexdigest()}
 
 
+def _shared_protocol(n_steps: int, burn_in: int, execution: Any, code: dict[str, Any]) -> dict[str, Any]:
+    """The protocol fields every run of one record must share."""
+
+    return {
+        "series_protocol_version": SERIES_PROTOCOL_VERSION,
+        "n_steps": int(n_steps),
+        "burn_in_frames": int(burn_in),
+        "execution": repr(execution),
+        "code": code,
+    }
+
+
 def run_protocol(
     label: str, config: Any, seed: int, *, n_steps: int, burn_in: int, execution: Any, code: dict[str, Any]
 ) -> dict[str, Any]:
@@ -157,14 +171,10 @@ def run_protocol(
         controller=replace(config.controller, n_steps=int(n_steps)),
     )
     payload = {
-        "series_protocol_version": SERIES_PROTOCOL_VERSION,
         "label": label,
         "root_seed": int(seed),
         "config_hash": run_config.config_hash,
-        "n_steps": int(n_steps),
-        "burn_in_frames": int(burn_in),
-        "execution": repr(execution),
-        "code": code,
+        **_shared_protocol(n_steps, burn_in, execution, code),
     }
     encoded = json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
     return {"protocol_hash": hashlib.sha256(encoded).hexdigest(), "protocol": payload}
@@ -433,15 +443,23 @@ def _gated_series(
                 "their protocol identity matches) or --output NAME for a fresh record."
             )
         previous = json.loads(path.read_text())
+        # Every retained run, in this plan or not (another comparison arm),
+        # must share the series protocol: version, frames, burn-in, execution
+        # and code (re-review S2).  Runs of this plan must also match their
+        # own configuration.
+        shared = _shared_protocol(n_steps, burn_in, execution, code)
         mismatched = []
         for entry in previous.get("runs", []):
             key = (entry.get("label"), entry.get("root_seed"))
-            if "protocol_hash" not in entry:
+            if "protocol_hash" not in entry or "protocol" not in entry:
                 raise EvidenceRecordExists(
                     f"{path} predates run protocol identities and cannot be resumed; "
                     "pass --output NAME for a fresh record."
                 )
-            if key in expected and entry["protocol_hash"] != expected[key]["protocol_hash"]:
+            saved = {name: entry["protocol"].get(name) for name in shared}
+            if saved != shared:
+                mismatched.append(key)
+            elif key in expected and entry["protocol_hash"] != expected[key]["protocol_hash"]:
                 mismatched.append(key)
         if mismatched:
             raise EvidenceRecordExists(

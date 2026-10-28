@@ -41,7 +41,7 @@ import numpy as np
 
 from ..core.hashing import stable_hash
 from ..core.protocols import RandomStreams
-from .camera import CameraConfig
+from .camera import CameraConfig, CameraConfigError
 from .layout import DetectorLayout, lenslet_block_indices
 
 
@@ -236,6 +236,17 @@ class CameraMaps:
                 digest.update(str(array.shape).encode("ascii"))
                 digest.update(array.tobytes(order="C"))
         content = digest.hexdigest()
+        if read is not None and camera.nonlinearity_coefficients:
+            # The configuration check used the scalar (median) read noise; the
+            # realized map widens some pixels' excursions (re-review S3).
+            try:
+                camera.require_monotonic_nonlinearity(float(camera.read_noise_e) * float(np.max(read)))
+            except CameraConfigError as exc:
+                raise CameraMapsError(
+                    "the realized CMOS read-noise map reaches "
+                    f"{float(camera.read_noise_e) * float(np.max(read)):.4g} e- in some pixel, "
+                    f"where the declared non-linearity is not monotonic: {exc}"
+                ) from exc
         realization_hash = stable_hash(
             {
                 "schema": CAMERA_MAPS_SCHEMA,
