@@ -15,7 +15,7 @@ produced; a resource-deferred gate is not a passed gate.
 | --- | --- |
 | Work started | 2026-10-15 00:11 CEST |
 | Actual starting commit | `e55754f4221a69f4765249c63f39cd081348a955` (branch `public-clean-main`) |
-| Starting worktree | three untracked planning files (`AO_REFACTOR_MASTER_TICKETS_REVISED.md`, `docs/refactor/ESO_SCAO_DEVELOPMENT_PROMPT.md`, `docs/repository_optimization_ticket.md`); no tracked modifications |
+| Starting worktree | three untracked planning files (`AO_REFACTOR_MASTER_TICKETS_REVISED.md`, the ESO SCAO development specification, `docs/repository_optimization_ticket.md`); no tracked modifications |
 | Commit/push policy | nothing committed, pushed, tagged or published; no governed baseline accepted or overwritten |
 | Host | macOS 26 (Darwin 25.5.0) arm64, 8 CPUs, 16 GiB RAM |
 | Python | 3.14.3 (`.venv`, editable install); NumPy 2.5.0, SciPy 1.18.0, pytest 9.1.1, ruff 0.15.22, mypy 2.3.0, psutil 7.2.2; HCIPy 0.7.0 installed but not exercised |
@@ -41,7 +41,7 @@ produced; a resource-deferred gate is not a passed gate.
 ## Resource policy and supervision (ESO-00)
 
 `shwfs_ao.runtime.resource_guard` (standard library plus optional psutil)
-implements section 2.3 of the prompt:
+implements section 2.3 of the specification:
 
 - `host_snapshot()` reads physical memory, available memory (psutil or
   `vm_stat`) and the *current* pressure level (`kern.memorystatus_vm_pressure_level`
@@ -507,9 +507,9 @@ time, pressure normal throughout.
 | symmetric COG window (A05c, v2) | assumption | `wfs.detector_window_px` | detector-level SH centroiding | `test_symmetric_window_removes_the_centroid_bias`, `test_version_two_changes_only_the_detector_window_and_records_why` | `centroid_window_bias_diagnostic.txt` |
 | 3-interval delay (S13, A10) | R1 | `controller.latency_frames` | `control/loop.py`, `controller.py` | `test_latency_two_correction_is_first_seen_three_frames_after_its_measurement` | manifest `timing_semantics` |
 | noiseless sensing (S14, A09) | R1 | `detector.*`, `*.include_noise` | detector-level sensor | `test_noiseless_slopes_are_invariant_to_the_electron_scale` | — |
-| full-coordinate calibration | prompt ESO-06 | `scalable.calibration_strategy` | `calibrate_sparse_interaction_matrix` | `test_grouped_calibration_equals_dense_per_actuator_differences` | full manifest `calibration` |
+| full-coordinate calibration | specification ESO-06 | `scalable.calibration_strategy` | `calibrate_sparse_interaction_matrix` | `test_grouped_calibration_equals_dense_per_actuator_differences` | full manifest `calibration` |
 | LSMR (A07b, A12) | assumption | `reconstructor.*`, `scalable.solver_*` | `SparseLsmrReconstructor` | `test_lsmr_matches_the_dense_tikhonov_solution` | manifest `solver`, convergence study |
-| intensity long exposure (A11) | prompt ESO-03 | runner burn-in, `science.psf_pad_factor` | `StreamingLongExposure` | `test_opposite_tilts_broaden_the_image_instead_of_cancelling` | `science_2200nm.npz` |
+| intensity long exposure (A11) | specification ESO-03 | runner burn-in, `science.psf_pad_factor` | `StreamingLongExposure` | `test_opposite_tilts_broaden_the_image_instead_of_cancelling` | `science_2200nm.npz` |
 
 ## Deviations
 

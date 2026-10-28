@@ -455,7 +455,7 @@ def test_the_committed_records_match_their_planned_runs_and_summaries(scale: str
     assert study._canonical(study._summarize(scale, remapped)) == study._canonical(record["scans"])
 
 
-# -- OBS-15..OBS-17 (review RV-01..RV-03 of run 2026-10-20-claude-f801cac): the identity fails closed --
+# -- OBS-15..OBS-17 (review RV-01..RV-03 at f801cac on 2026-10-20): the identity fails closed --
 
 
 UNKNOWN_CODE = {"package_sha256": None, "git_head": None, "source_changes_sha256": None}

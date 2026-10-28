@@ -33,7 +33,7 @@ Evidenced on the 2 m and `ci` tiers, on the 12 m tier (E2, E3, E4, E6 and
 DET-08, each over 3–5 independent root seeds), and at 42 m by one
 realization (E5). Every gated run was enabled by the user on 2026-10-16.
 
-| Clause of prompt §2.1 | Evidence | In the claim |
+| Clause of specification §2.1 | Evidence | In the claim |
 | --- | --- | --- |
 | polychromatic physical-optics lenslet images integrated over declared detector pixels | DET-03, DET-04 tests; `det_emccd_2m_plane_synthetic@1` loops | yes |
 | with charge diffusion and declared electronic inter-pixel coupling | partition-of-unity and width tests; K·diag(μ)·Kᵀ covariance at 4×10⁴ samples | yes |
@@ -106,13 +106,13 @@ Still out of bounds:
 
 Status: DONE (2026-10-15). The ledgers were completed with the DET-09 profiles and are checked by `tests/io/test_detector_level_ledgers.py`.
 
-### Entry gate (prompt section 2.4)
+### Entry gate (specification section 2.4)
 
 | Condition | Result |
 | --- | --- |
 | Base revision | `37b5bd9d3874e0b1d596641ec4474b7bb2a9d45e` on `main` ("Update README with HCIPy corrections and reviewed validation status", 2026-10-15 21:08 +0200). `main` equals `origin/main`. The planning snapshot names the same commit on `public-clean-main`. That branch was merged into `main` and deleted locally (see the branch-layout note in the repository history). |
 | AO-REF-016A lenslet-axis work, revised tests, lower-memory HCIPy build | `9352f6c`, `394d175`, `da189f3` are ancestors of the base (`git merge-base --is-ancestor`). Present. |
-| Worktree state | Clean tracked tree. Three untracked planning documents are recorded and preserved: `AO_REFACTOR_MASTER_TICKETS_REVISED.md`, `docs/refactor/DETECTOR_LEVEL_DEVELOPMENT_PROMPT.md` (this work's prompt), `docs/repository_optimization_ticket.md`. No modifications to files this work touches. |
+| Worktree state | Clean tracked tree. Three untracked planning documents are recorded and preserved: `AO_REFACTOR_MASTER_TICKETS_REVISED.md`, the detector-level development specification, `docs/repository_optimization_ticket.md`. No modifications to files this work touches. |
 | Native regression on the base | See the regression table below. It ran on a separate clean worktree of the base (`git worktree add --detach <scratch>/base_wt 37b5bd9`, `PYTHONPATH=<worktree>/src`), so edits made during the run cannot reach it. |
 | Known open items, recorded, not resolved here | `high_order_10m_*@3` loops are unstable: integrator gain 0.65 with `latency_frames: 2` exceeds the limit 0.618, and `tests/control/test_profile_stability.py` pins both as strict xfails. The even-window centroid bias is documented in `docs/refactor/eso_scao_evidence/published_profile_window_bias.md`. HCIPy closed-loop detector claims stay out of bounds until a lock-holding HCIPy profile exists; open-loop and sensor-level HCIPy checks remain in scope. |
 | Current profile schema version | `shwfs_ao.io.configs.PROFILE_SCHEMA_VERSION == 6`. New record fields go into schema 7. |
@@ -159,9 +159,9 @@ Whole-process peak RSS was 132 MiB.
 Finding that shapes DET-05: the compatibility detector stage and the
 centroid cost about 0.13–0.14 ms per lenslet. This is Python per-lenslet
 overhead, comparable to the batched optics. At 42 m (about 5500 lenslets)
-that is about 0.7 s of the 0.97 s SH measurement time in prompt section
+that is about 0.7 s of the 0.97 s SH measurement time in specification section
 2.5. The physical camera path is therefore vectorized across lenslets
-(prompt DET-05 action 5).
+(specification DET-05 action 5).
 
 ### Decision record
 
@@ -361,7 +361,7 @@ closed with a factory error.
 Detector source ledger: `src/shwfs_ao/resources/benchmarks/detector_source_ledger.v1.json`.
 - D1, D4 and D5 were checked by web search in this session.
 - D2 was confirmed only through citing work; its DOI is unverified.
-- D3, D7, D8 and D9 are as given in the prompt.
+- D3, D7, D8 and D9 are as given in the specification.
 - There is no D6, so every preset is `synthetic_assumed`.
 - R3 and R4 are copied unchanged as contextual cases.
 
@@ -852,7 +852,7 @@ No existing identity moved (DET-01).
   - Between-lenslet covariances are consistent with zero: max |c|/SE is
     3.0–3.9 over about 860 pairs.
   - The software check R·Σ_meas·Rᵀ equals the measured command covariance
-    to 4×10⁻¹⁵. As the prompt notes, that is an integration check, not
+    to 4×10⁻¹⁵. As the specification notes, that is an integration check, not
     detector evidence.
   - Row masks: the gates use model expectations (declared), so for a
     fixed residual the row mask is fixed by construction. Rows change only
@@ -908,7 +908,7 @@ No existing identity moved (DET-01).
 
 The estimates come from measured costs. The ci tier with the 12 m physics
 measures 29.8 ms of SH time per frame for 72 lenslets, which scales to 416
-(12 m) and 5112 (42 m) lenslets. Prompt section 2.5 gives the legacy costs
+(12 m) and 5112 (42 m) lenslets. Specification section 2.5 gives the legacy costs
 (12 m: 0.11 s/frame at 301 MiB; 42 m: 1.84 s/frame at 1.64 GiB). Every run
 uses 2 threads and writes to `docs/refactor/detector_level_evidence/`.
 
@@ -1036,7 +1036,7 @@ Everything was rerun serially with 2 threads (`<scratch>/final2/run.sh`).
 ## Next actions
 
 1. Commit only with the user's authorization, as Xu Han only.
-2. Optional follow-ups, outside this prompt's scope:
+2. Optional follow-ups, outside this specification's scope:
    - a control policy that does not latch up when the valid fraction drops
      (§2.3 excludes a control-loop redesign here);
    - a 42 m seed ensemble (needs separate enablement);
@@ -1154,7 +1154,7 @@ on the mean slope-variance and trace ratios, and 10 % per entry.
 - `det_emccd_12m_medium_derived@1` builds in 7.5 s, including maps,
   32-frame products and the sparse calibration.
 - A full frame (atmosphere, SH, reconstruction, DM, science) takes
-  0.177 s. The compatibility medium tier takes 0.11 s per frame (prompt
+  0.177 s. The compatibility medium tier takes 0.11 s per frame (specification
   section 2.5).
 - Peak RSS: 381 MiB.
 
@@ -1193,7 +1193,7 @@ on the mean slope-variance and trace ratios, and 10 % per entry.
     flux (no internal source). Every run is refused before its first
     frame, with "calibration produced no rows valid across every probe
     sample".
-- **Post-hoc follow-up, recorded reason (prompt §DET-09 acceptance):**
+- **Post-hoc follow-up, recorded reason (specification §DET-09 acceptance):**
   `det_emccd_12m_medium_derived@2`.
   - It adds a bright internal calibration source (2500 detected e⁻ per
     full subaperture, no sky) for the reference and interaction
@@ -1360,7 +1360,7 @@ once with leak 0 and once with leak 0.02).
   grow by 30 % and those of well-sensed actuators by 19 %. That is
   consistent with noise-driven excursions near the SNR_T floor.
 - **Conclusion.** The m = 11 limit is set by the noise level (SNR_T ≈ 8.6)
-  *combined with* the freeze-on-invalid control policy. The prompt (§2.3)
+  *combined with* the freeze-on-invalid control policy. The specification (§2.3)
   excludes a control-loop redesign, so the policy is not changed here; it
   is a follow-up. The CMOS collapse at m = 10 sits at a similar SNR_T.
 
@@ -1410,7 +1410,7 @@ same combined change as on @1 (review R5).
   is 0.03 lower, within the predeclared "somewhat above / below"
   expectation. The window, band and detector effects are not separable
   with one seed.
-- Multi-seed 42 m runs were not enabled (prompt: separate enablement).
+- Multi-seed 42 m runs were not enabled (specification: separate enablement).
 
 ### Predeclared expectations against outcomes
 
@@ -1427,7 +1427,7 @@ same combined change as on @1 (review R5).
 ## Closed-loop recovery policy (follow-up, 2026-10-16)
 
 This is the first optional follow-up under "Next actions": a control policy
-that does not latch up when the valid fraction drops. Prompt §2.3 excluded
+that does not latch up when the valid fraction drops. Specification §2.3 excluded
 it from DET-00…10.
 - Base: `a31099b`, with the work in this section uncommitted on top.
 - Execution: runs are serial with 2 threads, and the resource guard stays
@@ -1729,8 +1729,8 @@ policy the m_AB = 11 loop on `det_emccd_12m_medium_derived@2` no longer
 latches up. It still has 4–12 excursions per 400 frames, and its mean
 residual is 376.5 ± 88.3 nm against 189.3 nm at m_AB = 10. This section
 finds what triggers the excursions and tests opt-in remedies.
-- Base: `545463e` (the recovery-policy commit on `a31099b`, branch
-  `claude/pensive-tu-cb17dc`). The work was developed and evaluated on an
+- Base: `545463e` (the recovery-policy commit on `a31099b`). The work was
+  developed and evaluated on an
   uncommitted copy of that work, byte-identical to `545463e` in all 18
   files. This section's changes are uncommitted on top.
 - Execution: runs are serial with 2 threads, and the resource guard stays
@@ -2292,7 +2292,7 @@ each fix and its evidence; the results are added below as they exist.
   both arms. ΔV, the difference of the arms' mean-square post-update
   residuals over frames 100–399, is the propagated temporal detector
   noise. Its per-run standard error comes from 25-frame block means.
-- **2 m study (ungated, prompt §2.5).**
+- **2 m study (ungated, specification §2.5).**
   - `noise-isolation-2m`: `det_emccd_2m_synthetic@1` at m_AB 7, 8, 9 and
     10 (about 2060, 820, 326 and 130 detected e⁻ per full subaperture), root
     seeds 61–65, 400 frames, burn-in 100.

@@ -28,11 +28,8 @@ findings; record the issue-to-source-to-code connection and access limits.
 
 ## 2. Worktree and input records
 
-Work only in the existing cleanup checkout:
-
-`/Users/xuhan/Documents/AO Simulation/.claude/worktrees/cleanup-refactor-exec`
-
-Expected branch: `claude/cleanup-refactor-exec`. Observed preparation HEAD was
+The historical assignment targeted the existing isolated cleanup checkout.
+Observed preparation HEAD was
 `27f34fa9723df77f57ce7b2c438c3ff240d9b0e8`. Record actual current HEAD, dirty
 inputs, relevant untracked files, environment and active instructions before
 editing. Inspect later changes; do not reset to the preparation revision,
@@ -50,7 +47,8 @@ cleanup worktree:
 - `/Users/xuhan/Documents/AO Simulation/docs/refactor/AUDIT_FINDING_EXCHANGE_FORMAT.md`
 - In the cleanup checkout: `docs/refactor/CLEANUP_REFACTOR_STATUS.md`,
   `docs/technical_reference.md`, `docs/current_limitations.md`, `docs/roadmap.md`,
-  and `outputs/cleanup_refactor/2026-10-18-claude-2312502/review/review.md`.
+  and its retained `review/review.md` evidence for the 2026-10-18 cleanup
+  starting at `2312502` (archive locator in the execution record).
 
 Read the appended closure of the cleanup review as well as its initial findings.
 Bind its acceptance to the tree it actually covered. Later follow-ups are not

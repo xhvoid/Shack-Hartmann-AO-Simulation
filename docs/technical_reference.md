@@ -684,8 +684,9 @@ Status values: `SUPPORTED` (built and run by the factories and tests),
 not validated), `NOT_VALIDATED` (runs, but no evidence covers the
 combination). Every `REJECTED` entry below was attempted on this tree by
 `harness/combination_probe.py`, and the stage and message are recorded in
-`outputs/cleanup_refactor/2026-10-18-claude-2312502/cln08/combination_probe.json`
-(29 cases) and `cln10_final/combination_probe_after_review.json` (31 cases:
+`cln08/combination_probe.json` in the retained cleanup evidence for
+2026-10-18 at `2312502` (29 cases; archive locator in the
+[execution record](refactor/CLEANUP_REFACTOR_STATUS.md)) and `cln10_final/combination_probe_after_review.json` (31 cases:
 the review found the HCIPy `pyramid_like` DM and the schema-7 HCIPy
 cell-centred-axis rows unprobed, and the two cases were added).
 The table lists the important routes and the explicit refusals; it does not

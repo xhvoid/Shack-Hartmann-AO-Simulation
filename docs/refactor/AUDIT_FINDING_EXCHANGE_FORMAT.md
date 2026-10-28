@@ -36,9 +36,10 @@ At ledger level, record:
 | `source_reports` | Stable report IDs, absolute paths, reported source identities, dates and scope. Identify the reviewer/model only when known. |
 | `findings` | Records defined below. |
 
-For this reconciliation, use report namespaces such as
-`gpt-preaudit-20261017` and `claude-cleanup-20261018`. A source alias is the
-pair `(report_id, finding_id)`, never a bare `F-01`.
+For new reconciliations, use report namespaces such as
+`preaudit-20261017` and `cleanup-20261018`. A source alias is the
+pair `(report_id, finding_id)`, never a bare `F-01`. Existing report IDs
+remain unchanged in the original records.
 
 Assign canonical IDs `AR-001`, `AR-002`, and so on, persistently within the
 shared ledger. Reuse a canonical ID for the same root problem; do not renumber
