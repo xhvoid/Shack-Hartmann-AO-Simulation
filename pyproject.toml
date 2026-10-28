@@ -23,6 +23,11 @@ notebooks = [
     "jupyter>=1.0",
     "ipykernel>=6.0",
 ]
+notebook-test = [
+    "nbformat>=5.10",
+    "nbclient>=0.10",
+    "ipykernel>=6.29",
+]
 test = [
     "pytest>=8.0",
     "setuptools>=77",

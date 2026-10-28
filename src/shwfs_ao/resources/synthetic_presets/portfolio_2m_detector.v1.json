@@ -13,7 +13,7 @@
     "url": null,
     "access_time": null,
     "fallback_used": false,
-    "references": ["AO-REF-011", "IntegrationConfig.from_mode('portfolio')", "notebooks/11_full_detector_level_2m_scao_demo.ipynb"]
+    "references": ["AO-REF-011", "IntegrationConfig.from_mode('portfolio')", "notebooks/legacy/original_notebooks/11_full_detector_level_2m_scao_demo.ipynb"]
   },
   "config": {
     "backend": "native",

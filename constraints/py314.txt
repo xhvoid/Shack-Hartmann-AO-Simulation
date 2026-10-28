@@ -20,3 +20,9 @@ scipy==1.18.0
 setuptools==83.0.0
 six==1.17.0
 wheel==0.47.0
+# notebook-test extra: the declared packages are pinned here; their Jupyter
+# execution stack (ipython, jupyter-client, jupyter-core, traitlets, pyzmq,
+# tornado, ...) resolves under these pins for the notebook smoke job.
+ipykernel==7.3.0
+nbclient==0.11.0
+nbformat==5.10.4

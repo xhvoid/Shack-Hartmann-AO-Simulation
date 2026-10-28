@@ -13,7 +13,7 @@
     "url": null,
     "access_time": null,
     "fallback_used": false,
-    "references": ["AO-REF-011", "notebooks/09_ao_psf_instrument_performance_high_order_ao.ipynb"]
+    "references": ["AO-REF-011", "notebooks/legacy/original_notebooks/09_ao_psf_instrument_performance_high_order_ao.ipynb"]
   },
   "config": {
     "backend": "native",

@@ -39,8 +39,9 @@ AO_REF_011_PROFILE_RESOURCES = (
 # AO-REF-000 hashes remain historical pre-refactor evidence.  Later tickets
 # that deliberately migrate a notebook's physical owner record the reviewed
 # replacement hash here rather than rewriting that evidence in the manifest.
+# AO-REF-019 archived every original under notebooks/legacy/original_notebooks/.
 MIGRATED_NOTEBOOK_HASHES = {
-    "notebooks/09_ao_psf_instrument_performance_high_order_ao.ipynb": {
+    "notebooks/legacy/original_notebooks/09_ao_psf_instrument_performance_high_order_ao.ipynb": {
         "ticket": "AO-REF-006",
         "source_sha256": "bf69fb32d65ec1a0c93622bbfe379f719ee27bddca08c4a3e3c779c95f17f615",
     },
@@ -471,9 +472,13 @@ def test_all_notebooks_have_one_stable_disposition_and_reviewed_source_hash():
 
     assert contract["count"] == len(records) == 16
     assert len({record["id"] for record in records}) == 16
+    # AO-REF-019: the originals live under the legacy archive; no stray
+    # top-level notebooks may reappear.
     assert paths == {
-        str(path.relative_to(ROOT)) for path in (ROOT / "notebooks").glob("*.ipynb")
+        str(path.relative_to(ROOT))
+        for path in (ROOT / "notebooks" / "legacy" / "original_notebooks").glob("*.ipynb")
     }
+    assert list((ROOT / "notebooks").glob("*.ipynb")) == []
     assert sum(record["modifies_sys_path"] for record in records) == 8
     assert all(record["network_access"] == "none_detected" for record in records)
     for record in records:
@@ -485,7 +490,7 @@ def test_all_notebooks_have_one_stable_disposition_and_reviewed_source_hash():
         )
         assert _sha256(ROOT / record["path"]) == expected_hash
         assert record["replacement_target"].endswith(".ipynb")
-        assert "retain until AO-REF-019 acceptance" in record["disposition"]
+        assert "AO-REF-019 accepted" in record["disposition"]
 
     assert set(MIGRATED_NOTEBOOK_HASHES) <= paths
     assert {

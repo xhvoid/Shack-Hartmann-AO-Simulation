@@ -16,7 +16,7 @@
     "references": [
       "AO-REF-011",
       "IntegrationConfig.from_mode('fast')",
-      "notebooks/11_full_detector_level_2m_scao_demo.ipynb"
+      "notebooks/legacy/original_notebooks/11_full_detector_level_2m_scao_demo.ipynb"
     ]
   },
   "config": {
