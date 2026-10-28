@@ -110,7 +110,8 @@ class ScaoBackendComponentFactory(Protocol):
         """Build the atmosphere; ``layers`` is passed only for a layered model.
 
         :func:`build_scao_system` supplies ``layers`` exactly when the profile
-        selects ``atmosphere_model='native_layered'``, so a factory written
+        selects a layered model (``'native_layered'`` or
+        ``'hcipy_layered'``), so a factory written
         before layered atmospheres existed keeps building every single-layer
         profile unchanged.
         """

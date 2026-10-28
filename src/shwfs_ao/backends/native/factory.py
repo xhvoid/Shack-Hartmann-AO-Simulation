@@ -109,13 +109,6 @@ class NativeScaoComponentFactory:
         static_opd_rms_m: float,
         layers: Sequence[Any] = (),
     ) -> AtmosphereModel:
-        # Each layer exposes altitude_m, cn2_fraction and wind_m_per_s (the
-        # profile's AtmosphereLayerConfig); this layer never imports io.
-        if bool(layers) != (model == "native_layered"):
-            raise NativeScaoFactoryError(
-                "atmosphere layers are accepted by, and required for, exactly "
-                "the 'native_layered' model."
-            )
         builders: dict[str, Callable[[], AtmosphereModel]] = {
             "static": lambda: StaticOpdAtmosphere(
                 _static_opd(
@@ -200,8 +193,16 @@ class NativeScaoComponentFactory:
             raise NativeScaoFactoryError(
                 f"native atmosphere model {model!r} is not registered; "
                 "expected 'static', 'native_frozen_flow', "
-                "'native_frozen_flow_v2', or 'native_layered'."
+                "'native_frozen_flow_v2', or 'native_layered'.  The 'hcipy' "
+                "and 'hcipy_layered' models build through backend='hcipy'."
             ) from exc
+        # Each layer exposes altitude_m, cn2_fraction and wind_m_per_s (the
+        # profile's AtmosphereLayerConfig); this layer never imports io.
+        if bool(layers) != (model == "native_layered"):
+            raise NativeScaoFactoryError(
+                "atmosphere layers are accepted by, and required for, exactly "
+                "the 'native_layered' model."
+            )
         return builder()
 
     def build_wfs(
