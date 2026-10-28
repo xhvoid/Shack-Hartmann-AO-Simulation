@@ -69,6 +69,23 @@ export function initNgsReplay(entry, entryUrl) {
       a.addEventListener('click',async e=>{e.preventDefault();try{const {buffer}=await fetchVerified(ngc602File(name),ngc602Base);const u=URL.createObjectURL(new Blob([buffer],{type:ngc602File(name).media_type}));const link=document.createElement('a');link.href=u;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(u),30000);}catch(error){a.textContent=`${label} unavailable: ${error.message}`;}});$('ngc602-downloads').append(a);
     }
   }
+  async function loadNgcVideo(){
+    const e=entry.ngc602Video;require(e?.schema==='ao-explorer.ngc602-video-entry.v1','No MP4 export entry');
+    const r=await fetchVerifiedJson({href:e.manifest,bytes:e.manifest_bytes,sha256:e.manifest_sha256,media_type:'application/json'},entryUrl);
+    const m=r.value;require(m.schema==='ao-explorer.ngc602-video-manifest.v1'&&m.id===e.id,'MP4 identity mismatch');
+    const member=name=>{require(m.files[name],`MP4 member missing: ${name}`);return {href:name,...m.files[name]};};
+    const v=(await fetchVerifiedJson(member('data.json'),r.url)).value;
+    require(v.schema==='ao-explorer.ngc602-video-data.v1'&&v.parent_replay_entry.id===entry.ngc602Replay.id&&v.parent_replay_entry.manifest_sha256===entry.ngc602Replay.manifest_sha256,'MP4 parent mismatch');
+    require(v.parent_movie_sha256===ngc602Manifest.files['ngc602-comparison.webp'].sha256&&v.parent_scene_data_sha256===ngc602Manifest.files['data.json'].sha256,'MP4 source mismatch');
+    require(JSON.stringify(v.source_indices)===JSON.stringify(ngc602.indices)&&v.loss_frame===data.loss_frame&&v.loss_time_s===data.loss_time_s&&v.duration_s===40&&v.fps===60&&v.video_frames===2400&&v.simulation_rerun===false&&v.temporal_interpolation===false,'MP4 timing mismatch');
+    const p=$('ngc602-video');p.textContent='Share this comparison: ';
+    for(const [label,name] of [[`Download MP4 · 40 s · ${(m.files['ngc602-2p2m-ao-comparison.mp4'].bytes/1e6).toFixed(1)} MB`,'ngc602-2p2m-ao-comparison.mp4'],['Video timing & checks','data.json']]){
+      const a=document.createElement('a');a.href=new URL(name,r.url);a.textContent=label;
+      a.addEventListener('click',async event=>{event.preventDefault();try{const {buffer}=await fetchVerified(member(name),r.url);const u=URL.createObjectURL(new Blob([buffer],{type:member(name).media_type}));const link=document.createElement('a');link.href=u;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(u),30000);}catch(error){a.textContent=`${label} unavailable: ${error.message}`;}});
+      p.append(a,document.createTextNode(' · '));
+    }
+    p.append(document.createTextNode('H.264, 960 × 896, 60 fps, no audio. Existing images are held without interpolation.'));
+  }
   function chart(){
     if(!data)return;
     const k=data.indices[index],m=data.metrics;
@@ -181,6 +198,7 @@ export function initNgsReplay(entry, entryUrl) {
       }
       for(const field of ['uncorrected_strehl','atmosphere_rms_nm'])require(m[field].length===1500&&m[field].every(Number.isFinite),`Incomplete ${field}`);
       await loadNgc602();
+      loadNgcVideo().catch(error=>{$('ngc602-video').textContent=`MP4 download unavailable: ${error.message}`;});
       index=data.indices.indexOf(1499);require(index>=0,'Missing final frame');
       $('seek').max=data.indices.length-1;$('duration').value=String(duration);bars();
       root.querySelectorAll('button,input,select').forEach(e=>e.disabled=false);
