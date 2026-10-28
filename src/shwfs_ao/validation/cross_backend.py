@@ -10,9 +10,8 @@ a JSON report document evaluated by :mod:`shwfs_ao.validation.regression`.
 Design rules:
 
 - Pointwise optical comparisons feed both backends the same deterministic
-  fixtures — elementary polynomial and seeded-draw arrays whose content
-  hashes are recorded in the report, so a baseline can prove the inputs were
-  identical.  Fixtures deliberately avoid FFT-derived data.
+  fixtures. Raw hashes record the actual bytes, while lossless full-array
+  witnesses permit only roundoff-sized differences across platforms.
 - Independently generated native and HCIPy atmospheres are compared only by
   statistical diagnostics; equal seeds do not imply equal realizations
   across libraries, and no generator screen array is hashed.
@@ -44,7 +43,9 @@ from typing import Any, ClassVar, Mapping
 
 import numpy as np
 
-from ..core.hashing import component_config_hash, stable_hash
+from ..core.hashing import (
+    HASH_SCHEMA_ID, canonical_json_bytes, component_config_hash, stable_hash,
+)
 from ..core.wavefront import masked_rms, opd_to_phase
 from .physical import (
     centroid_xy_px,
@@ -52,6 +53,7 @@ from .physical import (
     mean_square_column_difference,
     normalized_singular_spectrum,
 )
+from .numerical_identity import dm_semantic_hash, numerical_input_record
 from .regression import (
     CROSS_BACKEND_BASELINE_SCHEMA_VERSION,
     CROSS_BACKEND_REPORT_SCHEMA_NAME,
@@ -193,6 +195,7 @@ def run_cross_backend_report(
         },
         "component_hashes": context.component_hashes,
         "fixture_hashes": context.fixture_hashes,
+        "numerical_inputs": context.numerical_inputs,
         "environment": {
             "python_version": sys.version.split()[0],
             "numpy_version": np.__version__,
@@ -317,6 +320,7 @@ class _ComparisonContext:
     actuator_pitch_m: float
     fixture_hashes: dict[str, str]
     component_hashes: dict[str, str]
+    numerical_inputs: dict[str, dict[str, Any]]
     # Memoized during the comparison run, not at build time.
     native_interaction: Any
     hcipy_interaction: Any
@@ -424,8 +428,9 @@ class _ComparisonContext:
             random_streams=NamedRandomStreams(config.root_seed),
         )
 
-        # Deterministic fixtures: elementary arithmetic and seeded draws
-        # only, so their hashes are stable evidence of shared inputs.
+        # Deterministic fixtures shared exactly within a run. Trigonometric
+        # functions and reductions may differ in their low bits across hosts;
+        # numerical witnesses below bind the full arrays across platforms.
         rho, theta = polar_pupil_coordinates(
             geometry.x_m,
             geometry.y_m,
@@ -537,6 +542,102 @@ class _ComparisonContext:
                 namespace=_ID_HASH_NAMESPACE,
             ),
         }
+        fixture_arrays = {
+            "static_opd_m": static_opd_m,
+            "tilt_x_opd_m": tilt_x_opd_m,
+            "tilt_y_opd_m": tilt_y_opd_m,
+            "command_fixture_opd_m": command_fixture_opd_m,
+            "time_grid_s": time_grid_s,
+            "atmosphere_opd_cube_m": atmosphere_opd_cube_m,
+        }
+        numerical_inputs = {
+            name: numerical_input_record(
+                values,
+                source_hash=fixture_hashes[name],
+                configuration_hash=stable_hash(
+                    {
+                        "recipe": "cross_backend_shared_inputs_v1",
+                        "fixture": name,
+                        "comparison_config": config.config_hash,
+                        "atmosphere_config": source_atmosphere.config_hash,
+                    },
+                    namespace=_ID_HASH_NAMESPACE,
+                ),
+            )
+            for name, values in fixture_arrays.items()
+        }
+        for name, dm in (("native_dm", native_dm), ("hcipy_dm", hcipy_dm)):
+            # The public DM config hash includes evaluated exp() samples.
+            # Retain it as byte provenance, and separately pin every semantic
+            # input while checking the entire influence stack numerically.
+            if name == "native_dm":
+                backend_component = "native.dm_spatial_backend"
+                backend_config = {
+                    "influence_functions": dm.influence_functions,
+                    "command_unit": "m_opd_equivalent",
+                    "output_unit": "m_opd",
+                    "synthesis": "ordered_linear_sum_no_piston_removal",
+                }
+            else:
+                from ..backends.hcipy.dm import (
+                    FLATTENING_ORDER, SURFACE_COMMAND_CONVENTION, _SURFACE_FACTOR_ID,
+                )
+                x_m, y_m = dm.x_m, dm.y_m
+                assert x_m is not None and y_m is not None
+                backend_component = "hcipy.dm_spatial_backend"
+                backend_config = {
+                    "influence_functions": dm.influence_functions,
+                    "x_axis_m": x_m[0, :],
+                    "y_axis_m": y_m[:, 0],
+                    "flattening_order": FLATTENING_ORDER,
+                    "command_unit": "m_opd_equivalent",
+                    "output_unit": "m_opd",
+                    "surface_command_convention": SURFACE_COMMAND_CONVENTION,
+                    "surface_factor": _SURFACE_FACTOR_ID,
+                }
+            if component_config_hash(backend_component, backend_config) != dm.backend_config_hash:
+                raise CrossBackendError("DM backend hash-payload witness no longer matches model")
+            backend_payload = canonical_json_bytes({
+                "hash_schema": HASH_SCHEMA_ID,
+                "namespace": "component_config",
+                "value": {"component_name": backend_component, "config": backend_config},
+            }).decode("utf-8")
+            hash_config = {
+                "config": dm.config,
+                "sampled_x_m": dm.x_m,
+                "sampled_y_m": dm.y_m,
+                "pupil_mask": dm.pupil_mask,
+                "actuator_ids": dm.actuator_ids,
+                "actuator_centers_m": dm.actuator_centers_m,
+                "actuator_pitch_m": dm.actuator_pitch_m,
+                "dead_actuator_mask": dm.dead_actuator_mask,
+                "stuck_actuator_mask": dm.stuck_actuator_mask,
+                "command_unit": dm.metadata["command_unit"],
+                "command_convention": dm.metadata["command_convention"],
+                "synthesis_convention": dm.metadata["synthesis_convention"],
+                "backend_identity": (
+                    "shwfs_ao.backends.native.dm.NativeDmBackend"
+                    if name == "native_dm" else
+                    "shwfs_ao.backends.hcipy.dm.HcipyDmBackend"
+                ),
+                "backend_name": dm.backend_name,
+                "backend_config_hash": dm.backend_config_hash,
+                "influence_functions": dm.influence_functions,
+            }
+            if component_config_hash("deformable_mirror", hash_config) != dm.config_hash:
+                raise CrossBackendError("DM hash-payload witness no longer matches model")
+            source_payload = canonical_json_bytes({
+                "hash_schema": HASH_SCHEMA_ID,
+                "namespace": "component_config",
+                "value": {"component_name": "deformable_mirror", "config": hash_config},
+            }).decode("utf-8")
+            numerical_inputs[name] = numerical_input_record(
+                dm.influence_functions,
+                source_hash=component_hashes[name],
+                configuration_hash=dm_semantic_hash(source_payload, backend_payload),
+                source_payload=source_payload,
+                backend_source_payload=backend_payload,
+            )
 
         return cls(
             config=config,
@@ -563,6 +664,7 @@ class _ComparisonContext:
             actuator_pitch_m=pitch_m,
             fixture_hashes=fixture_hashes,
             component_hashes=component_hashes,
+            numerical_inputs=numerical_inputs,
         )
 
 

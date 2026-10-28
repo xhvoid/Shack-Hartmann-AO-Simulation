@@ -36,7 +36,7 @@ GENERATOR_NAME = "scripts/generate_cross_backend_candidate.py"
 # without looking for concealed index entries, that its commit and patch hash
 # were sampled non-atomically, or that only the top-level package was checked
 # against this checkout.  Version 3 is the first that closes all three.
-GENERATOR_VERSION = "5"
+GENERATOR_VERSION = "6"
 CANDIDATE_FILE = "cross_backend_candidate.json"
 DIFF_JSON = "cross_backend_diff.json"
 DIFF_MARKDOWN = "cross_backend_diff.md"
@@ -963,9 +963,20 @@ def _current_baseline_bytes() -> bytes | None:
     return path.read_bytes()
 
 
-def _constraint_profile_name() -> str:
-    version = sys.version_info
-    return f"constraints/hcipy-py{version.major}{version.minor}.txt"
+def _constraint_profile_name(
+    python_version: tuple[int, int] | None = None,
+) -> str:
+    version = sys.version_info[:2] if python_version is None else python_version
+    supported = {(3, 11): "constraints/hcipy-py311.txt",
+                 (3, 14): "constraints/hcipy-py314.txt"}
+    if version not in supported:
+        raise SystemExit(
+            f"Cross-backend candidate generation is unsupported on Python "
+            f"{version[0]}.{version[1]}; use a locked Python 3.11 or 3.14 "
+            "environment. Core package/test support is broader than the "
+            "HCIPy candidate-generation profiles."
+        )
+    return supported[version]
 
 
 _IGNORED_LOCK_DISTRIBUTIONS = frozenset(

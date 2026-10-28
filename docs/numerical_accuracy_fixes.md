@@ -230,3 +230,42 @@ module and the supplemental TIPTOP numerical tests with their support module.
 A freshly built wheel installed outside the source checkout passed all 43
 selected non-slow tests in those two modules (three slow cases deselected).
 Ruff, the 101-file mypy check and whitespace checks also passed.
+
+### Linux publication portability
+
+The first GitHub Actions run after publication exposed platform assumptions
+that the successful macOS run could not exercise. The follow-up corrections
+address the validation and execution contracts:
+
+- The frozen science facade uses scalar quicksort for equal-radius pixels.
+  NumPy's x86 SIMD tie ordering changed one legacy EE80 interpolation despite
+  an unchanged PSF. The canonical stable-sort estimator and all four frozen
+  fast-reference files remain unchanged. Ring-crossing regressions exercise
+  three fractions at three angular spacings.
+- Frozen DM and experimental pyramid-sensor tests retain the original full
+  arrays and verify their historical digests. They compare continuous optical
+  values at strict floating-point tolerances, with exact mask, peak and seeded
+  detector checks, instead of requiring identical libm/FFT bits on every CPU.
+- Packaged preset serialization tests read through `importlib.resources`, so
+  the same test works from a source checkout and an installed wheel.
+- Cross-backend report schema v2 records lossless numerical input arrays beside
+  their original hashes. Evaluation checks exact configurations, masks and
+  sample layouts, verifies the hash evidence, and compares every floating-point
+  sample at fixed roundoff tolerances. Scientific metric criteria are unchanged.
+  The preview reproduced every scientific metric and every original input hash;
+  only informational timing and memory values differed. Candidate generation
+  now also rejects Python versions without an explicit HCIPy lock profile.
+- Notebook namespace selection checks access to a caller-owned private file.
+  Its sudo fallback initializes the network namespace, then returns to the
+  caller's UID/GID with capabilities removed and new privileges prohibited.
+  Live Linux kernel tests check private-file access, loopback connectivity and
+  refusal to re-enter the host network, including a forced fallback case.
+  CI configures its existing AppArmor exception before governance tests.
+
+Local focused verification: 144 science/resource tests and 72 DM/experimental
+tests passed. All eight fast integration tests passed, including complete
+scenario-table reproduction against the unchanged frozen references (714 s).
+Notebook governance and runner checks passed 106 tests, with three Linux-only
+cases skipped on macOS. Ruff passed and mypy checked 102 source files. Linux
+execution is recorded after the publication checks finish; these local results
+alone do not establish cross-platform success.

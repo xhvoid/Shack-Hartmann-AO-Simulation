@@ -254,9 +254,9 @@ def science_psf_metrics_from_opd(
         psf.y_angle_rad,
         historical_annulus_edges=True,
     ) / focal_pixel_scale_rad
-    # NumPy's historical default argsort was quicksort.  Preserve that tie
-    # ordering in the frozen pixel facade while keeping the public canonical
-    # physical metric deterministically stable-sorted.
+    # Preserve the historical scalar quicksort tie order in the frozen pixel
+    # facade, independent of CPU SIMD dispatch.  The public canonical physical
+    # metric remains deterministically stable-sorted.
     ee50_px = _canonical_ee_radius(
         psf.intensity,
         psf.x_angle_rad,

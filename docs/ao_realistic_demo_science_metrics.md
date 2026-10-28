@@ -60,6 +60,10 @@ physical `PsfResult` grid.
 The compatibility FWHM explicitly retains the historical inner-annulus-edge
 radius convention for existing artifacts. It underestimates well-sampled Airy
 widths on coarse grids; use the canonical estimator for new measurements.
+Compatibility EE50/EE80 also fix the historical scalar quicksort ordering of
+equal-radius pixels. NumPy's accelerated CPU-specific sort can permute those
+ties and change interpolation between adjacent rings even for identical PSFs.
+The canonical estimator continues to use a stable sort.
 
 For the fast 2 m demonstrator, residual OPD RMS, sampled-peak Strehl and halo
 fraction are useful complementary diagnostics with the definitions above.

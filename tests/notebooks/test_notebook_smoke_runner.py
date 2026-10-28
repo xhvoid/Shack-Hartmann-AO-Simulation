@@ -513,6 +513,9 @@ _FAKE_UNSHARE = "/usr/bin/unshare"
 _FAKE_IP = "/usr/sbin/ip"
 _FAKE_SUDO = "/usr/bin/sudo"
 _FAKE_NSENTER = "/usr/bin/nsenter"
+_FAKE_SETPRIV = "/usr/bin/setpriv"
+_FAKE_UID = 1001
+_FAKE_GID = 1002
 
 # Never offered, and named here so the test below can say so. A network
 # namespace without a user namespace does not confine a process holding
@@ -521,14 +524,33 @@ _FAKE_NSENTER = "/usr/bin/nsenter"
 _PRIVILEGED_NET = [_FAKE_UNSHARE, "--net", "--"]
 _PRIVILEGED_SUDO_NET = [_FAKE_SUDO, "-n", _FAKE_UNSHARE, "--net", "--"]
 
-_USER_NET = [_FAKE_UNSHARE, "--user", "--map-root-user", "--net", "--"]
-_SUDO_NET = [
-    _FAKE_SUDO,
-    "-n",
+_USER_NET = [
     _FAKE_UNSHARE,
     "--user",
     "--map-root-user",
     "--net",
+    "--",
+    "sh",
+    "-c",
+    runner._NAMESPACE_SHELL,
+]
+_SUDO_NET = [
+    _FAKE_SUDO,
+    "-n",
+    _FAKE_UNSHARE,
+    "--net",
+    "--",
+    "sh",
+    "-c",
+    runner._NAMESPACE_SHELL,
+    _FAKE_SETPRIV,
+    f"--reuid={_FAKE_UID}",
+    f"--regid={_FAKE_GID}",
+    "--clear-groups",
+    "--bounding-set=-all",
+    "--inh-caps=-all",
+    "--ambient-caps=-all",
+    "--no-new-privs",
     "--",
 ]
 
@@ -555,6 +577,9 @@ def _fake_linux_namespace_environment(
     sudo_needs_a_password=False,
     escape_succeeds_for=(),
     nsenter=_FAKE_NSENTER,
+    setpriv=_FAKE_SETPRIV,
+    unreadable_for=(),
+    status_overrides=None,
 ):
     """Run the probe's Linux decision path against recorded fakes.
 
@@ -574,6 +599,17 @@ def _fake_linux_namespace_environment(
 
     executed: list[list[str]] = []
     escapes = {tuple(prefix) for prefix in escape_succeeds_for}
+    unreadable = {tuple(prefix) for prefix in unreadable_for}
+    status = {
+        "Uid": " ".join([str(_FAKE_UID)] * 4),
+        "Gid": " ".join([str(_FAKE_GID)] * 4),
+        "Groups": "",
+        "NoNewPrivs": "1",
+        **dict.fromkeys(
+            ("CapInh", "CapPrm", "CapEff", "CapBnd", "CapAmb"), "0000000000000000"
+        ),
+    }
+    status.update(status_overrides or {})
 
     def fake_run(command, **kwargs):
         command = list(command)
@@ -585,37 +621,43 @@ def _fake_linux_namespace_environment(
                 "",
                 "sudo: a password is required\n" if sudo_needs_a_password else "",
             )
-        # The probe carries the outer namespace path as an argument, so the
-        # trailing three fields are the script, ``sh`` and that path.
-        assert command[-5:-3] == ["sh", "-c"], command
-        assert command[-1].startswith("/proc/"), command
-        prefix = tuple(command[:-5])
+        assert command[-6:-4] == ["sh", "-c"], command
+        assert command[-2].startswith("/proc/"), command
+        canary = Path(command[-1])
+        assert canary.is_file() and canary.stat().st_mode & 0o777 == 0o600
+        assert canary.parent.stat().st_mode & 0o777 == 0o700
+        prefix = tuple(command[:-6])
         links = links_seen_by.get(prefix)
-        if links is None:
+        if links is None or prefix in unreadable:
             return subprocess.CompletedProcess(
                 command, 1, "", "unshare: unshare failed: Operation not permitted\n"
             )
         verdict = "ESCAPE_SUCCEEDED\n" if prefix in escapes else "ESCAPE_REFUSED\n"
-        return subprocess.CompletedProcess(command, 0, links + verdict, "")
+        credentials = "".join(f"{key}:\t{value}\n" for key, value in status.items())
+        return subprocess.CompletedProcess(
+            command, 0, links + credentials + verdict, ""
+        )
 
     tools = {"unshare": _FAKE_UNSHARE, "ip": _FAKE_IP}
     if sudo is not None:
         tools["sudo"] = sudo
     if nsenter is not None:
         tools["nsenter"] = nsenter
+    if setpriv is not None:
+        tools["setpriv"] = setpriv
     monkeypatch.setattr(runner, "shutil", types.SimpleNamespace(which=tools.get))
     monkeypatch.setattr(
         runner,
         "subprocess",
-        types.SimpleNamespace(
-            run=fake_run, SubprocessError=subprocess.SubprocessError
-        ),
+        types.SimpleNamespace(run=fake_run, SubprocessError=subprocess.SubprocessError),
     )
     monkeypatch.setattr(
         runner,
         "sys",
         types.SimpleNamespace(platform="linux", executable=sys.executable),
     )
+    monkeypatch.setattr(runner.os, "geteuid", lambda: _FAKE_UID)
+    monkeypatch.setattr(runner.os, "getegid", lambda: _FAKE_GID)
     return executed
 
 
@@ -625,10 +667,8 @@ def test_a_stock_ubuntu_24_04_runner_reaches_a_namespace_through_sudo(monkeypatc
     ubuntu-latest is Ubuntu 24.04, which ships
     kernel.apparmor_restrict_unprivileged_userns=1: AppArmor denies capabilities
     inside an *unprivileged* user namespace, so the ordinary form fails and the
-    required notebook lanes had no namespace at all.  Sudo makes the same
-    unshare privileged, which the restriction does not cover — and because that
-    form still enters a child user namespace, it confines the kernel instead of
-    merely relocating it.
+    fallback uses sudo for setup, then drops to the caller with no capabilities
+    and no ability to regain them. It retains access to private caller files.
     """
 
     executed = _fake_linux_namespace_environment(
@@ -637,7 +677,7 @@ def test_a_stock_ubuntu_24_04_runner_reaches_a_namespace_through_sudo(monkeypatc
 
     assert runner._network_namespace_prefix() == _SUDO_NET
     # The unelevated form was actually tried before sudo was asked for anything.
-    attempted = [command[: command.index("sh")] for command in executed[:1]]
+    attempted = [command[:-6] for command in executed[:1]]
     assert attempted == [_USER_NET]
     assert executed[1] == [_FAKE_SUDO, "-n", "true"]
     assert executed[2][: len(_SUDO_NET)] == _SUDO_NET
@@ -649,26 +689,52 @@ def test_the_probed_forms_are_ordered_least_privileged_first(monkeypatch):
     assert list(runner._namespace_prefix_candidates()) == [_USER_NET, _SUDO_NET]
 
 
-def test_a_network_namespace_without_a_user_namespace_is_never_offered(monkeypatch):
-    """A bare ``unshare --net`` is not an offline sandbox and is not proposed.
-
-    setns(2) admits a process to any network namespace it holds CAP_SYS_ADMIN
-    over in that namespace's owning user namespace.  Under ``unshare --net``
-    alone — and under ``sudo unshare --net``, which holds more capability, not
-    less — notebook code keeps exactly that, so it can reopen
-    ``/proc/<pid>/ns/net`` and step back onto the host network.  The interface
-    listing cannot see this: it reports where the process started, not where it
-    may go.  Entering a child user namespace is what drops the capability, so
-    every offered form asks for one.
-    """
+def test_a_bare_privileged_network_namespace_is_never_offered(monkeypatch):
+    """The sudo path must drop privileges before any notebook code executes."""
 
     _fake_linux_namespace_environment(monkeypatch, links_seen_by={})
     offered = list(runner._namespace_prefix_candidates())
 
     for form in (_PRIVILEGED_NET, _PRIVILEGED_SUDO_NET):
         assert form not in offered
-    for form in offered:
-        assert "--user" in form and "--map-root-user" in form, form
+    assert "--user" in offered[0] and "--map-root-user" in offered[0]
+    assert offered[1][offered[1].index(_FAKE_SETPRIV) :] == _SUDO_NET[8:]
+
+
+def test_a_namespace_without_access_to_private_caller_files_is_rejected(monkeypatch):
+    _fake_linux_namespace_environment(
+        monkeypatch,
+        links_seen_by={tuple(_SUDO_NET): _LOOPBACK_ONLY_LINKS},
+        unreadable_for=(_SUDO_NET,),
+    )
+    assert runner._network_namespace_prefix() is None
+
+
+@pytest.mark.parametrize(
+    "status",
+    [
+        {"Uid": "0 0 0 0"},
+        {"Gid": "0 0 0 0"},
+        {"NoNewPrivs": "0"},
+        {"Groups": "0"},
+        *[
+            {field: "0000000000200000"}
+            for field in ("CapInh", "CapPrm", "CapEff", "CapBnd", "CapAmb")
+        ],
+    ],
+)
+def test_the_sudo_probe_requires_observed_dropped_privileges(monkeypatch, status):
+    _fake_linux_namespace_environment(
+        monkeypatch,
+        links_seen_by={tuple(_SUDO_NET): _LOOPBACK_ONLY_LINKS},
+        status_overrides=status,
+    )
+    assert runner._network_namespace_prefix() is None
+
+
+def test_sudo_is_not_offered_without_the_privilege_drop_tool(monkeypatch):
+    _fake_linux_namespace_environment(monkeypatch, links_seen_by={}, setpriv=None)
+    assert list(runner._namespace_prefix_candidates()) == [_USER_NET]
 
 
 def test_a_namespace_that_can_be_left_again_is_not_used(monkeypatch):
@@ -704,7 +770,9 @@ def test_without_nsenter_confinement_cannot_be_observed_so_nothing_is_offered(
     """
 
     _fake_linux_namespace_environment(
-        monkeypatch, links_seen_by={tuple(_USER_NET): _LOOPBACK_ONLY_LINKS}, nsenter=None
+        monkeypatch,
+        links_seen_by={tuple(_USER_NET): _LOOPBACK_ONLY_LINKS},
+        nsenter=None,
     )
 
     assert list(runner._namespace_prefix_candidates()) == []
@@ -742,9 +810,7 @@ def test_sudo_is_not_offered_when_it_cannot_elevate_without_asking(monkeypatch):
     assert [_FAKE_SUDO, "-n", "true"] in executed
     assert all(command[0] != _FAKE_SUDO for command in executed[1:])
 
-    absent = _fake_linux_namespace_environment(
-        monkeypatch, links_seen_by={}, sudo=None
-    )
+    absent = _fake_linux_namespace_environment(monkeypatch, links_seen_by={}, sudo=None)
     assert list(runner._namespace_prefix_candidates()) == [_USER_NET]
     assert absent == []
 
@@ -1034,7 +1100,7 @@ def test_the_budget_hands_the_kill_the_escalation_its_prefix_implies(monkeypatch
 
 def test_the_runner_command_wraps_the_runner_inside_the_namespace(tmp_path):
     notebook = tmp_path / "study.ipynb"
-    prefix = ["/usr/bin/unshare", "--user", "--map-root-user", "--net", "--"]
+    prefix = list(_USER_NET)
 
     isolated = runner._runner_command(
         notebook,
@@ -1053,24 +1119,48 @@ def test_the_runner_command_wraps_the_runner_inside_the_namespace(tmp_path):
     # Loopback is brought up inside the namespace, or the kernel's own ZMQ
     # channels could not connect; the runner then replaces the shell, so no
     # argument is ever re-parsed and a notebook path may contain anything.
-    assert isolated[len(prefix) : len(prefix) + 3] == ["sh", "-c", runner._NAMESPACE_SHELL]
     assert "ip link set lo up" in runner._NAMESPACE_SHELL
-    assert isolated[len(prefix) + 3 :] == plain
+    assert isolated[len(prefix) :] == plain
     assert plain[0] == sys.executable
     assert "--single" in plain and str(notebook) in plain and "--fast-smoke" in plain
 
 
-@pytest.mark.skipif(sys.platform != "linux", reason="network namespaces are a Linux facility")
+def test_the_sudo_runner_restores_the_callers_home_and_headless_backend(
+    tmp_path, monkeypatch
+):
+    private_home = tmp_path / "private home"
+    monkeypatch.setenv("HOME", str(private_home))
+    command = runner._runner_command(
+        tmp_path / "a notebook.ipynb",
+        cell_timeout_s=90,
+        fast_smoke=False,
+        isolation_prefix=list(_SUDO_NET),
+    )
+    assert command[len(_SUDO_NET) : len(_SUDO_NET) + 4] == [
+        "env",
+        f"HOME={private_home}",
+        "MPLBACKEND=Agg",
+        sys.executable,
+    ]
+
+
+@pytest.mark.skipif(
+    sys.platform != "linux", reason="network namespaces are a Linux facility"
+)
 def test_the_namespace_probe_reports_a_loopback_only_namespace():
     prefix = runner._network_namespace_prefix()
     if prefix is None:
         pytest.skip("unprivileged user namespaces are not permitted here")
-    listing = __import__("subprocess").run(
-        [*prefix, "sh", "-c", "ip link set lo up && ip -o link show"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout
+    listing = (
+        __import__("subprocess")
+        .run(
+            [*prefix, "ip", "-o", "link", "show"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        .stdout
+    )
     interfaces = {
         line.split(":", 2)[1].strip().split("@", 1)[0]
         for line in listing.splitlines()
@@ -1079,8 +1169,13 @@ def test_the_namespace_probe_reports_a_loopback_only_namespace():
     assert interfaces == {"lo"}
 
 
-@pytest.mark.skipif(sys.platform != "linux", reason="network namespaces are a Linux facility")
-def test_the_kernel_really_runs_with_loopback_only(tmp_path):
+@pytest.mark.skipif(
+    sys.platform != "linux", reason="network namespaces are a Linux facility"
+)
+@pytest.mark.parametrize("namespace_kind", ["preferred", "sudo"])
+def test_the_kernel_really_runs_with_loopback_only(
+    tmp_path, monkeypatch, namespace_kind
+):
     """The contract is about the kernel, not about the runner that starts it.
 
     Asserting on the interfaces the kernel can see tests the layer the in-kernel
@@ -1091,14 +1186,55 @@ def test_the_kernel_really_runs_with_loopback_only(tmp_path):
     nbformat = pytest.importorskip("nbformat")
     pytest.importorskip("nbclient")
     pytest.importorskip("ipykernel")
-    prefix = runner._network_namespace_prefix()
-    if prefix is None:
-        pytest.skip("unprivileged user namespaces are not permitted here")
+    if namespace_kind == "sudo":
+        candidates = [
+            prefix
+            for prefix in runner._namespace_prefix_candidates()
+            if runner._sudo_escalation(prefix)
+        ]
+        if not candidates:
+            pytest.skip("passwordless sudo and setpriv are unavailable")
+        candidate = candidates[0]
+        # Distinguish unavailable host capability from a broken fallback. Once
+        # privileged network creation works, every confinement/identity check
+        # and the private-file kernel execution below must succeed.
+        capability = subprocess.run(
+            [*candidate[:5], "true"], capture_output=True, text=True, timeout=30
+        )
+        if capability.returncode:
+            pytest.skip("sudo cannot create a network namespace on this host")
+        monkeypatch.setattr(
+            runner, "_namespace_prefix_candidates", lambda: iter(candidates)
+        )
+        prefix = runner._network_namespace_prefix()
+        assert prefix is not None, (
+            "privileged namespace setup worked but safe fallback failed"
+        )
+    else:
+        prefix = runner._network_namespace_prefix()
+        if prefix is None:
+            pytest.skip("network namespaces are not permitted here")
+
+    private = tmp_path / "caller-only"
+    private.mkdir(mode=0o700)
+    private_data = private / "secret.txt"
+    private_data.write_text("caller data", encoding="utf-8")
+    private_data.chmod(0o600)
+    # A private script path reproduces the CI checkout's 0700 parent, even on
+    # hosts whose checkout is otherwise world-readable.
+    private_runner = private / "run_notebook_smoke.py"
+    private_runner.write_bytes(Path(runner.__file__).read_bytes())
+    monkeypatch.setattr(runner, "__file__", str(private_runner))
+    outer_namespace = f"/proc/{os.getpid()}/ns/net"
 
     notebook = nbformat.v4.new_notebook()
     notebook.cells = [
         nbformat.v4.new_code_cell(
-            "import socket, subprocess, sys\n"
+            "import pathlib, socket, subprocess, sys\n"
+            f"assert pathlib.Path({str(private_data)!r}).read_text() == 'caller data'\n"
+            f"escape = subprocess.run(['nsenter', '--net={outer_namespace}', 'true'],\n"
+            "    capture_output=True, text=True)\n"
+            "assert escape.returncode != 0, 'kernel escaped to the host network'\n"
             "names = sorted(name for _, name in socket.if_nameindex())\n"
             "assert names == ['lo'], names\n"
             # A subprocess walks past the in-kernel guard and must still find
@@ -1117,7 +1253,7 @@ def test_the_kernel_really_runs_with_loopback_only(tmp_path):
             "server.close()\n"
         )
     ]
-    notebook_path = tmp_path / "isolation_contract.ipynb"
+    notebook_path = private / "isolation_contract.ipynb"
     nbformat.write(notebook, notebook_path)
 
     assert (
