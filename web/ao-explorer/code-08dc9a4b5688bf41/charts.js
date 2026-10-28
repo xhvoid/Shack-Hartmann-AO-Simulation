@@ -87,9 +87,12 @@ function legendLayout(ctx, series, left, right) {
 }
 
 export function lineChart(canvas, spec) {
-  const { ctx, width, height } = prepare(canvas, spec.height);
+  // Shaded-band labels get their own strip above the plot area, where no data
+  // is drawn; inside a band narrower than its label they ran into the curves.
+  const strip = (spec.shadeX || []).some((shade) => shade[2]) ? 14 : 0;
+  const { ctx, width, height } = prepare(canvas, spec.height && spec.height + strip);
   const legend = legendLayout(ctx, spec.series, 8, width - 8);
-  const m = { l: 58, r: 12, t: 8 + legend.rows * 14 + 4, b: 34 };
+  const m = { l: 58, r: 12, t: 8 + legend.rows * 14 + 4 + strip, b: 34 };
   const xs = []; const ys = [];
   for (const s of spec.series) for (const p of s.points) {
     xs.push(p[0]); ys.push(p[1]);
@@ -106,7 +109,7 @@ export function lineChart(canvas, spec) {
     ctx.fillStyle = "rgba(92, 97, 104, 0.10)";
     const a = tx(Math.max(shade[0], x0)); const b = tx(Math.min(shade[1], x1));
     ctx.fillRect(a, m.t, b - a, height - m.t - m.b);
-    if (shade[2]) { ctx.fillStyle = "#5c6168"; ctx.fillText(shade[2], a + 4, height - m.b - 6); }
+    if (shade[2]) { ctx.fillStyle = "#5c6168"; ctx.fillText(shade[2], Math.min(a + 4, width - m.r - ctx.measureText(shade[2]).width), m.t - 4); }
   }
   ctx.fillStyle = "#5c6168";
   const xt = xScale === "log" ? logTicks(x0, x1) : niceTicks(x0, x1, 6);
