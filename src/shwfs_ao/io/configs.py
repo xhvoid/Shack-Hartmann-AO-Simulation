@@ -308,8 +308,9 @@ class WfsConfig:
     # Whether the detector-level sensor clips negative pixels to zero before
     # centroiding.  Clipping turns zero-mean read noise into a positive
     # pedestal that pulls a center of gravity toward the window centre and
-    # lowers its response to spot motion; keeping negative pixels leaves it
-    # unbiased.  True is the behaviour every published profile ran with.
+    # lowers its response to spot motion; keeping negative pixels removes that
+    # bias and leaves it approximately unbiased.  True is the behaviour every
+    # published profile ran with.
     clip_negative_pixels: bool = True
 
     def __post_init__(self) -> None:
