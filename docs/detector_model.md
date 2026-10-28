@@ -235,7 +235,7 @@ Outside that domain it reports an undefined sigma, and the lenslet is
 invalid. Monte Carlo (E1) shows the first-order sigma low by about
 `4/SNR_T²` near the floor.
 
-## Known limitation: frozen DM at low valid fraction
+## Low valid fraction: frozen DM, waffle, and version 3
 
 The detector model marks lenslets outside its supported domain invalid. It
 does not change the control policy. When fewer than `min_valid_fraction`
@@ -243,13 +243,37 @@ does not change the control policy. When fewer than `min_valid_fraction`
 The integrator then receives no increment, so with zero leak the
 deformable mirror holds its last commands.
 
-At 12 m and m_AB = 11 (SNR_T ≈ 8.6), a noise-driven excursion drops the
-valid fraction below that threshold. The loop then stays frozen while the
-atmosphere evolves, so it never recovers. A leak of 0.02 lowers the
-residual but does not prevent the collapse.
+**The latch-up on @2.** At 12 m and m_AB = 11 (SNR_T ≈ 8.6),
+`det_emccd_12m_medium_derived@2` loses lock:
+- An excursion drops the valid fraction below 0.5.
+- The frozen DM never brings the spots back into the validity domain.
+- A leak of 0.02 lowers the residual but does not prevent the collapse.
 
-A recovery policy is outside the detector work and is recorded as a
-follow-up (status file, "E3 at m_AB = 11, closed-loop dynamics").
+**Opt-in recovery.** `controller.recovery` (schema 7) can reset the DM to
+flat after consecutive rejected frames. With that policy the loop
+re-closes from flat, but excursions still recur 4–12 times per 400
+frames.
+
+**Their trigger is under-regularization.** The relative Tikhonov damping
+of 0.001 leaves the global waffle mode unregularized.
+- Waffle is sensed about 40 times more weakly than a typical mode, so the
+  SH barely restores it.
+- Centroid noise drives it as a random walk.
+- At m_AB = 11 its wander broadens and clips spots that sit close to the
+  validity limits.
+
+**Version 3.** `det_emccd_12m_medium_derived@3` sets
+`reconstructor.alpha = 0.1` and keeps the reset as a safety net. In the
+predeclared evaluation (root seeds 21–25), m_AB = 11:
+- holds 195 nm with a K-band Strehl of 0.71, against 377 nm with the reset
+  alone and 1.9 µm on @2;
+- has no rejected frame at all.
+
+The same damping lowers the residual at m_AB = 10 by 9 nm. m_AB = 12 is
+unchanged, because no lenslet reaches SNR_T ≥ 7 there.
+
+Details: status file, "Closed-loop recovery policy", "Excursion trigger at
+m_AB = 11" and "`det_emccd_12m_medium_derived@3`".
 
 ## Supported claim
 

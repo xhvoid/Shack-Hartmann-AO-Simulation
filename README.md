@@ -444,7 +444,7 @@ the model is defined in the [detector model notes](docs/detector_model.md):
 | --- | --- | --- | --- |
 | `det_ccd_2m_synthetic@1`, `det_emccd_2m_synthetic@1`, `det_cmos_2m_synthetic@1` | synthetic CCD, EMCCD, CMOS | 700 nm, FFT point sampling | noise-on closed loops run |
 | `det_emccd_2m_plane_synthetic@1` | coupled EMCCD | 0.6–0.9 µm, 3 nodes, pixel-integrated, diffusion | noise-on closed loops run |
-| `det_emccd_12m_medium_derived@1`, `@2` | coupled EMCCD | R3 band, pixel-integrated | magnitude scan, camera comparison, effect sizes, exposure integration and 12 m noise propagation run with explicit enablement |
+| `det_emccd_12m_medium_derived@1`, `@2`, `@3` | coupled EMCCD | R3 band, pixel-integrated | magnitude scan, camera comparison, effect sizes, exposure integration and 12 m noise propagation run with explicit enablement; `@3` adds Tikhonov damping 0.1 and the reset recovery policy |
 | `det_ccd_42m_r3band_derived@1` | CCD, 3 e⁻ | R3 band, pixel-integrated | one 2000-frame noise-on run, with explicit enablement |
 
 On the 12 m tier the magnitude scan exposed a limit set by the control
@@ -466,6 +466,18 @@ policy rather than by the camera.
     once fewer than half the lenslets are valid the reconstructor returns
     no estimate, the deformable mirror stays frozen, and the loop does not
     recover. This is a control-policy limit, not a camera limit.
+- **`@3`, a second recorded post-hoc revision:**
+  - The excursions at m_AB = 11 come from the global waffle mode, which
+    the @2 damping (0.001) leaves unregularized.
+  - `@3` raises the damping to 0.1 and adds an opt-in reset of the
+    deformable mirror after two rejected frames.
+  - It holds **195 nm and a K-band Strehl of 0.71 at m_AB = 11** with no
+    rejected frame, against 1.9 µm and lost lock on `@2`.
+  - It also improves m_AB = 8–10 by about 8–9 nm, to 178–180 nm.
+  - In the camera comparison the CMOS now holds lock at m_AB = 10
+    (279 nm, Strehl 0.62), where it lost lock on `@2`.
+  - The limiting magnitude moves from between 10 and 11 to between 11 and
+    12. At m_AB = 12 no lenslet reaches the noise-model domain.
 
 Further results:
 - **Effect sizes at m_AB = 8 (12 m, `@2`).** Three changes were tested:

@@ -11,7 +11,8 @@
     "det_emccd_2m_plane_synthetic@1",
     "det_emccd_12m_medium_derived@1",
     "det_ccd_42m_r3band_derived@1",
-    "det_emccd_12m_medium_derived@2"
+    "det_emccd_12m_medium_derived@2",
+    "det_emccd_12m_medium_derived@3"
   ],
   "frozen": "2026-10-15",
   "classifications": {
@@ -63,6 +64,10 @@
           "detector_physics.camera.preset_version": 1
         },
         "det_emccd_12m_medium_derived@2": {
+          "detector_physics.camera.preset_name": "synthetic_emccd_coupled",
+          "detector_physics.camera.preset_version": 1
+        },
+        "det_emccd_12m_medium_derived@3": {
           "detector_physics.camera.preset_name": "synthetic_emccd_coupled",
           "detector_physics.camera.preset_version": 1
         }
@@ -125,6 +130,11 @@
           "wfs.detector_window_px": 15,
           "wfs.pad_factor": null,
           "detector_physics.sampling.pixel_scale_rad": 6.975694444444442e-07
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "wfs.detector_window_px": 15,
+          "wfs.pad_factor": null,
+          "detector_physics.sampling.pixel_scale_rad": 6.975694444444442e-07
         }
       }
     },
@@ -171,6 +181,10 @@
         "det_emccd_12m_medium_derived@2": {
           "detector_physics.sampling.kind": "mft_pixel_integrated",
           "detector_physics.sampling.oversampling": 4
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector_physics.sampling.kind": "mft_pixel_integrated",
+          "detector_physics.sampling.oversampling": 4
         }
       }
     },
@@ -215,6 +229,10 @@
           "detector_physics.layout.guard_px": 1
         },
         "det_emccd_12m_medium_derived@2": {
+          "detector_physics.sampling.diffusion_sigma_px": 0.2,
+          "detector_physics.layout.guard_px": 1
+        },
+        "det_emccd_12m_medium_derived@3": {
           "detector_physics.sampling.diffusion_sigma_px": 0.2,
           "detector_physics.layout.guard_px": 1
         }
@@ -282,6 +300,13 @@
           "wfs_wavelength_m": 7e-07
         },
         "det_emccd_12m_medium_derived@2": {
+          "detector_physics.bandpass.kind": "gauss_legendre",
+          "detector_physics.bandpass.band_min_m": 6e-07,
+          "detector_physics.bandpass.band_max_m": 9e-07,
+          "detector_physics.bandpass.n_samples": 3,
+          "wfs_wavelength_m": 7e-07
+        },
+        "det_emccd_12m_medium_derived@3": {
           "detector_physics.bandpass.kind": "gauss_legendre",
           "detector_physics.bandpass.band_min_m": 6e-07,
           "detector_physics.bandpass.band_max_m": 9e-07,
@@ -357,6 +382,13 @@
           "detector_physics.source.throughput_excluding_qe": 0.4,
           "detector_physics.source.incident_photons_per_full_subap_frame": null,
           "detector_physics.source.detected_e_per_full_subap_frame": null
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector_physics.source.kind": "ab_flat_fnu",
+          "detector_physics.source.ab_magnitude": 8.0,
+          "detector_physics.source.throughput_excluding_qe": 0.4,
+          "detector_physics.source.incident_photons_per_full_subap_frame": null,
+          "detector_physics.source.detected_e_per_full_subap_frame": null
         }
       },
       "context_sources": [
@@ -398,6 +430,9 @@
           "detector_physics.source.sky_ab_mag_per_arcsec2": null
         },
         "det_emccd_12m_medium_derived@2": {
+          "detector_physics.source.sky_ab_mag_per_arcsec2": 20.5
+        },
+        "det_emccd_12m_medium_derived@3": {
           "detector_physics.source.sky_ab_mag_per_arcsec2": 20.5
         }
       }
@@ -473,6 +508,14 @@
           "detector_physics.processing.n_sky_frames": 32,
           "detector_physics.processing.n_flat_frames": 32,
           "detector_physics.processing.flat_level_e": 1000.0
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector_physics.processing.mode": "estimated",
+          "detector_physics.processing.n_bias_frames": 32,
+          "detector_physics.processing.n_dark_frames": 32,
+          "detector_physics.processing.n_sky_frames": 32,
+          "detector_physics.processing.n_flat_frames": 32,
+          "detector_physics.processing.flat_level_e": 1000.0
         }
       },
       "context_sources": [
@@ -535,6 +578,12 @@
           "detector_physics.processing.flat_low_threshold": 0.5,
           "detector_physics.processing.flat_high_threshold": 1.5,
           "detector_physics.processing.bad_pixel_policy": "zero_weight"
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector_physics.processing.hot_pixel_threshold_e": 0.5,
+          "detector_physics.processing.flat_low_threshold": 0.5,
+          "detector_physics.processing.flat_high_threshold": 1.5,
+          "detector_physics.processing.bad_pixel_policy": "zero_weight"
         }
       }
     },
@@ -572,6 +621,9 @@
           "detector_physics.exposure_subsamples": 1
         },
         "det_emccd_12m_medium_derived@2": {
+          "detector_physics.exposure_subsamples": 1
+        },
+        "det_emccd_12m_medium_derived@3": {
           "detector_physics.exposure_subsamples": 1
         }
       }
@@ -619,6 +671,10 @@
         "det_emccd_12m_medium_derived@2": {
           "controller.gain": 0.3,
           "controller.include_noise": true
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "controller.gain": 0.3,
+          "controller.include_noise": true
         }
       }
     },
@@ -656,6 +712,9 @@
           "detector_physics.layout.scheme": "isolated_lenslet_blocks.v1"
         },
         "det_emccd_12m_medium_derived@2": {
+          "detector_physics.layout.scheme": "isolated_lenslet_blocks.v1"
+        },
+        "det_emccd_12m_medium_derived@3": {
           "detector_physics.layout.scheme": "isolated_lenslet_blocks.v1"
         }
       }
@@ -706,6 +765,11 @@
           "wfs.clip_negative_pixels": false
         },
         "det_emccd_12m_medium_derived@2": {
+          "detector_physics.processing.gain_treatment": "known_per_pixel",
+          "detector_physics.processing.clip_negative": false,
+          "wfs.clip_negative_pixels": false
+        },
+        "det_emccd_12m_medium_derived@3": {
           "detector_physics.processing.gain_treatment": "known_per_pixel",
           "detector_physics.processing.clip_negative": false,
           "wfs.clip_negative_pixels": false
@@ -833,6 +897,19 @@
           "detector.prnu_mode": "persistent",
           "detector.bad_pixel_fraction": 0.0,
           "detector.exposure_s": 0.002
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "detector.enabled": true,
+          "detector.photons_per_subap_frame": null,
+          "detector.read_noise_e": 0.0,
+          "detector.dark_e_per_s": 0.0,
+          "detector.background_e_per_pixel_frame": 0.0,
+          "detector.full_well_e": null,
+          "detector.qe": 1.0,
+          "detector.prnu_rms": 0.0,
+          "detector.prnu_mode": "persistent",
+          "detector.bad_pixel_fraction": 0.0,
+          "detector.exposure_s": 0.002
         }
       }
     },
@@ -877,6 +954,51 @@
       }
     },
     {
+      "id": "B20",
+      "title": "Reconstructor Tikhonov damping (version 3, post-hoc)",
+      "classification": "engineering_assumption",
+      "applies_to": "all",
+      "unit": "relative to the RMS column norm",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "0.1 (was 0.001): 0.001 leaves the global waffle mode (singular value 0.0265 of the RMS column norm) unregularized, and its noise-driven wander latched the loop up at m_AB = 11; 0.1 damps waffle by 15x and leaves the median mode at 0.99 of its gain; selected on root seeds 11 and 12 (0.03, 0.1, 0.3) and evaluated, predeclared, on root seeds 21-25 (det_excursion_e3_12m_v2.json)",
+      "transformation": "none",
+      "limitation": "changed after inspecting E3 on @2; selected at m_AB = 11 on the 12 m geometry only; @2 keeps 0.001 and its results stand",
+      "consuming_tests": [
+        "tests/io/test_detector_level_profiles.py::test_version_3_is_version_2_with_damping_and_the_reset_policy"
+      ],
+      "values_by_profile": {
+        "det_emccd_12m_medium_derived@3": {
+          "reconstructor.alpha": 0.1
+        }
+      }
+    },
+    {
+      "id": "B21",
+      "title": "Closed-loop recovery policy (version 3)",
+      "classification": "engineering_assumption",
+      "applies_to": "all",
+      "unit": "frames; fraction of the command removed per frame; null = off",
+      "authority_sources": [],
+      "locator": "",
+      "rationale": "reset the DM to flat after two consecutive rejected frames (det_recovery_e3_12m_v2.json); with the version-3 damping no frame is rejected at m_AB 10-11 on the evaluation seeds, so it is a safety net that never acts there; the subset fallback and the gain schedule stay off (null): neither recovered the loop in that evaluation",
+      "transformation": "none",
+      "limitation": "a reset costs about 20 frames of re-closing when it fires",
+      "consuming_tests": [
+        "tests/control/test_recovery.py",
+        "tests/io/test_recovery_policy_config.py"
+      ],
+      "values_by_profile": {
+        "det_emccd_12m_medium_derived@3": {
+          "controller.recovery.rejected_frames_before_decay": 2,
+          "controller.recovery.decay_per_rejected_frame": 1.0,
+          "controller.recovery.fallback_min_valid_fraction": null,
+          "controller.recovery.fallback_min_actuator_coverage": null,
+          "controller.recovery.gain_full_valid_fraction": null
+        }
+      }
+    },
+    {
       "id": "B16",
       "title": "Noise-on reconstruction validity floor",
       "classification": "engineering_assumption",
@@ -911,6 +1033,9 @@
           "reconstructor.min_valid_fraction": 0.5
         },
         "det_emccd_12m_medium_derived@2": {
+          "reconstructor.min_valid_fraction": 0.5
+        },
+        "det_emccd_12m_medium_derived@3": {
           "reconstructor.min_valid_fraction": 0.5
         }
       }
@@ -1368,6 +1493,74 @@
           "scalable.solver_btol": "derived:det_emccd_12m_medium_derived@1",
           "scalable.solver_max_iterations": "derived:det_emccd_12m_medium_derived@1",
           "scalable.nonconverged_policy": "derived:det_emccd_12m_medium_derived@1"
+        },
+        "det_emccd_12m_medium_derived@3": {
+          "backend": "derived:det_emccd_12m_medium_derived@2",
+          "wfs_model": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere_model": "derived:det_emccd_12m_medium_derived@2",
+          "telescope_diameter_m": "derived:det_emccd_12m_medium_derived@2",
+          "pupil_pixels": "derived:det_emccd_12m_medium_derived@2",
+          "lenslets_across": "derived:det_emccd_12m_medium_derived@2",
+          "actuators_across": "derived:det_emccd_12m_medium_derived@2",
+          "science_wavelengths_m": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.r0_m": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.r0_reference_wavelength_m": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.outer_scale_m": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.wind_m_per_s": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.target_rms_opd_m": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.normalize_rms": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.layers[*].altitude_m": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.layers[*].cn2_fraction": "derived:det_emccd_12m_medium_derived@2",
+          "atmosphere.layers[*].wind_m_per_s": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.min_fill_fraction": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.centroid_estimator": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.threshold_fraction": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.subtract_minimum": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.min_flux_e": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.min_peak_snr": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.max_centroid_sigma_px": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.max_window_clipping_fraction": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.central_obstruction_ratio": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.spider_width_m": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.photon_allocation": "derived:det_emccd_12m_medium_derived@2",
+          "wfs.lenslet_axis": "derived:det_emccd_12m_medium_derived@2",
+          "dm.influence_model": "derived:det_emccd_12m_medium_derived@2",
+          "dm.coupling_width_pitch": "derived:det_emccd_12m_medium_derived@2",
+          "dm.stroke_limit_opd_m": "derived:det_emccd_12m_medium_derived@2",
+          "dm.include_edge_actuators": "derived:det_emccd_12m_medium_derived@2",
+          "dm.actuator_margin_fraction": "derived:det_emccd_12m_medium_derived@2",
+          "dm.dead_actuator_indices": "derived:det_emccd_12m_medium_derived@2",
+          "dm.stuck_actuator_indices": "derived:det_emccd_12m_medium_derived@2",
+          "dm.stuck_command_opd_m": "derived:det_emccd_12m_medium_derived@2",
+          "calibration.source": "derived:det_emccd_12m_medium_derived@2",
+          "calibration.method": "derived:det_emccd_12m_medium_derived@2",
+          "calibration.probe_kind": "derived:det_emccd_12m_medium_derived@2",
+          "calibration.amplitude_m": "derived:det_emccd_12m_medium_derived@2",
+          "calibration.include_noise": "derived:det_emccd_12m_medium_derived@2",
+          "calibration.repeats": "derived:det_emccd_12m_medium_derived@2",
+          "calibration.resource_name": "derived:det_emccd_12m_medium_derived@2",
+          "reconstructor.kind": "derived:det_emccd_12m_medium_derived@2",
+          "reconstructor.rcond": "derived:det_emccd_12m_medium_derived@2",
+          "reconstructor.min_rank": "derived:det_emccd_12m_medium_derived@2",
+          "reconstructor.max_cached_masks": "derived:det_emccd_12m_medium_derived@2",
+          "command_projector.kind": "derived:det_emccd_12m_medium_derived@2",
+          "command_projector.mapping_resource": "derived:det_emccd_12m_medium_derived@2",
+          "controller.n_steps": "derived:det_emccd_12m_medium_derived@2",
+          "controller.leak": "derived:det_emccd_12m_medium_derived@2",
+          "controller.latency_frames": "derived:det_emccd_12m_medium_derived@2",
+          "controller.frame_rate_hz": "derived:det_emccd_12m_medium_derived@2",
+          "science.psf_pad_factor": "derived:det_emccd_12m_medium_derived@2",
+          "random.root_seed": "derived:det_emccd_12m_medium_derived@2",
+          "random.derivation_scheme_id": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.dm_operator": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.wfs_geometry": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.calibration_strategy": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.solver": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.solver_atol": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.solver_btol": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.solver_max_iterations": "derived:det_emccd_12m_medium_derived@2",
+          "scalable.nonconverged_policy": "derived:det_emccd_12m_medium_derived@2",
+          "detector_physics.calibration_source_detected_e_per_full_subap_frame": "derived:det_emccd_12m_medium_derived@2"
         }
       }
     }

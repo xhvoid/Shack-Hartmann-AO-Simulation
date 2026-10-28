@@ -599,6 +599,7 @@ AO_REF_011_SYSTEM_PROFILES = (
     ("det_emccd_12m_medium_derived", 1),
     ("det_ccd_42m_r3band_derived", 1),
     ("det_emccd_12m_medium_derived", 2),
+    ("det_emccd_12m_medium_derived", 3),
 )
 CONTRACT_MANIFEST = (
     ROOT
@@ -1870,5 +1871,5 @@ def test_pep660_editable_install_generates_resource_alias_only_in_environment(
         capture_output=True,
         text=True,
     )
-    assert result.stdout.strip() == "editable-resource-alias-ok:78"
+    assert result.stdout.strip() == "editable-resource-alias-ok:79"
     assert not source_alias.exists()

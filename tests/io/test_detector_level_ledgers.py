@@ -30,6 +30,7 @@ def test_every_detector_level_profile_value_has_a_ledger_row() -> None:
     for rows in coverage.values():
         assert {f"B{index:02d}" for index in range(1, 18)} - {"B14"} <= set(rows)
     assert {"B18", "B19"} <= set(coverage["det_emccd_12m_medium_derived@2"])
+    assert {"B20", "B21"} <= set(coverage["det_emccd_12m_medium_derived@3"])
     ids = {source["id"] for source in sources["sources"]}
     assert {"D1", "D2", "D3", "D4", "D5", "D7", "D8", "D9", "R3", "R4"} <= ids
     assert "D6" not in ids  # no datasheet: every preset stays synthetic_assumed
@@ -45,6 +46,6 @@ def test_profile_gains_are_the_recorded_scan_selections() -> None:
     for pid in ledger["profiles"]:
         name, version = pid.split("@")
         config = load_system_profile(name, int(version))
-        # Version 2 keeps its version-1 scan selection (B18/B19: the scan ran
-        # at a magnitude where neither version-2 change binds).
+        # Versions 2 and 3 keep the version-1 scan selection; the gain was not
+        # rescanned for their changes (B18-B21).
         assert config.controller.gain == selected[f"{name}@1"], pid
