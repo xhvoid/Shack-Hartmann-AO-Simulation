@@ -1014,3 +1014,41 @@ characters missing; review observation T3-OBS-01, P3). As the review
 proposes, this record closes AR-008 and roadmap G11 for that change; the
 frozen reconciliation ledgers and the implementation record are left as
 they are.
+
+## Traced paired-noise instrument: ticket T1 and roadmap S4 (2026-10-21)
+
+Ticket T1 of the next-stage plan (S4 tracing and the bounded 2 m replay) was
+carried out from `b644a08`; it is commit `36768d2` on `claude/t1-s4-telemetry`,
+and its implementation record is in
+`outputs/t1_s4_telemetry/2026-10-20-fable-b644a08/`.
+
+| Unit | Finding | Change | Behaviour and identity |
+| --- | --- | --- | --- |
+| M | roadmap S4 (an instrument for LIM-18 and AR-006, not their closure) | passive frame observation of the effective measurement row mask and the current frame's detector telemetry (model sigma and expected centroid per lenslet and axis, validated on their own domain); `paired_noise_run_traced` beside the unchanged `paired_noise_run`; the mask-locked arm with its own protocol identity (twin first; a partial lock is never reported exact); the traced record family (`noise-isolation-2m-traced`; the gated `-12m-traced` and `-12m-masklocked`) with one verified, allow-pickle-free NumPy sidecar per run under a diagnostic protocol beside series protocol 4, validated against the full schema (exact arrays, dtype, shape, canonical units, axes and meaning, frame domains, one lenslet order, canonical interleaved rows, map retention, mode-specific arrays) before any reuse; the NumPy-only analysis script and the 2 m H5 bound; tests, `docs/backends.md`, `docs/architecture.md`, technical reference 5.11 and the roadmap S4 note | every configuration, sensor, loop and detector hash, every history and the RNG draw order are unchanged (witnesses: 0 changed scientific leaves; five historical 2 m runs and the 32-run C0 replay reproduce `det09_noise_isolation_2m.json` bit for bit, and the traced and untraced runs of the current code are identical); the 12 m commands refuse before any profile or model without the user's enablement note; LIM-18 and the recorded records are untouched |
+
+Three independent reviews read the uncommitted change
+(`outputs/t1_s4_telemetry/review-2026-10-20-gpt/`,
+`review-2026-10-21-gpt-r2/` and `review-2026-10-21-gpt-r3/`). The first
+returned five P2 findings, T1-01 to T1-05 (an undefined expected centroid
+could refuse a measurement; digest-bound malformed sidecars passed reuse
+validation; supported construction refusals lost their diagnostic identity;
+zero-scatter populations lost their paired slopes; a non-positive
+correlation-time estimate reported zero uncertainty as reliable). The second
+found four of them resolved and T1-02 partial: declared units, axes and
+meaning were compared by type only, row and lenslet ids by count only, and
+the standalone loader was weaker than the runner. The third accepted the tree
+that `36768d2` commits byte for byte (base `b644a08`, tracked diff SHA-256
+`c743e9ff0ae393012fe2424d5ea68bd20719a090ce32149be1d9a3907719017f`, new files
+`174acf5e…`, `79b3dd95…`, `0e0b186f…`, `5bd2006f…`), `PASS_WITH_DECLARED_VALIDATION_LIMITS`, with no actionable
+finding: the reviewer's unchanged fourteen-variant probe is refused by both
+consumers, 235 focused tests passed, all 64 saved C0 sidecars are accepted
+unchanged and the fresh offline re-analyses have zero numeric differences.
+Its declared limits: CI has not run on the change; the checks ran in the
+local macOS environment (Python 3.14.3, NumPy 2.5.0), not the constraint
+lock, serially with two threads under the user's resource-guard instruction
+of 2026-10-20; the full suite, the H5 bound and the C0 study are the
+implementation's source-bound evidence, inspected and reused rather than
+re-executed; the acceptance covers the instrument and its record contract,
+not the noise-law question. S4, AR-006 and LIM-18 keep their status; the C0
+record and its sidecars stay local under `outputs/t1_s4_telemetry/`; no 12 m
+or 42 m arm was run.
