@@ -666,7 +666,11 @@ one the 10 % claim covers.
 
 ## DET-03 — Detector-plane sampling: MFT, pixel integration, diffusion, coupling
 
-Status: DONE (2026-10-15); the medium-tier cost is NOT_RUN_RESOURCE_POLICY.
+Status: DONE (2026-10-15). The medium-tier cost was measured on 2026-10-16
+under the user's enablement. At 12 m, pixel integration (k = 4) with
+diffusion adds 39 ms (+33 %) per full frame. See "12 m costs, full frame"
+under "E6, effect sizes on `det_emccd_12m_medium_derived@1`" in
+"Gated-run results".
 Files: `backends/native/shwfs_mft.py`, coupling in `detector/physical.py`.
 Decision D00-6.
 
@@ -867,14 +871,27 @@ No existing identity moved (DET-01).
     therefore not attributed to detector noise alone.
   - At these bright settings the 5×5 DM's fitting error dominates.
 - **Gain scan**: see "DET-09 gain-scan result" above.
-- **E3, magnitude scan (12 m)**: NOT_RUN_RESOURCE_POLICY.
-- **E4, camera comparison (12 m)**: NOT_RUN_RESOURCE_POLICY.
-- **E5, 2000-frame noise-on 42 m run**: NOT_RUN_RESOURCE_POLICY.
-- **E6, effect sizes (12 m)**: NOT_RUN_RESOURCE_POLICY.
-- **E2 at 12 m**: NOT_RUN_RESOURCE_POLICY.
+- **E3, magnitude scan (12 m)**: run on `@1` (predeclared), `@2` and
+  `@3`, root seeds 21–25. The limiting magnitude lies between 9 and 10 on
+  `@1`, between 10 and 11 on `@2`, and between 11 and 12 on `@3`.
+- **E4, camera comparison (12 m)**: run on `@1`, `@2` and `@3`, root seeds
+  31–33.
+  - At m_AB = 8 the order is EMCCD < CMOS < CCD in every version.
+  - At m_AB = 10, on `@2` and `@3`, only the EMCCD keeps full correction.
+    On `@3` the CMOS holds a degraded lock at 278.5 nm, and the CCD has no
+    valid lenslet.
+- **E5, 2000-frame noise-on 42 m run**: run once, root seed 1. Result:
+  173.2 nm, valid fraction ≥ 0.994 in every frame, K Strehl 0.753.
+- **E6, effect sizes (12 m)**: run on `@1` and `@2`, root seeds 41–43. On
+  `@2` every detector-feature effect is below 1 nm in two seeds. In the
+  strong-turbulence seed the effects vary by ±10 nm with no consistent
+  sign.
+- **E2 at 12 m**: slope-variance ratio 0.999 and trace ratio 1.008, within
+  the declared tolerance.
 
-  Each of these needs the user's enablement of a concrete run. The
-  estimates are under "Gated runs" below.
+  The user enabled each run on 2026-10-16. The results, with commands,
+  wall times and peak RSS, are under "Gated-run results" below. The `@3`
+  results are in "`det_emccd_12m_medium_derived@3`".
 
 ### Gated runs: configurations, estimates and commands
 
