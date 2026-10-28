@@ -39,13 +39,33 @@ discrete pixel flux; FWHM consumes angular surface brightness. Encircled-energy
 radii, FWHM, and halo apertures therefore use the angular axes rather than
 deriving scale from array indices.
 
+Peak Strehl is the maximum surface brightness divided by the ideal maximum;
+it follows the displaced PSF peak. Pure tilt therefore leaves its continuous
+limit unchanged, although pixel sampling and clipping can change the measured
+maximum. OPD RMS and the Maréchal estimate remove piston only and retain tilt.
+Do not apply Maréchal to that RMS and expect agreement with a displaced peak;
+use a consistently tilt-removed wavefront for that comparison.
+
+Canonical FWHM pairs each annulus's mean brightness with the area-weighted mean
+radius of its samples, then interpolates the half-maximum crossing. It remains
+sampling dependent: ideal Airy tests at padding 3, 4, 8 and 16 check convergence
+toward 1.02899 lambda/D. Use padding at least 8 for percent-level width work.
+
 The frozen compatibility `SciencePsfMetrics` rows additionally retain their
 historical `fwhm_px`, `ee50_px`, and `ee80_px` fields, exact field order, and
 nanometre-facing inputs. Those fields support existing notebooks and files;
 they do not change the canonical requirement to compute metrics from a
 physical `PsfResult` grid.
 
-For the fast 2 m demonstrator, the most robust science-facing scalar metrics are residual OPD RMS, Strehl, FWHM, and halo fraction. EE50/EE80 are useful secondary diagnostics, but they can show visible grid/radius quantization when the PSF sampling is deliberately small for fast reruns.
+The compatibility FWHM explicitly retains the historical inner-annulus-edge
+radius convention for existing artifacts. It underestimates well-sampled Airy
+widths on coarse grids; use the canonical estimator for new measurements.
+
+For the fast 2 m demonstrator, residual OPD RMS, sampled-peak Strehl and halo
+fraction are useful complementary diagnostics with the definitions above.
+Use the canonical estimator and resolved angular sampling for quantitative
+FWHM work. EE50/EE80 can show visible radius quantization when the PSF grid is
+deliberately small for fast reruns.
 
 Bandpass support is intentionally lightweight. If a direct SVO public-cache
 filter curve is available through the data-source loader, the canonical
@@ -56,6 +76,10 @@ quadrature-weighted scalar metrics only. They are not broadband detector-plane
 images, and same-index pixels from wavelength-dependent PSF grids must never be
 stacked. A future image API must require a common physical angular grid,
 flux-conserving resampling, and interpolation provenance before coaddition.
+
+Error-budget tables additionally take medians of scalar results over their
+tail-frame window. These medians describe instantaneous image quality and do
+not include the broadening from image motion during a long exposure.
 
 Validation summary:
 

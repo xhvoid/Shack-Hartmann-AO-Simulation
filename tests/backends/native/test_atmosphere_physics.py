@@ -95,7 +95,7 @@ def test_aperture_variance_rejects_non_physical_inputs() -> None:
 
 
 def test_v2_synthesis_carries_the_cell_integrated_psd_variance() -> None:
-    """Field variance must equal the PSD integrated over the sampled band.
+    """The ensemble point second moment equals the sampled PSD integral.
 
     This is the exact statement the v1 generator violates: it omits the
     ``N**2 * df`` factor, so its realizations carry essentially none of this
@@ -117,9 +117,9 @@ def test_v2_synthesis_carries_the_cell_integrated_psd_variance() -> None:
     variance = float(
         np.mean(
             [
-                subharmonic_von_karman_phase_realization(
+                np.mean(subharmonic_von_karman_phase_realization(
                     size, delta, r0, outer_scale, rng=rng, subharmonic_depth=0
-                ).var()
+                ) ** 2)
                 for _ in range(200)
             ]
         )
@@ -165,12 +165,11 @@ def test_v1_synthesis_is_not_absolutely_normalized() -> None:
 def test_v2_structure_function_follows_the_kolmogorov_five_thirds_law() -> None:
     """``D(r) = 6.88 (r/r0)**(5/3)`` over nearly two decades of separation.
 
-    Measured at 0.92-0.98 of theory with an exponent of 1.674 on a
-    well-resolved 512-point grid.  The residual few per cent is the Nyquist
-    band limit that no finite FFT screen escapes.  On coarser grids the
-    deepest subharmonics represent scales many times the screen and the ratio
-    drifts above one at the largest separations, so this contract is stated
-    for a resolved grid.
+    An effectively infinite outer scale requires deeper low-frequency
+    coverage than the shipped finite-L0=25m configuration: three levels
+    omit about17% at the largest separation here, nine reduce that cutoff
+    error below3%. The smallest separation also loses about7% to the
+    Nyquist band limit. Resolve both before testing against continuum theory.
     """
 
     size, delta, r0, outer_scale = 512, 0.02, 0.15, 1.0e6
@@ -180,10 +179,10 @@ def test_v2_structure_function_follows_the_kolmogorov_five_thirds_law() -> None:
 
     rng = np.random.default_rng(20260819)
     measured = np.zeros(separations.size)
-    realizations = 8
+    realizations = 32
     for _ in range(realizations):
         screen = subharmonic_von_karman_phase_realization(
-            size, delta, r0, outer_scale, rng=rng
+            size, delta, r0, outer_scale, rng=rng, subharmonic_depth=9
         )
         measured += _structure_function(screen, separations)
     measured /= realizations
@@ -495,6 +494,10 @@ def test_v2_spectrum_records_that_it_is_absolutely_normalized() -> None:
     )
 
     assert model.metadata["absolutely_normalized"] is True
+    assert model.metadata["raw_spectrum_absolutely_normalized"] is True
+    assert model.metadata["realization_rms_rescaled"] is False
+    assert model.metadata["spectral_quadrature_scheme"] == "midpoint_frequency_quadrature_v1"
+    assert model.metadata["spectral_quadrature_subsamples"] == 4
     assert model.metadata["subharmonic_depth"] == 3
 
 
@@ -519,6 +522,9 @@ def test_v2_default_rms_target_honours_the_outer_scale() -> None:
     )
 
     assert v2_target == pytest.approx(expected, rel=1.0e-9)
+    assert bounded.metadata["absolutely_normalized"] is False
+    assert bounded.metadata["raw_spectrum_absolutely_normalized"] is True
+    assert bounded.metadata["realization_rms_rescaled"] is True
     # v1 applies the infinite-outer-scale coefficient regardless of L0.
     assert v1_target > 1.2 * v2_target
 
@@ -605,12 +611,10 @@ def test_system_config_accepts_the_corrected_atmosphere_model() -> None:
 
 
 def test_v2_screens_are_not_periodic_so_wrapping_is_a_real_discontinuity() -> None:
-    """Subharmonic modes have periods longer than the screen.
+    """Both shifted quadrature nodes and subharmonics are off-grid.
 
-    The v1 screen and a depth-0 v2 screen contain only on-grid frequencies and
-    are exactly periodic, so wrapping them is seamless.  Adding subharmonics
-    buys the correct low-frequency content at the cost of periodicity, which is
-    why an oversized screen exists.
+    The v1 screen contains only on-grid frequencies and is periodic. V2
+    cannot be safely wrapped, even when its subharmonic depth is zero.
     """
 
     from shwfs_ao.backends.native.atmosphere import (
@@ -629,14 +633,16 @@ def test_v2_screens_are_not_periodic_so_wrapping_is_a_real_discontinuity() -> No
             size, delta, r0, outer_scale, rng=np.random.default_rng(3)
         )
     )
-    subharmonic = wrap_ratio(
-        subharmonic_von_karman_phase_realization(
-            size, delta, r0, outer_scale, rng=np.random.default_rng(3)
-        )
-    )
-
     assert periodic < 2.0
-    assert subharmonic > 10.0
+    for depth in (0, 3):
+        ratios = [
+            wrap_ratio(subharmonic_von_karman_phase_realization(
+                size, delta, r0, outer_scale,
+                rng=np.random.default_rng(seed), subharmonic_depth=depth,
+            ))
+            for seed in range(8)
+        ]
+        assert np.median(ratios) > 5.0
 
 
 def test_oversized_screen_keeps_the_seam_out_of_the_pupil() -> None:
@@ -786,49 +792,57 @@ def test_the_legacy_periodic_model_still_wraps_without_complaint() -> None:
     assert not model.exceeded_travel_budget
 
 
-def test_oversized_screen_does_not_change_the_ensemble_amplitude() -> None:
-    """Screen size buys travel room, not physics.
+def test_shipped_v2_ensemble_variance_and_realization_scatter() -> None:
+    """Compare mean variance, not mean RMS, on the actual shipped pupil."""
 
-    The subharmonics carry the low frequencies, so the ensemble pupil RMS must
-    match the von Karman aperture variance regardless of how much padding the
-    screen has.
-    """
+    from scipy.signal import fftconvolve
+    from scipy.special import gamma, kv
+    from shwfs_ao.backends.native.factory import SCREEN_OVERSIZE_FACTOR
 
     pixels, diameter, r0, outer_scale = 52, 2.0, 0.1263371938263465, 25.0
-    delta = diameter / pixels
-    coordinates = (np.arange(pixels) - pixels // 2) * delta
+    # The physical calibration uses linspace endpoints, not D / pixels.
+    delta = diameter / (pixels - 1)
+    coordinates = np.linspace(-diameter / 2, diameter / 2, pixels)
     x_m, y_m = np.meshgrid(coordinates, coordinates)
-    mask = np.hypot(x_m, y_m) <= diameter / 2.0
-    theory = math.sqrt(
-        von_karman_piston_removed_variance_rad2(diameter, r0, outer_scale)
-    )
+    mask = np.hypot(x_m, y_m) <= diameter / 2
+    size = SCREEN_OVERSIZE_FACTOR * pixels
+    start = (size - pixels) // 2
 
-    for screen_size in (pixels, 2 * pixels, 4 * pixels):
-        values = []
-        for index in range(24):
-            model = FrozenFlowAtmosphere(
-                FrozenFlowAtmosphereConfig(
-                    grid_size=pixels,
-                    delta_m=delta,
-                    pupil_diameter_m=diameter,
-                    r0_m=r0,
-                    outer_scale_m=outer_scale,
-                    wind_m_per_s=(0.0, 0.0),
-                    root_seed=9000 + index,
-                    normalize_rms=False,
-                    spectrum_model=SPECTRUM_SUBHARMONIC_V2,
-                    translation_model=TRANSLATION_FOURIER_SUBPIXEL_V2,
-                    screen_grid_size=screen_size,
-                ),
-                pupil_mask=mask,
-            )
-            model.reset(realization_index=0)
-            frame = np.asarray(model.opd_at(0.0), dtype=float)
-            values.append(float(np.nanstd(frame[mask])))
-        measured_rad = float(np.mean(values)) * 2.0 * np.pi / 500.0e-9
-        assert measured_rad == pytest.approx(theory, rel=0.25), (
-            f"screen {screen_size}: {measured_rad:.2f} rad vs theory {theory:.2f}"
+    # Independent continuous von Karman covariance, averaged over every pair
+    # of actual pupil samples. This accounts for rasterization without using
+    # the generator's frequencies or any cell-power helper.
+    lags = np.arange(1 - pixels, pixels) * delta
+    lag_x, lag_y = np.meshgrid(lags, lags)
+    z = 2 * np.pi * np.hypot(lag_x, lag_y) / outer_scale
+    alpha = 5 / 6
+    b0 = np.pi * 0.023 * r0 ** (-5 / 3) * (6 / 5) * outer_scale ** (5 / 3)
+    safe_z = np.where(z == 0, 1.0, z)
+    covariance = b0 * 2 ** (1 - alpha) / gamma(alpha) * safe_z**alpha * kv(alpha, safe_z)
+    covariance[z == 0] = b0
+    pairs = fftconvolve(mask.astype(float), mask[::-1, ::-1].astype(float), mode="full")
+    theory = float(np.sum(pairs * (b0 - covariance)) / mask.sum()**2)
+
+    rng = np.random.default_rng(20260922)
+    variances = []
+    for _ in range(512):
+        screen = subharmonic_von_karman_phase_realization(
+            size, delta, r0, outer_scale, rng=rng
         )
+        window = screen[start : start + pixels, start : start + pixels]
+        variances.append(float(np.var(window[mask])))
+    values = np.asarray(variances)
+    mean = float(values.mean())
+    sem = float(values.std(ddof=1) / np.sqrt(values.size))
+    # Three standard errors plus a 1% finite-band/quadrature allowance. The
+    # previous ~19% bias fails this bound with the same independent seed.
+    assert 3 * sem < 0.12 * theory
+    assert abs(mean - theory) < 3 * sem + 0.01 * theory, (
+        f"mean variance {mean:.4f} +/- {sem:.4f} SEM vs {theory:.4f} rad^2"
+    )
+    # An RMS-pinned realization could pass the mean test while destroying the
+    # physical ensemble; require substantial independent realization scatter.
+    assert values.std(ddof=1) / mean > 0.4
+
 
 
 def test_oversizing_the_legacy_spectrum_is_refused() -> None:
@@ -842,3 +856,145 @@ def test_odd_padding_is_refused_so_the_window_stays_centred() -> None:
             spectrum_model=SPECTRUM_SUBHARMONIC_V2,
             screen_grid_size=_flow_config().grid_size + 1,
         )
+
+
+def _independent_quadrature_variance(subsamples: int, factor: int = 3) -> float:
+    """Integrate PSD times a circular-pupil piston filter at spectral nodes."""
+
+    from scipy.special import j1
+
+    diameter, r0, outer_scale = 2.0, 0.1263371938263465, 25.0
+    size, delta = factor * 52, diameter / 51
+    step = 1 / (size * delta)
+    offsets = (np.arange(subsamples) + 0.5) / subsamples - 0.5
+
+    def integrand(fx: np.ndarray, fy: np.ndarray) -> np.ndarray:
+        f = np.hypot(fx, fy)
+        argument = np.pi * diameter * f
+        safe = np.where(argument == 0, 1, argument)
+        pupil_filter = np.where(argument == 0, 0, 1 - (2 * j1(safe) / safe)**2)
+        return 0.023 * r0**(-5 / 3) * (f*f + outer_scale**-2)**(-11 / 6) * pupil_filter
+
+    frequencies = np.fft.fftfreq(size, delta)
+    fx, fy = np.meshgrid(frequencies, frequencies)
+    total = 0.0
+    for ox in offsets:
+        for oy in offsets:
+            weighted = integrand(fx + ox * step, fy + oy * step)
+            weighted[0, 0] = 0
+            total += float(weighted.sum()) * (step / subsamples)**2
+    for level in (1, 2, 3):
+        width = step / 3**level
+        for cx in (-1, 0, 1):
+            for cy in (-1, 0, 1):
+                if cx == 0 and cy == 0:
+                    continue
+                fx, fy = np.meshgrid((cx + offsets) * width, (cy + offsets) * width)
+                total += float(integrand(fx, fy).sum()) * (width / subsamples)**2
+    return total
+
+
+def test_v2_spectral_quadrature_converges_to_continuum_pupil_variance() -> None:
+    """Resolve frequency *locations*, not only cell-integrated power."""
+
+    theory = von_karman_piston_removed_variance_rad2(2.0, 0.1263371938263465, 25.0)
+    errors = [abs(_independent_quadrature_variance(n) / theory - 1) for n in (1, 2, 4, 8)]
+    assert errors == sorted(errors, reverse=True)
+    assert errors[2] < 0.005
+    # The output-grid padding is a travel budget, not a variance calibration.
+    for factor in (1, 3, 6):
+        assert _independent_quadrature_variance(4, factor) == pytest.approx(theory, rel=0.012)
+
+
+def test_v2_raw_spectrum_scales_with_fried_parameter() -> None:
+    weak = subharmonic_von_karman_phase_realization(
+        52, 2 / 51, 0.3, 25.0, rng=np.random.default_rng(14)
+    )
+    strong = subharmonic_von_karman_phase_realization(
+        52, 2 / 51, 0.15, 25.0, rng=np.random.default_rng(14)
+    )
+    np.testing.assert_allclose(strong, weak * 2**(5 / 6), rtol=1e-12, atol=1e-12)
+
+
+@pytest.mark.parametrize("subsamples", [0, -1, True, 1.5])
+def test_v2_quadrature_rejects_invalid_subsample_counts(subsamples) -> None:
+    with pytest.raises(NativeAtmosphereError, match="frequency_subsamples"):
+        subharmonic_von_karman_phase_realization(
+            8, 0.1, 0.15, 25.0, rng=np.random.default_rng(1),
+            frequency_subsamples=subsamples,
+        )
+
+
+def _direct_quadrature_at_points(
+    config: FrozenFlowAtmosphereConfig, x_m: np.ndarray, y_m: np.ndarray
+) -> np.ndarray:
+    """Tiny-grid oracle: sum every plane wave directly, with no FFTs."""
+
+    rng = np.random.default_rng(config.root_seed)
+    assert config.outer_scale_m is not None
+    size = config.generated_grid_size
+    step = 1 / (size * config.delta_m)
+    offsets = np.array([-3, -1, 1, 3]) / 8
+    base = np.fft.fftfreq(size, config.delta_m)
+    result = np.zeros(x_m.size)
+
+    def add_nodes(fx: np.ndarray, fy: np.ndarray, width: float, dc: slice | int) -> None:
+        nonlocal result
+        power = 0.023 * config.r0_m**(-5 / 3) * (
+            fx*fx + fy*fy + config.outer_scale_m**-2
+        )**(-11 / 6) * (width / 4)**2
+        power[dc, dc] = 0
+        coefficients = (
+            rng.normal(size=power.shape) + 1j * rng.normal(size=power.shape)
+        ) * np.sqrt(power)
+        result += np.real(np.exp(2j * np.pi * (
+            x_m[:, None] * fx.ravel() + y_m[:, None] * fy.ravel()
+        )) @ coefficients.ravel())
+
+    for ox in offsets:
+        for oy in offsets:
+            fx, fy = np.meshgrid(base + ox * step, base + oy * step)
+            add_nodes(fx, fy, step, 0)
+    for level in (1, 2, 3):
+        width = step / 3**level
+        nodes = (np.array([-1, 0, 1])[:, None] + offsets).ravel() * width
+        fx, fy = np.meshgrid(nodes, nodes)
+        add_nodes(fx, fy, width, slice(4, 8))
+    return result
+
+
+@pytest.mark.parametrize("normalize", [False, True])
+@pytest.mark.parametrize("wind", [(0.3, 0.0), (-0.18, 0.24)])
+def test_v2_subpixel_flow_matches_direct_off_grid_plane_waves(
+    normalize: bool, wind: tuple[float, float]
+) -> None:
+    """Exact spectral replay stays accurate even near the travel boundary."""
+
+    config = FrozenFlowAtmosphereConfig(
+        grid_size=6, screen_grid_size=18, delta_m=0.3, pupil_diameter_m=1.5,
+        r0_m=0.15, outer_scale_m=25.0, root_seed=37,
+        spectrum_model=SPECTRUM_SUBHARMONIC_V2,
+        translation_model=TRANSLATION_FOURIER_SUBPIXEL_V2,
+        normalize_rms=normalize, wind_m_per_s=wind,
+    )
+    coords = np.linspace(-0.75, 0.75, 6)
+    x, y = np.meshgrid(coords, coords)
+    mask = np.hypot(x, y) <= 0.75
+    model = FrozenFlowAtmosphere(config, pupil_mask=mask)
+    # Generated coordinates start at zero; the six-pixel window starts at 6.
+    xx, yy = np.meshgrid((np.arange(6) + 6) * 0.3, (np.arange(6) + 6) * 0.3)
+    initial = _direct_quadrature_at_points(config, xx[mask], yy[mask])
+    gain = (
+        float(model.metadata["target_rms_rad"]) / float(initial.std())
+        if normalize else 1.0
+    )
+    for time_s in (0.0, 0.25, 0.5, 3.5, 5.5):
+        phase = _direct_quadrature_at_points(
+            config, xx[mask] - wind[0] * time_s, yy[mask] - wind[1] * time_s
+        )
+        expected = (phase - phase.mean()) * gain * 500e-9 / (2 * np.pi)
+        np.testing.assert_allclose(model.opd_at(time_s)[mask], expected, rtol=1e-11, atol=1e-18)
+    assert model.metadata["frozen_flow_discretization"] == "exact_nonperiodic_spectral_subpixel"
+    # Query cadence must not advance the saved spectral random state.
+    model.reset(realization_index=0)
+    np.testing.assert_allclose(model.opd_at(5.5)[mask], expected, rtol=1e-11, atol=1e-18)

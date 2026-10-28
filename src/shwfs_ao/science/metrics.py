@@ -325,9 +325,34 @@ def fwhm_diameter_from_angular_surface_brightness(
     """Return radial-profile FWHM in radians from angular surface brightness.
 
     The radial profile is area-weighted in annuli whose width is the smallest
-    physical angular-axis interval.  Only occupied annuli participate in the
-    half-maximum interpolation, which keeps the definition valid for
-    irregular and non-square angular grids.
+    physical angular-axis interval.  Each profile sample is placed at the
+    area-weighted mean radius of its contributing pixels, rather than the
+    annulus's inner edge.  Only occupied annuli participate in the
+    half-maximum interpolation, including on irregular and non-square grids.
+    As with any sampled profile, coarse angular sampling limits accuracy.
+    """
+
+    return _radial_profile_fwhm_diameter(
+        angular_surface_brightness_per_sr,
+        x_angle_rad,
+        y_angle_rad,
+        center_angle_rad=center_angle_rad,
+        historical_annulus_edges=False,
+    )
+
+
+def _radial_profile_fwhm_diameter(
+    angular_surface_brightness_per_sr: np.ndarray,
+    x_angle_rad: np.ndarray,
+    y_angle_rad: np.ndarray,
+    *,
+    center_angle_rad: tuple[float, float] | None = None,
+    historical_annulus_edges: bool,
+) -> float:
+    """Shared radial kernel with an explicit frozen-facade compatibility mode.
+
+    The legacy pixel facade retains its historical annulus-edge coordinates.
+    New physical metrics always use the mean physical sample radii instead.
     """
 
     brightness, x_axis, y_axis = _validated_grid(
@@ -354,6 +379,10 @@ def fwhm_diameter_from_angular_surface_brightness(
     for output_index, annulus in enumerate(occupied):
         selected = bin_index == annulus
         area = float(np.sum(solid_angle[selected]))
+        if not historical_annulus_edges:
+            radii[output_index] = float(
+                np.sum(radius[selected] * solid_angle[selected]) / area
+            )
         profile[output_index] = float(
             np.sum(brightness[selected] * solid_angle[selected]) / area
         )

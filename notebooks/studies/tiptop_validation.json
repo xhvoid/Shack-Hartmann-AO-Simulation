@@ -1,0 +1,288 @@
+{
+  "versions": {
+    "astro-tiptop": "1.5.1",
+    "astro-p3": "1.6.2",
+    "mastsel": "1.5.2"
+  },
+  "model": "P3 correction-band residual plus continuous von Karman fitting tail; MASTSEL PSF propagation",
+  "baseline_raw_fitting_nm": 47.895476098869175,
+  "baseline_wide_raw_fitting_nm": 64.92005279342386,
+  "baseline_completed_fitting_nm": 71.30034825589287,
+  "baseline_raw_total_nm": [
+    120.76251498922373,
+    121.25957666041018,
+    121.22544536422771,
+    120.8499733042562,
+    133.03194338624454,
+    158.70958929908033,
+    192.76602192858476
+  ],
+  "baseline_completed_total_nm": [
+    131.68831800314288,
+    132.14312057767765,
+    132.11188146733502,
+    131.76831902136828,
+    142.9955795722788,
+    167.09203795552273,
+    199.64728838786132
+  ],
+  "baseline_completed_strehl": [
+    0.7809155554569548,
+    0.7802420705219205,
+    0.7823884877770415,
+    0.787029395333858,
+    0.7578561489427498,
+    0.6868864197994489,
+    0.5861976225444765
+  ],
+  "baseline_completed_ee50mas": [
+    0.6354027692676473,
+    0.6346762261465578,
+    0.6363055364720122,
+    0.6414490167774066,
+    0.6225985715990399,
+    0.5746400802134132,
+    0.5072377204320743
+  ],
+  "baseline_crop_energy": [
+    0.9517957082900754,
+    0.951780022717668,
+    0.9517799918929759,
+    0.9518523391314643,
+    0.9517455418134988,
+    0.9515261495884781,
+    0.9513707299961633
+  ],
+  "max_1024_2048_strehl_change": 1.0986763618880957e-06,
+  "max_1024_2048_ee_change": 8.875113886364083e-06,
+  "max_1024_2048_fwhm_mas_change": 7.324933368835218e-05,
+  "max_1024_2048_crop_energy_change": 0.001807113127085036,
+  "max_quadrature_relative_change": 9.88343515028969e-13,
+  "max_completed_psf_change_native_fov400_to800": 0.0,
+  "max_focal_pixel_fwhm_relative_change": 0.003707049688110864,
+  "focal_refinement_records": [
+    {
+      "field (arcsec)": 0.0,
+      "FWHM at 5 mas pixels": 43.28054509580518,
+      "FWHM at 2.5 mas pixels": 43.440975210812155,
+      "FWHM relative change": 0.003706748948097749,
+      "peak Strehl change": 1.2450617092873983e-07,
+      "EE(50 mas) change": 2.416029611551629e-05
+    },
+    {
+      "field (arcsec)": 5.0,
+      "FWHM at 5 mas pixels": 43.284532970646445,
+      "FWHM at 2.5 mas pixels": 43.44499088509531,
+      "FWHM relative change": 0.003707049688110864,
+      "peak Strehl change": 2.415698827418211e-06,
+      "EE(50 mas) change": 2.7166708650105953e-05
+    },
+    {
+      "field (arcsec)": 10.0,
+      "FWHM at 5 mas pixels": 43.300723204094126,
+      "FWHM at 2.5 mas pixels": 43.4612197551985,
+      "FWHM relative change": 0.0037065559008768734,
+      "peak Strehl change": 8.978215861876748e-07,
+      "EE(50 mas) change": 2.9074449746979703e-05
+    },
+    {
+      "field (arcsec)": 15.0,
+      "FWHM at 5 mas pixels": 43.347309191945854,
+      "FWHM at 2.5 mas pixels": 43.50770093071783,
+      "FWHM relative change": 0.003700154444691073,
+      "peak Strehl change": -1.0276820036070333e-06,
+      "EE(50 mas) change": 3.2358252747943794e-05
+    },
+    {
+      "field (arcsec)": 20.0,
+      "FWHM at 5 mas pixels": 43.45445923221505,
+      "FWHM at 2.5 mas pixels": 43.61433862763273,
+      "FWHM relative change": 0.0036792402492757947,
+      "peak Strehl change": 2.4293176614786915e-07,
+      "EE(50 mas) change": 3.781101757782679e-05
+    },
+    {
+      "field (arcsec)": 25.0,
+      "FWHM at 5 mas pixels": 43.66617308863202,
+      "FWHM at 2.5 mas pixels": 43.82471170333369,
+      "FWHM relative change": 0.00363069633741131,
+      "peak Strehl change": 6.7558387256694274e-06,
+      "EE(50 mas) change": 4.574147404134976e-05
+    },
+    {
+      "field (arcsec)": 30.0,
+      "FWHM at 5 mas pixels": 44.05129351708081,
+      "FWHM at 2.5 mas pixels": 44.20690869162544,
+      "FWHM relative change": 0.0035325903536589376,
+      "peak Strehl change": 1.1255246841423983e-05,
+      "EE(50 mas) change": 5.029549703416958e-05
+    }
+  ],
+  "annular_reference_records": [
+    {
+      "pixel (mas)": 5.0,
+      "continuous annular FWHM (mas)": 43.30310053880367,
+      "sampled contour FWHM (mas)": 43.08807890403256,
+      "fractional sampling bias": -0.004965502056335058
+    },
+    {
+      "pixel (mas)": 2.5,
+      "continuous annular FWHM (mas)": 43.30310053880367,
+      "sampled contour FWHM (mas)": 43.249711851465904,
+      "fractional sampling bias": -0.0012329068051356584
+    }
+  ],
+  "max_budget_closure_nm": 5.968558980384842e-13,
+  "repeat_max_psf_difference": 0.0,
+  "n_model_evaluations": 15,
+  "n_completed_science_psfs": 105,
+  "model_plus_completion_runtime_s": 84.03216862492263,
+  "seeing_records": [
+    {
+      "seeing (arcsec)": 0.5,
+      "completed Strehl": 0.8836807295048827,
+      "completed EE(50 mas)": 0.7122818645948897,
+      "completed FWHM (mas)": 43.193618264449505,
+      "raw P3 fitting (nm)": 32.373861850944344,
+      "completed fitting (nm)": 48.19385487672385,
+      "completed total (nm)": 93.18824677352471
+    },
+    {
+      "seeing (arcsec)": 0.65,
+      "completed Strehl": 0.8346360162489794,
+      "completed EE(50 mas)": 0.6756239611134358,
+      "completed FWHM (mas)": 43.23274636096091,
+      "raw P3 fitting (nm)": 40.28536498559205,
+      "completed fitting (nm)": 59.97143753533506,
+      "completed total (nm)": 112.61225171383134
+    },
+    {
+      "seeing (arcsec)": 0.8,
+      "completed Strehl": 0.7809155554569548,
+      "completed EE(50 mas)": 0.6354027692676473,
+      "completed FWHM (mas)": 43.28054509580518,
+      "raw P3 fitting (nm)": 47.895476098869175,
+      "completed fitting (nm)": 71.30034825589287,
+      "completed total (nm)": 131.68831800314288
+    },
+    {
+      "seeing (arcsec)": 1.0,
+      "completed Strehl": 0.7048865872402188,
+      "completed EE(50 mas)": 0.5782463821928986,
+      "completed FWHM (mas)": 43.35751209912065,
+      "raw P3 fitting (nm)": 57.6836640485175,
+      "completed fitting (nm)": 85.87168706382963,
+      "completed total (nm)": 156.59506333645908
+    },
+    {
+      "seeing (arcsec)": 1.2,
+      "completed Strehl": 0.6269746513992339,
+      "completed EE(50 mas)": 0.5192842429076149,
+      "completed FWHM (mas)": 43.449486925128326,
+      "raw P3 fitting (nm)": 67.14863837145857,
+      "completed fitting (nm)": 99.96186886024182,
+      "completed total (nm)": 180.94100739685032
+    }
+  ],
+  "profile_records": [
+    {
+      "ground fraction": 0.4,
+      "r0 at H (m)": 0.4836042123575544,
+      "theta0 at H (arcsec)": 12.269891795363797,
+      "completed Strehl on axis": 0.7397914299752273,
+      "completed Strehl at 30 arcsec": 0.5132634264301255,
+      "completed fitting (nm)": 71.30034825589287,
+      "tomography on axis (nm)": 110.45231213376127
+    },
+    {
+      "ground fraction": 0.59,
+      "r0 at H (m)": 0.4836042123575544,
+      "theta0 at H (arcsec)": 16.161044563335047,
+      "completed Strehl on axis": 0.7809155554569548,
+      "completed Strehl at 30 arcsec": 0.5861976225444765,
+      "completed fitting (nm)": 71.30034825589287,
+      "tomography on axis (nm)": 93.98214971674301
+    },
+    {
+      "ground fraction": 0.75,
+      "r0 at H (m)": 0.4836042123575544,
+      "theta0 at H (arcsec)": 23.468791457530216,
+      "completed Strehl on axis": 0.8174514235675514,
+      "completed Strehl at 30 arcsec": 0.6588836914214771,
+      "completed fitting (nm)": 71.30034825589287,
+      "tomography on axis (nm)": 77.5985670894043
+    }
+  ],
+  "budget_records": [
+    {
+      "index": "good seeing, on axis",
+      "fitting": 48.19385487672385,
+      "aliasing": 16.752628770064216,
+      "servo-lag": 20.48873272688715,
+      "tomography": 65.97483048168174,
+      "noise": 31.658674449161317,
+      "diff. refraction": 12.037400502874304,
+      "chromatism": 12.693069508675016,
+      "completed total": 93.18824677352501,
+      "raw P3 total": 86.17327821551632,
+      "raw P3 fitting": 32.373861850944344,
+      "OTF closure error": 2.984279490192421e-13
+    },
+    {
+      "index": "median, on axis",
+      "fitting": 71.30034825589287,
+      "aliasing": 24.78465913470973,
+      "servo-lag": 30.312034231038673,
+      "tomography": 93.98214971674301,
+      "noise": 34.96481571261022,
+      "diff. refraction": 17.80871960016459,
+      "chromatism": 18.778748425909924,
+      "completed total": 131.68831800314334,
+      "raw P3 total": 120.76251498922373,
+      "raw P3 fitting": 47.895476098869175,
+      "OTF closure error": 4.547473508864641e-13
+    },
+    {
+      "index": "poor seeing, on axis",
+      "fitting": 99.96186886024182,
+      "aliasing": 34.74766823407325,
+      "servo-lag": 42.49695358871995,
+      "tomography": 130.03550339261056,
+      "noise": 38.83472396999343,
+      "diff. refraction": 24.967520310720676,
+      "chromatism": 26.327484134765147,
+      "completed total": 180.9410073968502,
+      "raw P3 total": 165.2716911707121,
+      "raw P3 fitting": 67.14863837145857,
+      "OTF closure error": 1.1368683772161603e-13
+    },
+    {
+      "index": "median, 30 arcsec",
+      "fitting": 71.30034825589287,
+      "aliasing": 24.78465913470973,
+      "servo-lag": 30.312034231038673,
+      "tomography": 174.53594641494004,
+      "noise": 45.93052225228032,
+      "diff. refraction": 17.80871960016459,
+      "chromatism": 18.778748425909924,
+      "completed total": 199.64728838786152,
+      "raw P3 total": 192.76602192858476,
+      "raw P3 fitting": 47.895476098869175,
+      "OTF closure error": 1.9895196601282805e-13
+    },
+    {
+      "index": "compact ring, on axis",
+      "fitting": 71.30034825589287,
+      "aliasing": 24.78465913470973,
+      "servo-lag": 30.312034231038673,
+      "tomography": 74.48334568481356,
+      "noise": 28.501989437333965,
+      "diff. refraction": 17.80871960016459,
+      "chromatism": 18.778748425909924,
+      "completed total": 116.81935833409311,
+      "raw P3 total": 104.3025818037914,
+      "raw P3 fitting": 47.895476098869175,
+      "OTF closure error": 5.968558980384842e-13
+    }
+  ]
+}

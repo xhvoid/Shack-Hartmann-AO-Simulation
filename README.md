@@ -1,46 +1,100 @@
-# Shack-Hartmann Adaptive-Optics Simulation
+# Shack-Hartmann Wavefront Sensing & Adaptive Optics
 
 [![tests](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/actions/workflows/ci.yml/badge.svg)](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+**From optical wavefronts to detector measurements, calibrated reconstruction and closed-loop correction.**
 
 A modular Shack-Hartmann SCAO simulation framework with native and HCIPy
 optical backends, custom detector and real-time-control modelling,
 science-facing PSF diagnostics, and cross-backend physical validation.
 
-The project makes the numerical path from pupil-plane aberration to WFS
-measurement, reconstruction, deformable-mirror correction, residual OPD, and
-science PSF inspectable. It is a research/portfolio framework, not an
-observatory digital twin, a calibrated ESO instrument simulator, or an
-operational AO pipeline.
+This Python project investigates how wavefront sensing, sampling, detector
+noise, reconstruction and control choices affect adaptive-optics performance.
+Its emphasis is an inspectable numerical chain: explicit physical units,
+controlled experiments, quantitative diagnostics and reproducible results.
 
-## What the framework contains
+**Start here:** [sensor calibration](notebooks/tutorials/01_geometric_shwfs.ipynb)
+· [reconstruction](notebooks/tutorials/03_tsvd_regularization.ipynb)
+· [closed-loop control](notebooks/tutorials/04_closed_loop_control.ipynb)
+· [installation](docs/getting_started.md)
+· [technical documentation](docs/README.md)
 
-- Geometric and detector-level Shack-Hartmann sensors with stable physical
-  subaperture/row identities.
-- Native NumPy atmosphere, mode, SH-WFS diffraction, DM, and science-PSF
-  implementations.
-- Optional HCIPy atmosphere, Gaussian DM, microlens/Fresnel SH-WFS, and
-  Fraunhofer science-propagation adapters.
-- Repository-owned detector effects, persistent detector realization,
-  centroid estimators, and explicit validity gates.
-- Modal or actuator interaction calibration; least-squares, TSVD, and
-  Tikhonov reconstruction with runtime row masks and bounded factor caches.
-- Typed command projection, applied-command-aware leaky integration, and one
-  frame-exact latency owner.
-- Physical-axis Strehl, FWHM, EE50/EE80, halo, and scalar bandpass diagnostics.
-- Versioned profiles, named random domains, explicit provenance, governed
-  artifact schemas, and native-versus-HCIPy validation.
+![Calibrated closed-loop wavefront correction](figures/canonical_closed_loop_control.png)
 
-## Quick start
+*Current executed control tutorial: the open and corrected wavefront RMS are
+compared over the same time samples. A short, noiseless synthetic example
+shows the transient response; it does not establish a general performance limit.*
 
-Python 3.10 or newer is required. The package exposes `test`, `hcipy`, and
-`notebook-test` extras; contributors may install the `test` extra from an
-editable checkout, while released users install the corresponding extras from
-the distribution. The commands below assume the `test` extra is already
-available. Exact dependency resolution is frozen under `constraints/`.
+## Engineering focus
 
-The following native commands are executable documentation: CI parses this
-entire fenced block and runs it against a built, non-editable wheel from a
-temporary bundle with no `src/` or `.git` directory.
+| Area | Implementation and evidence |
+| --- | --- |
+| Optical modelling | OPD/phase conversion, von Kármán frozen-flow turbulence, geometric and diffractive Shack-Hartmann sensing, Fourier PSF propagation |
+| Sensor analysis | Reference calibration, photon/read noise, persistent detector response, centroid uncertainty and invalid-measurement handling |
+| Reconstruction | Modal/actuator interaction matrices, singular-spectrum diagnostics, least squares, TSVD and Tikhonov regularization |
+| Control | Leaky integration, explicit frame latency, actuator stroke/fault handling and feedback of the command actually applied |
+| Numerical verification | Analytic fixtures, statistical atmosphere checks, sampling convergence, native/HCIPy comparisons and packaged regression baselines |
+| Scientific software | Typed component interfaces, independent random streams, resource hashes, installed-wheel tests and automated notebook execution |
+
+These exercises develop skills relevant to wavefront-sensor laboratory work:
+connecting an optical model to measurements, calibrating response, analysing
+residuals and testing numerical assumptions. The present implementation uses
+Shack-Hartmann sensing and continuous synthetic mirrors. **ZEUS/Zernike
+phase-contrast sensing, segmented-mirror co-phasing and MELT/ZIRCAM laboratory
+data are outside its current scope.** Zernike modal expansions used here are
+not a Zernike phase-contrast sensor.
+
+## Selected results
+
+The values below come from committed, executed notebooks. They describe the
+specified synthetic experiments, not predicted ELT or instrument performance.
+
+| Experiment | Recorded result | Interpretation |
+| --- | --- | --- |
+| [Sensor calibration](notebooks/tutorials/01_geometric_shwfs.ipynb) | A 2 µrad tilt produces 2.701 px displacement versus 2.902 px geometrically; measured/geometric gain **0.9305** | Finite spot windows change the measured response; calibration matters |
+| [TSVD reconstruction](notebooks/tutorials/03_tsvd_regularization.ipynb) | Retaining 12, 24, 27 and 29 singular modes gives command RMS errors of **62.90, 43.37, 17.51 and 8.58 nm** | Cutoffs cross the measured spectrum; thresholds retaining the same rank tie in this realization |
+| [Closed-loop control](notebooks/tutorials/04_closed_loop_control.ipynb) | Matched final-half wavefront RMS: **148.6 → 84.4 nm** | A 1 m, 500 Hz, gain-0.5 example with zero frame delay and detector noise disabled |
+| [Correction-order comparison](notebooks/studies/high_order_scao.ipynb) | Common open-loop RMS **256.3 nm**; 5×5 / 7×7 / 9×9 DM grids give **246.7 / 229.6 / 227.5 nm** | Pupil sampling, 10×10 lenslet geometry and atmospheric trajectory are held fixed |
+| [Gain and latency](notebooks/studies/noise_latency_gain.ipynb) | At two frames of delay, closed/open RMS rises from **0.723** at gain 0.2 to **1.746** at gain 1.0 | The 16-frame noiseless scan exposes amplification; it is not a formal stability boundary |
+
+![Singular-spectrum diagnostics and reconstruction error](figures/canonical_tsvd_regularization.png)
+
+*Reconstruction error versus retained rank for one injected command and noise
+realization. The full-rank cutoff settings are tied; the plot does not imply a
+universally optimal regularization parameter.*
+
+### System-level sensitivity with TIPTOP
+
+A separate [TIPTOP/P3 and MASTSEL study](notebooks/studies/12_TIPTOP_performance_modelling.ipynb)
+examines a representative **8 m, eight-LGS, three-DM** configuration at
+**1.65 µm** across a **0–30 arcsec** science field. It complements the custom
+time-domain simulator with analytical sensitivity modelling.
+
+The study adds an explicitly documented continuous fitting-error tail to the
+sampled P3 residual spectrum. The completed on-axis baseline gives **131.7 nm
+residual WFE**, **0.781 peak Strehl**, and **0.635 encircled energy within
+50 mas**. Increasing seeing from 0.5 to 1.2 arcsec reduces that encircled energy
+by **27.1%**, even though the PSF core width changes only slightly.
+
+![TIPTOP atmospheric seeing sensitivity](figures/tiptop_seeing_sensitivity.png)
+
+The implementation retains raw upstream results alongside the completed
+values, checks error-budget closure and independently varies frequency
+quadrature, computational field and focal-pixel sampling. See the
+[method and limitations](docs/notebook12_tiptop_portfolio_notes.md) and
+[machine-readable validation results](notebooks/studies/tiptop_validation.json).
+This is a restricted high-order analytical adapter, not an unmodified TIPTOP
+prediction or a calibrated instrument model.
+
+## Run the project
+
+Follow the [installation and notebook guide](docs/getting_started.md) first.
+The core requires Python **3.10+**; the optional TIPTOP study requires
+**3.11+**. Native simulations run offline after dependencies are installed.
+
+From the repository root in the configured environment:
 
 <!-- readme-smoke: native -->
 ```bash
@@ -49,335 +103,116 @@ python -m pytest -q tests/core/test_types_contracts.py
 AO_DEMO_OUTPUT_DIR=readme-smoke-output AO_DEMO_REFERENCE_METRICS=readme-smoke-output/fast_reference_metrics.json python examples/run_fast_integration.py
 ```
 
-`run_fast_integration.py` preserves the frozen fast-integration behavior
-through the canonical `shwfs_ao.experiments.integration` facade, then delegates
-file creation to the canonical `shwfs_ao.io.artifacts` writer. The shared
-canonical system builder and loop are under `shwfs_ao.experiments.scao` and
-`shwfs_ao.control`.
+The demonstration writes figures, tables and metrics to `readme-smoke-output/`.
+It uses the fast **control-space proxy** described below. For the physical
+wavefront experiments, start with the linked tutorials and studies.
 
-For HCIPy, install the `hcipy` extra (or `test,hcipy` for validation). The
-constrained HCIPy CI lane executes this separate wheel-installed block:
+After installing the optional HCIPy dependencies:
 
 <!-- readme-smoke: hcipy -->
 ```bash
 python examples/run_native_hcipy_validation.py
 ```
 
-Every shell command in this README appears in an executable `bash` block with a
-`readme-smoke` owner. The runner rejects an unowned block, so a
-source-checkout-only command cannot be added silently. Development-only
-installation, baseline, data-refresh, and notebook commands live in their
-owning documentation pages rather than masquerading as portable quick-start
-commands.
+Both command blocks are exercised in CI against an installed wheel outside
+the source checkout. [Locked environments](constraints/README.md) and
+[replay rules](docs/reproducibility.md) document stronger reproducibility
+requirements than a normal interactive installation.
 
-## Architecture at a glance
-
-The shared pipeline uses optical path difference in SI units:
+## How the simulation is organized
 
 ```text
-atmosphere OPD (m)
-  - DM correction OPD (m)
-  = residual OPD (m)
-  → WFS MeasurementVector with stable row IDs
-  → mask-aware reconstruction
-  → typed coordinate-to-actuator projection
-  → gain/leak/latency controller
-  → full-layout DM command in m OPD-equivalent
-  → applied-command acknowledgement
-  → residual OPD history and physical-axis PSF diagnostics
+Atmospheric OPD ── subtract DM correction ──► residual wavefront
+                                               │
+                        ┌──────────────────────┴────────────────────┐
+                        ▼                                           ▼
+                 Shack-Hartmann optics                        Science PSF
+                        ▼                                           ▼
+               Detector + centroiding                    Strehl / FWHM / EE
+                        ▼
+             Validity-aware reconstruction
+                        ▼
+               Gain / leak / latency
+                        ▼
+              DM stroke and fault policy ──► next correction
 ```
 
-Phase is always tied to an explicit wavelength:
+Optical path difference is stored in **metres**, phase is tied to an explicit
+wavelength, and DM commands are **OPD-equivalent correction amplitudes**.
+Calibration preserves measurement-row and actuator identities. Invalid
+measurements remain invalid; the controller advances time and synchronizes
+its state with the command the mirror actually applies.
 
-```python
-phase_rad = 2.0 * np.pi * opd_m / wavelength_m
-opd_m = phase_rad * wavelength_m / (2.0 * np.pi)
-```
+The NumPy/SciPy implementation lives in [src/shwfs_ao](src/shwfs_ao).
+Optional [HCIPy](https://hcipy.org/) adapters supply alternative optical
+components through the same interfaces; detector, reconstruction and control
+policies remain shared. The supplemental study uses
+[TIPTOP](https://github.com/astro-tiptop/TIPTOP),
+[P3](https://github.com/astro-tiptop/P3) and
+[MASTSEL](https://github.com/astro-tiptop/MASTSEL), with its local numerical
+completion identified separately.
 
-DM commands are positive OPD-equivalent correction amplitudes—not actuator
-volts and not reflective surface displacement. The loop convention is:
+See [architecture](docs/architecture.md) for module diagrams and
+[backend contracts](docs/backends.md) for units, signs and interfaces.
 
-```python
-residual_opd_m = atmosphere_opd_m - dm_correction_opd_m
-requested_commands_opd_m = (
-    (1.0 - leak) * last_applied_commands_opd_m
-    + gain * released_delta_opd_m
-)
-```
+## Validation and model boundaries
 
-`released_delta_opd_m` is the increment the sole controller delay queue
-releases on this frame, which may be older than the one just reconstructed.
-Applying the gain to the newly reconstructed delta instead would describe a
-loop with no latency; see `docs/backends.md` for the full convention.
+Validation combines analytic component checks, seeded regression tests,
+statistical turbulence checks and comparisons with an independent optical
+backend. CI covers source and installed-wheel execution on Python 3.10 and
+3.14, an HCIPy lane on Python 3.11, notebook smoke runs, lint and static types.
+Agreement between implementations is evidence about the tested quantities;
+it does not establish agreement with laboratory or on-sky measurements.
 
-The HCIPy reflective-DM adapter converts OPD command to half-sized surface
-displacement and lets reflection produce `2 * surface` OPD exactly once.
+Recent numerical corrections include sub-cell atmospheric spectral
+integration, exact subpixel frozen-flow replay and a radial PSF-width
+estimator checked against analytic diffraction. The
+[numerical verification record](docs/numerical_accuracy_fixes.md) documents
+methods, tolerances, corrected results and remaining limitations.
 
-### Package map
+<details>
+<summary><strong>Interpreting the packaged regression baselines</strong></summary>
 
-| Package | Responsibility |
-| --- | --- |
-| `shwfs_ao.core` | wavefront units/validation, geometry, provenance, hashes, named RNG streams, public protocols and result types |
-| `shwfs_ao.backends.native` | transparent NumPy atmosphere, modes, SH-WFS optics, DM synthesis, science propagation, native factory |
-| `shwfs_ao.backends.hcipy` | lazy conversion and HCIPy component adapters; no detector/control/artifact policy |
-| `shwfs_ao.detector` | configuration/realization, electron effects, centroiding, validity |
-| `shwfs_ao.wfs.shack_hartmann` | lenslet geometry, reference calibration, detector/geometric sensors |
-| `shwfs_ao.dm` | actuator IDs, OPD stroke/fault policy, requested/applied diagnostics |
-| `shwfs_ao.calibration` | probe bases, interaction matrices, diagnostics, reconstructors |
-| `shwfs_ao.control` | command mapping, gain/leak/latency, loop, history, sweeps |
-| `shwfs_ao.science` | bandpasses, propagation selection, physical-axis metrics |
-| `shwfs_ao.experiments` | profile construction, SCAO orchestration, conditioned/error-budget workflows |
-| `shwfs_ao.validation` | physical estimators, governed regression, cross-backend comparison |
-| `shwfs_ao.io` | strict profiles/public data/resources and explicit artifact writing |
-| `shwfs_ao.experimental.pwfs` | exploratory PWFS forward model outside the stable SH-WFS contract |
+The fast integration test synthesizes disturbances within the DM's own
+controllable space and therefore contains no fitting error. The physical
+baseline uses a von Kármán atmosphere. Their `all_effects` rows are:
 
-Both the native and HCIPy backends are built-in SCAO component factories,
-selected by a profile's `backend` field, so a `backend="hcipy"` configuration
-builds the HCIPy system through the same public-protocol adapters that
-cross-backend validation uses. Of the packaged profiles only
-`high_order_10m_hcipy` selects HCIPy; the rest are native and need no optional
-dependency to build. When the optional `hcipy` extra is not installed,
-`build_scao_system()` raises the canonical `OptionalDependencyError` with its
-install hint instead of silently falling back to native.
-
-Five current-module diagrams—package dependencies, runtime data flow,
-native/HCIPy boundary, calibration, and experiment/artifact flow—are in
-[docs/architecture.md](docs/architecture.md). The exact protocol and result
-field reference is in [docs/backends.md](docs/backends.md).
-
-## Backends: shared and different responsibilities
-
-| Behavior | Shared repository layer | Native | HCIPy |
-| --- | --- | --- | --- |
-| atmosphere interface | absolute-time, piston-removed OPD m | periodic Fourier frozen flow | finite/infinite von Kármán layers |
-| SH-WFS output | normalized spots with stable IDs, then the same detector/centroid/validity chain | local padded FFT | microlens array + Fresnel propagation |
-| DM policy | ordered IDs, stroke, dead/stuck, clipping, telemetry | multiple synthetic influence families | matched Gaussian reflective DM |
-| real-time control | calibration, reconstruction, projection, gain/leak/latency | shared | shared |
-| science result | unit-flux `PsfResult` with angular axes | centered padded FFT | Fraunhofer focal grid |
-
-HCIPy objects never cross these boundaries. Native and HCIPy are compared
-exactly for identity/units and shared fixtures, tightly for simple conversion
-and sign checks, and through documented physical tolerances for optical or
-closed-loop metrics. Independently generated atmospheres are compared
-statistically, not pointwise. HCIPy usage alone is not observatory validation.
-
-## Detector and control behavior
-
-The detector path keeps optical propagation separate from electronics:
-
-```text
-unit-sum optical spot
-→ source/background electron expectation
-→ persistent pixel response
-→ Poisson shot noise
-→ Gaussian read noise
-→ full-well and bad-pixel policy
-→ centroid estimator
-→ flux/SNR/uncertainty/clipping validity
-```
-
-Canonical profiles can hold persistent PRNU and bad-pixel maps in one
-`DetectorRealization`. Frozen historical profiles retain the explicit
-`per_frame_legacy` PRNU/draw-order mode until a separately reviewed numerical
-change updates their baseline.
-
-Invalid measurement rows stay invalid and may carry NaN; they are never
-zero-filled. If too few rows are usable, reconstruction returns `None`. The
-controller still advances its queue, enqueues a zero increment, permits leak,
-and may release an older delayed command. After the DM clips or applies faults,
-the controller is synchronized to the command actually applied.
-
-## Profiles and notebooks
-
-Packaged, versioned profiles include:
-
-- `fast_2m_detector`;
-- `portfolio_2m_detector`;
-- `research_2m_detector`;
-- `high_order_10m_geometric`; and
-- `high_order_10m_hcipy` (requires the optional `[hcipy]` extra to build).
-
-A profile name never means “latest defaults.” Backend selection does not
-silently change seeing, photon budget, detector noise, or controller settings.
-
-The current notebooks are thin research narratives over installed APIs:
-
-- `notebooks/tutorials/` builds from wavefront/atmosphere through geometric
-  and detector SH-WFS, TSVD, and shared closed-loop control.
-- `notebooks/studies/` covers mode-order sampling, high-order SCAO,
-  noise/latency/gain, detector-level 2 m SCAO, and native-versus-HCIPy
-  comparison.
-- `notebooks/experimental/pwfs_detector_level_atmosphere.ipynb` documents the
-  exploratory PWFS path and its limits.
-- `notebooks/legacy/original_notebooks/` is archived evidence, not the primary
-  architecture or execution path.
-
-Fast tutorials execute offline in CI from a non-editable wheel in a fresh
-working directory. The disposition and seed policy for every original and
-canonical notebook is recorded in `notebooks/notebook_manifest.json`.
-
-## Provenance: public anchors versus synthetic AO
-
-| Input/model | Classification | Interpretation |
-| --- | --- | --- |
-| ESO ASM cache | direct public data | conditions seeing/r0-style inputs; not a measured phase cube |
-| SVO 2MASS J/H/Ks curves | direct public data | weights scalar wavelength diagnostics |
-| Pan-STARRS/2MASS rows | direct public data | photometric anchors for an engineering photon estimate |
-| atmosphere screens | synthetic or literature-inspired | generated wavefronts, even when public seeing conditions their amplitude |
-| error-budget disturbance | **two sources, and they differ fundamentally** | see the note below — the packaged `fast` budget is not driven by an atmosphere |
-| detector and WFS thresholds | synthetic/internal | not measured camera calibration |
-| DM influences and interaction matrix | synthetic calibration | not a hardware poke matrix |
-| controller/latency | compact simulation policy | not an operational RTC model |
-| science PSFs | diagnostic propagation | trends, not calibrated throughput predictions |
-
-See [docs/provenance.md](docs/provenance.md) and [DATA_LICENSES.md](DATA_LICENSES.md)
-for the five source classes, structured fields, cache terms, and
-redistribution caveats.
-
-### The error-budget disturbance: read this before quoting a Strehl
-
-The packaged `fast` error budget, its reference metrics, and the figure below
-are built on `PHASE_SOURCE_CONTROL_SPACE` — a disturbance synthesized by
-driving the deformable mirror and reading back its own surface. It therefore
-lies entirely inside the mirror's controllable span, and the budget built on it
-**contains no fitting error at all**: the DM reproduces the input to machine
-precision. There is no `r0` and no outer scale on that path; the amplitude is a
-free parameter.
-
-`PHASE_SOURCE_ATMOSPHERIC_SCREEN` is the physical alternative: a calibrated von
-Kármán screen in frozen flow whose amplitude follows `r0` and the outer scale,
-with a two-frame command latency. Fitting error, temporal error, and aliasing
-all appear on their own. On this 2 m / 5×5-actuator scale the two disagree by
-far more than a refinement:
-
-Both are packaged, accepted baselines, so these are the repository's own
-recorded numbers rather than an illustration:
-
-| `all_effects` row | open-loop | closed-loop | ratio | Strehl J / H / K |
+| Disturbance | Open-loop RMS | Closed-loop RMS | Closed/open | Peak Strehl J / H / K |
 | --- | --- | --- | --- | --- |
 | control-space proxy (`fast_*`) | 77.2 nm | 59.4 nm | 0.77 | 0.915 / 0.950 / 0.971 |
-| von Kármán screen (`physical_*`) | 645.4 nm | 595.3 nm | 0.92 | 0.320 / 0.533 / 0.673 |
+| von Kármán screen (`physical_*`) | 492.0 nm | 440.6 nm | 0.90 | 0.188 / 0.250 / 0.448 |
 
-The proxy row is the packaged `fast_*` baseline at its own 12-frame length; the
-physical row is the packaged `physical_*` baseline at 24 frames. They are read
-straight out of
-`src/shwfs_ao/resources/reference_metrics/*_error_budget_regression_baseline.csv`.
+These are separate 12- and 24-frame regression fixtures, respectively. The
+physical case deliberately stresses a 13-actuator synthetic DM with a
+120 nm OPD stroke cap; its median tail frame has 10 saturated actuators.
+It is not an optimized AO design. RMS removes piston but retains tilt;
+peak Strehl follows the displaced PSF maximum. Band values are weighted
+instantaneous scalar metrics summarized over tail frames, not a broadband
+exposure image. [Baseline definitions and validation](docs/validation.md)
+provide the complete interpretation.
 
-A 5×5 actuator grid simply cannot correct a von Kármán screen across a 2 m
-pupil — fitting error alone leaves roughly 43 % of it uncorrected — and the
-proxy disturbance is constructed so that it can. The physical baseline lives in
-`src/shwfs_ao/resources/reference_metrics/physical_*`, is governed by
-`scripts/update_physical_regression_baselines.py`, and is enforced by
-`tests/experiments/test_physical_integration.py`. A side-by-side run of both
-tables is available from a source checkout with
-`scripts/compare_error_budget_disturbances.py`.
+</details>
 
-The proxy is retained because every accepted baseline was generated with it,
-and because it remains a legitimate way to isolate temporal and noise terms
-*from* fitting error. It is not an atmosphere, and a Strehl quoted from it is
-not an AO performance prediction.
+The native time-domain model is single-line-of-sight SCAO, with synthetic DM
+influences and detector assumptions. The TIPTOP study has its own restricted
+multi-guide-star analytical scope. Neither is an observatory digital twin;
+scintillation, full ELT geometry and measured hardware calibration are absent.
+Public ESO atmospheric-monitoring data and SVO/catalogue inputs are attributed
+in [provenance](docs/provenance.md) and [data licences](DATA_LICENSES.md).
+The experimental PWFS and [archived notebooks](notebooks/legacy/original_notebooks)
+are retained as research history, separate from current validated results.
 
-## Validation and reproducibility
+## Explore further
 
-Validation has four distinct levels:
+- [Five tutorials](notebooks/tutorials): wavefronts, sensing, detector statistics, reconstruction and control.
+- [Parameter studies](notebooks/studies): correction order, gain/delay, detector-level SCAO, native/HCIPy comparison and TIPTOP sensitivity.
+- [Figure provenance](figures/README.md): current results versus historical plots.
+- [Technical documentation](docs/README.md): validation, reproducibility, APIs and artifact schemas.
 
-1. exact interface/unit/sign/order and analytic component tests;
-2. seeded native regression under frozen metric-specific tolerances;
-3. native-versus-HCIPy exact, tight-numerical, physical-tolerance, and
-   informational comparison levels; and
-4. provenance/finiteness checks for conditioned scenarios.
+## Author, citation and licence
 
-The root seed is split into six stable named domains: detector realization,
-detector shot noise, detector read noise, calibration, atmosphere, and NCPA.
-The derivation scheme is versioned, keyed/scoped children do not perturb
-unrelated persistent streams, and controlled sweeps reset random, atmosphere,
-controller, and DM state per point.
+**Xu Han** · [Citation metadata](CITATION.cff) · [MIT licence](LICENSE)
 
-Accepted baselines are read-only during ordinary work. Generation writes a
-candidate and diff to an explicit separate directory; acceptance is a distinct
-reviewed command requiring a reason and review reference. Schema-v2 artifacts
-remain readable; schema 3 adds structured provenance/reproducibility,
-component/layout hashes, CSV sidecars, and a content-addressed manifest. The
-upgrader refuses to invent non-inferable metadata.
-
-Details:
-
-- [docs/validation.md](docs/validation.md)
-- [docs/reproducibility.md](docs/reproducibility.md)
-- [docs/artifact_schemas.md](docs/artifact_schemas.md)
-
-## Compatibility and migration
-
-AO-REF-021 Phase A deprecated the 19 installed root-level imports such as
-`dm_model`, `reconstruction`, `shwfs_detector`, and `pwfs_forward`. Importing a
-root shim emits `DeprecationWarning` with its canonical replacement and planned
-removal release. `import shwfs_ao` and canonical subpackages remain silent.
-
-The `shwfs_ao.legacy.*` namespace is the silent, non-canonical compatibility
-layer for retained behavior adapters. It should be used only when no canonical
-drop-in preserves a frozen public behavior. The generated
-`ao_simulation_data` resource alias is also deprecated; read canonical packaged
-resources through `shwfs_ao.io.resources`.
-
-Nothing is deleted in Phase A. Root shims and resource aliases remain installed
-until both the recorded time and release boundaries have elapsed; Phase B is a
-separate major/boundary release with no numerical changes. The complete symbol
-replacement map, deprecation clock, and serialized migration rules are in
-[docs/migration.md](docs/migration.md).
-
-## Selected outputs
-
-These tracked figures illustrate the model's diagnostics, not calibrated
-performance claims.
-
-![Fast detector-level error-budget scenarios](figures/detector_level_SCAO/fast_error_budget.png)
-
-This figure is the control-space-proxy budget, so its near-unity Strehl values
-reflect a disturbance the mirror can correct exactly. See
-[the error-budget disturbance note](#the-error-budget-disturbance-read-this-before-quoting-a-strehl).
-
-![High-order SCAO J/H/K PSF diagnostic](figures/high_order_ao_jhk_psf.png)
-
-![Noise, latency, and gain stability scan](figures/noise_latency_gain_stability.png)
-
-The PWFS images are exploratory only:
-
-![Exploratory PWFS detector images](figures/PWFS_detector_images.png)
-
-## Explicit limitations
-
-- Not an observatory digital twin.
-- Not calibrated to a specific ESO instrument.
-- The packaged `fast` error budget is driven by a control-space proxy, not an
-  atmosphere, so it carries no fitting error; use
-  `physical_error_budget_scenarios()` for an atmosphere-driven budget.
-- The historical `native_frozen_flow` screen is retained byte-identical for
-  baseline reproducibility despite a known low-frequency deficit; new work
-  should select `native_frozen_flow_v2`.
-- Synthetic DM influence functions and interaction calibration.
-- Synthetic/internal detector assumptions and centroid-validity thresholds.
-- Limited single-line-of-sight atmosphere; no complete scintillation or
-  tomography model.
-- PWFS branch experimental, not a validated PWFS control backend.
-- No ELT LGS tomography, cone-effect, sodium-layer, multi-guide-star, or sky-
-  coverage model.
-- No claim that HCIPy usage or cross-backend agreement alone validates
-  observatory performance.
-
-## Documentation
-
-- [Architecture](docs/architecture.md)
-- [Backends and public contracts](docs/backends.md)
-- [Validation](docs/validation.md)
-- [Provenance](docs/provenance.md)
-- [Reproducibility](docs/reproducibility.md)
-- [Artifact schemas](docs/artifact_schemas.md)
-- [Migration](docs/migration.md)
-- [Documentation index](docs/README.md)
-
-## Citation and license
-
-Use [CITATION.cff](CITATION.cff) for citation metadata. Repository-authored
-software and documentation are MIT licensed; third-party cached data retain the
-terms and acknowledgement requirements summarized in
-[DATA_LICENSES.md](DATA_LICENSES.md).
+Repository-authored software and documentation are MIT licensed. Third-party
+software and cached data retain their own terms and acknowledgement
+requirements, recorded in [DATA_LICENSES.md](DATA_LICENSES.md).

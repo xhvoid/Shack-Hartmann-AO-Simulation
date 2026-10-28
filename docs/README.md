@@ -8,6 +8,10 @@ wheel-verified quick-start commands, scope, results, and limitations.
 
 ## Overview and reproducibility
 
+- [Getting started](getting_started.md) — installation, notebook entry points and optional dependencies.
+- [Current numerical verification](numerical_accuracy_fixes.md) — corrected atmospheric, PSF and notebook results.
+- [TIPTOP sensitivity study](notebook12_tiptop_portfolio_notes.md) — method, convergence checks and recorded results.
+
 - [Architecture](architecture.md) — package dependencies plus runtime,
   backend, calibration, and artifact-flow diagrams.
 - [Backends and public contracts](backends.md) — native/HCIPy responsibilities,

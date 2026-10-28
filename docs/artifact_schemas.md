@@ -57,7 +57,8 @@ Schema cannot express.
 
 `read_v2()` requires `schema_version == 2` and the complete historical fast
 metric set: workflow/preset/source fields, config hash, scenario identity,
-open/closed RMS, H-band Strehl, valid-centroid fraction, kept modes, validation
+open/closed piston-removed RMS (including tilt), H-band sampled-peak Strehl,
+valid-centroid fraction, kept modes, validation
 counts, runtime band/note, and tolerances. If `schema_name` is present it must
 be `shwfs_ao.fast_reference_metrics`.
 

@@ -67,12 +67,12 @@ PHASE_SOURCE_CONTROL_SPACE = "control_space_proxy"
 and reading back its own surface, so the disturbance lies entirely inside the
 mirror's controllable span.  A budget built on it therefore contains **no
 fitting error at all**: the DM reproduces the input to machine precision
-(measured residual ~1e-13 nm), where a von Karman screen of the same RMS on the
-same 5x5 actuator grid leaves about 43 % uncorrected.  There is also no r0 and
-no outer scale on this path — the amplitude is the free parameter
+(measured residual ~1e-13 nm). Atmospheric fitting error depends on the full
+influence-function basis, pupil sampling and screen, not actuator count alone.
+There is also no r0 and no outer scale on this path — the amplitude is the free parameter
 ``phase_amplitude_nm``.
 
-Retained because every accepted baseline was generated with it, and because it
+Retained for the accepted fast baselines, and because it
 remains a legitimate way to isolate temporal and noise terms from fitting
 error.  It is not an atmosphere.
 """
@@ -377,13 +377,12 @@ def physical_error_budget_scenarios(
     two-frame latency instead of applying this frame's measurement to this
     frame's mirror.
 
-    Both terms the proxy matrix cannot contain therefore appear here.  On the
-    shipped 2 m / 5x5-actuator scale the difference is not subtle: the packaged
-    proxy ``all_effects`` row reports J/H/K Strehl 0.915/0.950/0.971 and a
-    closed/open RMS ratio of 0.77, while the packaged atmospheric row reports
-    0.320/0.533/0.673 and 0.92.  The gap is expected because fitting error alone
-    leaves roughly 43 % of a von Karman screen uncorrected on that actuator
-    grid.
+    The physical residual includes fitting, sensing, temporal and scenario
+    terms. The synthetic 5x5 grid has 13 illuminated actuators and Gaussian
+    width/pitch 0.40 (4.4 percent nearest-neighbour coupling); its fitting
+    floor is specific to that basis. The ``all_effects`` row retains a 120 nm
+    OPD-equivalent stroke limit as a saturation stress case, not a tuned
+    hardware design. Its residual must not be attributed to fitting alone.
 
     The default ``r0_m`` is the value the packaged observing conditions imply
     at 500 nm; ``n_steps`` at 1 kHz covers about ten atmospheric coherence

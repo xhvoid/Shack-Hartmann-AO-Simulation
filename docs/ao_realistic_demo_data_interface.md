@@ -57,6 +57,16 @@ and the Pan-STARRS 700 nm photon-budget estimate as one WFS flux point. It
 still records the AO loop, detector, DM, and error-channel model as synthetic
 fast-mode proxies rather than measured telemetry.
 
+In particular, `phase_amplitude_nm = 260 * seeing_arcsec / 0.80` is a
+historical linear control-space amplitude proxy. It is neither the pupil
+OPD RMS nor the physical von Kármán scaling (RMS scales as seeing^(5/6) at
+fixed aperture and outer scale). Seeing and r0 columns describe the public
+conditioning inputs; the roughly 61 nm open RMS in the error-budget CSV and
+73 nm in the photon-scan CSV describe their separate proxy runs. They must
+not be interpreted as the expected atmospheric variance for those inputs.
+For physical amplitude use the `atmospheric_screen` disturbance with r0 and
+outer scale, as documented in [validation.md](validation.md).
+
 The fallback fixtures remain deliberately labelled as `synthetic_assumed` or `synthetic_literature_inspired` unless they are actually downloaded public data. Gaia should only be described as used after a query/cache file exists with direct provenance; Pan-STARRS DR2 is the current optical-photometry substitute. ERA5/CDS access requires user credentials.
 
 Validation summary:

@@ -141,10 +141,11 @@ class NativeScaoComponentFactory:
             # shipped run.  A longer run fails at the first frame outside that
             # budget, before the wrap seam can enter the pupil; the rejected
             # attempt also leaves `atmosphere.exceeded_travel_budget` true.
-            # The oversize does not change the physics: the
-            # ensemble pupil RMS is screen-size independent and matches the von
-            # Karman aperture variance, because the subharmonics — not the grid
-            # extent — carry the low frequencies.
+            # Off-grid quadrature modes are translated by exact spectral
+            # replay, not periodic interpolation. Four-by-four spectral
+            # quadrature plus subharmonics approximates continuum covariance;
+            # finite-band/depth errors still require convergence checks. The
+            # oversize primarily supplies travel room, not an RMS correction.
             "native_frozen_flow_v2": lambda: FrozenFlowAtmosphere(
                 FrozenFlowAtmosphereConfig(
                     grid_size=geometry.pupil_shape[0],

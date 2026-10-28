@@ -8,6 +8,7 @@ in metres, with NaN outside the configured pupil.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import asdict, dataclass
 import math
 from numbers import Integral, Real
@@ -29,18 +30,19 @@ _PHASE_VARIANCE_COEFFICIENT = 1.03
 SPECTRUM_LEGACY_V1 = "legacy_fourier_v1"
 """Historical spectrum: no absolute normalization, no subharmonics.
 
-Retained byte-identical because every accepted baseline was generated with
+Retained byte-identical because historical profiles and baselines were generated with
 it.  Its realizations carry no calibrated amplitude of their own and are
 usable only through ``normalize_rms``; see ``SPECTRUM_SUBHARMONIC_V2``.
 """
 
 SPECTRUM_SUBHARMONIC_V2 = "subharmonic_von_karman_v2"
-"""Absolutely normalized von Karman spectrum with subharmonic compensation.
+"""Physically normalized von Karman spectrum with subharmonic compensation.
 
-The Fourier sum carries its physical ``N**2 * df`` amplitude, and three
-levels of Lane/Johansson subharmonics restore the sub-``1/(N*delta)``
-frequencies a bare FFT screen cannot represent.  Realizations are calibrated
-in radians without any RMS renormalization.
+Four-by-four spectral quadrature represents each frequency cell at its
+quadrature frequencies, including three levels of subharmonics below the
+main FFT band. The raw spectrum is calibrated in radians; the atmosphere
+wrapper can additionally rescale individual realizations if ``normalize_rms``
+is enabled (the historical configuration default).
 """
 
 TRANSLATION_LEGACY_V1 = "nearest_integer_roll_v1"
@@ -49,15 +51,18 @@ TRANSLATION_LEGACY_V1 = "nearest_integer_roll_v1"
 TRANSLATION_FOURIER_SUBPIXEL_V2 = "fourier_subpixel_v2"
 """Exact sub-pixel translation by a Fourier phase ramp.
 
-For periodic Fourier content, a linear phase ramp is an exact rigid
-translation rather than an interpolation, so the integer-roll temporal
-staircase disappears.  The v2 subharmonics are not edge-periodic; the travel
-budget prevents their wrap seam from entering the pupil.
+Periodic legacy content uses an FFT phase ramp. Nonperiodic v2 quadrature
+modes are evaluated at their actual translated coordinates by replaying the
+same spectral draws. This avoids interpolating a discontinuous periodic
+extension of an off-grid spectrum. The finite-screen travel budget remains
+the supported domain for both v2 translation modes.
 """
 
 _SPECTRUM_MODELS = (SPECTRUM_LEGACY_V1, SPECTRUM_SUBHARMONIC_V2)
 _TRANSLATION_MODELS = (TRANSLATION_LEGACY_V1, TRANSLATION_FOURIER_SUBPIXEL_V2)
 _SUBHARMONIC_DEPTH = 3
+_SPECTRAL_QUADRATURE_SUBSAMPLES = 4
+_SPECTRAL_QUADRATURE_SCHEME = "midpoint_frequency_quadrature_v1"
 
 __all__ = (
     "NativeAtmosphereError",
@@ -89,6 +94,11 @@ class FrozenFlowAtmosphereConfig:
     ``screen_grid_size`` may provide padding, and
     :meth:`FrozenFlowAtmosphere.opd_at` refuses the first requested translation
     beyond that padding before the wrap seam can enter the pupil.
+
+    ``normalize_rms=True`` is retained for legacy compatibility. With v2,
+    explicitly use ``False`` to preserve the physical ensemble amplitude and
+    its realization-to-realization scatter. When enabled, normalization fixes
+    only the initial central-pupil RMS, not that of every translated frame.
     """
 
     grid_size: int
@@ -327,7 +337,11 @@ class StaticOpdAtmosphere:
 
 
 class FrozenFlowAtmosphere:
-    """Single-screen Fourier atmosphere with periodic integer-pixel flow."""
+    """Seeded Fourier atmosphere with selectable spectrum and frozen flow.
+
+    Legacy screens use periodic integer shifts by default; v2 supports exact
+    translation of its nonperiodic spectral modes within a padded travel area.
+    """
 
     def __init__(
         self,
@@ -371,6 +385,17 @@ class FrozenFlowAtmosphere:
             config_payload["spectrum_model"] = spectrum_model
             config_payload["translation_model"] = translation_model
             config_payload["screen_grid_size"] = screen_grid_size
+            if spectrum_model == SPECTRUM_SUBHARMONIC_V2:
+                config_payload["spectral_quadrature_scheme"] = (
+                    _SPECTRAL_QUADRATURE_SCHEME
+                )
+                config_payload["spectral_quadrature_subsamples"] = (
+                    _SPECTRAL_QUADRATURE_SUBSAMPLES
+                )
+                if translation_model == TRANSLATION_FOURIER_SUBPIXEL_V2:
+                    config_payload["translation_evaluation"] = (
+                        "exact_spectral_replay_v1"
+                    )
             discretization = f"{spectrum_model}+{translation_model}"
         self._config_hash = component_config_hash(
             "native.frozen_flow_atmosphere",
@@ -398,6 +423,8 @@ class FrozenFlowAtmosphere:
             dtype=float,
         )
         self._realization_index = 0
+        self._spectral_rng: np.random.Generator | None = None
+        self._initial_rms_gain = 1.0
         self._realization_seed: int | None = config.root_seed
         self._random_stream_id = ""
         self._last_time_s = 0.0
@@ -445,12 +472,18 @@ class FrozenFlowAtmosphere:
             random_streams=self._random_streams,
         )
         if self._config.spectrum_model == SPECTRUM_SUBHARMONIC_V2:
-            phase = _subharmonic_phase_screen(
+            # Store just the generator state, not 16 full coefficient grids.
+            # Replaying it lets translated frames evaluate the same off-grid
+            # modes exactly without memory growing with the quadrature order.
+            self._spectral_rng = deepcopy(rng)
+            phase, self._initial_rms_gain = _subharmonic_phase_screen(
                 self._config,
                 self._pupil_mask,
                 rng=rng,
             )
         else:
+            self._spectral_rng = None
+            self._initial_rms_gain = 1.0
             phase = _legacy_fourier_phase_screen(
                 self._config,
                 self._pupil_mask,
@@ -510,11 +543,28 @@ class FrozenFlowAtmosphere:
                     "screen_grid_size, shorten the run, or slow the wind."
                 )
         if self._config.translation_model == TRANSLATION_FOURIER_SUBPIXEL_V2:
-            shifted_phase = _fourier_translate(
-                self._base_phase_rad,
-                shift_x_px=shift_x_px,
-                shift_y_px=shift_y_px,
-            )
+            if self._config.spectrum_model == SPECTRUM_SUBHARMONIC_V2:
+                if shift_x_px == 0.0 and shift_y_px == 0.0:
+                    shifted_phase = self._base_phase_rad
+                else:
+                    assert self._spectral_rng is not None
+                    shifted_phase = _quadrature_phase_realization(
+                        self._config.generated_grid_size,
+                        self._config.delta_m,
+                        self._config.r0_m,
+                        self._config.outer_scale_m,
+                        rng=deepcopy(self._spectral_rng),
+                        depth=_SUBHARMONIC_DEPTH,
+                        subsamples=_SPECTRAL_QUADRATURE_SUBSAMPLES,
+                        shift_x_px=shift_x_px,
+                        shift_y_px=shift_y_px,
+                    ) * self._initial_rms_gain
+            else:
+                shifted_phase = _fourier_translate(
+                    self._base_phase_rad,
+                    shift_x_px=shift_x_px,
+                    shift_y_px=shift_y_px,
+                )
         else:
             shifted_phase = np.roll(
                 np.roll(self._base_phase_rad, int(np.round(shift_y_px)), axis=0),
@@ -569,6 +619,21 @@ class FrozenFlowAtmosphere:
                 "travel_budget_px": config.travel_budget_px,
                 "absolutely_normalized": (
                     config.spectrum_model == SPECTRUM_SUBHARMONIC_V2
+                    and not config.normalize_rms
+                ),
+                "raw_spectrum_absolutely_normalized": (
+                    config.spectrum_model == SPECTRUM_SUBHARMONIC_V2
+                ),
+                "realization_rms_rescaled": config.normalize_rms,
+                "spectral_quadrature_scheme": (
+                    _SPECTRAL_QUADRATURE_SCHEME
+                    if config.spectrum_model == SPECTRUM_SUBHARMONIC_V2
+                    else None
+                ),
+                "spectral_quadrature_subsamples": (
+                    _SPECTRAL_QUADRATURE_SUBSAMPLES
+                    if config.spectrum_model == SPECTRUM_SUBHARMONIC_V2
+                    else 1
                 ),
                 "subharmonic_depth": (
                     _SUBHARMONIC_DEPTH
@@ -576,8 +641,11 @@ class FrozenFlowAtmosphere:
                     else 0
                 ),
                 "frozen_flow_discretization": (
-                    "exact_periodic_fourier_subpixel"
-                    if config.translation_model == TRANSLATION_FOURIER_SUBPIXEL_V2
+                    (
+                        "exact_nonperiodic_spectral_subpixel"
+                        if config.spectrum_model == SPECTRUM_SUBHARMONIC_V2
+                        else "exact_periodic_fourier_subpixel"
+                    ) if config.translation_model == TRANSLATION_FOURIER_SUBPIXEL_V2
                     else "nearest_integer_periodic_numpy_roll"
                 ),
             }
@@ -706,89 +774,113 @@ def subharmonic_von_karman_phase_realization(
     *,
     rng: np.random.Generator,
     subharmonic_depth: int = _SUBHARMONIC_DEPTH,
+    frequency_subsamples: int = _SPECTRAL_QUADRATURE_SUBSAMPLES,
 ) -> np.ndarray:
-    """Draw one absolutely normalized von Karman phase realization in radians.
+    """Draw a PSD-normalized von Karman phase realization in radians.
 
-    Two defects of :func:`fourier_von_karman_phase_realization` are corrected
-    here, and both are needed for the result to be physical:
+    Each spectral cell uses ``frequency_subsamples**2`` midpoint quadrature
+    nodes, with independent Gaussian coefficients at the *actual* node
+    frequencies. Integrating a cell's PSD and concentrating that power at its
+    centre gives the wrong covariance when the cell spans a changing pupil
+    filter (about 19 percent excess pupil variance at the shipped geometry).
+    Quadrature of the Fourier integral avoids that pupil-dependent error.
 
-    *Amplitude.* A discrete spectral synthesis of a field with PSD ``Phi`` is
-    ``phi = Re(N**2 * ifft2(c * sqrt(Phi) * df))`` with ``df = 1/(N*delta)``
-    and ``c`` a unit complex Gaussian.  The historical implementation omits
-    the ``N**2 * df`` factor entirely, so its realizations are smaller than
-    the physical screen by that factor and carry no calibrated amplitude.
+    The main band needs one shifted FFT per quadrature offset, carrying the
+    physical ``N**2 * df / frequency_subsamples`` amplitude. Nested 3x3
+    subharmonic cells cover its DC cell, with the innermost cell omitted.
+    Their separable Fourier sums use small matrix products. The default 4x4
+    rule needs 16 FFTs but only O(N**2) temporary storage.
 
-    *Low frequencies.* The coarsest frequency an ``N``-point FFT represents is
-    ``df``; a pupil that fills the grid therefore receives no power at all
-    below ``1/D``, which is where Kolmogorov turbulence keeps most of its
-    variance.  ``subharmonic_depth`` levels of Lane/Johansson subharmonics add
-    those modes back on successively finer 3x3 frequency cells.
-
-    The returned screen is the full finite realization before piston removal,
-    calibrated in radians at the r0 reference wavelength.  No RMS
-    renormalization is applied or needed.
+    This is finite-band quadrature, not an exact continuum realization;
+    convergence depends on grid spacing, screen extent and subharmonic depth.
+    The default three subharmonic levels resolve the shipped 2m/L0=25m
+    configuration, but are not universal: an effectively infinite outer
+    scale needs deeper coverage (nine levels in the Kolmogorov validation).
+    No pupil-specific correction or realization RMS normalization is applied.
     """
 
     size = _integer("size", size, minimum=2)
     delta_m = _positive("delta_m", delta_m)
     r0_m = _positive("r0_m", r0_m)
     depth = _integer("subharmonic_depth", subharmonic_depth, minimum=0)
+    subsamples = _integer("frequency_subsamples", frequency_subsamples, minimum=1)
+
+    return _quadrature_phase_realization(
+        size, delta_m, r0_m, outer_scale_m,
+        rng=rng, depth=depth, subsamples=subsamples,
+    )
+
+
+def _quadrature_phase_realization(
+    size: int,
+    delta_m: float,
+    r0_m: float,
+    outer_scale_m: float | None,
+    *,
+    rng: np.random.Generator,
+    depth: int,
+    subsamples: int,
+    shift_x_px: float = 0.0,
+    shift_y_px: float = 0.0,
+) -> np.ndarray:
+    """Evaluate sampled Fourier modes, optionally at translated coordinates."""
 
     frequency_step = 1.0 / (size * delta_m)
     frequencies = np.fft.fftfreq(size, d=delta_m)
     frequency_x, frequency_y = np.meshgrid(frequencies, frequencies)
-
-    cell_power = _cell_integrated_power(
-        frequency_x,
-        frequency_y,
-        frequency_step,
-        r0_m,
-        outer_scale_m,
+    offsets = (np.arange(subsamples, dtype=float) + 0.5) / subsamples - 0.5
+    coordinates = np.arange(size, dtype=float) * delta_m
+    shifted_x = coordinates - shift_x_px * delta_m
+    shifted_y = coordinates - shift_y_px * delta_m
+    translation = np.exp(
+        -2j * np.pi * delta_m
+        * (frequency_x * shift_x_px + frequency_y * shift_y_px)
     )
-    # The DC cell is covered by the subharmonic hierarchy below, which tiles
-    # exactly that cell; leaving it here as well would double-count it.
-    cell_power[0, 0] = 0.0
-
-    random_complex = rng.normal(size=(size, size)) + 1j * rng.normal(
-        size=(size, size)
-    )
-    coefficients = random_complex * np.sqrt(cell_power)
-    phase = np.real(np.fft.ifft2(coefficients) * size**2)
+    phase = np.zeros((size, size), dtype=float)
+    for offset_x in offsets:
+        for offset_y in offsets:
+            power = _von_karman_psd(
+                np.hypot(
+                    frequency_x + offset_x * frequency_step,
+                    frequency_y + offset_y * frequency_step,
+                ),
+                r0_m,
+                outer_scale_m,
+            ) * (frequency_step / subsamples) ** 2
+            # Every quadrature node of the DC cell belongs to the nested
+            # subharmonic hierarchy, never to both sums.
+            power[0, 0] = 0.0
+            coefficients = (
+                rng.normal(size=(size, size))
+                + 1j * rng.normal(size=(size, size))
+            ) * np.sqrt(power)
+            carrier = (
+                np.exp(2j * np.pi * offset_y * frequency_step * shifted_y)[:, None]
+                * np.exp(2j * np.pi * offset_x * frequency_step * shifted_x)[None, :]
+            )
+            phase += np.real(
+                np.fft.ifft2(coefficients * translation) * size**2 * carrier
+            )
 
     if depth == 0:
         return phase
 
-    # Subharmonics are evaluated directly on the sample grid rather than by
-    # FFT: there are only 8 modes per level, and their periods are by
-    # construction longer than the grid, so no transform can represent them.
-    coordinates = np.arange(size, dtype=float) * delta_m
-    x_m, y_m = np.meshgrid(coordinates, coordinates)
-
+    # Three adjacent cells per axis, each resolved into midpoint nodes.
+    # Separability avoids an N x N exponential for every low-frequency node.
     for level in range(1, depth + 1):
         level_step = frequency_step / (3.0**level)
-        for index_x in (-1, 0, 1):
-            for index_y in (-1, 0, 1):
-                if index_x == 0 and index_y == 0:
-                    # Covered by the next deeper level, or DC at the bottom.
-                    continue
-                fx = index_x * level_step
-                fy = index_y * level_step
-                power = float(
-                    _cell_integrated_power(
-                        np.asarray(fx),
-                        np.asarray(fy),
-                        level_step,
-                        r0_m,
-                        outer_scale_m,
-                    )
-                )
-                if power <= 0.0:
-                    continue
-                coefficient = (rng.normal() + 1j * rng.normal()) * math.sqrt(power)
-                phase += np.real(
-                    coefficient
-                    * np.exp(2j * np.pi * (fx * x_m + fy * y_m))
-                )
+        nodes = (np.arange(-1, 2)[:, None] + offsets).ravel() * level_step
+        node_x, node_y = np.meshgrid(nodes, nodes)
+        power = _von_karman_psd(
+            np.hypot(node_x, node_y), r0_m, outer_scale_m
+        ) * (level_step / subsamples) ** 2
+        power[subsamples : 2 * subsamples, subsamples : 2 * subsamples] = 0.0
+        coefficients = (
+            rng.normal(size=power.shape) + 1j * rng.normal(size=power.shape)
+        ) * np.sqrt(power)
+        waves_x = np.exp(2j * np.pi * shifted_x[:, None] * nodes[None, :])
+        waves_y = np.exp(2j * np.pi * shifted_y[:, None] * nodes[None, :])
+        phase += np.real(waves_y @ coefficients @ waves_x.T)
 
     return phase
 
@@ -854,8 +946,8 @@ def _subharmonic_phase_screen(
     pupil_mask: np.ndarray,
     *,
     rng: np.random.Generator,
-) -> np.ndarray:
-    """Generate a calibrated v2 realization, renormalizing only if asked.
+) -> tuple[np.ndarray, float]:
+    """Return a calibrated v2 screen and its optional initial RMS gain.
 
     When the screen is oversized the returned array is the full generated
     screen; piston removal and masking happen after the pupil window is cut in
@@ -875,19 +967,21 @@ def _subharmonic_phase_screen(
     window = _centered_window(phase, config.grid_size)
     phase = phase - masked_mean(window, pupil_mask)
 
+    rms_gain = 1.0
     if config.normalize_rms:
         target_rms = _target_rms_rad(config)
         current_rms = masked_rms(
             _centered_window(phase, config.grid_size), pupil_mask
         )
         if current_rms > 0.0:
-            phase = phase * (target_rms / current_rms)
+            rms_gain = target_rms / current_rms
+            phase = phase * rms_gain
             phase = phase - masked_mean(
                 _centered_window(phase, config.grid_size), pupil_mask
             )
     if not np.all(np.isfinite(phase)):
         raise NativeAtmosphereError("generated full phase screen must be finite.")
-    return phase
+    return phase, rms_gain
 
 
 def _legacy_fourier_phase_screen(
