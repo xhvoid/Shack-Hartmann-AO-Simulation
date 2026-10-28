@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from typing import Literal
 
 import numpy as np
 
@@ -145,6 +146,9 @@ class DetectorShackHartmannSensor:
         detector_realization: DetectorRealization | None = None,
         provenance: Provenance | None = None,
         realization_index: int = 0,
+        photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
+            "throughput_scaled"
+        ),
     ) -> DetectorShackHartmannSensor:
         """Calibrate zero phase and return a sensor owning that realization."""
 
@@ -197,6 +201,7 @@ class DetectorShackHartmannSensor:
                 random_streams=random_streams,
                 provenance=provenance,
                 zero_phase_spots=zero_spots,
+                photon_allocation=photon_allocation,
             )
             seeds = legacy_calibration_seeds(
                 calibration,
@@ -388,6 +393,8 @@ class DetectorShackHartmannSensor:
         ):
             transmitted_spot = (
                 normalized_spot * float(spots.relative_throughput[index])
+                if self._calibration.photon_allocation == "throughput_scaled"
+                else np.asarray(normalized_spot, dtype=float)
             )
             frame_streams = random_streams.scoped(
                 "shack_hartmann.measurement",
