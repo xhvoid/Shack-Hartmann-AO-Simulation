@@ -880,4 +880,35 @@ identity `2312502` with an empty source digest). Evidence:
 | S1 | `run_detector_level_evidence.py --output det09_e5_42m_noise_on_current_2312502.json --enabled-by-user "…" e5`: `det_ccd_42m_r3band_derived@1`, root seed 1, 2000 frames, burn-in 200, summary telemetry, regenerated bands | **done 18:51–19:52**: 173.2 nm, Strehl 0.753, valid 0.999; every scientific field of the run (residual and open-loop series, valid fractions, science metrics, lock flag) bit-identical to the 2026-10-16 record; 1.797 s/frame (machine shared, load about 4.6), 1.60 GiB `ru_maxrss`; code identity `2312502`, empty source digest. The S2 driver's protocol for seed 1 reproduces this record's protocol hash. The record's `argv` holds the absolute script path (the run was started by absolute path); the S2 and S3 records avoid it. Copied byte for byte into this branch's evidence directory; LIM-17, the README, the roadmap and the reference now cite it |
 | S2 | `s2/run_one_seed.py` through the same runner machinery: root seeds 2–6 (stage 1, five realizations), then 7–11 (ten), one fresh process each, same protocol as S1 | queued after the verification |
 | S3 | `scripts/eso_scao_paired_convergence_study.py`: paired pupil, WFS and science sampling scans on the 12 m and 42 m ESO tiers (protocol and criterion declared in its docstring) | 5 m self-check passed (pairing: first-frame open-loop 540.57 vs 540.05 nm at 12 vs 16 samples). **12 m done 20:13–20:24** (`s3/medium/paired_convergence_medium.json`, code identity `2312502`, clean): pupil 12→16→20 Strehl 0.7618→0.7603→0.7584, finest two 0.25 % (paired −0.25 ± 0.05 %), EE50 0.55 %: converged; WFS pad 2→3→4: 0.00 %: converged; science pad 2→3→4: Strehl identical (on-axis), EE50 32.56→31.65→30.35 mas, finest two 4.3 % (paired 4.27 ± 0.11 %): **EE50 not converged in science sampling**. 42 m queued after S2 |
-| S2 progress | — | stage 1 started 20:24 (seed 2) after the 12 m study released it |
+| S2 progress | — | Seed 2 ran 20:24–21:25: 175.0 nm, Strehl 0.748, 1.808 s/frame, 1.68 GiB (`det09_s2_42m_seed2.json`, relative `argv`, code identity `2312502`, clean). The queue then stopped: `run_s2.sh` assigned zsh's read-only `status` parameter after the seed, which aborts a zsh script (kept as written; the logged end of seed 2 was added afterwards). Because the queue still reported completion, the 42 m S3 study started at 21:26 as designed. `s2/run_s2_continue.sh` (the same driver, protocol and note; `rc` instead of `status`; skips recorded seeds) runs seeds 3–11 after S3 finishes |
+
+## Post-audit reconciliation (2026-10-18)
+
+Assignment: [`POST_AUDIT_RECONCILIATION_EXECUTION_PROMPT.md`](POST_AUDIT_RECONCILIATION_EXECUTION_PROMPT.md),
+format [`AUDIT_FINDING_EXCHANGE_FORMAT.md`](AUDIT_FINDING_EXCHANGE_FORMAT.md)
+(both copied byte for byte from the main checkout). It reconciles the GPT
+pre-refactor scientific audit (`outputs/pre_refactor_audit/20261017T143700Z/`
+in the main checkout, tree `f09eb16`) with this branch at `27f34fa`. Run
+`2026-10-18-claude-27f34fa`; ledger, report, test manifest, acceptance and
+status are in `outputs/audit_reconciliation/2026-10-18-claude-27f34fa/`.
+GPT finding IDs are namespaced there (`gpt-preaudit-20261017`); GPT F-01 is
+not this record's F-01.
+
+| Unit | GPT finding | Change | Behaviour and identity |
+| --- | --- | --- | --- |
+| A | F-01 (P2) | `detector/noise_model.py`: the coarse-quantization gate applies the half-ADC-step condition to every pixel that enters the centroid, with its own read-noise map and gain map | support flags change only where a contributing pixel is under-dithered, block by block (such a block reports the undefined sigma, so its lenslet fails the validity gate); the propagated covariance is unchanged; no packaged or recorded configuration flips (at least 0.65 ADU on every pixel of their CMOS maps); identifier kept `detector_covariance_v2` (it enters the physical WFS hash) |
+| B | F-02 (P2) | `control/loop.py`: a multi-sample effective quadrature (count, duration) enters the run `config_hash` and a `wfs_exposure` metadata entry, which also records an override of the WFS's configured count | single-sample identities and metadata unchanged; no packaged profile uses more than one sample; a WFS's declared count must be an integer of at least 1 |
+| C | F-03 (P2) | `scripts/run_detector_level_evidence.py`: series protocol 3 puts the producing environment (Python, NumPy, SciPy, machine) in every run's protocol; a resume under another environment or of a version-2 record is refused, and so is a resume that would add runs while the code identity is unknown | version-2 records are read-only history; nothing is attributed to them |
+| D | F-09 (P2) | verifies U1 and adds `test_a_current_schema_record_runs_end_to_end` | test only |
+| E | F-04–F-08, F-10–F-12 | wording and provenance in the reference, LIM-04/05/07/08/11/16/18, new LIM-19, roadmap G11/G12; `_fourier_translate` and `reconstruct_subset` docstrings | no behaviour change; packaged ledgers (F-08) deferred to a governed resource version |
+| F | review findings RV-01–RV-08 | the reference no longer attributes the F-10 Nyquist loss to `native_frozen_flow_v2` (spectral replay keeps it; only `_fourier_translate` loses it); exact CMOS margins; bound environment fields; a WFS may declare its count as any integer type | the integer-type change in `control/loop.py` only accepts more declared counts; identities unchanged |
+
+Checks of the final tree are listed in that run's `TEST_MANIFEST.json`; the
+independent review and the acceptance decision are in its `review/` directory
+and `ACCEPTANCE.md`. Until that review confirms a repair, the ledger keeps it
+`FIXED_PENDING_VERIFICATION`.
+
+The large experiments (S1, S2, S3) were produced by `2312502` in their own
+worktree; they are bound to that producer, not to these repairs. None of
+units A–C affects their configurations (CCD/EMCCD uniform maps or noiseless
+tiers, single-sample exposure, one record per seed).

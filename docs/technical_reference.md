@@ -352,7 +352,13 @@ For frame `k` the shared loop (`control.loop.run_closed_loop`) does, in order:
 2. Measure it. With `exposure_subsamples = n > 1` (physical camera only), the
    atmosphere is also sampled at `t_k + j·τ/n`, `j = 1 … n−1`, against the
    same held correction; the optical intensities are averaged and detector
-   noise is applied once.
+   noise is applied once. The effective quadrature (count and duration) enters
+   the run's `config_hash` and its `wfs_exposure` metadata when `n > 1`, and
+   overrides the WFS's configured count, which the metadata then records too;
+   single-sample runs keep their identities (2026-10-18, GPT audit F-02). A
+   WFS that declares `exposure_subsamples` must give an integer of at least 1;
+   its configured duration is not in the metadata but stays in its own
+   configuration hash.
 3. Intersect the rows: calibration-valid ∩ runtime-valid ∩ finite.
 4. Reconstruct. The reconstructor returns an estimate, or `None` when the
    usable fraction is below `min_valid_fraction` or the rank is below
@@ -402,7 +408,7 @@ statement made, not of instrument accuracy.
 | `static` | one fixed OPD map, scaled to `atmosphere.target_rms_opd_m`, realization-invariant | native; tests and fixtures | static aberration studies |
 | `native_frozen_flow` (retained) | historical Fourier screen without absolute amplitude, no frequencies below `1/(Nδ)`, no subharmonics; rescaled to the infinite-L0 Noll target `1.03 (D/r0)^(5/3)` when `normalize_rms` is true; frozen flow by nearest-integer `numpy.roll` | native; `*_detector@1`, `@2`, `high_order_10m_geometric@1`/`@2` | historical replay only; at 2 m about 1.5× HCIPy's RMS and only 0.78 of the variance in the first 14 Zernike modes (backends.md) |
 | `native_frozen_flow_v2` | absolutely normalized von Kármán phase PSD `Φ(f) = 0.023 r0^(−5/3) (f² + L0^(−2))^(−11/6)` [rad² m²], each cell resolved by 4×4 midpoint frequency quadrature, three nested 3×3 subharmonic levels; exact sub-pixel flow by spectral replay; screen 3× the pupil array, so travel is limited to about one pupil width | native; `fast_2m_detector@3/@4`, `portfolio_2m_detector@3/@4`, `research_2m_detector@3`, `det_*_2m_synthetic@1`, `high_order_10m_geometric@3` | single layer; a run that would move the wrap seam into the pupil is refused at that frame |
-| `native_layered` | one independent, absolutely normalized von Kármán screen per layer with `r0ᵢ = r0 fᵢ^(−3/5)` and its own wind, summed on axis. Spectrum split: a periodic FFT band on a screen 2× the pupil (moved by an exact Fourier phase ramp, one inverse FFT per frame for all layers) plus analytic low frequencies (inner 9×9 cells with 4×4 quadrature, three subharmonic levels) evaluated at the translated coordinates | native; `eso_turbulence_2m_detector@1`, every ESO benchmark tier, `det_emccd_12m_medium_derived@*`, `det_ccd_42m_r3band_derived@1` | any travel; the periodic band repeats after one screen period (`periodic_band_repeated`) |
+| `native_layered` | one independent, absolutely normalized von Kármán screen per layer with `r0ᵢ = r0 fᵢ^(−3/5)` and its own wind, summed on axis. Spectrum split: a periodic FFT band on a screen 2× the pupil (moved by an exact Fourier phase ramp, one inverse FFT per frame for all layers) plus analytic low frequencies (inner 9×9 cells with 4×4 quadrature, three subharmonic levels) evaluated at the translated coordinates | native; `eso_turbulence_2m_detector@1`, every ESO benchmark tier, `det_emccd_12m_medium_derived@*`, `det_ccd_42m_r3band_derived@1` | any travel; `periodic_band_repeated` flags a layer whose travel reaches one screen period, an advisory: an exact repeat needs both wind components times the elapsed time to be whole periods, as for the packaged axis-aligned winds (GPT audit F-12) |
 | `hcipy` | one HCIPy `InfiniteAtmosphericLayer` (row extrusion from the exact von Kármán covariance, Assémat et al. 2006) with sub-pixel flow | HCIPy backend only; `high_order_10m_hcipy@*` | infinite layers on square or rectangular pupils |
 | `hcipy_layered` | one HCIPy infinite layer per profile layer with `r0ᵢ = r0 fᵢ^(−3/5)` | HCIPy backend only | the same layered block as `native_layered`; its own `observing_conditions_hash` |
 
@@ -426,7 +432,7 @@ propagation between layers (layer altitude is metadata only).
 | Geometric SH (`wfs_model="geometric"`) | masked finite-difference OPD gradients averaged over each lenslet's illuminated samples, minus a zero-OPD reference; no optics, detector or noise | native only; `high_order_10m_geometric@*` | `rad_wavefront_slope` |
 | Compatibility detector SH (`detector_level`, no `detector_physics`) | lenslet spots from the optics backend, the AO-REF-004 detector (photons × QE, PRNU after background, Poisson and read noise, full well after read noise, bad pixels), optional negative clipping, centroid, four validity gates | native or HCIPy; every profile up to schema 6, schema-7 profiles without the block | `pixel` |
 | Physical-camera SH (`detector_level` with schema-7 `detector_physics`) | photometry → MFT or FFT optics → camera chain `physical_camera.v1` → RTC processing with fixed products → centre of gravity on the window → `detector_covariance_v2` gates | native only (dense or compact geometry); `det_*` profiles | `pixel` (input-referred electrons upstream) |
-| Pyramid WFS (experimental) | stateless Fourier model: focal pyramid mask, four pupil images, normalized slopes | `shwfs_ao.experimental.pwfs`; not a factory option | slope maps |
+| Pyramid WFS (experimental) | stateless Fourier model: focal pyramid mask, four pupil images, normalized slopes; the modulation amplitude `t` enters as the tilt phase `2π t x` with `x = 2r/D`, so `t` corresponds to `2t λ/D` in angle (GPT audit F-11), not a physical modulation radius without conversion | `shwfs_ao.experimental.pwfs`; not a factory option | slope maps |
 
 | Mode | Advantages | Disadvantages and failure modes | Cost | Evidence | Recommended use |
 | --- | --- | --- | --- | --- | --- |
@@ -515,7 +521,7 @@ datasheet, a named commercial camera or a measured calibration (LIM-01).
 | --- | --- | --- | --- |
 | Compatibility first order | `Var(c_x) = Σ (x_i − c_x)² (S_i + B + RN²) / (Σ S_i)²`, the larger axis reported | plain centre of gravity; not a bound under thresholding, clipping, PRNU, saturation or defects | compatibility validity gate `max_centroid_sigma_px` |
 | Legacy spot-width proxy | spot width over SNR | frozen facades only | historical adapters |
-| `detector_covariance_v2` | temporal variance conditional on the realized masters: `Var_t(c) = Σ w_k² (σ_k² + q_k²/12) + G² F² Σ μ_l (Kᵀw)_l²` with `w = Pᵀ j / (f G m')`, evaluated by local correlations; the calibration-ensemble variance (master errors, shared dark/flat covariance) is reported separately as `centroid_calibration_sigma_px` | supported only for a plain centre of gravity without negative clipping or non-linearity, no expected saturation above 90 % of any capacity, every expected ADC code at least 5 temporal sigmas inside both limits, read noise ≥ 0.5 ADU and `SNR_T ≥ 7`; elsewhere sigma is undefined and the lenslet invalid | physical-path validity gates; Monte Carlo agreement within 2.4 % (E1 review rerun; 2.15 % before the review); first-order sigma about `4/SNR_T²` low near the floor |
+| `detector_covariance_v2` | temporal variance conditional on the realized masters: `Var_t(c) = Σ w_k² (σ_k² + q_k²/12) + G² F² Σ μ_l (Kᵀw)_l²` with `w = Pᵀ j / (f G m')`, evaluated by local correlations; the calibration-ensemble variance (master errors, shared dark/flat covariance) is reported separately as `centroid_calibration_sigma_px` | supported only for a plain centre of gravity without negative clipping or non-linearity, no expected saturation above 90 % of any capacity, every expected ADC code at least 5 temporal sigmas inside both limits, read noise of at least half an ADC step on every pixel that enters the centroid (its own read-noise and gain maps; corrected 2026-10-18, GPT audit F-01, the gate had used the scalar read noise; Widrow et al. 1996 give σ > q as the rule of thumb for Gaussian inputs, and at the half-step cut the exact per-pixel white-model variance error is at most 2.4 %) and `SNR_T ≥ 7`; elsewhere sigma is undefined and the lenslet invalid | physical-path validity gates; Monte Carlo agreement within 2.4 % (E1 review rerun; 2.15 % before the review); first-order sigma about `4/SNR_T²` low near the floor |
 
 The temporal sigma describes frame-to-frame scatter given fixed masters; the
 calibration-ensemble sigma is a persistent per-run bias. Neither is a total
@@ -570,7 +576,7 @@ lenslet measurement depends on light outside its own samples.
 | Leaky integrator with integer latency (default) | `requested = (1 − leak) · applied_{k−1} + gain · released`, where `released` is the increment queued `latency_frames` frames earlier; the controller is the sole owner of the queue | `controller.gain`, `leak`, `latency_frames`, `frame_rate_hz` | every profile |
 | Default rejection | a rejected frame (`None`) enqueues exact zeros; queued increments still execute and leak still applies; with zero leak the DM holds its last applied shape once the queue drains | no `controller.recovery` block | every profile without the block (all but `det_emccd_12m_medium_derived@3`) |
 | Decay/reset (opt-in) | after more than `rejected_frames_before_decay` consecutive frames without a usable increment, the request is multiplied by `1 − decay_per_rejected_frame` (1 = reset to flat); acts after the controller update, never clears the queue | `controller.recovery.rejected_frames_before_decay`, `decay_per_rejected_frame` (schema 7) | any reconstructor; `@3` uses 2 frames and 1.0 |
-| Guarded subset fallback (opt-in) | a rejected frame is reconstructed from its usable rows when their fraction is at least `fallback_min_valid_fraction`; with `fallback_min_actuator_coverage`, only actuators whose usable rows keep that fraction of their calibrated response energy are solved for | `recovery.fallback_min_valid_fraction`, `fallback_min_actuator_coverage` | sparse LSMR only; refused with a dense reconstructor |
+| Guarded subset fallback (opt-in) | a rejected frame is reconstructed from its usable rows when their fraction is at least `fallback_min_valid_fraction`; with `fallback_min_actuator_coverage`, only actuators whose usable rows keep that fraction of their calibrated response energy are solved for; that is response-energy coverage, not a rank or observability test (GPT audit F-05: a two-column response keeps 99.99 % of each column's energy and still loses rank; LSMR then returns the minimum-norm estimate) | `recovery.fallback_min_valid_fraction`, `fallback_min_actuator_coverage` | sparse LSMR only; refused with a dense reconstructor |
 | Gain schedule (opt-in) | every used increment scaled by `min(1, valid_fraction / gain_full_valid_fraction)` | `recovery.gain_full_valid_fraction` | any reconstructor |
 
 | Mode | Advantages | Disadvantages and failure modes | Evidence | Use |
@@ -597,7 +603,7 @@ reacquires a lost spot (LIM-13, LIM-16).
 | Choice | Definition | Normalization and grid | Selector |
 | --- | --- | --- | --- |
 | Native FFT PSF | centred, zero-padded FFT of the pupil field at one wavelength | unit total flux over the full uncropped grid; angular pixel `λ/(pad · N · δ)` | `science.psf_pad_factor`; `backend = "native"` |
-| HCIPy Fraunhofer PSF | perfect-lens propagation to an explicit angular grid rebuilt per wavelength | unit sum over the finite focal window; `captured_flux_fraction` would be needed to recover the full-field denominator | `backend = "hcipy"`; `HcipyFocalSampling` |
+| HCIPy Fraunhofer PSF | perfect-lens propagation to an explicit angular grid rebuilt per wavelength | unit sum over the finite focal window; `captured_flux_fraction` would be needed to recover the full-field denominator. A long exposure averages these per-frame unit-sum images with equal weights, so it is conditional on capture: a finite window can give a peak ratio above one (GPT audit F-04: 1.188 for a 2.5 λ/D tilt in a 3 λ/D window), and an equal-source-flux exposure would weight each frame by its captured fraction before one final normalization | `backend = "hcipy"`; `HcipyFocalSampling` |
 | Peak Strehl | image maximum (wherever it is) of angular surface brightness over the ideal image's peak from the same propagator | follows a displaced core; finite sampling can lower it | `peak_strehl_from_discrete_flux`; long exposure `peak_strehl` |
 | On-axis Strehl | final long-exposure image at the optical axis over the ideal peak | sensitive to static tilt (the v1 42 m run: peak 0.78, on-axis 0.20) | long exposure `on_axis_strehl` |
 | Maréchal estimate | `exp(−(2π σ_OPD/λ)²)` from piston-removed RMS (tilt retained) | an estimate from RMS, not an image metric | `marechal_strehl_from_opd` |
@@ -624,7 +630,7 @@ analytic reference at the claimed sampling.
 | --- | --- | --- | --- | --- |
 | Control-space proxy (`fast_*`) | disturbance synthesized by the DM itself, so it lies in the controllable span (residual about 1e-13 nm when perfectly corrected) | seeded regression | temporal, noise, stroke, misregistration and NCPA terms isolated from fitting error | atmospheric performance; no `r0` |
 | Physical integration (`physical_*`) | the same instrument against a calibrated von Kármán screen (`subharmonic_von_karman_v2`), two frames of latency | seeded regression | real fitting error, servo lag and aliasing on a constrained 13-actuator case | an optimized design |
-| Detector-level evidence (`scripts/run_detector_level_evidence.py`) | predeclared experiments over profiles and seeds with protocol identities | model-versus-Monte-Carlo and closed-loop simulation evidence | detector-noise propagation, magnitude limits under declared control settings | camera or instrument validation |
+| Detector-level evidence (`scripts/run_detector_level_evidence.py`) | predeclared experiments over profiles and seeds with protocol identities; each run names its code and its producing environment (Python version, NumPy, SciPy and machine; not the BLAS backend, threads or OS; series protocol 3, 2026-10-18, GPT audit F-03), and version-2 records cannot be continued | model-versus-Monte-Carlo and closed-loop simulation evidence | detector-noise propagation, magnitude limits under declared control settings | camera or instrument validation |
 | Paired noise isolation (`paired_noise_run`) | two identical systems, one measuring with noise and one the noiseless operating expectation; the per-frame difference of residual maps | isolated temporal detector-noise variance with block-averaged errors | the scaling of the noise contribution | separating calibration-master errors (they are common to both arms) |
 | ESO-derived benchmark (`experiments.eso_scao_benchmark`) | four tiers from historical DRM parameters with source and assumption ledgers | capability and single-realization performance | that the full 84×84 / 85×85 scale runs and what it costs | comparison with an ESO result (none exists for SCAO in the DRM database) |
 | Native versus HCIPy suite | thirteen comparison groups on one small deterministic profile | cross-implementation agreement within declared tolerances | the tested conventions and quantities | backend interchangeability in general |
@@ -822,7 +828,10 @@ measured data.
   to the power 0.960 ± 0.010 (12 m) and 0.950 ± 0.013 (2 m); a 6.7 % dip at
   12 m (m_AB 10) and a 9 % drift at 2 m (m_AB 5–7) are unexplained. The README
   states these departures; a new study (S4) adds a record and never rewrites
-  this one.
+  this one. A five-seed paired bootstrap of the saved 12 m records (GPT
+  pre-refactor audit, a historical-input reanalysis with a different,
+  unweighted estimator) gives a slope of −1.086 with bootstrap SD 0.028; with
+  five clusters it is exploratory and does not validate an interval.
 - **12 m profile versions.** `@1` (predeclared) collapsed at m_AB 10 through
   a peak-pixel SNR gate inherited from the point-sampled 2 m profiles and had
   no calibratable rows from m_AB 11. `@2` (post hoc: internal calibration
@@ -836,6 +845,14 @@ measured data.
 - **Spatial convergence.** The smoke-tier pupil-sampling scan missed the
   declared 2 % criterion (12 → 16 samples per lenslet changed Strehl by 2.8 %
   and EE50 by 5.6 %, with a changed WFS field of view and unpaired draws).
+  The paired study (S3, `scripts/eso_scao_paired_convergence_study.py`, fixed
+  WFS field of view and paired atmospheric draws; three realizations, 200
+  frames) on the 12 m `medium` tier, produced 2026-10-18 by `2312502`: peak
+  Strehl converged in pupil (12 → 16 → 20 samples: 0.7618 → 0.7603 → 0.7584,
+  finest two 0.25 %), WFS (pad 2 → 3 → 4: 0.00 %) and science sampling
+  (identical); EE50 converged in pupil (0.55 %) and WFS sampling but **not in
+  science sampling** (32.56 → 31.65 → 30.35 mas, finest two 4.3 %, paired
+  4.27 ± 0.11 %). The 42 m scans were still running at this writing.
 
 ### 7.6 Historical 42 m results
 
@@ -902,7 +919,7 @@ the entry says so. No paywalled text was copied into the repository.
 | --- | --- | --- | --- | --- |
 | Phase PSD and r0 | `atmosphere._von_karman_psd`, layered model | [Rod81], [Fri66] | external method | record |
 | Subharmonics and cell quadrature | `subharmonic_von_karman_phase_realization`, layered inner cells | [Lan92] (subharmonics); quadrature and band split derived here | external method + repository derivation | record; expected-variance tests |
-| Frozen flow by phase ramp and spectral replay | `atmosphere._fourier_translate`, layered band | standard Fourier shift theorem | repository derivation | translation tests to 1e-12 rad |
+| Frozen flow by phase ramp and spectral replay | spectral replay (`native_frozen_flow_v2`), layered band, `atmosphere._fourier_translate` (legacy spectrum with `fourier_subpixel_v2`, programmatic only: it shifts a real screen, so on an even grid it attenuates the Nyquist row and column, GPT audit F-10) | standard Fourier shift theorem | repository derivation | translation tests to 1e-12 rad |
 | Historical RMS target | `native_frozen_flow` | [Nol76] | external method (retained) | record + quadrature check |
 | ESO atmosphere and system scales | ESO profiles and ledgers | [R1], [R2] | direct public input | page |
 | Wind directions, sampling, gains, probe amplitude, stroke, electron scale | ESO ledger A02–A12 | — | engineering assumption | ledger validation tests |

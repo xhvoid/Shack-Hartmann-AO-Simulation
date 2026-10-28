@@ -42,6 +42,8 @@ from shwfs_ao.io.configs import (
     ScienceConfig,
     SystemConfig,
     WfsConfig,
+    PROFILE_SCHEMA_VERSION,
+    SystemConfigError,
     load_system_profile,
 )
 
@@ -207,6 +209,35 @@ def test_experiment_runner_executes_a_tiny_all_hcipy_system() -> None:
 
     rebuilt = scao.build_scao_system(config)
     assert dict(rebuilt.component_hashes) == dict(system.component_hashes)
+
+
+def test_a_current_schema_record_runs_end_to_end() -> None:
+    """The default record schema has its own HCIPy route, not only a refusal.
+
+    The fixture above is a schema-6 record on purpose: its contracts keep the
+    historical cell-centred lens axes.  The current schema refuses those axes
+    for an HCIPy detector-level record, and with block-centred axes builds
+    and runs the same tiny system deterministically (GPT audit F-09).
+    """
+
+    historical = _tiny_hcipy_system_config()
+    with pytest.raises(SystemConfigError, match="pixel_block_center"):
+        replace(historical, record_schema_version=PROFILE_SCHEMA_VERSION)
+    config = replace(
+        historical,
+        record_schema_version=PROFILE_SCHEMA_VERSION,
+        wfs=replace(historical.wfs, lenslet_axis="pixel_block_center"),
+    )
+    assert PROFILE_SCHEMA_VERSION == 7
+
+    system = scao.build_scao_system(config)
+    assert system.wfs.optics_backend.lenslet_axis == "pixel_block_center"
+    history = scao.run_closed_loop(config, system=system)
+    assert history.n_steps == config.controller.n_steps
+    assert history.metadata["backend_names"] == {"atmosphere": "hcipy", "wfs": "hcipy", "dm": "hcipy"}
+    assert np.all(np.isfinite(history.post_update_residual_opd_rms_m))
+    rerun = scao.run_closed_loop(config)
+    np.testing.assert_array_equal(history.applied_command_history_opd_m, rerun.applied_command_history_opd_m)
 
 
 def test_wfs_pad_factor_realizes_the_cross_backend_spot_sampling() -> None:
