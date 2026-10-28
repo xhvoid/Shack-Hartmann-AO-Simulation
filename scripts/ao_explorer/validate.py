@@ -26,12 +26,14 @@ and flux bookkeeping, a recorded reason for every missing value, per-frame
 series and CSV coherence, summary values recomputed from the per-frame rows
 with the metrics of the mean intensity image kept apart from the mean
 instantaneous metrics, v2 block summaries and playback/screen/series
-metadata, the v2 provenance's copy of the producer's record checks against
-the producer's own contract -- every required check literally true, the
-analysis frames and count, the diagnostics' keys and types -- eight research
-groups with quantitative content, byte-identical source copies and
-source-bound extracts), and the page code's content build must equal the one
-the entry records.
+metadata, each provenance's copy of the producer's record checks against
+that producer's own contract -- every required check literally true, the
+analysis frames and count, the diagnostics' keys and types; the window from
+the checks mapping under v2 and, under v1, from the case record's hash-bound
+time domain through an adapter, as the v1 provenance holds no job record --
+eight research groups with quantitative content, byte-identical source
+copies and source-bound extracts), and the page code's content build must
+equal the one the entry records.
 
 Raw-evidence mode (``--series-dir``): additionally binds every case to its
 retained attempt directory and files (the layout is the contract's: the v1
@@ -168,6 +170,42 @@ def _mean(values: Sequence[float]) -> float:
 def _std(values: Sequence[float]) -> float:
     mean = _mean(values)
     return math.sqrt(sum((v - mean) ** 2 for v in values) / len(values))
+
+
+# The v1 provenance holds the producer's ``checks`` mapping but no producer job record; the window those checks were
+# made on is the recorded time domain of the hash-bound case record, in these fields (review R24 follow-up).
+V1_TIME_DOMAIN_FIELDS = ("frames", "burn_in_frames", "analysis_window", "analysis_count")
+
+
+def v1_window_record(time_domain: Any) -> Dict[str, Any]:
+    """Adapter: a v1 case record's recorded time domain as the shared rule's job-record window fields.
+
+    The v1 producer contract (``web_contract.producer_checks_v1``) reads its analysis window from a job record's
+    ``burn_in`` and ``n_steps``.  Historical v1 provenance carries no such record; the observed window lives in the
+    case record's ``time_domain`` (``frames``, ``burn_in_frames``, ``analysis_window``, ``analysis_count``).  The
+    recorded ``burn_in_frames`` and ``frames`` are handed to the rule under the job-record names exactly as recorded
+    -- no coercion, no default, no expected constant filled in -- so the rule judges the observed values (exact ints
+    equal to the contract window, the count by their difference).  This is a view of the recorded values, not a job
+    record present in the provenance; :func:`v1_window_consistent` judges the other two recorded fields against them.
+    """
+
+    record = time_domain if isinstance(time_domain, dict) else {}
+    return {"burn_in": record.get("burn_in_frames"), "n_steps": record.get("frames")}
+
+
+def v1_window_consistent(time_domain: Any) -> bool:
+    """Whether a v1 case record's recorded window and count are exact ints consistent with its burn-in and frame count.
+
+    ``analysis_window`` must be the list ``[burn_in_frames, frames]`` and ``analysis_count`` must equal
+    ``frames - burn_in_frames``, every value an exact ``int`` (a bool, float or string is not one).  Which window that
+    is -- the contract's -- is the shared rule's judgement through :func:`v1_window_record`.
+    """
+
+    record = time_domain if isinstance(time_domain, dict) else {}
+    frames, burn_in, window, count = (record.get(key) for key in V1_TIME_DOMAIN_FIELDS)
+    exact = type(frames) is int and type(burn_in) is int and type(count) is int
+    return (exact and isinstance(window, list) and len(window) == 2 and all(type(value) is int for value in window)
+            and window == [burn_in, frames] and count == frames - burn_in)
 
 
 class Dataset:
@@ -825,6 +863,8 @@ class Checker:
             self.check(provenance.get("atmosphere_pairing") == case.get("pairing"), f"{case_id}: provenance pairing equals the case pairing", area="provenance")
         else:
             self.check(provenance.get("job_id") == f"case-{case_id}", f"{case_id}: provenance names the case job", area="provenance")
+            if c.producer_checks is not None:
+                self.check_v1_producer_checks(case_id, provenance.get("checks"), case.get("time_domain"))
 
     def check_mean_archive_binding(self, case_id: str, observation: Dict[str, Any], provenance: Dict[str, Any]) -> None:
         """The observation parents' file digest is the mean archive's digest the provenance binds (review R18-03).
@@ -846,28 +886,55 @@ class Checker:
             self.check(name == MEAN_ARCHIVE and _hex64(digest) and digest == recorded,
                        f"{case_id}: {role} observation parent's file digest equals the provenance's {MEAN_ARCHIVE} digest (parent {name!r} {str(digest)[:12]}, provenance {str(recorded)[:12]})", area="provenance")
 
-    def check_producer_checks(self, case_id: str, checks: Any) -> None:
+    def check_v1_producer_checks(self, case_id: str, checks: Any, time_domain: Any) -> None:
+        """The v1 provenance's copy of the producer's record checks, judged on the window the case record names.
+
+        The v1 exporter (``render.py``) applies the shared contract at the export boundary; the validator applies the
+        same rule to what the dataset carries (review R24 follow-up).  The v1 contract reads its window from a job
+        record, which the historical provenance does not hold, so the rule is given :func:`v1_window_record`, the
+        adapter over the hash-bound case record's recorded ``burn_in_frames`` and ``frames``; the recorded
+        ``analysis_window`` and ``analysis_count`` must be exact ints consistent with those two fields
+        (:func:`v1_window_consistent`).  A pilot window, ``[16, 64)``, is self-consistent and still refused: the
+        rule compares the recorded values with the production contract's ``[40, 180)`` and 140 frames.
+        """
+
+        record = time_domain if isinstance(time_domain, dict) else {}
+        shown = ", ".join(f"{key} {record.get(key)!r}" for key in V1_TIME_DOMAIN_FIELDS)
+        self.check(v1_window_consistent(time_domain),
+                   f"{case_id}: the case record's time domain names the analysis window [burn_in_frames, frames) with analysis_count = frames - burn_in_frames "
+                   f"as exact integers (recorded {shown})", area="provenance")
+        self.check_producer_checks(case_id, checks, job=v1_window_record(time_domain))
+
+    def check_producer_checks(self, case_id: str, checks: Any, job: Any = None) -> None:
         """The provenance's copy of the producer's record checks against the producer's own contract.
 
         Each check the producer refuses a record without must be recorded and literally ``true`` (a string,
         number or null is not a pass); the recorded analysis frames and count must be the selected contract's
-        window; the numeric diagnostics must carry the producer's keys with finite numbers, absolute deviations
-        non-negative.  No tolerance is applied to the diagnostics' values.
+        window -- read from the checks mapping (v2) or from the job-record view ``job`` (v1, the adapter over the
+        case record's time domain); the numeric diagnostics must carry the producer's keys with finite numbers,
+        absolute deviations non-negative.  No tolerance is applied to the diagnostics' values.
         """
 
         c = self.c
         expected = c.producer_checks
         assert expected is not None
-        problems = web_contract.producer_check_problems(checks, expected, c.analysis_window, c.analysis_count)
+        problems = web_contract.producer_check_problems(checks, expected, c.analysis_window, c.analysis_count, job=job)
         if problems.kind is not None:
             self.check(False, f"{case_id}: every producer check recorded in the provenance passed (the checks record is {problems.kind}, not an object)", area="provenance")
             return
         missing, unexpected, not_true = list(problems.missing), list(problems.unexpected), list(problems.not_true)
         self.check(not missing and not unexpected, f"{case_id}: provenance records exactly the producer's check fields (missing {missing}, unexpected {unexpected})", area="provenance")
         self.check(not not_true, f"{case_id}: every producer check recorded in the provenance passed (required checks present and literally true; {not_true})", area="provenance")
-        frames, count = checks.get(expected.window_fields[0]), checks.get(expected.window_fields[1])
-        self.check(not problems.frames_wrong, f"{case_id}: producer analysis frames are the {c.name} window [{c.burn_in}, {c.frames}) (recorded {frames!r})", area="provenance")
-        self.check(not problems.count_wrong, f"{case_id}: producer analysis count is the {c.name} contract's {c.analysis_count} (recorded {count!r})", area="provenance")
+        first, second = expected.window_fields
+        if expected.window_in_checks:
+            recorded_frames, recorded_count = repr(checks.get(first)), repr(checks.get(second))
+        else:
+            record = job if isinstance(job, dict) else {}
+            start, stop = record.get(first), record.get(second)
+            recorded_frames = f"{first} {start!r}, {second} {stop!r}"
+            recorded_count = f"{second} - {first} = {stop - start!r}" if type(start) is int and type(stop) is int else f"{second} - {first} undefined"
+        self.check(not problems.frames_wrong, f"{case_id}: producer analysis frames are the {c.name} window [{c.burn_in}, {c.frames}) (recorded {recorded_frames})", area="provenance")
+        self.check(not problems.count_wrong, f"{case_id}: producer analysis count is the {c.name} contract's {c.analysis_count} (recorded {recorded_count})", area="provenance")
         self.check(not problems.diagnostics, f"{case_id}: producer diagnostics carry the producer's keys and finite numbers, absolute deviations non-negative ({list(problems.diagnostics)})", area="provenance")
 
     def check_pairing(self, case_id: str, case: Dict[str, Any], protocol_case: Dict[str, Any]) -> None:

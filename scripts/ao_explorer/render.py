@@ -75,7 +75,10 @@ class RenderError(RuntimeError):
 # and observer.py and whose window is the contract's (protocol.py), so those
 # four sources are part of the export content identity: a change to any of
 # them can change what this exporter accepts.  The derive stage does not read
-# the rule, so the observation identity is unchanged.
+# the rule, so the observation identity's file set stays (binary_scene.py,
+# render.py); its digest still changes whenever render.py's bytes change,
+# comment-only edits included, while every historical dataset keeps the
+# generation identities it recorded (review R24-01).
 OBSERVATION_FILES = ("binary_scene.py", "render.py")
 EXPORT_FILES = ("binary_scene.py", "render.py", "research.py", "web_contract.py", "producer.py", "observer.py", "protocol.py")
 
