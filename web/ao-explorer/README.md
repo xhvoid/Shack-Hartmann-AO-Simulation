@@ -197,7 +197,13 @@ real archives, which are not in the repository. A missing or malformed archive
 is reported as a failure of its case. For the active dataset the validator also
 checks each case's copy of the producer's record checks against
 `long_series.run_case`: every required check present and literally `true`, the
-analysis frames and count, and the diagnostics' keys and types.
+analysis frames and count, and the diagnostics' keys and types. `long_export.py`
+applies the same rule (`web_contract.producer_check_problems`) when it reads a
+case record. Both observation parents of a case must name the retained
+`mean_psfs.npz` with one file digest, equal to the one the provenance records;
+with `--series-dir` that digest is also checked against the archive's bytes,
+and the parents' array digests are checked against the arrays decoded from
+those same bytes.
 The galaxy and RMS derivatives and the other sections' bundles are covered by
 the binding check below, not by this validator.
 

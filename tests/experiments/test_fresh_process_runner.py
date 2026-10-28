@@ -77,6 +77,8 @@ def test_a_successful_job_round_trips_its_result_and_reports_its_own_peak(tmp_pa
     assert envelope["child"]["vm_hwm_bytes"] == peak and envelope["child"]["ru_maxrss_bytes"] >= peak
     assert "VmHWM" in measurement["method"] and "excludes the supervising parent" in measurement["boundary"] and "ru_maxrss" in measurement["ru_maxrss_note"]
     assert "process-group peak" in measurement["is_not"] and "capacity budget" in measurement["is_not"]
+    assert "vfork" in measurement["ru_maxrss_note"] and "historical peak" in measurement["ru_maxrss_note"]
+    assert "not an exact allocation" in measurement["accounting_limits"] and "inaccurate" in measurement["accounting_limits"]
     files = envelope["files"]
     assert all(files[name] is not None for name in ("job.json", "payload.pickle", "child.json", "result.json", "output.log")) and files["exception.pickle"] is None
     assert json.loads((tmp_path / "job" / "envelope.json").read_text()) == envelope

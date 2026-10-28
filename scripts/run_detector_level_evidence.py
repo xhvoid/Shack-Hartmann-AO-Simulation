@@ -1923,10 +1923,12 @@ def noise_isolation_12m_masklocked(arguments: argparse.Namespace) -> None:
 # in, so in a series run in one process a later run reports the series peak
 # so far, not its own.  That field and its meaning stay as they are.  With
 # ``--fresh-process-dir`` each science_run of a gated series runs instead in a
-# fresh interpreter (this script in its child mode), launched, timed out and
-# reaped by ``shwfs_ao.runtime.resource_guard.run_supervised``, and the child's
-# own peak is recorded beside the unchanged result in a separate envelope,
-# ``execution_envelope.child_process_peak_rss_bytes``.  Off by default.
+# fresh interpreter (this script in its child mode), launched and timed out by
+# ``shwfs_ao.runtime.resource_guard.run_supervised`` (which waits for, so reaps,
+# the child it started and signals the child's whole process group; a group
+# member it stopped may stay a zombie until its own parent reaps it), and the
+# child's own peak is recorded beside the unchanged result in a separate
+# envelope, ``execution_envelope.child_process_peak_rss_bytes``.  Off by default.
 
 FRESH_PROCESS_SCHEMA = "detector-evidence.fresh-process-execution.v1"
 FRESH_PROCESS_CHILD_FLAG = "--fresh-process-child"
@@ -1950,9 +1952,17 @@ FRESH_PROCESS_PEAK_RSS = {
     ),
     "is_not": "a process-group peak, the exact allocation of the called function alone, or a measured AO capacity budget",
     "ru_maxrss_note": (
-        "getrusage(RUSAGE_SELF).ru_maxrss is recorded beside it (child.ru_maxrss_bytes) but not used: on Linux an "
-        "exec'd process's ru_maxrss also keeps the high-water mark of the image it was spawned from, so it can "
-        "include the supervisor's footprint at spawn; the same holds for science_run's process_peak_rss_bytes in a child"
+        "getrusage(RUSAGE_SELF).ru_maxrss is recorded beside it (child.ru_maxrss_bytes) but not used: at exec Linux folds "
+        "the high-water mark of the memory image being replaced into the process's ru_maxrss.  run_supervised's launch "
+        "uses vfork under CPython on Linux, so that image is the supervisor's own and ru_maxrss can carry the supervisor's "
+        "historical peak, even memory it released before the launch; after a fork it would carry the resident set copied "
+        "at the fork.  science_run's process_peak_rss_bytes in a child has the same limit"
+    ),
+    "accounting_limits": (
+        "VmHWM is the kernel's per-image resident high-water counter, not an exact allocation: it counts resident "
+        "anonymous, file-backed and shared-memory pages (shared pages in every process that maps them); the kernel "
+        "stores the mark when it is about to lower the resident set and a reader takes the larger of it and the current "
+        "resident set; and proc(5) calls these counters inaccurate because of a kernel-internal scalability optimization"
     ),
 }
 _FRESH_PROCESS_FILES = ("job.json", "payload.pickle", "child.json", "result.json", "exception.pickle", "output.log")
