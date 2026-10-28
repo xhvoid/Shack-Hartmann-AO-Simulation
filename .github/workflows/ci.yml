@@ -62,9 +62,13 @@ jobs:
 
       - name: Run example scripts
         if: matrix.python-version == '3.14'
+        # The demos default to the tracked figures/detector_level_SCAO, whose
+        # files are not bit-portable: platform roundoff changes low bits and,
+        # through the calibration hash in its noise-stream key, the centroid
+        # demo's whole detector-noise draw. CI writes outside the checkout.
         run: |
-          python examples/run_psf_strehl_demo.py
-          python examples/run_shwfs_centroid_demo.py
+          AO_DEMO_OUTPUT_DIR="$RUNNER_TEMP/ao-generated" python examples/run_psf_strehl_demo.py
+          AO_DEMO_OUTPUT_DIR="$RUNNER_TEMP/ao-generated" python examples/run_shwfs_centroid_demo.py
 
       - name: Fast detector-level SCAO smoke
         if: matrix.python-version == '3.14'
@@ -180,8 +184,8 @@ jobs:
           chmod -R a-w .
           PYTHONPATH= python -m pytest -c pytest.ini -q --strict-markers -p no:cacheprovider -m "not hcipy and not slow" tests
           chmod -R u+w .
-          PYTHONPATH= python examples/run_psf_strehl_demo.py
-          PYTHONPATH= python examples/run_shwfs_centroid_demo.py
+          AO_DEMO_OUTPUT_DIR="$RUNNER_TEMP/ao-generated" PYTHONPATH= python examples/run_psf_strehl_demo.py
+          AO_DEMO_OUTPUT_DIR="$RUNNER_TEMP/ao-generated" PYTHONPATH= python examples/run_shwfs_centroid_demo.py
           AO_DEMO_OUTPUT_DIR="$RUNNER_TEMP/ao-generated" PYTHONPATH= python examples/run_fast_integration.py
 
       - name: Execute README native commands from the clean wheel
@@ -263,8 +267,11 @@ jobs:
         # Ubuntu's AppArmor policy can deny unprivileged user namespaces.
         # Enable the preferred path; the runner also supports passwordless
         # sudo for setup followed by a verified drop to the invoking user's
-        # credentials with no capabilities. Neither path runs notebooks with
-        # host root privileges. An image without this knob needs no change.
+        # credentials with no capabilities. Neither path runs notebook code as
+        # host root, but the isolation covers network interfaces only: host
+        # services reachable through Unix sockets in the shared filesystem
+        # (for example a Docker socket) are outside this contract. An image
+        # without this knob needs no change.
         run: |
           if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
             sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
