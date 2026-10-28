@@ -271,6 +271,12 @@ def register_scao_backend_factory(
             f"a SCAO backend factory is already registered for {name!r}."
         )
     _FACTORIES[name] = factory
+    # The registry is an input to what a configuration builds, so every
+    # remembered identity was derived under a factory set that no longer
+    # applies.  Keeping them would let verification answer from a build that
+    # can no longer happen — accepting a system this registry would not build,
+    # and rejecting one it would.
+    _BUILD_IDENTITY_MEMO.clear()
 
 
 def build_scao_system(
@@ -464,9 +470,14 @@ def _verify_supplied_system(config: SystemConfig, system: ScaoSystem) -> None:
 
     First, the recorded ``component_hashes`` must still be the identity of the
     components the system holds *now*.  ``ScaoSystem.__post_init__`` establishes
-    that at construction, but a component can be mutated afterwards — registering
-    a further random-stream domain, for example, changes a hash-covered identity
-    — so the live components are re-hashed here rather than trusted.
+    that at construction, but a component can be swapped or mutated afterwards —
+    registering a further random-stream domain, for example, changes a
+    hash-covered identity — so the record is re-derived here rather than
+    trusted.  How much that catches depends on the component: the stream
+    identity is recomputed from live attributes, while the rest report a
+    ``config_hash`` each fixed at its own construction, so replacing a component
+    is always caught but reaching inside one and mutating its private state is
+    not.  That limit belongs to the components, not to this check.
 
     Second, that recorded identity must be the one ``source_config`` actually
     builds.  Otherwise a caller could construct a system whose components were

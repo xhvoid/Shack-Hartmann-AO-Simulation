@@ -34,7 +34,8 @@ The built-in profile-level `ScaoBackendComponentFactory` registrations are
 (`shwfs_ao.backends.hcipy.factory.HCIPY_SCAO_COMPONENT_FACTORY`) builds the
 detector-level lenslet SH-WFS on fixed block windows, the single-layer von
 Kármán frozen-flow atmosphere, the matched Gaussian DM, and the Fraunhofer
-science propagator; `high_order_10m_hcipy@2` is its packaged profile. The
+science propagator; `high_order_10m_hcipy@2` is its current packaged profile,
+alongside the superseded `high_order_10m_hcipy@1` that remains loadable. The
 serialized fields keep one meaning across backends: `wfs.pad_factor` is the
 spot sampling in detector pixels per lambda/d — realized natively by FFT
 zero-padding and by the equivalent lenslet f-number under HCIPy — and
