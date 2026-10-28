@@ -7,7 +7,7 @@
 <meta name="description" content="Precomputed native 2 m Shack-Hartmann SCAO experiment and the main results of the AO simulation project, with their evidence and limits.">
 <link rel="icon" href="data:,">
 <!-- Code and style come from the content-addressed build directory; see scripts/ao_explorer/site_build.py. -->
-<link rel="stylesheet" href="code-3b85a599186cdf30/styles.css">
+<link rel="stylesheet" href="code-0a8f8bdbb4d9aea8/styles.css">
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script type="module" src="code-3b85a599186cdf30/app.js" onerror="aoCodeUnavailable()"></script>
+<script type="module" src="code-0a8f8bdbb4d9aea8/app.js" onerror="aoCodeUnavailable()"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -109,51 +109,6 @@ function aoCodeUnavailable() {
     <p class="hint" id="speed-note">Playback time is presentation only: one pass replays the recorded 1.000 s of simulated time, slowed down, at the recorded frame timestamps.</p>
   </section>
 
-  <section class="panel" aria-labelledby="curves-title">
-    <h2 id="curves-title">Metrics over the whole trajectory</h2>
-    <p class="hint" id="curves-hint">All recorded frames, including the startup exclusion (shaded). Summaries use the analysis window only. The cursor marks the displayed frame.</p>
-    <div class="charts">
-      <figure class="chart"><canvas id="chart-rms" width="640" height="240" role="img" aria-label="RMS against frame-start time"></canvas><figcaption>Pupil RMS on one common nm OPD scale: atmosphere and total pre-update residual (piston removed, tilt retained; solid), and the same residual after tip/tilt removal (piston and fitted tilt removed; dashed). The cursor marks the displayed frame.</figcaption></figure>
-      <div class="rms-panel">
-        <div id="rms-readout" class="rms-readout" role="group" aria-label="RMS values of the displayed frame or of the analysis window"></div>
-        <p class="hint" id="rms-mode-note"></p>
-        <p class="hint" id="rms-explanation">The total residual includes tilt. Fitting a plane (piston and tip/tilt) over the illuminated pupil to the same pre-update residual map that forms the AO-corrected PSF, and removing it, separates the fitted wavefront tilt from the remaining higher-order error. The tilt is removed only in this calculation: the PSFs and galaxy images keep their original image motion and morphology. A fitted wavefront tilt is not the same as a measured image-centroid motion. The atmosphere RMS keeps its tilt while this residual does not, so their ratio alone is not a like-for-like measure of correction efficiency, and a smaller detilted RMS is not evidence of convergence or of a correction applied to the images.</p>
-      </div>
-      <figure class="chart"><canvas id="chart-strehl" width="640" height="220" role="img" aria-label="Strehl against frame"></canvas><figcaption>Instantaneous peak Strehl at 1.65 µm: uncorrected and AO-corrected</figcaption></figure>
-      <figure class="chart"><canvas id="chart-valid" width="640" height="160" role="img" aria-label="Measurement validity against frame"></canvas><figcaption>Valid measurement fraction of frame k, and the DM saturation fraction of the command issued at the end of frame k (that command is held from frame k + 1); ticks below mark frames whose reconstruction was unusable</figcaption></figure>
-    </div>
-    <p class="current-frame" id="current-frame" aria-live="polite"></p>
-    <details>
-      <summary>Data table and downloads for this case</summary>
-      <div id="downloads" class="downloads"></div>
-      <p class="table-title" id="frame-table-title"></p>
-      <div id="frame-table" class="table-scroll" role="region" tabindex="0" aria-labelledby="frame-table-title"></div>
-    </details>
-  </section>
-
-  <section class="panel" aria-labelledby="summary-title">
-    <h2 id="summary-title">Analysis-window summary and comparison with the baseline</h2>
-    <p class="table-title" id="summary-table-title"></p>
-    <div id="summary-table" class="table-scroll" role="region" tabindex="0" aria-labelledby="summary-table-title"></div>
-    <p class="hint" id="pairing-note"></p>
-    <h3>100 ms block summaries</h3>
-    <p class="table-title" id="blocks-title"></p>
-    <div id="blocks-table" class="table-scroll" role="region" tabindex="0" aria-labelledby="blocks-title"></div>
-    <p class="hint" id="blocks-note"></p>
-  </section>
-
-  <section class="panel" aria-labelledby="binary-title">
-    <h2 id="binary-title">Synthetic binary observation</h2>
-    <p class="hint" id="binary-label">Synthetic binary observation — analysis-window average; relative flux per numerical cell; no additional science-camera noise.</p>
-    <div class="binary">
-      <figure class="map obs"><div class="zoomwrap"><img id="scene-img" alt="Input binary scene reference" width="312" height="312"></div><figcaption><strong>Input scene (shared)</strong><span id="scene-caption"></span></figcaption></figure>
-      <figure class="map obs"><div class="zoomwrap"><img id="obs-unc" alt="Binary through the uncorrected average PSF" width="312" height="312"></div><figcaption><strong>Through the uncorrected average</strong><span id="obs-unc-caption"></span></figcaption></figure>
-      <figure class="map obs"><div class="zoomwrap"><img id="obs-ao" alt="Binary through the AO-corrected average PSF" width="312" height="312"></div><figcaption><strong>Through the AO-corrected average</strong><span id="obs-ao-caption"></span></figcaption></figure>
-    </div>
-    <label class="zoom-toggle"><input type="checkbox" id="zoom"> Show the full native window (±4.3″, 156 cells); the default view is the central ±1.8″ (64 cells), the same window as the PSF panels. Display scaling only; the images are not resampled or renormalized.</label>
-    <p class="hint" id="binary-note"></p>
-  </section>
-
   <section class="panel" id="galaxy-panel" aria-labelledby="galaxy-title">
     <div class="viewer-head">
       <h2 id="galaxy-title">NGC 1705 through the simulated PSFs</h2>
@@ -193,6 +148,53 @@ function aoCodeUnavailable() {
       <summary>Template source, preparation, flux accounting and limits</summary>
       <div id="galaxy-notes" class="prose"></div>
       <pre id="galaxy-meta" class="pre"></pre>
+    </details>
+  </section>
+
+  <section class="panel" aria-labelledby="curves-title">
+    <h2 id="curves-title">Metrics over the whole trajectory</h2>
+    <p class="hint" id="curves-hint">All recorded frames, including the startup exclusion (shaded). Summaries use the analysis window only. The cursor marks the displayed frame.</p>
+    <div class="charts">
+      <figure class="chart"><canvas id="chart-rms" width="640" height="240" role="img" aria-label="RMS against frame-start time"></canvas><figcaption>Pupil RMS on one common nm OPD scale: atmosphere and total pre-update residual (piston removed, tilt retained; solid), and the same residual after tip/tilt removal (piston and fitted tilt removed; dashed). The cursor marks the displayed frame.</figcaption></figure>
+      <div class="rms-panel">
+        <div id="rms-readout" class="rms-readout" role="group" aria-label="RMS values of the displayed frame or of the analysis window"></div>
+        <p class="hint" id="rms-mode-note"></p>
+        <p class="hint" id="rms-explanation">The total residual includes tilt. Fitting a plane (piston and tip/tilt) over the illuminated pupil to the same pre-update residual map that forms the AO-corrected PSF, and removing it, separates the fitted wavefront tilt from the remaining higher-order error. The tilt is removed only in this calculation: the PSFs and galaxy images keep their original image motion and morphology. A fitted wavefront tilt is not the same as a measured image-centroid motion. The atmosphere RMS keeps its tilt while this residual does not, so their ratio alone is not a like-for-like measure of correction efficiency, and a smaller detilted RMS is not evidence of convergence or of a correction applied to the images.</p>
+      </div>
+      <figure class="chart"><canvas id="chart-strehl" width="640" height="220" role="img" aria-label="Strehl against frame"></canvas><figcaption>Instantaneous peak Strehl at 1.65 µm: uncorrected and AO-corrected</figcaption></figure>
+      <figure class="chart"><canvas id="chart-valid" width="640" height="160" role="img" aria-label="Measurement validity against frame"></canvas><figcaption>Valid measurement fraction of frame k, and the DM saturation fraction of the command issued at the end of frame k (that command is held from frame k + 1); ticks below mark frames whose reconstruction was unusable</figcaption></figure>
+    </div>
+    <p class="current-frame" id="current-frame" aria-live="polite"></p>
+    <details>
+      <summary>Data table and downloads for this case</summary>
+      <div id="downloads" class="downloads"></div>
+      <p class="table-title" id="frame-table-title"></p>
+      <div id="frame-table" class="table-scroll" role="region" tabindex="0" aria-labelledby="frame-table-title"></div>
+    </details>
+  </section>
+
+  <section class="panel" aria-labelledby="summary-title">
+    <h2 id="summary-title">Analysis-window summary and comparison with the baseline</h2>
+    <p class="table-title" id="summary-table-title"></p>
+    <div id="summary-table" class="table-scroll" role="region" tabindex="0" aria-labelledby="summary-table-title"></div>
+    <p class="hint" id="pairing-note"></p>
+    <h3>100 ms block summaries</h3>
+    <p class="table-title" id="blocks-title"></p>
+    <div id="blocks-table" class="table-scroll" role="region" tabindex="0" aria-labelledby="blocks-title"></div>
+    <p class="hint" id="blocks-note"></p>
+  </section>
+
+  <section class="panel" aria-labelledby="binary-title">
+    <details>
+      <summary id="binary-title">Simple point-source comparison</summary>
+      <p class="hint" id="binary-label">Synthetic binary observation — analysis-window average; relative flux per numerical cell; no additional science-camera noise.</p>
+      <div class="binary">
+        <figure class="map obs"><div class="zoomwrap"><img id="scene-img" alt="Input binary scene reference" width="312" height="312"></div><figcaption><strong>Input scene (shared)</strong><span id="scene-caption"></span></figcaption></figure>
+        <figure class="map obs"><div class="zoomwrap"><img id="obs-unc" alt="Binary through the uncorrected average PSF" width="312" height="312"></div><figcaption><strong>Through the uncorrected average</strong><span id="obs-unc-caption"></span></figcaption></figure>
+        <figure class="map obs"><div class="zoomwrap"><img id="obs-ao" alt="Binary through the AO-corrected average PSF" width="312" height="312"></div><figcaption><strong>Through the AO-corrected average</strong><span id="obs-ao-caption"></span></figcaption></figure>
+      </div>
+      <label class="zoom-toggle"><input type="checkbox" id="zoom"> Show the full native window (±4.3″, 156 cells); the default view is the central ±1.8″ (64 cells), the same window as the PSF panels. Display scaling only; the images are not resampled or renormalized.</label>
+      <p class="hint" id="binary-note"></p>
     </details>
   </section>
 
