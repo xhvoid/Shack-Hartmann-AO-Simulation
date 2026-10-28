@@ -166,8 +166,10 @@ within 3 % on every shared realization.  Start new portfolio-scale work from
 
 Schema 4 adds `atmosphere.layers`, the per-layer altitude, Cn² fraction and
 wind of a multi-layer atmosphere, selected by
-`atmosphere_model = "native_layered"`.  Only that model accepts layers and it
-requires them; their fractions must sum to one, the block-level
+`atmosphere_model = "native_layered"` or, on the HCIPy backend, by
+`"hcipy_layered"`.  Only those two models accept layers and they require
+them; each backend builds only its own, so the generator stays part of the
+observing conditions.  The fractions must sum to one, the block-level
 `wind_m_per_s` must be zero, and the atmosphere is absolutely normalized
 (`normalize_rms = false`, `target_rms_opd_m = null`).  A v1-v3 configuration
 carrying layers is refused rather than having them dropped.

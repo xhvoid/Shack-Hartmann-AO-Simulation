@@ -41,9 +41,10 @@ PROFILE_SCHEMA_NAME = "shwfs_ao.system_profile"
 # gravity; a v3 record states whether its sensor does.  v1 and v2 records
 # predate the field and keep the clipping their profiles were published with.
 # Schema v4 adds atmosphere.layers, the per-layer Cn2 fractions and winds of a
-# multi-layer atmosphere (atmosphere_model="native_layered").  A single-layer
-# block states an empty list; v1-v3 records predate the field and can only
-# describe single-layer atmospheres.
+# multi-layer atmosphere (atmosphere_model="native_layered", or its HCIPy
+# counterpart "hcipy_layered").  A single-layer block states an empty list;
+# v1-v3 records predate the field and can only describe single-layer
+# atmospheres.
 PROFILE_SCHEMA_VERSION = 4
 SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2, 3, 4)
 # The WFS photon allocation the schema-v1 profiles were reviewed and published
@@ -87,7 +88,10 @@ AtmosphereModelName = Literal[
     "native_frozen_flow_v2",
     "native_layered",
     "hcipy",
+    "hcipy_layered",
 ]
+# The models that take atmosphere.layers, one per backend; no other accepts them.
+_LAYERED_ATMOSPHERE_MODELS = frozenset({"native_layered", "hcipy_layered"})
 # Same tolerance the public-data loader applies to normalized Cn2 weights.
 _LAYER_FRACTION_ABS_TOL = 1.0e-9
 
@@ -129,7 +133,10 @@ class ProfileProvenance:
 
 @dataclass(frozen=True, slots=True)
 class AtmosphereLayerConfig:
-    """One frozen-flow layer of a multi-layer (``native_layered``) atmosphere.
+    """One frozen-flow layer of a multi-layer atmosphere.
+
+    Layers are taken by ``native_layered`` and ``hcipy_layered``, which split
+    the turbulence identically and differ only in the screen generator.
 
     ``cn2_fraction`` is this layer's share of the integrated turbulence
     strength, so the layer's own Fried parameter is
@@ -833,6 +840,7 @@ class SystemConfig:
             "native_frozen_flow_v2",
             "native_layered",
             "hcipy",
+            "hcipy_layered",
         }:
             raise SystemConfigError("unsupported atmosphere_model.")
         object.__setattr__(self, "telescope_diameter_m", _positive(self.telescope_diameter_m, "telescope_diameter_m"))
@@ -859,10 +867,12 @@ class SystemConfig:
         for value, value_type, label in expected:
             if not isinstance(value, value_type):
                 raise SystemConfigError(f"{label} has the wrong configuration type.")
-        if (self.atmosphere_model == "native_layered") != bool(self.atmosphere.layers):
+        if (self.atmosphere_model in _LAYERED_ATMOSPHERE_MODELS) != bool(
+            self.atmosphere.layers
+        ):
             raise SystemConfigError(
-                "atmosphere_model='native_layered' requires atmosphere.layers, "
-                "and no other atmosphere model accepts them."
+                "atmosphere_model='native_layered' or 'hcipy_layered' requires "
+                "atmosphere.layers, and no other atmosphere model accepts them."
             )
         if self.wfs_model == "detector_level":
             if not self.detector.enabled or self.wfs.pad_factor is None or self.wfs.detector_window_px is None:

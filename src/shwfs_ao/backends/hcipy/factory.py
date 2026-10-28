@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+import math
 from typing import Any, Literal
 
 from ...core.protocols import (
@@ -41,7 +42,11 @@ from ...wfs.shack_hartmann.geometry import (
     build_shack_hartmann_geometry,
 )
 from ...wfs.shack_hartmann.measurement import DetectorShackHartmannSensor
-from .atmosphere import HcipyAtmosphereConfig, HcipyVonKarmanAtmosphere
+from .atmosphere import (
+    HcipyAtmosphereConfig,
+    HcipyAtmosphereLayerConfig,
+    HcipyVonKarmanAtmosphere,
+)
 from .dm import build_hcipy_deformable_mirror
 from .propagation import HcipySciencePropagator, focal_sampling_from_psf_sampling
 from .shwfs import HcipyShackHartmannOptics
@@ -98,13 +103,22 @@ class HcipyScaoComponentFactory:
         static_opd_rms_m: float,
         layers: Sequence[Any] = (),
     ) -> AtmosphereModel:
-        if model != "hcipy" or layers:
+        if model not in ("hcipy", "hcipy_layered"):
             raise HcipyScaoFactoryError(
                 f"HCIPy atmosphere model {model!r} is not registered; this "
-                "backend builds only 'hcipy' (single-layer von Karman "
-                "frozen flow).  The 'static', 'native_frozen_flow' and "
-                "layered 'native_layered' models build through "
-                "backend='native'."
+                "backend builds only 'hcipy' (single-layer von Karman frozen "
+                "flow) and 'hcipy_layered' (one HCIPy layer per "
+                "atmosphere.layers entry).  The 'static', 'native_frozen_flow', "
+                "'native_frozen_flow_v2' and 'native_layered' models build "
+                "through backend='native'."
+            )
+        # Each layer exposes altitude_m, cn2_fraction and wind_m_per_s (the
+        # profile's AtmosphereLayerConfig); this layer never imports io.
+        if bool(layers) != (model == "hcipy_layered"):
+            raise HcipyScaoFactoryError(
+                "atmosphere layers are accepted by, and required for, exactly "
+                "the 'hcipy_layered' model; 'hcipy' is single-layer and is "
+                "never flattened from, or expanded into, several layers."
             )
         if normalize_rms or target_rms_rad is not None:
             raise HcipyScaoFactoryError(
@@ -112,8 +126,17 @@ class HcipyScaoComponentFactory:
                 "profiles selecting it must set normalize_rms=false and "
                 "target_rms_opd_m=null, or use backend='native'."
             )
-        return HcipyVonKarmanAtmosphere(
-            HcipyAtmosphereConfig.single_layer(
+        if layers:
+            config = _layered_config(
+                r0_m=r0_m,
+                outer_scale_m=outer_scale_m,
+                phase_reference_wavelength_m=phase_reference_wavelength_m,
+                wind_m_per_s=wind_m_per_s,
+                root_seed=random_streams.root_seed,
+                layers=layers,
+            )
+        else:
+            config = HcipyAtmosphereConfig.single_layer(
                 r0_m=r0_m,
                 outer_scale_m=outer_scale_m,
                 wind_m_per_s=wind_m_per_s,
@@ -122,7 +145,9 @@ class HcipyScaoComponentFactory:
                     phase_reference_wavelength_m
                 ),
                 root_seed=random_streams.root_seed,
-            ),
+            )
+        return HcipyVonKarmanAtmosphere(
+            config,
             geometry.pupil_geometry,
             pupil_mask=geometry.pupil_mask,
             random_streams=random_streams.scoped("hcipy-atmosphere"),
@@ -205,3 +230,53 @@ class HcipyScaoComponentFactory:
 
 
 HCIPY_SCAO_COMPONENT_FACTORY = HcipyScaoComponentFactory()
+
+# Same tolerance the profile layer applies to normalized Cn2 fractions.
+_LAYER_FRACTION_ABS_TOL = 1.0e-9
+
+
+def _layered_config(
+    *,
+    r0_m: float,
+    outer_scale_m: float | None,
+    phase_reference_wavelength_m: float,
+    wind_m_per_s: tuple[float, float],
+    root_seed: int,
+    layers: Sequence[Any],
+) -> HcipyAtmosphereConfig:
+    """One infinite HCIPy layer per profile layer, holding its Cn2 share.
+
+    A layer carrying the fraction ``f`` of the integrated turbulence has Fried
+    parameter ``r0 * f**(-3/5)``, so the layers' Cn2 add up to exactly the
+    profile's ``r0`` — the split the native ``native_layered`` model uses.
+    """
+
+    fractions = tuple(float(layer.cn2_fraction) for layer in layers)
+    if not all(math.isfinite(value) and value > 0.0 for value in fractions):
+        raise HcipyScaoFactoryError(
+            f"layer cn2_fraction values must be finite and positive; got {fractions!r}."
+        )
+    total = math.fsum(fractions)
+    if not math.isclose(total, 1.0, rel_tol=0.0, abs_tol=_LAYER_FRACTION_ABS_TOL):
+        raise HcipyScaoFactoryError(
+            f"layer cn2_fraction values must sum to 1; got {total!r}."
+        )
+    if tuple(wind_m_per_s) != (0.0, 0.0):
+        raise HcipyScaoFactoryError(
+            "a layered atmosphere carries its winds per layer; the block-level "
+            "wind_m_per_s must be (0, 0)."
+        )
+    return HcipyAtmosphereConfig(
+        layers=tuple(
+            HcipyAtmosphereLayerConfig(
+                r0_m=r0_m * fraction ** (-3.0 / 5.0),
+                outer_scale_m=outer_scale_m,
+                wind_m_per_s=tuple(layer.wind_m_per_s),
+                altitude_m=layer.altitude_m,
+            )
+            for fraction, layer in zip(fractions, layers)
+        ),
+        r0_reference_wavelength_m=phase_reference_wavelength_m,
+        phase_conversion_reference_wavelength_m=phase_reference_wavelength_m,
+        root_seed=root_seed,
+    )

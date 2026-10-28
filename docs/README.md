@@ -47,7 +47,7 @@ wheel-verified quick-start commands, scope, results, and limitations.
 
 - [Data-source interface](ao_realistic_demo_data_interface.md)
 - [Atmosphere profiles](ao_realistic_demo_atmosphere_profile_builder.md)
-- [ESO E-ELT ten-layer turbulence model](eso_elt_turbulence_model.md) — source table, `native_layered` atmosphere, validation and the `eso_turbulence_2m_detector@1` profile
+- [ESO E-ELT ten-layer turbulence model](eso_elt_turbulence_model.md) — source table, `native_layered` atmosphere, validation, the HCIPy `hcipy_layered` cross-check and the `eso_turbulence_2m_detector@1` profile
 - [Detector-level Shack-Hartmann WFS](ao_realistic_demo_detector_shwfs.md)
 - [Synthetic deformable-mirror model](ao_realistic_demo_dm_model.md)
 - [Interaction matrix](ao_realistic_demo_interaction_matrix.md)

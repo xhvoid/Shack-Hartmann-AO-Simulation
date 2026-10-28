@@ -127,6 +127,86 @@ At 1 m, 256 screens of a 2 m pupil give a standard error of about 5%; the
 discrete model's exact expectation there is 0.996. A one-pixel separation is
 8% low; that is the pixel-scale cutoff.
 
+### Cross-check against HCIPy
+
+`atmosphere_model = "hcipy_layered"` (with `backend = "hcipy"`) builds the
+same ten layers with HCIPy: one `InfiniteAtmosphericLayer` per profile layer,
+with Fried parameter `r0 fᵢ^(-3/5)` and the layer's wind and altitude. HCIPy
+shares no code or random numbers with the native model. It extrudes each
+layer row by row from the exact von Kármán covariance (Assémat et al. 2006)
+rather than synthesizing a spectrum, so it is an independent check of the
+native layer split, normalization and frozen flow.
+
+`tests/backends/hcipy/test_hcipy_layered_atmosphere.py` compares ensemble
+statistics on the ESO profile's 2 m / 72 px pupil, with phase in radians at
+500 nm. HCIPy frames are taken every 0.25 s from 0.5 s on, after every layer
+has crossed the pupil grid and its initial screen has been replaced by
+extruded rows. Native frames are independent t = 0 realizations, which the
+stationary, exactly translating model permits. Standard errors treat each
+HCIPy realization's mean as one independent sample. The slow tier, 512 HCIPy
+frames from 32 realizations against 1024 native realizations, measured:
+
+| Statistic | HCIPy / native | Gate |
+| --- | --- | --- |
+| Piston-removed pupil variance | 0.93 ± 0.04 | ±20% |
+| Piston- and tip/tilt-removed pupil variance | 1.03 ± 0.03 | ±10% |
+| `D(r)`, r = 2 px (5.6 cm) | 1.010 ± 0.010 | ±4% |
+| `D(r)`, r = 4 px | 0.993 ± 0.013 | ±5% |
+| `D(r)`, r = 8 px | 0.983 ± 0.017 | ±7% |
+| `D(r)`, r = 16 px (0.44 m) | 0.969 ± 0.024 | ±10% |
+| Temporal structure function, τ = 3 ms | 1.035 ± 0.007 | ±6% |
+| Temporal structure function, τ = 10 ms | 1.008 ± 0.012 | ±6% |
+| Temporal structure function, τ = 30 ms | 1.015 ± 0.022 | ±10% |
+| Co-moving, τ = 10 ms, 5 px along the flow | 0.92 ± 0.04 | ±20% |
+| Counter-moving, τ = 10 ms, 5 px against the flow | 1.006 ± 0.017 | ±8% |
+
+The temporal structure function is the pupil mean of
+`(φ(t + τ) − φ(t))²`. The co-moving and counter-moving statistics shift the
+later frame by the turbulence-weighted wind's 5 px (14.5 m/s × 10 ms) along
+and against +x before differencing. They depend on how far each layer's own
+speed is from that common shift, and so on which wind belongs to which
+layer. Every gate is at least three standard errors. A comparison passes
+only if its ratio lies inside the gate. The co-moving gate also allows for
+the sub-2 px difference described below, because that statistic is
+dominated by layers moving close to 5 px. The non-slow tier, which runs in
+CI, uses 120 HCIPy frames and 256 native realizations with gates about twice
+as wide.
+
+Two controls show the comparison resolves the winds:
+
+- **Flow direction.** In both backends the counter-moving statistic is about
+  six times the co-moving one (5.8 native, 6.3 HCIPy), so every layer moves
+  toward +x.
+- **Wind-to-layer assignment.** The native model is rerun from the same
+  seeds with the ten winds reversed, so every speed is kept but the ground
+  layer gets 10 m/s and the 18.5 km layer 12.1 m/s. Its co-moving statistic
+  rises by 62% and its 3 ms temporal structure function by 10%, so the
+  reversed atmosphere fails the gates the correctly mapped HCIPy layers
+  pass.
+
+The backends differ, by construction, in three places that the gates
+exclude. These measurements are not test-gated:
+
+- **Below 2 px and 3 ms.** Extruded HCIPy screens have `D(1 px)` 5% above
+  native, and the 1 ms temporal structure function is 7% above. HCIPy
+  keeps the exact pixel-scale covariance: its `D(1 px)` is within 1% of the
+  von Kármán value. The native band carries no power above the grid's
+  Nyquist frequency, so its `D(1 px)` is 7% low (see inner scale above).
+  HCIPy also interpolates sub-pixel positions bilinearly.
+- **HCIPy's initial screens.** Until a layer has moved one grid width (2 m,
+  0.06–0.25 s for these winds), HCIPy shows the layer's initial screen,
+  drawn by a separate finite spectral layer. For a single layer over 400
+  realizations, that screen's `D(r)` is 4% below the von Kármán value at
+  2–8 px and 10% below at 1 px. A 150-frame `hcipy_layered` run at 1 kHz
+  therefore mostly sees initial screens. Over 400 ESO realizations, native
+  `D(r)` is within 1% of the analytic value at 2–32 px.
+- **Low orders.** The piston-removed variance is dominated by tip/tilt and
+  varies by about 80% between realizations. With a different seed, the
+  tip/tilt-removed ratio was 0.94 ± 0.03; together the two seeds give about
+  0.985. HCIPy documents that its extrusion loses low orders at large outer
+  scales. A loss of a few percent can be neither confirmed nor excluded at
+  this sample size.
+
 ## Use in the SCAO simulation
 
 Profile schema 4 adds `atmosphere.layers` to the serialized SCAO profile, and
@@ -145,6 +225,29 @@ from shwfs_ao.io import load_system_profile
 config = load_system_profile("eso_turbulence_2m_detector", 1)
 history = run_closed_loop(config)
 ```
+
+The same atmosphere runs through the HCIPy backend as `hcipy_layered`. The
+HCIPy lenslet model needs whole block windows, which 72 px over 7 lenslets
+are not, so an all-HCIPy run states a 70 px pupil and 10 px windows:
+
+```python
+from dataclasses import replace
+
+from shwfs_ao.io import load_system_profile
+
+eso = load_system_profile("eso_turbulence_2m_detector", 1)
+hcipy_config = replace(
+    eso,
+    backend="hcipy",
+    atmosphere_model="hcipy_layered",
+    pupil_pixels=70,
+    wfs=replace(eso.wfs, detector_window_px=10),
+)
+```
+
+The generator is part of the observing conditions, so this configuration has
+its own `observing_conditions_hash`. `native_layered` under
+`backend = "hcipy"` is refused rather than silently swapping generators.
 
 Any other profile can be driven by the same turbulence:
 
@@ -181,8 +284,10 @@ realization scatter of tens of nanometres.
 
 - On-axis SCAO only. Layer altitude is recorded but unused: there is no
   anisoplanatism, cone effect, LGS, tomography or scintillation.
-- The HCIPy backend refuses layered profiles rather than flattening them to
-  one layer.
+- The HCIPy backend builds layered profiles only as `hcipy_layered`, one
+  HCIPy layer per profile layer. It refuses `native_layered` and never
+  flattens layers into one. Its first frames show HCIPy's slightly weaker
+  initial screens (see the cross-check above).
 - ESO's system parameters (84×84 sub-apertures, 85×85 actuators, 500 Hz,
   3-frame delay, LGS asterisms) are not part of the turbulence profile, and
   the repository's 2 m system is not an ELT model.

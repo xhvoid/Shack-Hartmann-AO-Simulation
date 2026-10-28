@@ -32,8 +32,9 @@ with that install hint.
 The built-in profile-level `ScaoBackendComponentFactory` registrations are
 `native` and `hcipy`. The HCIPy factory
 (`shwfs_ao.backends.hcipy.factory.HCIPY_SCAO_COMPONENT_FACTORY`) builds the
-detector-level lenslet SH-WFS on fixed block windows, the single-layer von
-Kármán frozen-flow atmosphere, the matched Gaussian DM, and the Fraunhofer
+detector-level lenslet SH-WFS on fixed block windows, the single-layer
+(`hcipy`) and multi-layer (`hcipy_layered`) von Kármán frozen-flow
+atmospheres, the matched Gaussian DM, and the Fraunhofer
 science propagator; `high_order_10m_hcipy@2` is its current packaged profile,
 alongside the superseded `high_order_10m_hcipy@1` that remains loadable. The
 serialized fields keep one meaning across backends: `wfs.pad_factor` is the
@@ -41,7 +42,7 @@ spot sampling in detector pixels per lambda/d — realized natively by FFT
 zero-padding and by the equivalent lenslet f-number under HCIPy — and
 `wfs.detector_window_px` must equal `pupil_pixels // lenslets_across`, the
 block window the HCIPy lenslet model actually measures on. Profiles the HCIPy
-backend cannot represent (geometric WFS, `static` or `native_frozen_flow`
+backend cannot represent (geometric WFS, the `static` and `native_*`
 atmospheres, RMS-normalized seeing) fail closed with a factory error rather
 than silently substituting native components, and resolving the registration
 never imports HCIPy: building without the optional dependency raises the
@@ -122,8 +123,30 @@ screen period of travel (`periodic_band_repeated`). See
 
 Factories receive the layers through an optional `layers` keyword of
 `build_atmosphere`, passed only for a layered profile, so a factory written
-before it keeps building every single-layer profile. The HCIPy factory
-refuses layered profiles rather than flattening them to one layer.
+before it keeps building every single-layer profile.
+
+### HCIPy atmosphere: `hcipy_layered` (multi-layer)
+
+`hcipy_layered` is the HCIPy backend's counterpart: the same
+`atmosphere.layers` block, built as one `InfiniteAtmosphericLayer` per layer
+with r0ᵢ = r0 fᵢ^(-3/5), the layer's wind and its altitude, so the layers'
+Cn² sum to the profile's r0. Only `backend = "hcipy"` builds it, and the HCIPy
+factory refuses `native_layered`, whose name pins the native generator; the
+two are distinct observing conditions with distinct
+`observing_conditions_hash` values. Layer fractions must sum to one and the
+block-level wind must be zero, as for the native model.
+
+The two generators share no code or random numbers. Native screens come from
+the split Fourier spectrum above; HCIPy extrudes each layer row by row from
+the exact von Kármán covariance. On the ESO profile's 2 m / 72 px pupil,
+512 extruded HCIPy frames against 1024 native realizations give HCIPy/native
+ratios of 0.97–1.01 for D(r) at 2–16 px, 1.008–1.015 for the temporal
+structure function at 10–30 ms (1.035 at 3 ms), and 1.03 ± 0.03 for the
+piston- and tip/tilt-removed variance. A reversed wind-to-layer assignment
+falls outside the tolerances the test gates these ratios with. HCIPy's initial screens, before a layer has
+crossed the pupil grid, are a few percent weaker at small separations. The
+measurements are in [the ESO turbulence notes](eso_elt_turbulence_model.md#cross-check-against-hcipy)
+and `tests/backends/hcipy/test_hcipy_layered_atmosphere.py`.
 
 ### Known backend scope
 
@@ -132,7 +155,11 @@ refuses layered profiles rather than flattening them to one layer.
   sub-pixel. `native_layered` records layer altitude but, like the HCIPy
   adapter, propagates on axis only.
   HCIPy atmosphere supports finite/infinite layers, both translating rigidly
-  on square and rectangular pupils. The
+  on square and rectangular pupils; the profile-level `hcipy` and
+  `hcipy_layered` models build infinite layers. HCIPy's first frames show
+  each layer's initial screen until the layer has moved one pupil grid
+  (0.06–0.25 s for the ESO winds on a 2 m pupil); its D(r) is about 4 % low
+  at 2–8 px. The
   adapter sums pupil-plane phase/OPD; layer altitude is metadata and there is
   no scintillation, anisoplanatic tomography, or laser-guide-star propagation.
 - The legacy native spectrum is exactly periodic and may wrap indefinitely.
