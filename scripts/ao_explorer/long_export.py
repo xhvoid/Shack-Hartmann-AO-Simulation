@@ -64,6 +64,9 @@ import rms_diagnostics
 import web_contract
 
 
+# The export's content identity: every source whose bytes can change what this exporter accepts or writes.  The
+# shared producer-check rule (web_contract.py) reads long_series.py and observer.py to derive its contract, so both
+# are listed as well (review R19-01); observer.py stays part of the numerical producer identity too.
 CODE_FILES = (
     "long_export.py",
     "long_series.py",
@@ -75,6 +78,8 @@ CODE_FILES = (
     "identity.py",
     "producer.py",
     "protocol.py",
+    "web_contract.py",
+    "observer.py",
 )
 MANIFEST_SCHEMA = "ao-explorer.manifest.v2"
 WEB_SCHEMA_VERSION = "ao-explorer.web.v2"
