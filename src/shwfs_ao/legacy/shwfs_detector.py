@@ -301,8 +301,12 @@ def measure_centroid_shifts(
         * _LEGACY_WFS_WAVELENGTH_M
         / (2.0 * np.pi)
     )
+    # For seed=None the sensor context resolved one recorded entropy root;
+    # deriving the ordered child seeds from that same root keeps the whole
+    # call a pure function of runtime_streams.root_seed.  For integer seeds
+    # the root equals the seed, so the frozen sequence is unchanged.
     ordered_seeds = _legacy_sequential_child_seeds(
-        None if seed is None else int(seed),
+        int(runtime_streams.root_seed) if seed is None else int(seed),
         len(geometry.subaperture_ids),
     )
     measurement = sensor._measure_legacy(

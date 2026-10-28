@@ -81,6 +81,12 @@ detector generators. Switching a frozen profile from `per_frame_legacy` to
 persistent PRNU is a numerical-model change requiring a candidate baseline and
 rationale, not a documentation or structural cleanup.
 
+An explicit legacy seed reproduces the frozen `numpy.random.default_rng(seed)`
+sequence byte-for-byte. Without one, `per_frame_legacy` draws come from the
+supplied provider's `detector.shot_noise` domain, and unseeded legacy adapter
+entry points resolve one recorded entropy root before any draw, so identical
+root state always replays and no detector path samples unrecorded OS entropy.
+
 `include_noise=False` disables temporal shot/read draws. It does not remove
 persistent response/bad-pixel maps or the explicitly keyed compatibility
 response used by legacy calibration.

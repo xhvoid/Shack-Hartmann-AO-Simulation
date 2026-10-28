@@ -191,7 +191,7 @@ class NamedRandomStreams:
 
 
 def _legacy_sequential_child_seeds(
-    root_seed: int | None,
+    root_seed: int,
     count: int,
 ) -> tuple[int, ...]:
     """Replay the pre-refactor ordered ``default_rng`` child-seed sequence.
@@ -200,13 +200,12 @@ def _legacy_sequential_child_seeds(
     code uses named, keyed streams; the adapters need the historical
     order-dependent sequence so frozen seeded simulations remain unchanged
     while the physical measurement loop lives in the canonical WFS layer.
+    The caller must resolve an explicit recorded root seed first: drawing a
+    fresh OS-entropy sequence here would make identical root state
+    non-replayable.
     """
 
-    if root_seed is not None and (type(root_seed) is not int or root_seed < 0):
-        raise RandomStreamError(
-            "root_seed must be a non-negative integer or None; "
-            f"got {root_seed!r}."
-        )
+    root_seed = _validate_root_seed(root_seed)
     if type(count) is not int or count < 0:
         raise RandomStreamError(
             f"count must be a non-negative integer; got {count!r}."

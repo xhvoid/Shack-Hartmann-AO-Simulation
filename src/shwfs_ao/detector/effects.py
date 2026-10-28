@@ -113,6 +113,7 @@ def apply_detector_effects(
         if needs_legacy_rng:
             legacy_rng, legacy_stream_id = _legacy_generator(
                 seed,
+                random_streams,
             )
 
         if float(config.prnu_rms) > 0.0:
@@ -219,7 +220,7 @@ def apply_legacy_detector_effects(
     if realization.stream_id is not None:
         stream_ids["detector.realization"] = realization.stream_id
     if float(config.read_noise_e) > 0.0:
-        legacy_rng, legacy_stream_id = _legacy_generator(seed)
+        legacy_rng, legacy_stream_id = _legacy_generator(seed, random_streams)
         image_e = image_e + legacy_rng.normal(
             scale=float(config.read_noise_e),
             size=intensity.shape,
@@ -297,7 +298,7 @@ def _apply_configured_photonless_effects(
     # exactly: no background, PRNU, or Poisson stage without a photon budget.
     image_e = intensity.copy()
     if include_noise and float(config.read_noise_e) > 0.0:
-        read_rng, read_stream_id = _legacy_generator(legacy_seed)
+        read_rng, read_stream_id = _legacy_generator(legacy_seed, random_streams)
         image_e = image_e + read_rng.normal(
             scale=float(config.read_noise_e),
             size=intensity.shape,
@@ -419,11 +420,30 @@ def _validate_realization(
 
 def _legacy_generator(
     legacy_seed: int | None,
+    random_streams: RandomStreams,
 ) -> tuple[np.random.Generator, str]:
-    return (
-        np.random.default_rng(legacy_seed),
-        f"per_frame_legacy:numpy.default_rng(seed={legacy_seed})",
-    )
+    """Return the single legacy-mode generator and its recorded identity.
+
+    An explicit seed reproduces the frozen ``numpy.random.default_rng(seed)``
+    draw sequence byte-for-byte.  Without a seed the generator is the supplied
+    provider's persistent ``detector.shot_noise`` stream, so identical root
+    state replays identically; this layer never draws unrecorded OS entropy.
+    """
+
+    if legacy_seed is not None:
+        return (
+            np.random.default_rng(legacy_seed),
+            f"per_frame_legacy:numpy.default_rng(seed={legacy_seed})",
+        )
+    try:
+        generator = random_streams.generator("detector.shot_noise")
+        stream_id = random_streams.stream_id("detector.shot_noise")
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise DetectorEffectsError(
+            "random_streams could not supply the per_frame_legacy generator "
+            "without an explicit legacy_seed."
+        ) from exc
+    return generator, f"per_frame_legacy:{stream_id}"
 
 
 def _validate_boolean(value: object, *, label: str) -> None:

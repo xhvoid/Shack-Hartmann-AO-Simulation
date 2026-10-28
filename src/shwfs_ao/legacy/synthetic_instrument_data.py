@@ -590,9 +590,13 @@ def measure_detector_shwfs(
     residual_opd_m[inside] = (
         phase[inside] * calibration.geometry.wfs_wavelength_m / (2.0 * np.pi)
     )
+    # runtime_key equals the explicit seed when one was given and is the
+    # single recorded entropy root otherwise, so seeded draws stay frozen
+    # while unseeded calls no longer sample a second, unrecorded entropy
+    # sequence inside the child-seed helper.
     ordered_seeds = (
         _legacy_sequential_child_seeds(
-            normalized_seed,
+            runtime_key,
             len(sensor.subaperture_ids),
         )
         if bool(include_noise)
