@@ -142,7 +142,7 @@ canonical shared SCAO contracts directly.
 | Package | Owns | Does not own |
 | --- | --- | --- |
 | `shwfs_ao.core` | strict OPD/phase conversion, masked wavefront operations, immutable result types, component protocols, pupil geometry, provenance, hashes, named RNG streams | detector physics, propagation, control, files |
-| `shwfs_ao.backends.native` | transparent NumPy atmosphere, Zernike modes, SH-WFS diffraction, DM spatial synthesis, science FFT propagation, native SCAO component factory | detector effects, validity, controller state, artifacts |
+| `shwfs_ao.backends.native` | transparent NumPy single- and multi-layer atmospheres, Zernike modes, SH-WFS diffraction, DM spatial synthesis, science FFT propagation, native SCAO component factory | detector effects, validity, controller state, artifacts |
 | `shwfs_ao.backends.hcipy` | lazy repository↔HCIPy conversion and HCIPy atmosphere, Gaussian DM, SH-WFS optics, and Fraunhofer science propagation adapters | detector/centroid policy, stroke/fault policy, latency, artifact writing |
 | `shwfs_ao.detector` | detector configuration and realization, electron expectations/noise/effects, centroid estimators, validity policy | lenslet optics, control |
 | `shwfs_ao.wfs.shack_hartmann` | lenslet geometry and IDs, backend-result validation, zero-phase reference calibration, geometric and detector-level sensors | detector-effect implementation, reconstruction, control |

@@ -13,7 +13,7 @@ import pytest
 import data_sources as top_level_data_sources
 from shwfs_ao.core.provenance import Provenance as CoreProvenance
 from shwfs_ao import io
-from shwfs_ao.io import configs, public_data
+from shwfs_ao.io import configs, public_data, turbulence_profiles
 from shwfs_ao.legacy import data_sources as legacy_data_sources
 from shwfs_ao.legacy import runtime_resources as legacy_runtime_resources
 
@@ -71,8 +71,27 @@ def _public_names(module: object) -> set[str]:
     return {name for name in vars(module) if not name.startswith("_")}
 
 
+TURBULENCE_PROFILE_EXPORTS = (
+    "ESO_ELT_PROFILE_NAME",
+    "TurbulenceLayer",
+    "TurbulenceProfile",
+    "TurbulenceProfileError",
+    "available_turbulence_profiles",
+    "eso_elt_turbulence_profile",
+    "load_turbulence_profile",
+)
+
+
 def test_io_public_surface_is_explicit_and_identity_preserving():
-    assert io.__all__ == (*configs.__all__, *PUBLIC_DATA_EXPORTS)
+    assert io.__all__ == (
+        *configs.__all__,
+        *PUBLIC_DATA_EXPORTS,
+        *TURBULENCE_PROFILE_EXPORTS,
+    )
+    assert all(
+        getattr(io, name) is getattr(turbulence_profiles, name)
+        for name in TURBULENCE_PROFILE_EXPORTS
+    )
     assert public_data.__all__ == PUBLIC_DATA_EXPORTS
     assert all(
         getattr(io, name) is getattr(public_data, name)

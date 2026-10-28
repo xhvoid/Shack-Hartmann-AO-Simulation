@@ -45,7 +45,7 @@ from ..core.protocols import (
 from ..core.random import NamedRandomStreams
 from ..detector import CentroidConfig, CentroidValidityConfig, DetectorConfig
 from ..dm import DMConfig
-from ..io.configs import SystemConfig
+from ..io.configs import AtmosphereLayerConfig, SystemConfig
 from ..io.resources import read_text_resource
 from ..science.propagation import PsfSampling
 
@@ -105,8 +105,15 @@ class ScaoBackendComponentFactory(Protocol):
         target_rms_rad: float | None,
         normalize_rms: bool,
         static_opd_rms_m: float,
+        layers: Sequence[AtmosphereLayerConfig] = (),
     ) -> AtmosphereModel:
-        ...
+        """Build the atmosphere; ``layers`` is passed only for a layered model.
+
+        :func:`build_scao_system` supplies ``layers`` exactly when the profile
+        selects ``atmosphere_model='native_layered'``, so a factory written
+        before layered atmospheres existed keeps building every single-layer
+        profile unchanged.
+        """
 
     def build_wfs(
         self,
@@ -451,6 +458,9 @@ def build_scao_system(
         central_obstruction_ratio=config.wfs.central_obstruction_ratio,
         spider_width_m=config.wfs.spider_width_m,
     )
+    layer_keywords: dict[str, Any] = (
+        {"layers": config.atmosphere.layers} if config.atmosphere.layers else {}
+    )
     atmosphere = factory.build_atmosphere(
         model=config.atmosphere_model,
         geometry=geometry,
@@ -468,6 +478,7 @@ def build_scao_system(
             if config.atmosphere.target_rms_opd_m is None
             else config.atmosphere.target_rms_opd_m
         ),
+        **layer_keywords,
     )
     dm = factory.build_dm(
         geometry=geometry,
