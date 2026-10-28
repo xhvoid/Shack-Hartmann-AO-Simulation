@@ -87,6 +87,31 @@ supplied provider's `detector.shot_noise` domain, and unseeded legacy adapter
 entry points resolve one recorded entropy root before any draw, so identical
 root state always replays and no detector path samples unrecorded OS entropy.
 
+The canonical detector-level Shack-Hartmann sensor draws each lenslet's
+temporal noise beneath
+`scoped("shack_hartmann.measurement", key=(noise_stream_identity, subaperture_id))`.
+The noise-stream identity (schema
+`shwfs_ao.shack_hartmann_noise_stream_identity.v1`) hashes only declared
+inputs: geometry, IDs, wavelength, detector sampling, detector and centroid
+configuration, photon allocation, the optics backend name and configuration
+hash, and the detector realization named by its derivation (configuration
+hash, root seed, stream ID, window shape). It deliberately excludes the
+calibration hash, which binds reference centroids computed through the FFT and
+the realization hash over a PRNU map drawn through libm; both differ in their
+low bits between hosts, and keyed on the calibration hash a one-ULP reference
+difference redrew every frame. One seed therefore selects the same noise
+streams on every host, and noisy measurements agree to roundoff rather than
+bitwise: expected images still carry platform FFT/libm roundoff, and NumPy's
+Poisson and normal samplers could in principle round a draw differently at a
+libm decision boundary. The calibration hash remains provenance. Measurement
+metadata records `noise_stream_identity` and `noise_stream_identity_schema`,
+and the sensor `config_hash` covers the identity, so results from the earlier
+calibration-hash keying are distinguishable. Portability also requires the
+declared inputs themselves to be the same floats on both hosts; a photon
+budget computed upstream, for example from a catalog magnitude, is such an
+input. Legacy adapter paths that pass explicit per-frame legacy seeds are
+unaffected.
+
 `include_noise=False` disables temporal shot/read draws. It does not remove
 persistent response/bad-pixel maps or the explicitly keyed compatibility
 response used by legacy calibration.
@@ -98,6 +123,14 @@ records stream references, amplitude, forward/central method, repeat count,
 sensor/geometry/detector/DM hashes, row/coordinate layout, units, and matrix
 hash. No calibration helper constructs a hidden global RNG or consumes runtime
 atmosphere/detector state.
+
+That scope key includes the calibration context hash, which binds the probe
+maps, the DM hash over its influence functions, the sensor configuration hash,
+and the detector realization hash. Those carry floats computed through libm or
+the FFT, so noisy interaction calibration (`include_noise=True`) replays
+exactly within one host environment but, unlike detector-level measurement,
+does not yet select the same noise streams on another host. Noise-free
+calibration draws nothing and is unaffected.
 
 ### Control and sweeps
 
