@@ -87,7 +87,7 @@ import numpy as np
 
 
 SCHEMA = "shwfs_ao.detector_level_convergence_study.v1"
-RUN_PROTOCOL_VERSION = 1
+RUN_PROTOCOL_VERSION = 2  # version 2 (round 4): the protocol carries the plan-derived `expected` physical records
 AXES = ("pupil", "detector", "spectrum", "exposure", "science")
 ARMS = ("operating_expectation", "noise_on")
 PUPIL_READINGS = ("common", "growing")
@@ -139,6 +139,8 @@ ARM_RESULT_FIELDS = ("post_update_rms_m", "post_update_mean_square_m2", "pre_upd
 # The identity-bearing inputs a completed row's result must repeat from its protocol
 # (the profile hash cannot carry them: the pairing options are not part of SystemConfig).
 PAIRING_OPTION_FIELDS = ("band_draw_reference_screen_size", "band_limit_screen_size", "screen_period_rule")
+# The canonical units of an arm's scalar results (the experiment core writes exactly these).
+ARM_UNITS = {"rms": "m", "mean_square": "m2", "fractions": "1"}
 _TEMP_MARK = ".tmp-"
 
 
@@ -282,7 +284,7 @@ def plan(scale: str, axes: tuple[str, ...] = AXES) -> dict[str, PlannedRun]:
 def planned_protocol(scale: str, run: PlannedRun) -> dict[str, Any]:
     """What a run is, apart from who produced it."""
 
-    from shwfs_ao.experiments.convergence_study import scan_configuration
+    from shwfs_ao.experiments.convergence_study import planned_physics_record, scan_configuration
 
     spec = SCALES[scale]
     config = scan_configuration(run.config, root_seed=int(spec["root_seed"]))
@@ -307,6 +309,9 @@ def planned_protocol(scale: str, run: PlannedRun) -> dict[str, Any]:
         "atmosphere_options": None if run.atmosphere_options is None else run.atmosphere_options.to_record(),
         "exposure_override": None if run.exposure is None else {"subsamples": run.exposure.subsamples, "sample_rule": run.exposure.sample_rule},
         "execution": {"telemetry_level": spec["telemetry_level"], "atmosphere_band_storage": spec["band_storage"]},
+        # What the run must record, derived from the plan alone (no system is built):
+        # the detector budget, spectral nodes, exposure keywords and screen geometry.
+        "expected": planned_physics_record(config, exposure=run.exposure, atmosphere_options=run.atmosphere_options),
     }
 
 
@@ -431,6 +436,12 @@ def _finite_number(value: object) -> bool:
     return _number(value) and math.isfinite(float(value))
 
 
+def _same_optional_float(value: object, expected: object, *, rel_tol: float = 1.0e-12) -> bool:
+    if expected is None:
+        return value is None
+    return _finite_number(value) and _finite_number(expected) and math.isclose(float(value), float(expected), rel_tol=rel_tol, abs_tol=0.0)  # type: ignore[arg-type]
+
+
 def _hex_digest(value: object) -> bool:
     return isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value)
 
@@ -479,6 +490,9 @@ def check_run(path: Path, row: object, planned: dict[str, Any]) -> str | None:
         _canonical(execution.get(name)) != _canonical(value) for name, value in protocol["execution"].items()
     ):
         return f"{path}: the result's execution options disagree with the run's protocol"
+    expected = protocol["expected"]
+    if _canonical(result.get("exposure_keywords")) != _canonical(expected["exposure_keywords"]):
+        return f"{path}: the result's exposure keywords {result.get('exposure_keywords')!r} are not the plan's {expected['exposure_keywords']!r}"
     arms = result.get("arms")
     if not isinstance(arms, dict) or list(arms) != list(protocol["arms"]):
         return f"{path}: the result's arms are not the planned {protocol['arms']} in order"
@@ -487,29 +501,64 @@ def check_run(path: Path, row: object, planned: dict[str, Any]) -> str | None:
     for arm, entry in arms.items():
         if not isinstance(entry, dict):
             return f"{path}: arm {arm} is not a record"
-        missing = [name for name in ARM_RESULT_FIELDS if not _number(entry.get(name))]
+        missing = [name for name in ARM_RESULT_FIELDS if not _finite_number(entry.get(name))]
         if missing:
-            return f"{path}: arm {arm} results {missing} are missing or not numbers"
+            return f"{path}: arm {arm} results {missing} are missing or not finite numbers"
+        if any(float(entry[name]) < 0.0 for name in ARM_RESULT_FIELDS) or float(entry["reconstruction_usable_fraction"]) > 1.0:
+            return f"{path}: arm {arm} results are outside their domains (non-negative; fractions within [0, 1])"
+        if entry.get("units") != ARM_UNITS:
+            return f"{path}: arm {arm} units {entry.get('units')!r} are not the canonical {ARM_UNITS}"
         if not _hex_digest(entry.get("open_loop_rms_series_sha256")):
             return f"{path}: arm {arm} has no open-loop series digest"
         digests.add(entry["open_loop_rms_series_sha256"])
         science = entry.get("science")
         if not isinstance(science, list) or len(science) != len(protocol["science_wavelengths_m"]):
             return f"{path}: arm {arm} has {None if not isinstance(science, list) else len(science)} science images for {len(protocol['science_wavelengths_m'])} wavelengths"
-        for image in science:
+        for index, image in enumerate(science):
             production = image.get("production") if isinstance(image, dict) else None
-            if not isinstance(production, dict) or not all(_number(production.get(name)) for name in ("peak_strehl", "ee50_radius_rad", "ee80_radius_rad")):
-                return f"{path}: arm {arm} has incomplete production science metrics"
+            if not isinstance(production, dict) or not all(_finite_number(production.get(name)) for name in ("peak_strehl", "ee50_radius_rad", "ee80_radius_rad", "wavelength_m")):
+                return f"{path}: arm {arm} has incomplete production science metrics (finite Strehl, EE50 and EE80 radii, wavelength)"
+            if not (0.0 <= float(production["peak_strehl"]) <= 1.0 + 1.0e-3 and 0.0 < float(production["ee50_radius_rad"]) <= float(production["ee80_radius_rad"])):
+                return f"{path}: arm {arm} production science metrics are outside their domains (Strehl within [0, 1]; 0 < EE50 radius <= EE80 radius)"
+            planned_wavelength = float(protocol["science_wavelengths_m"][index])
+            if not math.isclose(float(production["wavelength_m"]), planned_wavelength, rel_tol=1.0e-12, abs_tol=0.0):
+                return f"{path}: arm {arm} science wavelength {production['wavelength_m']!r} is not the planned {planned_wavelength}"
             reference = image.get("fourier_reference")
             if not isinstance(reference, dict) or reference.get("status") not in ("available", "unavailable"):
                 return f"{path}: arm {arm} has no Fourier reference status"
-            if reference["status"] == "available" and not all(_number(reference.get(name)) for name in ("ee50_radius_rad", "ee80_radius_rad")):
-                return f"{path}: arm {arm} has an available Fourier reference without its radii"
+            if reference["status"] == "available" and not all(_finite_number(reference.get(name)) for name in ("ee50_radius_rad", "ee80_radius_rad")):
+                return f"{path}: arm {arm} has an available Fourier reference without finite radii"
+            if reference["status"] == "available" and not 0.0 < float(reference["ee50_radius_rad"]) <= float(reference["ee80_radius_rad"]):
+                return f"{path}: arm {arm} Fourier reference radii are outside their domain (0 < EE50 <= EE80)"
         geometry = entry.get("geometry")
-        if not isinstance(geometry, dict) or not isinstance(geometry.get("retained_lenslet_count"), int) or not _hex_digest(geometry.get("retained_lenslet_ids_sha256")):
-            return f"{path}: arm {arm} has no retained-lenslet record"
-        if not isinstance(entry.get("detector_budget"), dict) or not _number(entry["detector_budget"].get("detected_e_full_subaperture_per_frame")):
-            return f"{path}: arm {arm} has no detector budget"
+        count_ok = isinstance(geometry, dict) and isinstance(geometry.get("retained_lenslet_count"), int) and not isinstance(geometry.get("retained_lenslet_count"), bool) and geometry["retained_lenslet_count"] > 0
+        if not count_ok or not _hex_digest(geometry.get("retained_lenslet_ids_sha256")):
+            return f"{path}: arm {arm} has no retained-lenslet record (positive count and identity digest)"
+        area = geometry.get("illuminated_area_fraction")
+        if not isinstance(area, dict) or not all(_finite_number(area.get(name)) for name in ("mean", "min", "max")) or not 0.0 <= float(area["min"]) <= float(area["mean"]) <= float(area["max"]) <= 1.0:
+            return f"{path}: arm {arm} has no illuminated-area statistics within [0, 1] (min <= mean <= max)"
+        budget = entry.get("detector_budget")
+        parameters = protocol["parameters"]
+        if not isinstance(budget, dict) or not _finite_number(budget.get("detected_e_full_subaperture_per_frame")) or float(budget["detected_e_full_subaperture_per_frame"]) < 0.0:
+            return f"{path}: arm {arm} has no detector budget (finite, non-negative detected electrons)"
+        nodes = budget.get("spectral_nodes_m")
+        if not isinstance(nodes, list) or len(nodes) != parameters["spectral_nodes"] or not all(_finite_number(v) and float(v) > 0.0 for v in nodes) or any(float(b) <= float(a) for a, b in zip(nodes, nodes[1:])):
+            return f"{path}: arm {arm} spectral nodes are not {parameters['spectral_nodes']} increasing positive wavelengths"
+        if budget.get("oversampling") != parameters["oversampling"]:
+            return f"{path}: arm {arm} detector oversampling {budget.get('oversampling')!r} is not the planned {parameters['oversampling']}"
+        if not _finite_number(budget.get("exposure_s")) or float(budget["exposure_s"]) <= 0.0:
+            return f"{path}: arm {arm} detector budget has no positive exposure time"
+        if not math.isclose(float(budget["exposure_s"]), float(expected["exposure_s"]), rel_tol=1.0e-12, abs_tol=0.0):
+            return f"{path}: arm {arm} detector budget exposure time {budget['exposure_s']!r} is not the plan's {expected['exposure_s']}"
+        if budget.get("configured_exposure_subsamples") != expected["configured_exposure_subsamples"] or budget.get("oversampling") != expected["oversampling"]:
+            return f"{path}: arm {arm} detector budget sub-samples or oversampling are not the plan's"
+        if _canonical(budget.get("bandpass")) != _canonical(expected["bandpass"]):
+            return f"{path}: arm {arm} detector bandpass {budget.get('bandpass')!r} is not the plan's {expected['bandpass']!r}"
+        planned_nodes = expected["spectral_nodes_m"]
+        if len(nodes) != len(planned_nodes) or any(not math.isclose(float(a), float(b), rel_tol=1.0e-12, abs_tol=0.0) for a, b in zip(nodes, planned_nodes)):
+            return f"{path}: arm {arm} spectral nodes are not the plan's quadrature nodes {planned_nodes}"
+        if not _same_optional_float(budget.get("pixel_scale_rad"), expected["pixel_scale_rad"]) or not _same_optional_float(budget.get("diffusion_sigma_px"), expected["diffusion_sigma_px"]):
+            return f"{path}: arm {arm} detector pixel scale or diffusion is not the plan's"
         options = protocol["atmosphere_options"]
         if _canonical(entry.get("system_atmosphere_options")) != _canonical(options):
             return f"{path}: arm {arm} was built with other atmosphere options than the plan"
@@ -531,9 +580,31 @@ def check_run(path: Path, row: object, planned: dict[str, Any]) -> str | None:
         if len(hashes) != 1:
             return f"{path}: arm {arm} atmosphere hashes are missing or disagree between its metadata, loop and system records"
         atmosphere_hashes.add(atmosphere["config_hash"])
+        if atmosphere.get("realization_index") != protocol["realization"]:
+            return f"{path}: arm {arm} atmosphere realization {atmosphere.get('realization_index')!r} is not the planned {protocol['realization']}"
+        geometry_expected = expected["atmosphere"]
+        if geometry_expected is not None:
+            size = atmosphere.get("screen_size")
+            if not isinstance(size, int) or isinstance(size, bool) or size != geometry_expected["screen_size"]:
+                return f"{path}: arm {arm} screen size {size!r} is not the plan's {geometry_expected['screen_size']}"
+            if not _same_optional_float(atmosphere.get("screen_period_m"), geometry_expected["screen_period_m"], rel_tol=1.0e-9):
+                return f"{path}: arm {arm} screen period {atmosphere.get('screen_period_m')!r} is not the plan's {geometry_expected['screen_period_m']}"
+            if atmosphere.get("model_kind") != geometry_expected["model_kind"] or _canonical(atmosphere.get("grid_shape")) != _canonical(geometry_expected["grid_shape"]) or atmosphere.get("pairing_active") != geometry_expected["pairing_active"]:
+                return f"{path}: arm {arm} atmosphere model, grid shape or pairing flag is not the plan's"
+            for name in ("grid_delta_m", "pupil_diameter_m"):
+                if not _same_optional_float(atmosphere.get(name), geometry_expected[name]):
+                    return f"{path}: arm {arm} atmosphere {name} {atmosphere.get(name)!r} is not the plan's {geometry_expected[name]}"
+            if geometry_expected["pairing_active"]:
+                if atmosphere.get("band_limit_half_width_index") != geometry_expected["band_limit_half_width_index"] or atmosphere.get("reference_draw_normals_per_layer") != geometry_expected["reference_draw_normals_per_layer"]:
+                    return f"{path}: arm {arm} common-band half-width or reference draw size is not the plan's"
+                if not _same_optional_float(atmosphere.get("frequency_spacing_per_m"), geometry_expected["frequency_spacing_per_m"], rel_tol=1.0e-9):
+                    return f"{path}: arm {arm} frequency spacing is not the plan's"
+                retained = atmosphere.get("band_power_retained_fraction")
+                if not _finite_number(retained) or not 0.0 <= float(retained) <= 1.0:
+                    return f"{path}: arm {arm} band power retained fraction is not within [0, 1]"
         exposure = entry.get("wfs_exposure")
-        rule = protocol["parameters"]["exposure_rule"]
-        count = protocol["parameters"]["exposure_subsamples"]
+        rule = parameters["exposure_rule"]
+        count = parameters["exposure_subsamples"]
         if rule == "left_point" and count == 1:
             if exposure is not None:
                 return f"{path}: arm {arm} records an exposure quadrature the plan did not ask for"
@@ -541,6 +612,19 @@ def check_run(path: Path, row: object, planned: dict[str, Any]) -> str | None:
             expected_scheme = "midpoint_uniform_held_dm.v1" if rule == "midpoint" else "left_point_uniform_held_dm.v1"
             if not isinstance(exposure, dict) or exposure.get("scheme") != expected_scheme or exposure.get("subsamples") != count:
                 return f"{path}: arm {arm} exposure metadata {exposure!r} is not the planned {expected_scheme} with {count} sub-samples"
+            duration = exposure.get("duration_s")
+            if not _finite_number(duration) or float(duration) <= 0.0 or not math.isclose(float(duration), float(budget["exposure_s"]), rel_tol=1.0e-9, abs_tol=0.0):
+                return f"{path}: arm {arm} exposure duration {duration!r} is not the detector budget's positive exposure time {budget['exposure_s']}"
+            if rule == "midpoint":
+                offsets = exposure.get("sample_time_offsets_s")
+                expected_offsets = [(j + 0.5) * float(duration) / count for j in range(count)]
+                centred = isinstance(offsets, list) and len(offsets) == count and all(_finite_number(v) for v in offsets) and all(
+                    math.isclose(float(v), e, rel_tol=1.0e-9, abs_tol=0.0) for v, e in zip(offsets, expected_offsets)
+                )
+                if exposure.get("sample_rule") != "midpoint" or not centred:
+                    return f"{path}: arm {arm} midpoint exposure metadata does not carry the {count} centred sample offsets of its duration"
+            elif "sample_rule" in exposure:
+                return f"{path}: arm {arm} left-point exposure metadata carries a sample rule (not the historical payload)"
     if len(digests) != 1:
         return f"{path}: the arms saw different open-loop series (digests {sorted(digests)})"
     if len(atmosphere_hashes) != 1:
@@ -557,17 +641,27 @@ def check_run(path: Path, row: object, planned: dict[str, Any]) -> str | None:
         length = protocol["n_steps"] - protocol["burn_in_frames"]
         if not isinstance(series, list) or len(series) != length or not all(_finite_number(v) for v in series):
             return f"{path}: delta_v_m2 is not a series of {length} finite numbers"
+        if any(float(v) < 0.0 for v in series):
+            return f"{path}: delta_v_m2 has negative elements (a centred pupil mean square is non-negative)"
+        # The signed difference of the arms' mean squares (noisy minus twin) may be
+        # negative; only its finiteness is a domain condition.
+        if "mean_square_difference_m2" in paired and not _finite_number(paired["mean_square_difference_m2"]):
+            return f"{path}: the difference of mean squares is not a finite number"
         if paired.get("units") != "m2" or paired.get("series_axes") != ["analysed_frame"] or paired.get("series_length") != length:
             return f"{path}: delta_v_m2 is not declared with units m2 over the analysed_frame axis of length {length}"
-        if not _number(paired.get("mean_m2")) or not math.isclose(float(paired["mean_m2"]), float(np.mean(series)), rel_tol=1.0e-12, abs_tol=0.0):
+        if not _finite_number(paired.get("mean_m2")) or not math.isclose(float(paired["mean_m2"]), float(np.mean(series)), rel_tol=1.0e-12, abs_tol=0.0):
             return f"{path}: the DeltaV mean is not the mean of its series"
+        block_se = paired.get("block_standard_error_m2")
+        if block_se is not None and (not _finite_number(block_se) or float(block_se) < 0.0):
+            return f"{path}: the DeltaV block standard error is not a finite non-negative number or None"
     elif paired["status"] != "unavailable":
         return f"{path}: the plan did not ask for the paired DeltaV and the result reports one"
     timing = result.get("timing")
-    if not isinstance(timing, dict) or not _number(timing.get("wall_s")):
-        return f"{path}: no timing"
-    if not isinstance(row.get("ru_maxrss_bytes"), int):
-        return f"{path}: no child peak RSS"
+    if not isinstance(timing, dict) or not _finite_number(timing.get("wall_s")) or float(timing["wall_s"]) <= 0.0:
+        return f"{path}: no positive timing"
+    rss = row.get("ru_maxrss_bytes")
+    if not isinstance(rss, int) or isinstance(rss, bool) or rss <= 0:
+        return f"{path}: no positive child peak RSS"
     return None
 
 
@@ -800,11 +894,27 @@ def analyze(scale: str, runs: dict[str, dict[str, Any]], plan_runs: dict[str, Pl
                 pairing[reading]["adjacent_dilation"] = dilations
             axis_record["pairing"] = pairing
         else:
-            digests = {name: entry["open_loop_rms_series_sha256"] for name, entry in axis_record["settings"].items()}
+            # Keyed by realization: setting -> {realization: digest}; the arms of a row
+            # share one digest (check_run), so each row contributes one. Realizations
+            # differ from one another by design, so lists are never compared as sets.
+            by_realization = {
+                name: {int(row["protocol"]["realization"]): row["result"]["arms"][arms[0]]["open_loop_rms_series_sha256"] for row in rows}
+                for name, rows in settings.items()
+            }
+            realizations = sorted({realization for table in by_realization.values() for realization in table})
+            incomplete = [r for r in realizations if any(r not in table for table in by_realization.values())]
+            mismatched = [r for r in realizations if r not in incomplete and len({table[r] for table in by_realization.values()}) != 1]
+            shared = bool(realizations) and not incomplete and not mismatched
             axis_record["pairing"] = {
-                "open_loop_series_shared_by_all_settings": len({tuple(value) for value in digests.values()}) == 1 and all(len(value) == 1 for value in digests.values()),
-                "digests": digests,
-                "interpretation": "non-pupil axes share the atmosphere grid, so every setting must see the identical open-loop series",
+                "open_loop_series_shared_by_all_settings": shared,
+                "comparison": "per realization across settings: every setting holds the realization and sees the identical open-loop series",
+                "realizations": realizations,
+                "incomplete_realizations": incomplete,
+                "mismatched_realizations": mismatched,
+                "digests_by_setting_and_realization": {name: {str(r): d for r, d in sorted(table.items())} for name, table in by_realization.items()},
+                "digests": {name: sorted(set(table.values())) for name, table in by_realization.items()},
+                "distinct_digests_across_realizations": (len({d for table in by_realization.values() for d in table.values()}) == len(realizations)) if shared else None,
+                "interpretation": "non-pupil axes share the atmosphere grid, so each realization must see the identical open-loop series in every setting",
             }
         analysis["axes"][axis] = axis_record
     analysis["cost"] = {
