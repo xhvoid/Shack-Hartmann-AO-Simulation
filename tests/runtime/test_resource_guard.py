@@ -294,6 +294,92 @@ def test_workers_left_by_the_child_are_stopped_at_the_limits(tmp_path: Path):
     assert not done_file.exists()
 
 
+_ZOMBIE_LEADER = '''
+import os, subprocess, sys, time
+
+pid_file = sys.argv[1]
+joiner = "import os; os.setpgid(0, int(os.environ['JOIN_PGID']))"
+parent = (
+    "import os, subprocess, sys, time\\n"
+    f"child = subprocess.Popen([sys.executable, '-c', {joiner!r}])\\n"
+    f"open({pid_file!r}, 'w').write(f'{{os.getpid()}} {{child.pid}}')\\n"
+    "time.sleep(60)\\n"  # never reaps its child
+)
+# The parent gets a group of its own in this session, so only its child
+# joins the supervised group, exits there, and stays a zombie.
+subprocess.Popen(
+    [sys.executable, "-c", parent],
+    process_group=0,
+    env={**os.environ, "JOIN_PGID": str(os.getpgid(0))},
+)
+deadline = time.monotonic() + 20.0
+while time.monotonic() < deadline:
+    fields = open(pid_file).read().split() if os.path.exists(pid_file) else []
+    if len(fields) == 2:
+        state = subprocess.run(
+            ["ps", "-o", "pgid=,stat=", "-p", fields[1]],
+            capture_output=True, text=True,
+        ).stdout.split()
+        if state[:1] == [str(os.getpgid(0))] and state[1:2] and state[1][0] == "Z":
+            sys.exit(0)
+    time.sleep(0.05)
+sys.exit(3)
+'''
+
+
+def test_a_zombie_left_in_the_group_does_not_hold_a_finished_job(tmp_path: Path):
+    """A worker that has exited but is never reaped must not count as running.
+
+    In a container whose PID 1 does not reap orphans, finished workers stay
+    zombies.  The test builds that state directly: the zombie sits in the
+    supervised group while its parent, outside the group, never reaps it.
+    """
+
+    leader, pid_file = tmp_path / "leader.py", tmp_path / "pids"
+    leader.write_text(_ZOMBIE_LEADER)
+    try:
+        result = run_supervised(
+            [sys.executable, str(leader), str(pid_file)],
+            budget_bytes=512 * MIB,
+            timeout_s=8.0,
+            pressure_probe=_normal,
+            poll_interval_s=0.1,
+        )
+        parent_pid, zombie_pid = (int(value) for value in pid_file.read_text().split())
+        assert result.returncode == 0
+        assert result.status == "COMPLETED", result.reason
+        assert result.wall_s < 8.0
+    finally:
+        if pid_file.exists() and len(pid_file.read_text().split()) == 2:
+            os.kill(int(pid_file.read_text().split()[0]), signal.SIGKILL)
+    assert _wait_until_dead(parent_pid)
+    assert _wait_until_dead(zombie_pid)  # reaped once its parent is gone
+
+
+def test_stopping_a_group_of_zombies_neither_raises_nor_waits_out_the_grace():
+    import subprocess
+
+    import shwfs_ao.runtime.resource_guard as guard
+
+    # A group leader that has exited and is not yet reaped: a zombie-only
+    # group, which macOS refuses to signal (EPERM) and SIGKILL cannot clear.
+    leader = subprocess.Popen([sys.executable, "-c", "pass"], start_new_session=True)
+    deadline = time.monotonic() + 10.0
+    while True:
+        state = subprocess.run(
+            ["ps", "-o", "stat=", "-p", str(leader.pid)], capture_output=True, text=True
+        ).stdout.strip()
+        if state.startswith("Z"):
+            break
+        assert time.monotonic() < deadline, "the leader never became a zombie"
+        time.sleep(0.05)
+    assert not guard._group_alive(leader.pid)
+    started = time.monotonic()
+    guard._terminate_group(leader, cleanup_grace_s=2.0)
+    assert time.monotonic() - started < 1.0
+    assert leader.returncode == 0  # reaped by the cleanup
+
+
 def test_a_failing_probe_stops_the_group_instead_of_orphaning_it(tmp_path: Path):
     pid_file = tmp_path / "child.pid"
     calls = {"rss": 0}

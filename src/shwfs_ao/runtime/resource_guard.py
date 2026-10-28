@@ -675,7 +675,13 @@ def _terminate_group(
     try:
         os.killpg(pgid, signal.SIGTERM)
     except ProcessLookupError:
+        process.poll()
         return
+    except PermissionError:
+        # macOS refuses to signal a group that holds only zombies.  Nothing
+        # in it can run, and no signal would reap it.
+        if process.poll() is not None and not _group_alive(pgid):
+            return
     deadline = time.monotonic() + cleanup_grace_s
     while time.monotonic() < deadline:
         if process.poll() is not None and not _group_alive(pgid):
@@ -683,7 +689,7 @@ def _terminate_group(
         time.sleep(0.05)
     try:
         os.killpg(pgid, signal.SIGKILL)
-    except ProcessLookupError:
+    except (ProcessLookupError, PermissionError):
         pass
     try:
         process.wait(timeout=5.0)
@@ -691,14 +697,67 @@ def _terminate_group(
         pass
 
 
+_EXITED_PSUTIL_STATES = frozenset({"zombie", "dead"})
+_EXITED_PS_STATES = frozenset({"Z", "X"})
+
+
+def _group_member_running(pgid: int) -> list[bool] | None:
+    """For each member of ``pgid``, whether it is still running.
+
+    A zombie or dead member has exited and only waits to be reaped.  ``ps``
+    is read first because it reports a zombie's group on macOS, where
+    ``getpgid`` refuses zombies; psutil is the fallback (Linux ``getpgid``
+    accepts them).  Returns ``None`` when the members cannot be listed.
+    """
+
+    text = _run_text(["ps", "-A", "-o", "pgid=,stat="])
+    if text is not None:
+        running: list[bool] = []
+        for line in text.splitlines():
+            parts = line.split()
+            if len(parts) == 2 and parts[0].isdigit() and int(parts[0]) == pgid:
+                running.append(parts[1][:1] not in _EXITED_PS_STATES)
+        return running
+    psutil = _psutil()
+    if psutil is None:
+        return None
+    try:
+        running = []
+        for process in psutil.process_iter(["pid"]):
+            try:
+                if os.getpgid(process.pid) != pgid:
+                    continue
+                running.append(process.status() not in _EXITED_PSUTIL_STATES)
+            except Exception:  # vanished, or a zombie getpgid refuses
+                continue
+        return running
+    except Exception:  # the listing itself was refused
+        return None
+
+
 def _group_alive(pgid: int) -> bool:
+    """Whether any member of ``pgid`` is still running.
+
+    ``killpg(pgid, 0)`` alone cannot tell: Linux delivers signal 0 to a
+    zombie, and macOS refuses a group of zombies with EPERM.  A worker that
+    has exited stays a zombie until its parent reaps it, which can be never
+    in a container whose PID 1 does not reap orphans; counting it would hold
+    a finished job until the wall-clock limit.  So when the group exists the
+    members' states decide.  If they cannot be read, or the listing finds no
+    member the kernel still holds, the group counts as alive and the
+    supervisor's limits keep applying.
+    """
+
     try:
         os.killpg(pgid, 0)
     except ProcessLookupError:
         return False
-    except PermissionError:  # pragma: no cover - foreign group
+    except PermissionError:
+        pass  # a group of zombies on macOS, or a foreign group
+    running = _group_member_running(pgid)
+    if not running:
         return True
-    return True
+    return any(running)
 
 
 def run_supervised(
