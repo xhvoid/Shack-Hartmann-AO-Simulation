@@ -419,6 +419,32 @@ def test_hcipy_backend_resolves_through_the_shipped_registry_fail_closed() -> No
         )
 
 
+def test_wfs_photon_allocation_threads_from_config_through_the_factory() -> None:
+    base = _tiny_system_config("detector_level")
+    assert base.wfs.photon_allocation == "throughput_scaled"
+
+    default_system = scao.build_scao_system(base)
+    # The assembled sensor carries the config's allocation policy verbatim.
+    assert default_system.wfs.calibration.photon_allocation == "throughput_scaled"
+
+    unit_sum_config = replace(
+        base, wfs=replace(base.wfs, photon_allocation="unit_sum")
+    )
+    unit_sum_system = scao.build_scao_system(unit_sum_config)
+    assert unit_sum_system.wfs.calibration.photon_allocation == "unit_sum"
+
+    # The choice reaches the calibrated realization, so the live WFS component
+    # identity — not just the config — differs from the throughput default.
+    assert (
+        unit_sum_system.wfs.calibration.config_hash
+        != default_system.wfs.calibration.config_hash
+    )
+    assert (
+        unit_sum_system.component_hashes["wfs"]
+        != default_system.component_hashes["wfs"]
+    )
+
+
 def test_numerical_scale_is_hashed_separately_from_observing_conditions() -> None:
     config = _tiny_system_config()
     scaled = replace(

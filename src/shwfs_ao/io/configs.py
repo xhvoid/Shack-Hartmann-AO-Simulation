@@ -179,6 +179,9 @@ class WfsConfig:
     max_window_clipping_fraction: float
     central_obstruction_ratio: float
     spider_width_m: float
+    photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
+        "throughput_scaled"
+    )
 
     def __post_init__(self) -> None:
         fill = _fraction(self.min_fill_fraction, "min_fill_fraction")
@@ -215,6 +218,10 @@ class WfsConfig:
         object.__setattr__(self, "max_window_clipping_fraction", clipping)
         object.__setattr__(self, "central_obstruction_ratio", obstruction)
         object.__setattr__(self, "spider_width_m", _nonnegative(self.spider_width_m, "spider_width_m"))
+        if self.photon_allocation not in {"throughput_scaled", "unit_sum"}:
+            raise SystemConfigError(
+                "photon_allocation must be 'throughput_scaled' or 'unit_sum'."
+            )
 
     @property
     def config_hash(self) -> str:
@@ -578,7 +585,13 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
         science_wavelengths_m=_tuple_value(values["science_wavelengths_m"], "science_wavelengths_m"),
         atmosphere=_construct(AtmosphereConfig, values["atmosphere"], _ATMOSPHERE_FIELDS, "atmosphere", tuple_fields={"wind_m_per_s"}),
         detector=_construct(DetectorSystemConfig, values["detector"], _DETECTOR_FIELDS, "detector"),
-        wfs=_construct(WfsConfig, values["wfs"], _WFS_FIELDS, "wfs"),
+        wfs=_construct(
+            WfsConfig,
+            values["wfs"],
+            _WFS_FIELDS,
+            "wfs",
+            optional_fields=_WFS_OPTIONAL_FIELDS,
+        ),
         dm=_construct(DmSystemConfig, values["dm"], _DM_FIELDS, "dm", tuple_fields={"dead_actuator_indices", "stuck_actuator_indices"}),
         calibration=_construct(CalibrationConfig, values["calibration"], _CALIBRATION_FIELDS, "calibration"),
         reconstructor=_construct(ReconstructorConfig, values["reconstructor"], _RECONSTRUCTOR_FIELDS, "reconstructor"),
@@ -630,7 +643,11 @@ def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
 _SYSTEM_FIELDS = {"backend", "wfs_model", "atmosphere_model", "telescope_diameter_m", "pupil_pixels", "lenslets_across", "actuators_across", "wfs_wavelength_m", "science_wavelengths_m", "atmosphere", "detector", "wfs", "dm", "calibration", "reconstructor", "command_projector", "controller", "science", "random"}
 _ATMOSPHERE_FIELDS = {"r0_m", "r0_reference_wavelength_m", "outer_scale_m", "wind_m_per_s", "target_rms_opd_m", "normalize_rms"}
 _DETECTOR_FIELDS = {"enabled", "photons_per_subap_frame", "read_noise_e", "dark_e_per_s", "background_e_per_pixel_frame", "full_well_e", "qe", "prnu_rms", "exposure_s", "prnu_mode", "bad_pixel_fraction"}
-_WFS_FIELDS = {"min_fill_fraction", "pad_factor", "detector_window_px", "centroid_estimator", "threshold_fraction", "subtract_minimum", "min_flux_e", "min_peak_snr", "max_centroid_sigma_px", "max_window_clipping_fraction", "central_obstruction_ratio", "spider_width_m"}
+_WFS_FIELDS = {"min_fill_fraction", "pad_factor", "detector_window_px", "centroid_estimator", "threshold_fraction", "subtract_minimum", "min_flux_e", "min_peak_snr", "max_centroid_sigma_px", "max_window_clipping_fraction", "central_obstruction_ratio", "spider_width_m", "photon_allocation"}
+# photon_allocation was added after the first profiles were written; it is
+# optional on load so those profiles still deserialize and default to the
+# compatibility policy, while serialization always records it.
+_WFS_OPTIONAL_FIELDS = frozenset({"photon_allocation"})
 _DM_FIELDS = {"influence_model", "coupling_width_pitch", "stroke_limit_opd_m", "include_edge_actuators", "actuator_margin_fraction", "dead_actuator_indices", "stuck_actuator_indices", "stuck_command_opd_m"}
 _CALIBRATION_FIELDS = {"source", "method", "probe_kind", "amplitude_m", "include_noise", "repeats", "resource_name"}
 _RECONSTRUCTOR_FIELDS = {"kind", "rcond", "alpha", "min_valid_fraction", "min_rank", "max_cached_masks"}
@@ -647,9 +664,10 @@ def _construct(
     label: str,
     *,
     tuple_fields: frozenset[str] | set[str] = frozenset(),
+    optional_fields: frozenset[str] | set[str] = frozenset(),
 ) -> Any:
     mapping = _mapping(value, label)
-    _keys(mapping, fields, label)
+    _keys(mapping, fields, label, optional=optional_fields)
     kwargs = dict(mapping)
     for name in tuple_fields:
         kwargs[name] = _tuple_value(kwargs[name], f"{label}.{name}")
@@ -677,9 +695,15 @@ def _provenance(value: object) -> Provenance:
         raise SystemConfigError(f"invalid profile provenance: {exc}") from exc
 
 
-def _keys(value: Mapping[str, object], expected: set[str], label: str) -> None:
+def _keys(
+    value: Mapping[str, object],
+    expected: set[str],
+    label: str,
+    *,
+    optional: frozenset[str] | set[str] = frozenset(),
+) -> None:
     actual = set(value)
-    missing = sorted(expected - actual)
+    missing = sorted(expected - optional - actual)
     unknown = sorted(actual - expected)
     if missing or unknown:
         raise SystemConfigError(f"{label} fields mismatch; missing={missing}, unknown={unknown}.")

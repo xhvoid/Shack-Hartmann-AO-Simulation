@@ -138,6 +138,9 @@ class HcipyScaoComponentFactory:
         centroid_config: CentroidConfig,
         validity_config: CentroidValidityConfig,
         random_streams: RandomStreams,
+        photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
+            "throughput_scaled"
+        ),
     ) -> WavefrontSensor:
         if model != "detector_level":
             raise HcipyScaoFactoryError(
@@ -169,6 +172,7 @@ class HcipyScaoComponentFactory:
             random_streams=random_streams.scoped("hcipy-detector-wfs"),
             centroid_config=centroid_config,
             validity_config=validity_config,
+            photon_allocation=photon_allocation,
         )
 
     def build_dm(
