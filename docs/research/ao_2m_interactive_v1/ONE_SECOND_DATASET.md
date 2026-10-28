@@ -507,7 +507,20 @@ changed a third time, to
 `45cfb23088068b2a6d7a4a2166492cf9ae62500b7ceca2a42c97775f99d5a920` (the producer
 checks of a case record judged by the validator's rule, `web_contract.producer_check_problems`,
 instead of a truthiness filter over the booleans present). It generated nothing
-in this dataset either, and was tested on synthetic records only. `rms_diagnostics.py`, which wrote
+in this dataset either, and was tested on synthetic records only. **Exporter identity,
+2026-10-27 (review R19-01):** that version executed the shared rule but its content identity
+did not list it, so a change to the rule alone left the aggregate exporter digest unchanged.
+The identity (`long_export.CODE_FILES`) now also lists `web_contract.py` and `observer.py`,
+whose source the rule parses, and `long_export.py` changed a fourth time, to
+`67692bca86a0039eb7d74832390f04ae8f9fc35f73ebe2450289d51ae1278afb`. Three identities are kept
+apart: the digest of the file `long_export.py`; the aggregate exporter content digest
+(`code_identity()["sha256"]`, over the listed files; it keys a new dataset and is recorded in its
+provenance), which is
+`a8308ff89761903b3f0b3a9f800de94dc62133d1c512c352ae426c9bc9474ea2` over twelve files for this
+development version (`b3a1f84cc465c8994c2cb8578e8abf7ab8ec4d4171949955b24d1d6b52b9039d` over ten
+before the correction); and the generation identity recorded in this dataset, which stays
+`6e1ad796b7ce0c0ef695b2117ca87f644754dd65b95f2ac01392ebb11ffe2c8f` (aggregate) with
+`long_export.py` at `c6c53ce6…`. Nothing was exported with the development versions. `rms_diagnostics.py`, which wrote
 the RMS derivative, is
 `e7e343b4f8dac065f6714618f379f6c245b92040f091fb06f0e64ca85d202cf6`.
 
