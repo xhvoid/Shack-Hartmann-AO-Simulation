@@ -258,7 +258,7 @@ tr.excluded th, tr.excluded td { color: var(--muted); font-style: italic; }
 }
 
 /* Paired NGS replay: equal spatial scales and one transport. */
-.ngsr-panel { scroll-margin-top:24px; }
+.ngsr-panel { scroll-margin-top:140px; }
 .ngsr-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; max-width:880px; margin:16px auto; }
 .ngsr-grid figure { margin:0; min-width:0; }
 .ngsr-grid h3 { font-size:15px; margin:0 0 8px; }
@@ -272,4 +272,4 @@ tr.excluded th, tr.excluded td { color: var(--muted); font-style: italic; }
 .ngsr-event { padding:8px 12px; border-left:3px solid #777; background:#f0ede6; }
 .ngsr-event[data-phase="loss"], .ngsr-event[data-phase="after"] { border-color:#a3324e; }
 #ngsr-seek { max-width:100%; width:220px; }
-@media(max-width:600px) { .ngsr-grid { gap:7px; } .ngsr-grid h3 { font-size:12px; } .ngsr-grid figcaption { font-size:10px; } }
+@media(max-width:600px) { .ngsr-panel { scroll-margin-top:16px; } .ngsr-grid { gap:7px; } .ngsr-grid h3 { font-size:12px; } .ngsr-grid figcaption { font-size:10px; } }
