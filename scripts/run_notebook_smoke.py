@@ -16,14 +16,19 @@ or hidden local files.
 Offline execution is enforced at two levels, because one of them is not
 enough.  The outer level is the real one: the runner subprocess and the kernel
 it starts are placed in their own network namespace containing nothing but
-loopback, so *no* code they run can reach the network — a ``!curl`` cell, a
-``%pip install``, a ``subprocess.run``, a C extension, or a direct call into
-the private ``_socket`` module.  Loopback is brought up inside the namespace
-because Jupyter's own ZMQ channels use it.  The inner level is an injected
-first cell that denies outbound IPv4/IPv6 connections and non-loopback name
-resolution inside the kernel, which turns an attempted access into a clear
-Python error naming the address instead of an opaque "Network is unreachable"
-from somewhere deep in a library.
+loopback, so *no* code they run has an interface through which to reach the
+network — a ``!curl`` cell, a ``%pip install``, a ``subprocess.run``, a C
+extension, or a direct call into the private ``_socket`` module.  Loopback is
+brought up inside the namespace because Jupyter's own ZMQ channels use it.
+What the namespace removes is network interfaces, and nothing else: the
+filesystem is shared with the host, so a host service listening on a Unix
+socket bound to a path — a Docker daemon socket, for instance, which can start
+a container on the host network — stays reachable with whatever file
+permissions allow, and is outside this contract.  The inner level is an
+injected first cell that denies outbound IPv4/IPv6 connections and
+non-loopback name resolution inside the kernel, which turns an attempted
+access into a clear Python error naming the address instead of an opaque
+"Network is unreachable" from somewhere deep in a library.
 
 Namespace isolation is a Linux facility, so ``--network-isolation`` states what
 to do when it is unavailable.  The default, ``required``, refuses to run: a
@@ -79,24 +84,27 @@ DEFAULT_NETWORK_ISOLATION = "required"
 _NAMESPACE_SHELL = 'ip link set lo up && exec "$0" "$@"'
 
 # Run after a candidate has initialized loopback to decide whether it may be
-# used. ``$2`` is a caller-owned private file that must remain readable. ``$1``
-# is the *outer* network namespace — the one the notebook must not be able to
-# return to — so nsenter's refusal to enter it is the observation that a network
-# namespace alone would not have produced, and that a bare `unshare --net`
-# would have failed.  Printed as a word rather than signalled by exit status,
-# because the interface listing has to come back from the same run.
+# used. ``$2`` is a caller-owned private file that must remain readable.
+# /proc/self/status reports the credentials the probe actually runs with, which
+# the sudo form must show dropped to the caller's.  ``$1`` is the *outer*
+# network namespace — the one the notebook must not be able to return to — so
+# nsenter's refusal to enter it is the observation that a network namespace
+# alone would not have produced, and that a bare `unshare --net` would have
+# failed.  Printed as a word rather than signalled by exit status, because the
+# interface listing has to come back from the same run.
 _NAMESPACE_PROBE = (
     'test -r "$2" && ip -o link show && cat /proc/self/status && '
     'if nsenter --net="$1" true 2>/dev/null; '
     "then echo ESCAPE_SUCCEEDED; else echo ESCAPE_REFUSED; fi"
 )
 
-# Run by _kill_process_group when the group it must end is owned by root.  The
-# process group id arrives as an argument rather than being interpolated, so
-# nothing is re-parsed and the call is the same killpg the parent just tried.
-# argv[1] is the runner's process group; the rest are the individual
-# descendants that live outside it. Both are needed for the same reason the
-# unprivileged path needs both.
+# Run by _kill_process_group when the group it must end was started through
+# sudo, whose wrapper and namespace setup are owned by root.  The process group
+# id arrives as an argument rather than being interpolated, so nothing is
+# re-parsed and the call is the same killpg the parent just tried.  argv[1] is
+# the runner's process group; the rest are the individual descendants that
+# live outside it. Both are needed for the same reason the unprivileged path
+# needs both.
 _REISSUE_KILLPG = (
     "import os, signal, sys\n"
     "try:\n"
@@ -514,9 +522,9 @@ def _network_namespace_prefix() -> list[str] | None:
     """A command prefix that runs its argument in a loopback-only namespace.
 
     Returns ``None`` when this environment cannot provide one.  Availability is
-    established by *doing* it rather than by inspecting the platform: unshare
-    and ip must exist, the namespace must actually be created, and it must
-    contain loopback and nothing else.  A probe that merely started is not
+    established by *doing* it rather than by inspecting the platform: unshare,
+    ip and nsenter must exist, the namespace must actually be created, and it
+    must contain loopback and nothing else.  A probe that merely started is not
     evidence, so the interface list is read back and checked — an unexpected
     result means the prefix is not returned rather than silently used.  That
     check is what makes an ``unshare`` which silently did not take, or a sudo
@@ -620,11 +628,15 @@ def _resolve_network_isolation(mode: str) -> list[str]:
             "Network isolation is unavailable on this platform, so the "
             "notebooks cannot be executed under the offline contract: the "
             "in-kernel guard is a tripwire, not a sandbox, and a subprocess or "
-            "a direct _socket call reaches the network past it. Linux with "
-            "unshare(1) and ip(8) provides it, through unprivileged user "
-            "namespaces, an existing CAP_SYS_ADMIN, or passwordless sudo; on "
-            "Ubuntu 24.04 and later the first of those needs "
-            "kernel.apparmor_restrict_unprivileged_userns=0. Pass "
+            "a direct _socket call reaches the network past it. Linux "
+            "provides it when unshare(1), ip(8) and nsenter(1) are all "
+            "installed and either the caller can create a user namespace "
+            "(unprivileged user namespaces, or an existing CAP_SYS_ADMIN; on "
+            "Ubuntu 24.04 and later the unprivileged form needs "
+            "kernel.apparmor_restrict_unprivileged_userns=0) or passwordless "
+            "sudo is available together with setpriv(1), which drops the "
+            "runner back to the caller's identity with no capabilities before "
+            "any notebook code runs. Pass "
             "--network-isolation auto to run anyway with the tripwire alone, "
             "knowing the contract is not enforced."
         )
@@ -661,9 +673,12 @@ def _runner_command(
     # default), so the MPLBACKEND this process set for the kernel would be
     # dropped on the way through and a notebook could reach for an interactive
     # backend on a headless runner.  Re-stating it inside the namespace costs
-    # one exec and keeps every isolation form running the same kernel
-    # environment. Restore the caller's home as well, so Jupyter and plotting
-    # libraries use its writable configuration/cache directories after sudo.
+    # one exec and keeps the backend the same under every isolation form.
+    # Restore the caller's home as well, so Jupyter and plotting libraries use
+    # its writable configuration/cache directories after sudo.  Nothing else
+    # is carried across, so the environments still differ: the unprivileged
+    # form inherits this process's whole environment, while under sudo the
+    # runner and kernel see sudo's reset environment plus HOME and MPLBACKEND.
     inner = (
         ["env", f"HOME={Path.home()}", "MPLBACKEND=Agg", *runner]
         if _sudo_escalation(isolation_prefix)
@@ -673,13 +688,19 @@ def _runner_command(
 
 
 def _kill_process_group(process: subprocess.Popen, escalation: list[str]) -> None:
-    """Kill the runner and its kernel; both live in one session/group.
+    """Kill the runner's group and every descendant, the kernel included.
 
     ``escalation`` is :func:`_sudo_escalation` for the isolation prefix that
     started the process, and is empty for every unelevated one.  It exists
     because kill(2) delivers a signal only when the sender's real or effective
-    uid matches the target's real or saved uid: everything behind sudo has both
-    set to root, so an unprivileged parent's killpg raises EPERM.  Left
+    uid matches the target's real or saved uid.  Under the sudo form that holds
+    for some processes and not others.  The runner, and the kernel it starts,
+    run as the caller: setpriv(1) makes the caller's uid and gid the real,
+    effective and saved ids and clears every capability set before the runner
+    starts, which the probe confirms from /proc/self/status.  The sudo wrapper
+    itself is root-owned, and so is the namespace setup it runs (unshare and
+    the shell that brings loopback up) until setpriv drops to the caller, so an
+    unprivileged parent's signal to those is refused with EPERM.  Left
     unhandled the budget would surface a PermissionError instead of its own
     message while the notebook it was meant to bound kept running.
 
@@ -722,13 +743,15 @@ def _kill_process_group(process: subprocess.Popen, escalation: list[str]) -> Non
         if escalation:
             # Unconditional, not a fallback for EPERM. kill(2) reports success
             # when the signal reached *at least one* member of the group, and
-            # under sudo the group holds both the signalable sudo process and
-            # the root descendants it started. Killing sudo alone therefore
-            # returns success while the kernel — the thing the budget exists to
-            # stop — keeps running with the notebook still executing in it. The
-            # privileged pass is the only one that can reach those descendants,
-            # so it runs whenever the group was started privileged, whatever the
-            # unprivileged attempt reported.
+            # under sudo the group can hold caller-owned processes beside
+            # root-owned ones. The runner and kernel are caller-owned and are
+            # reached by the signals above; the sudo wrapper is not, nor is the
+            # namespace setup while it still runs — and a budget that expires
+            # before setpriv has dropped to the caller finds the process that
+            # was about to become the runner still root-owned. A successful
+            # killpg says nothing about those, and only the privileged pass can
+            # reach them, so it runs whenever the group was started privileged,
+            # whatever the unprivileged attempt reported.
             subprocess.run(
                 [
                     *escalation,
