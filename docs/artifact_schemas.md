@@ -237,7 +237,11 @@ python scripts/generate_cross_backend_candidate.py \
 Generation refuses packaged destinations and existing candidate files, writes
 machine-readable and Markdown diffs, and does not accept. Acceptance never
 reruns the experiment; it validates that the reviewed candidate/diff still
-match, requires human metadata, and then updates only the named baseline. CI
+match, requires human metadata, and then updates only the named baseline. A
+fast candidate whose reference JSON disagrees with its own CSVs
+(reference-scenario metrics other than the rounded CSV row, or a
+passing-check count the validation table contradicts) is refused before
+anything is copied. CI
 guards accepted-resource hashes and the complete worktree around tests,
 examples, notebooks, and ordinary generators.
 
