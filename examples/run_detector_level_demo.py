@@ -5,7 +5,7 @@ a synthetic EMCCD, photometric AB source and sky, estimated calibration
 products and RTC pixel processing) through the canonical
 ``build_scao_system`` / ``run_closed_loop`` API, then prints and writes a
 summary: residual RMS, valid-measurement fraction, and the
-``detector_covariance_v1`` centroid sigma of the last frame.  It takes a few
+``detector_covariance_v2`` centroid sigma of the last frame.  It takes a few
 seconds and well under 300 MiB.
 
 Outputs go to ``$AO_DEMO_OUTPUT_DIR`` or, when that variable is unset,

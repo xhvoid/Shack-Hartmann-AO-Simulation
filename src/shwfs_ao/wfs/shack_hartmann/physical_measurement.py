@@ -9,7 +9,7 @@ Per frame it runs
     -> physical camera chain (``shwfs_ao.detector.physical_camera.v1``)
     -> RTC pixel processing with fixed calibration products
     -> centroid on the central window of each block
-    -> ``detector_covariance_v1`` quality and validity gates.
+    -> ``detector_covariance_v2`` quality and validity gates.
 
 The optics backend returns blocks of ``window + 2 * guard`` pixels; the guard
 ring exists so that electronic coupling and charge diffusion act on real
@@ -53,7 +53,12 @@ from ...detector.noise_model import (
 )
 from ...detector.physical import POISSON_ROUNDOFF_FLOOR, apply_physical_camera
 from ...detector.physical_config import PhysicalDetectorConfig, physical_budget
-from ...detector.processing import CalibrationProducts, build_calibration_products, process_frames
+from ...detector.processing import (
+    CalibrationProducts,
+    build_calibration_products,
+    process_frames,
+    without_sky_master,
+)
 from ...detector.validity import DEFAULT_CENTROID_VALIDITY, CentroidValidityConfig
 from .calibration import row_ids_for_subapertures
 from .compact_geometry import CompactShackHartmannGeometry, geometries_match
@@ -130,6 +135,7 @@ class PhysicalShackHartmannSensor:
         if source is None:
             self._reference_budget = self._budget
             self._reference_sky = self._sky
+            self._reference_products = products
         else:
             if area_fraction is None:
                 raise PhysicalShackHartmannError(
@@ -141,6 +147,8 @@ class PhysicalShackHartmannSensor:
             self._reference_budget = reference_budget
             self._reference_budget.flags.writeable = False
             self._reference_sky = np.zeros_like(self._sky)
+            # The source is observed without sky: subtract bias and dark only.
+            self._reference_products = None if products is None else without_sky_master(products)
         self._area_fraction = None if area_fraction is None else np.array(area_fraction, dtype=float)
         reference = np.array(reference_centroids_px, dtype=float)
         reference.flags.writeable = False
@@ -220,6 +228,7 @@ class PhysicalShackHartmannSensor:
                 {
                     "response_hash": self._response_hash,
                     "calibration_source_detected_e_per_full_subap_frame": float(source),
+                    "reference_additive_master": "bias_and_dark_without_sky_v1",
                 },
             )
         noisy_payload: dict[str, Any] = {
@@ -484,7 +493,7 @@ class PhysicalShackHartmannSensor:
         return int(self._config.exposure_subsamples)
 
     def noise_model(self, residual_opd_m: np.ndarray) -> ExtendedCentroidQuality:
-        """``detector_covariance_v1`` prediction at a fixed residual (no draws).
+        """``detector_covariance_v2`` prediction at a fixed residual (no draws).
 
         Returns the :class:`~shwfs_ao.detector.noise_model.ExtendedCentroidQuality`
         the validity gates would see for this residual, including each
@@ -547,6 +556,44 @@ class PhysicalShackHartmannSensor:
 
         if not isinstance(include_noise, (bool, np.bool_)):
             raise PhysicalShackHartmannError("include_noise must be a boolean.")
+        return self._measure_samples(
+            residual_opd_samples,
+            random_streams=random_streams,
+            include_noise=bool(include_noise),
+            operating=bool(include_noise),
+        )
+
+    def measure_operating_expectation(
+        self,
+        residual_opd_samples: Sequence[np.ndarray],
+        *,
+        random_streams: RandomStreams,
+    ) -> WfsMeasurement:
+        """The noiseless expectation of an operating exposure.
+
+        Unlike ``measure_exposure(..., include_noise=False)``, which is the
+        calibration observation (the internal source when one is declared),
+        this observes the guide star and sky at the operating budget through
+        the operating products, with every detector noise draw replaced by its
+        mean.  Paired with a noise-on loop it isolates the temporal detector
+        noise contribution (DET-09).
+        """
+
+        return self._measure_samples(
+            residual_opd_samples,
+            random_streams=random_streams,
+            include_noise=False,
+            operating=True,
+        )
+
+    def _measure_samples(
+        self,
+        residual_opd_samples: Sequence[np.ndarray],
+        *,
+        random_streams: RandomStreams,
+        include_noise: bool,
+        operating: bool,
+    ) -> WfsMeasurement:
         samples = tuple(residual_opd_samples)
         if not samples:
             raise PhysicalShackHartmannError("at least one residual sample is required.")
@@ -566,7 +613,8 @@ class PhysicalShackHartmannSensor:
         centroids, telemetry_parts = self._centroids_from_spots(
             spots[0] if len(spots) == 1 else tuple(spots),
             random_streams=random_streams if include_noise else None,
-            include_noise=bool(include_noise),
+            include_noise=include_noise,
+            operating=operating,
             telemetry=True,
         )
         return self._measurement(centroids, telemetry_parts, include_noise=bool(include_noise), random_streams=random_streams)
@@ -601,12 +649,16 @@ class PhysicalShackHartmannSensor:
         *,
         random_streams: RandomStreams | None,
         include_noise: bool,
+        operating: bool | None = None,
         telemetry: bool = False,
     ) -> tuple[np.ndarray, dict[str, Any]]:
         # The deterministic reference path observes the calibration source when
-        # one is declared; noisy measurements observe the star and the sky.
-        budget = self._budget if include_noise else self._reference_budget
-        sky = self._sky if include_noise else self._reference_sky
+        # one is declared; noisy measurements, and the noiseless operating
+        # expectation, observe the star and the sky.
+        operating = include_noise if operating is None else operating
+        budget = self._budget if operating else self._reference_budget
+        sky = self._sky if operating else self._reference_sky
+        products = self._products if operating else self._reference_products
         source, window_capture = self._expected_source(spots, budget)
         generators = None
         scoped: list[Any] = []
@@ -630,7 +682,7 @@ class PhysicalShackHartmannSensor:
             generators=generators,
             poisson_floor_e=self._poisson_floor,
         )
-        processed = process_frames(batch.raw, self._products, self._config.processing)
+        processed = process_frames(batch.raw, products, self._config.processing)
         rows, cols = self._layout.window_slice
         window = processed[:, rows, cols]
         centroids = _window_centroids(window, self._centroid_config)
@@ -645,6 +697,7 @@ class PhysicalShackHartmannSensor:
                 "n_samples": 1 if isinstance(spots, SpotIntensityResult) else len(spots),
                 "scoped": scoped,
                 "sky": sky,
+                "products": products,
             }
         return centroids, parts
 
@@ -657,13 +710,14 @@ class PhysicalShackHartmannSensor:
         random_streams: RandomStreams,
     ) -> WfsMeasurement:
         batch = parts["batch"]
+        products = parts["products"]
         n = centroids.shape[0]
         quality = detector_covariance_quality(
             expected_source_e=batch.expected_source_e,
             expected_background_e=batch.expected_background_e,
             camera=self._camera,
             maps=self._map_arrays,
-            products=self._products,
+            products=products,
             processing=self._config.processing,
             centroid_config=self._centroid_config,
             window=self._layout.window_slice,
@@ -699,7 +753,7 @@ class PhysicalShackHartmannSensor:
         frames = None
         optical_spots = None
         if self._telemetry_level == "full":
-            products_hash = None if self._products is None else self._products.content_hash
+            products_hash = None if products is None else products.content_hash
             frame_list = []
             for index in range(n):
                 stream_ids: dict[str, str] = {}
@@ -770,7 +824,7 @@ class PhysicalShackHartmannSensor:
             "camera_preset": f"{self._camera.preset_name}@{self._camera.preset_version}",
             "processing_mode": self._config.processing.mode,
             "calibration_products_hash": (
-                None if self._products is None else self._products.content_hash
+                None if products is None else products.content_hash
             ),
             "camera_maps_realization_hash": self._maps.realization_hash,
             "random_root_seed": int(random_streams.root_seed),

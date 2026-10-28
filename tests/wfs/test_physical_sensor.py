@@ -28,6 +28,7 @@ from shwfs_ao.detector.processing import (
     PixelProcessingConfig,
     build_calibration_products,
     process_frames,
+    without_sky_master,
 )
 from shwfs_ao.wfs.shack_hartmann.geometry import build_shack_hartmann_geometry
 from shwfs_ao.wfs.shack_hartmann.physical_measurement import (
@@ -152,10 +153,17 @@ def test_identity_rules_of_the_physical_sensor() -> None:
     summary = base.with_telemetry_level("summary")
     for name in ("config_hash", "response_hash", "noisy_response_hash", "detector_hash", "noise_stream_identity"):
         assert getattr(summary, name) == getattr(base, name)
+    # With the ADC on, read noise dithers the reference quantizer and moves
+    # the response identity (review R1); with the ADC off it moves only the
+    # noisy response.
     read_noise, _ = build(physical(camera(read_noise_e=6.0), proc=oracle))
-    assert read_noise.response_hash == base.response_hash
+    assert read_noise.response_hash != base.response_hash
     assert read_noise.camera_maps.realization_hash == base.camera_maps.realization_hash
     assert read_noise.noisy_response_hash != base.noisy_response_hash
+    analog, _ = build(physical(camera(adc_bits=None), proc=oracle))
+    analog_read_noise, _ = build(physical(camera(adc_bits=None, read_noise_e=6.0), proc=oracle))
+    assert analog_read_noise.response_hash == analog.response_hash
+    assert analog_read_noise.noisy_response_hash != analog.noisy_response_hash
     adc, _ = build(physical(camera(adc_bits=12), proc=oracle))
     assert adc.response_hash != base.response_hash
     guard, _ = build(physical(proc=oracle, guard=1))
@@ -378,3 +386,120 @@ def test_a_calibration_source_decouples_calibration_from_the_operating_flux() ->
     # Without a source, the reference follows the operating flux.
     plain, _ = build(physical(proc=processing("oracle"), magnitude=6.0, sky=None))
     assert plain.response_hash != bright.response_hash
+
+
+
+# -- Review 2026-10-16: R1 (response identity) and R3 (calibration source sky) --
+
+
+def _tilt_response(sensor: PhysicalShackHartmannSensor, streams) -> np.ndarray:
+    tilt = np.where(sensor.geometry.pupil_mask, 1.0e-7 * sensor.geometry.x_m, 0.0)
+    telemetry = sensor.measure(tilt, random_streams=streams, include_noise=False).detector_telemetry
+    return telemetry.centroids_xy_px - telemetry.reference_centroids_xy_px
+
+
+@pytest.mark.parametrize("adc_bits", [12, None], ids=["adc_on", "adc_off"])
+def test_equal_response_identities_mean_equal_reference_responses(adc_bits: int | None) -> None:
+    # Fixed maps and products; only the read noise differs.  With the ADC on
+    # the dithered reference quantizer changes, and so must the identity; with
+    # the ADC off neither changes (review R1).
+    cam = camera(
+        adc_bits=adc_bits, read_noise_e=0.0, dark_e_per_s=0.0, hot_pixel_fraction=0.0,
+        hot_pixel_dark_e_per_s=0.0, prnu_rms=0.0, dead_pixel_fraction=0.0,
+        conversion_gain_e_per_adu=100.0, bias_adu=100.0, offset_map_rms_adu=0.0,
+    )
+    base = physical(cam, proc=processing("oracle"), magnitude=6.0, sky=None)
+    quiet, streams = build(base)
+    noisy, noisy_streams = build(
+        replace(base, camera=replace(cam, read_noise_e=100.0)), products=quiet.calibration_products
+    )
+    zero = np.zeros(quiet.geometry.pupil_shape)
+    raw = [
+        np.stack([f.raw_image for f in s.measure(zero, random_streams=r, include_noise=False).detector_telemetry.detector_frames])
+        for s, r in ((quiet, streams), (noisy, noisy_streams))
+    ]
+    responses = [_tilt_response(quiet, streams), _tilt_response(noisy, noisy_streams)]
+    if adc_bits is None:
+        assert quiet.response_hash == noisy.response_hash
+        np.testing.assert_array_equal(raw[0], raw[1])
+        np.testing.assert_array_equal(responses[0], responses[1])
+    else:
+        assert quiet.response_hash != noisy.response_hash
+        assert float(np.max(np.abs(raw[0] - raw[1]))) > 0.1
+        assert float(np.max(np.abs(responses[0] - responses[1]))) > 0.01
+
+
+def test_a_calibration_source_reference_subtracts_bias_and_dark_but_no_sky() -> None:
+    # The internal source is observed without sky, so its frames must not have
+    # the operating sky master subtracted (review R3): a linear, noiseless,
+    # oracle camera returns exactly the source.
+    linear = camera(
+        adc_bits=None, read_noise_e=0.0, full_well_e=1.0e9, dark_e_per_s=0.0, hot_pixel_fraction=0.0,
+        hot_pixel_dark_e_per_s=0.0, prnu_rms=0.0, dead_pixel_fraction=0.0,
+        conversion_gain_e_per_adu=1.0, bias_adu=0.0, offset_map_rms_adu=0.0,
+    )
+    config = replace(
+        physical(linear, proc=processing("oracle"), magnitude=6.0, sky=12.0),
+        calibration_source_detected_e_per_full_subap_frame=5.0e4,
+    )
+    sensor, streams = build(config)
+    assert float(np.min(sensor.sky_e_per_pixel)) > 0.1
+    zero = np.zeros(sensor.geometry.pupil_shape)
+    reference = sensor.measure(zero, random_streams=streams, include_noise=False)
+    for frame in reference.detector_telemetry.detector_frames:
+        np.testing.assert_allclose(frame.image_e, frame.expected_source_e, rtol=0.0, atol=1e-9)
+        assert frame.calibration_products_hash != sensor.calibration_products.content_hash
+    # Operating frames observe star and sky and still subtract the sky master.
+    operating = sensor.measure(zero, random_streams=streams, include_noise=True)
+    frame = operating.detector_telemetry.detector_frames[4]
+    assert frame.calibration_products_hash == sensor.calibration_products.content_hash
+    residual = frame.image_e - frame.expected_source_e
+    assert abs(float(np.mean(residual))) < 3.0 * math.sqrt(float(np.mean(frame.expected_pre_poisson_e)) / residual.size)
+
+
+def test_estimated_products_with_a_calibration_source_keep_the_sky_out_of_the_reference() -> None:
+    # Estimated masters: the reference image equals the source plus only the
+    # bias and dark master errors, never minus the sky level.
+    config = replace(
+        physical(proc=processing("estimated"), magnitude=6.0, sky=12.0),
+        calibration_source_detected_e_per_full_subap_frame=5.0e4,
+    )
+    sensor, streams = build(config)
+    products = sensor.calibration_products
+    assert products.sky_raw is not None
+    frame = sensor.measure(
+        np.zeros(sensor.geometry.pupil_shape), random_streams=streams, include_noise=False
+    ).detector_telemetry.detector_frames[4]
+    without_sky = without_sky_master(products)
+    block = np.array([4])
+    expected = process_frames(frame.raw_image[None], without_sky, config.processing, indices=block)[0]
+    np.testing.assert_array_equal(frame.image_e, expected)
+    assert frame.calibration_products_hash == without_sky.content_hash
+    # Against the operating products, the only difference on live pixels is
+    # the sky master, which the reference no longer loses.
+    with_sky = process_frames(frame.raw_image[None], products, config.processing, indices=block)[0]
+    live = ~frame.bad_pixel_mask
+    sky_master_e = products.sky_raw[4] * products.conversion_input_e_per_raw[4] / products.flat[4]
+    np.testing.assert_allclose((frame.image_e - with_sky)[live], sky_master_e[live], rtol=0.0, atol=1e-9)
+
+
+def test_the_operating_expectation_observes_the_star_not_the_calibration_source() -> None:
+    # measure(include_noise=False) is the calibration observation (the
+    # internal source); the operating expectation is the noiseless star.
+    config = replace(
+        physical(proc=processing("estimated"), magnitude=6.0, sky=12.0),
+        calibration_source_detected_e_per_full_subap_frame=5.0e4,
+    )
+    sensor, streams = build(config)
+    zero = np.zeros(sensor.geometry.pupil_shape)
+    noisy = sensor.measure(zero, random_streams=streams, include_noise=True).detector_telemetry
+    calibration = sensor.measure(zero, random_streams=streams, include_noise=False).detector_telemetry
+    expectation = sensor.measure_operating_expectation((zero,), random_streams=streams).detector_telemetry
+    star = np.array([frame.expected_source_e.sum() for frame in noisy.detector_frames])
+    np.testing.assert_allclose([frame.expected_source_e.sum() for frame in expectation.detector_frames], star, rtol=1e-12)
+    assert not np.allclose([frame.expected_source_e.sum() for frame in calibration.detector_frames], star)
+    for frame in expectation.detector_frames:
+        assert frame.calibration_products_hash == sensor.calibration_products.content_hash
+    # Noiseless: the same exposure twice is identical, whatever the streams.
+    again = sensor.measure_operating_expectation((zero,), random_streams=streams).detector_telemetry
+    np.testing.assert_array_equal(again.centroids_xy_px, expectation.centroids_xy_px)
