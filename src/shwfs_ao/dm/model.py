@@ -822,8 +822,10 @@ def _build_actuator_metadata(
 
 def _readonly_array(values: npt.ArrayLike, *, dtype: npt.DTypeLike) -> np.ndarray:
     if is_immutable_buffer_array(values, dtype=dtype):
-        # Already immutable: sharing it avoids a second dense influence cube.
-        return values
+        # Already immutable: sharing its buffer avoids a second dense influence
+        # cube.  A fresh view keeps shape and dtype metadata private to the
+        # caller, so reshaping the returned array cannot reshape ours.
+        return values.view()
     contiguous = np.ascontiguousarray(np.array(values, dtype=dtype, copy=True))
     immutable = np.frombuffer(contiguous.tobytes(order="C"), dtype=contiguous.dtype)
     return immutable.reshape(contiguous.shape)
