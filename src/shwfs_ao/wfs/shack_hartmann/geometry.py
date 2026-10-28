@@ -189,7 +189,21 @@ class ShackHartmannGeometry:
                 raise ShackHartmannGeometryError(
                     f"subaperture_masks[{index}] must not be empty."
                 )
-            if not np.array_equal(mask, expected_mask):
+            # Frozen legacy facades keep the historical half-open final cells,
+            # which omit the +x/+y pupil-edge samples of the same lenslet.
+            if not np.array_equal(mask, expected_mask) and not np.array_equal(
+                mask,
+                _lenslet_cell(
+                    pupil.x_m,
+                    pupil.y_m,
+                    x_edges_m,
+                    y_edges_m,
+                    row=row,
+                    column=column,
+                    close_final_edges=False,
+                )
+                & pupil.pupil_mask,
+            ):
                 raise ShackHartmannGeometryError(
                     f"subaperture_masks[{index}] does not match physical lenslet "
                     f"row {row}, column {column}."
@@ -318,8 +332,76 @@ def partition_pupil_geometry(
     n_lenslets_across: int,
     min_fill_fraction: float,
 ) -> ShackHartmannGeometry:
-    """Retain lenslet cells whose illuminated sampled-area fraction passes a cut."""
+    """Retain lenslet cells whose illuminated sampled-area fraction passes a cut.
 
+    The cells tile every pupil sample exactly once: cell intervals are
+    half-open ``[lower, upper)`` except that the final row and column also
+    include the ``+x``/``+y`` pupil edge, so odd grids keep their edge samples
+    and every final cell's fill fraction uses its full sampled block.
+    """
+
+    return _partition_lenslet_cells(
+        pupil_geometry,
+        n_lenslets_across=n_lenslets_across,
+        min_fill_fraction=min_fill_fraction,
+        close_final_edges=True,
+    )
+
+
+def _legacy_partition_pupil_geometry(
+    pupil_geometry: PupilGeometry,
+    *,
+    n_lenslets_across: int,
+    min_fill_fraction: float,
+) -> ShackHartmannGeometry:
+    """Partition with the frozen legacy half-open cells on every edge.
+
+    Samples on the final ``+x``/``+y`` pupil edges belong to no lenslet, and
+    the final cells' fill fractions omit them.  Only legacy facades use this.
+    """
+
+    return _partition_lenslet_cells(
+        pupil_geometry,
+        n_lenslets_across=n_lenslets_across,
+        min_fill_fraction=min_fill_fraction,
+        close_final_edges=False,
+    )
+
+
+def _legacy_build_shack_hartmann_geometry(
+    config: ShwfsGeometryConfig | None,
+) -> ShackHartmannGeometry:
+    """Build a config geometry with the frozen legacy half-open lenslet cells."""
+
+    if config is None:
+        config = ShwfsGeometryConfig()
+    elif not isinstance(config, ShwfsGeometryConfig):
+        raise ShackHartmannGeometryError(
+            "config must be a ShwfsGeometryConfig or None."
+        )
+    try:
+        pupil = build_pupil_geometry(
+            telescope_diameter_m=config.telescope_diameter_m,
+            pupil_shape=(config.n_pupil_pixels, config.n_pupil_pixels),
+            central_obstruction_ratio=config.central_obstruction_ratio,
+            spider_width_m=config.spider_width_m,
+        )
+    except GeometryError as exc:
+        raise ShackHartmannGeometryError(str(exc)) from exc
+    return _legacy_partition_pupil_geometry(
+        pupil,
+        n_lenslets_across=config.n_lenslets,
+        min_fill_fraction=config.min_fill_fraction,
+    )
+
+
+def _partition_lenslet_cells(
+    pupil_geometry: PupilGeometry,
+    *,
+    n_lenslets_across: int,
+    min_fill_fraction: float,
+    close_final_edges: bool,
+) -> ShackHartmannGeometry:
     if not isinstance(pupil_geometry, PupilGeometry):
         raise ShackHartmannGeometryError(
             "pupil_geometry must be a PupilGeometry."
@@ -338,6 +420,7 @@ def partition_pupil_geometry(
     masks: list[np.ndarray] = []
     centers: list[tuple[float, float]] = []
     identifiers: list[str] = []
+    assigned_samples = 0
     # Deliberately retain the frozen repository traversal: x/column outer,
     # y/row inner.  Physical indices in the ID make this backend-independent.
     for column in range(count_across):
@@ -349,8 +432,10 @@ def partition_pupil_geometry(
                 y_edges_m,
                 row=row,
                 column=column,
+                close_final_edges=close_final_edges,
             )
             cell_samples = int(np.count_nonzero(cell))
+            assigned_samples += cell_samples
             if cell_samples == 0:
                 continue
             valid = cell & pupil_geometry.pupil_mask
@@ -367,6 +452,11 @@ def partition_pupil_geometry(
             )
             identifiers.append(subaperture_id(row, column))
 
+    # Disjoint cells whose sizes sum to the grid size cover every sample once.
+    if close_final_edges and assigned_samples != pupil_geometry.pupil_mask.size:
+        raise ShackHartmannGeometryError(
+            "Lenslet cells must assign every pupil sample to exactly one cell."
+        )
     if not masks:
         raise ShackHartmannGeometryError(
             "No illuminated lenslet cells meet min_fill_fraction."
@@ -445,13 +535,34 @@ def _lenslet_cell(
     *,
     row: int,
     column: int,
+    close_final_edges: bool = True,
 ) -> np.ndarray:
-    return (
-        (x_m >= x_edges_m[column])
-        & (x_m < x_edges_m[column + 1])
-        & (y_m >= y_edges_m[row])
-        & (y_m < y_edges_m[row + 1])
+    return _cell_interval(
+        x_m,
+        x_edges_m,
+        column,
+        close_final_edge=close_final_edges,
+    ) & _cell_interval(
+        y_m,
+        y_edges_m,
+        row,
+        close_final_edge=close_final_edges,
     )
+
+
+def _cell_interval(
+    values_m: np.ndarray,
+    edges_m: np.ndarray,
+    index: int,
+    *,
+    close_final_edge: bool,
+) -> np.ndarray:
+    # Interior cells are half-open so a shared edge belongs to one cell; the
+    # final cell also owns the upper pupil edge, which equals max(values_m).
+    lower = values_m >= edges_m[index]
+    if close_final_edge and index == edges_m.size - 2:
+        return lower & (values_m <= edges_m[index + 1])
+    return lower & (values_m < edges_m[index + 1])
 
 
 def _positive_integer(value: object, *, label: str) -> int:
