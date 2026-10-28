@@ -178,4 +178,6 @@ tr.excluded th, tr.excluded td { color: var(--muted); font-style: italic; }
 .rms-values dt { font-size: 12px; overflow-wrap: anywhere; }
 .rms-values dt span { display: block; color: var(--muted); font-size: 11px; }
 .rms-values dd { margin: 2px 0 0; font-family: var(--mono); font-size: 14px; }
+#galaxy-rms-readout { max-width: 900px; margin-top: 10px; }
+#galaxy-rms-readout .rms-values dd { font-size: 18px; font-variant-numeric: tabular-nums; }
 @media (max-width: 600px) { .rms-values { grid-template-columns: 1fr; } }

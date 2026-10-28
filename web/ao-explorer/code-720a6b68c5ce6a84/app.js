@@ -512,7 +512,11 @@ function renderRmsReadout(k, t, mode) {
     ["Total residual RMS", "piston removed; tilt retained", values[1]],
     ["Residual RMS after tip/tilt removal", r ? "piston and fitted tilt removed" : `piston and fitted tilt removed; unavailable for this case: ${c.rmsError}`, values[2]],
   ];
-  $("rms-readout").innerHTML = `<p class="rms-head">${head}</p><dl class="rms-values">${rows.map(([name, rule, value]) => `<div><dt>${name} <span>${escapeHtml(rule)}</span></dt><dd>${value === null ? "unavailable" : `${fmt(value)} nm OPD`}</dd></div>`).join("")}</dl>`;
+  const markup = `<p class="rms-head">${head}</p><dl class="rms-values">${rows.map(([name, rule, value]) => `<div><dt>${name} <span>${escapeHtml(rule)}</span></dt><dd>${value === null ? "unavailable" : `${fmt(value)} nm OPD`}</dd></div>`).join("")}</dl>`;
+  for (const id of ["rms-readout", "galaxy-rms-readout"]) $(id).innerHTML = markup;
+  $("galaxy-rms-mode-note").textContent = average
+    ? "Temporal means of the per-frame RMS values over the analysis window, not the RMS of an averaged wavefront. Images retain their original tip/tilt."
+    : "The same recorded case and frame as the PSFs, galaxy animation and chart cursor. Tip/tilt removal applies only to the third RMS value; the images retain their original tip/tilt.";
   const third = r ? "" : " The residual RMS after tip/tilt removal is unavailable for this case, so only the two recorded series are shown.";
   $("rms-mode-note").textContent = average
     ? `Average mode: temporal means of the per-frame RMS values over frames ${START()}–${FRAMES() - 1} (${lo.toFixed(3)}–${hi.toFixed(3)} s, ${COUNT()} frames). They are not the RMS of an averaged wavefront and not inferred from the average PSF. The chart cursor only marks the paused frame ${k}; it is not part of these statistics.${third}`
