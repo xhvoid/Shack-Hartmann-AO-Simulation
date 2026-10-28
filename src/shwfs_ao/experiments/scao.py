@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import json
 from pathlib import PurePosixPath
 from types import MappingProxyType
-from typing import Any, Protocol, cast, runtime_checkable
+from typing import Any, Literal, Protocol, cast, runtime_checkable
 
 import numpy as np
 
@@ -118,6 +118,9 @@ class ScaoBackendComponentFactory(Protocol):
         centroid_config: CentroidConfig,
         validity_config: CentroidValidityConfig,
         random_streams: RandomStreams,
+        photon_allocation: Literal["throughput_scaled", "unit_sum"] = (
+            "throughput_scaled"
+        ),
     ) -> WavefrontSensor:
         ...
 
@@ -322,6 +325,7 @@ def build_scao_system(
         centroid_config=_centroid_config(config),
         validity_config=_validity_config(config),
         random_streams=streams,
+        photon_allocation=config.wfs.photon_allocation,
     )
     science_propagator = factory.build_science_propagator(
         geometry=geometry,
