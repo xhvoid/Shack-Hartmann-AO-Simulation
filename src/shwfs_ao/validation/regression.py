@@ -959,6 +959,18 @@ def _validate_comparison(comparison: object) -> None:
                 f"metric {metric['name']!r} level and criterion type must "
                 "agree on informational status."
             )
+        # An informational metric's value never gates, but it is still a
+        # measurement: a runtime in seconds, a peak memory, a standard error.
+        # Requiring it to be a finite number is what makes it evidence rather
+        # than a slot that can be filled with prose — and it is what the
+        # packaged JSON Schema already requires of it.
+        if criterion["type"] == "informational" and not _finite_number(metric["value"]):
+            raise BaselineContractError(
+                f"metric {metric['name']!r} is informational, so its recorded "
+                "value must still be a finite number: it is the measurement "
+                f"the gated values are read against, not a label. Got "
+                f"{metric['value']!r}."
+            )
         # An exact metric must gate on equality, never on a tolerance or a
         # range that a later edit could widen into an always-passing check.
         if metric["level"] == "exact" and criterion["type"] != "equals":

@@ -10,6 +10,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 import time
+import types
 from pathlib import Path
 
 import pytest
@@ -163,7 +164,12 @@ def test_network_guard_blocks_name_resolution_before_any_dns_query_leaves():
         "getnameinfo",
     )
     saved = {name: getattr(socket, name) for name in resolvers}
-    saved_connect = socket.socket.connect
+    # The guard replaces every one of these; restoring only some leaves a
+    # deny-by-default hook installed for the rest of the pytest session.
+    saved_methods = {
+        name: getattr(socket.socket, name)
+        for name in ("connect", "connect_ex", "sendto", "sendmsg")
+    }
     try:
         resolved: list = []
         socket.getaddrinfo = lambda host, *args, **kwargs: (
@@ -241,7 +247,31 @@ def test_network_guard_blocks_name_resolution_before_any_dns_query_leaves():
     finally:
         for name, original in saved.items():
             setattr(socket, name, original)
-        socket.socket.connect = saved_connect
+        for name, original in saved_methods.items():
+            setattr(socket.socket, name, original)
+
+
+def test_the_guard_tests_leave_no_hook_installed_in_this_process():
+    """Every socket entry point the guard patches must be restored.
+
+    These tests exec the guard against the *real* socket module, so a hook left
+    behind denies traffic for every later test in the same process.
+    """
+
+    import socket
+
+    for name in (
+        "getaddrinfo",
+        "gethostbyname",
+        "gethostbyname_ex",
+        "gethostbyaddr",
+        "getnameinfo",
+    ):
+        module_level = getattr(socket, name)
+        assert module_level.__module__ in ("socket", "_socket"), (name, module_level)
+    for name in ("connect", "connect_ex", "sendto", "sendmsg"):
+        method = getattr(socket.socket, name)
+        assert not isinstance(method, types.FunctionType), (name, method)
 
 
 def test_network_guard_installs_where_sendmsg_does_not_exist():

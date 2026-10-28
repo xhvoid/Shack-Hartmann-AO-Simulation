@@ -346,6 +346,94 @@ def test_running_a_supplied_system_never_rebuilds_or_recalibrates_it(
         scao.run_closed_loop(config, system=forged)
 
 
+def test_a_supplied_interaction_matrix_is_part_of_the_remembered_identity() -> None:
+    """A supplied matrix is an input to the build, not a product of it.
+
+    Two systems can share a configuration and differ only in the matrix handed
+    to them, so the remembered identity is only reusable for the same matrix —
+    otherwise the memo would answer for a build that never happened.
+    """
+
+    build_config = _tiny_system_config()
+    first_matrix = scao.build_scao_system(build_config).interaction_matrix
+    other_matrix = scao.build_scao_system(
+        replace(
+            build_config,
+            calibration=replace(build_config.calibration, amplitude_m=2.0e-8),
+        )
+    ).interaction_matrix
+    assert first_matrix.matrix_hash != other_matrix.matrix_hash
+
+    supplied_config = replace(
+        build_config,
+        calibration=replace(build_config.calibration, source="supplied"),
+    )
+    first = scao.build_scao_system(supplied_config, interaction_matrix=first_matrix)
+    second = scao.build_scao_system(supplied_config, interaction_matrix=other_matrix)
+
+    # Same configuration, different supplied matrix, therefore different keys
+    # and different remembered identities.
+    assert scao._build_identity_key(supplied_config, first_matrix) != (
+        scao._build_identity_key(supplied_config, other_matrix)
+    )
+    assert scao._recall_build_identity(supplied_config, first_matrix) == dict(
+        first.component_hashes
+    )
+    assert scao._recall_build_identity(supplied_config, other_matrix) == dict(
+        second.component_hashes
+    )
+    assert first.component_hashes["interaction_matrix"] != (
+        second.component_hashes["interaction_matrix"]
+    )
+
+    # And both verify against their own matrix rather than each other's.
+    scao.run_closed_loop(supplied_config, system=first)
+    scao.run_closed_loop(supplied_config, system=second)
+
+
+def test_a_remembered_identity_is_only_reused_for_an_equal_configuration() -> None:
+    """The memo key is a hash; the remembered configuration is the authority.
+
+    A hit that did not re-compare the configuration would make a hash the sole
+    basis for reusing an identity, so this guard is what keeps the memo an
+    optimization rather than a second, weaker trust path.
+    """
+
+    config = _tiny_system_config()
+    system = scao.build_scao_system(config)
+    assert scao._recall_build_identity(config, None) == dict(system.component_hashes)
+
+    # Poison the entry under the honest key with a different configuration.
+    key = scao._build_identity_key(config, None)
+    stranger = replace(
+        config,
+        atmosphere=replace(config.atmosphere, target_rms_opd_m=90.0e-9),
+    )
+    scao._BUILD_IDENTITY_MEMO[key] = (stranger, dict(system.component_hashes))
+    assert scao._recall_build_identity(config, None) is None
+
+    # A miss falls back to the rebuild, so the honest system still runs.
+    scao.run_closed_loop(config, system=system)
+
+
+def test_the_build_identity_memo_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A long-running process may build many configurations; eviction costs a
+    # rebuild, never correctness.
+    monkeypatch.setattr(scao, "_BUILD_IDENTITY_MEMO", {})
+    monkeypatch.setattr(scao, "_BUILD_IDENTITY_MEMO_LIMIT", 3)
+    base = _tiny_system_config()
+    keys = []
+    for index in range(6):
+        config = replace(
+            base, controller=replace(base.controller, n_steps=2 + index)
+        )
+        scao._remember_build_identity(config, None, {"probe": "x" * 8})
+        keys.append(scao._build_identity_key(config, None))
+    assert len(scao._BUILD_IDENTITY_MEMO) == 3
+    assert keys[0] not in scao._BUILD_IDENTITY_MEMO
+    assert keys[-1] in scao._BUILD_IDENTITY_MEMO
+
+
 def test_replacing_a_backend_factory_invalidates_the_build_identity_memo() -> None:
     """The factory registry is an input to what a configuration builds.
 
@@ -381,6 +469,15 @@ def test_replacing_a_backend_factory_invalidates_the_build_identity_memo() -> No
             # Three times the static aberration this profile asked for.
             kwargs["static_opd_rms_m"] = kwargs["static_opd_rms_m"] * 3.0  # type: ignore[operator]
             return honest_factory.build_atmosphere(**kwargs)  # type: ignore[arg-type]
+
+    # Registering a backend for the FIRST time invalidates nothing: no
+    # configuration could have been built against a backend that was not yet
+    # registered, and clearing there would put back the rebuild-and-recalibrate
+    # cost the memo exists to avoid.
+    remembered = dict(scao._BUILD_IDENTITY_MEMO)
+    assert remembered
+    scao._factory_for("hcipy")
+    assert dict(scao._BUILD_IDENTITY_MEMO) == remembered
 
     try:
         scao.register_scao_backend_factory("native", StrongerAberration(), replace=True)

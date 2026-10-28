@@ -649,6 +649,17 @@ def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
     so one config always has one serialized form.  The record's schema version
     is independent of ``profile_version`` — a v1 *profile* re-serializes as a v2
     *record* that still identifies itself as ``…@1`` and parses back equal.
+
+    Note what that costs, because it is easy to be surprised by: the schema
+    version is *inside* the hashed mapping, so bumping
+    :data:`PROFILE_SCHEMA_VERSION` changes ``SystemConfig.config_hash`` for
+    every profile, including ones whose physics and whose packaged record did
+    not change.  A result labelled with a profile from before the bump will not
+    reproduce the hash the same profile reports afterwards.  The v2 bump already
+    did this to the ``@1`` profiles.  A future schema version must therefore be
+    a deliberate decision about identity, not only about record format;
+    ``tests/io/test_configs.py`` pins every packaged identity so the change
+    cannot pass unnoticed.
     """
 
     if not isinstance(config, SystemConfig):
