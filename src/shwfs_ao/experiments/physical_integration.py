@@ -31,7 +31,13 @@ from ..legacy.ao_integration import (
     build_reference_metrics,
     build_validation_results,
 )
-from .error_budget import ScenarioResult, run_error_budget_scenarios
+from .error_budget import (
+    AOErrorBudgetError,
+    ScenarioResult,
+    _require_integer,
+    _require_positive,
+    run_error_budget_scenarios,
+)
 from .atmospheric_disturbance import physical_error_budget_scenarios
 
 
@@ -85,6 +91,11 @@ class PhysicalIntegrationConfig:
             real system achieves; zero would describe a loop applying this
             frame's measurement to this frame's mirror.
         turbulence_speed_m_s: Frozen-flow wind speed.
+
+    ``n_steps`` and ``latency_frames`` must be genuine integers (``bool`` is
+    rejected), and the five physical quantities must be finite and positive.
+    Nothing is coerced first: a fractional frame count raises rather than
+    running truncated under another configuration's ``config_hash``.
     """
 
     n_steps: int = 24
@@ -98,15 +109,17 @@ class PhysicalIntegrationConfig:
     source_note: str = DEFAULT_SOURCE_NOTE
 
     def __post_init__(self) -> None:
-        if int(self.n_steps) < 2:
-            raise AOIntegrationError("n_steps must be >= 2.")
-        for name in ("r0_m", "outer_scale_m", "r0_reference_wavelength_m",
-                     "frame_rate_hz", "turbulence_speed_m_s"):
-            value = float(getattr(self, name))
-            if not value > 0.0:
-                raise AOIntegrationError(f"{name} must be positive.")
-        if int(self.latency_frames) < 0:
-            raise AOIntegrationError("latency_frames must be >= 0.")
+        # The ScenarioConfig validators every row is eventually built from,
+        # applied before any int()/float() normalization below can truncate
+        # 24.9 to 24 or let an infinite rate through to the hash.
+        try:
+            _require_integer("n_steps", self.n_steps, minimum=2)
+            for name in ("r0_m", "outer_scale_m", "r0_reference_wavelength_m",
+                         "frame_rate_hz", "turbulence_speed_m_s"):
+                _require_positive(name, getattr(self, name))
+            _require_integer("latency_frames", self.latency_frames, minimum=0)
+        except AOErrorBudgetError as exc:
+            raise AOIntegrationError(str(exc)) from exc
         if self.source_class not in ALLOWED_SOURCE_CLASSES:
             raise AOIntegrationError(
                 f"source_class={self.source_class!r} is not in the permitted "

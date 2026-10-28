@@ -386,9 +386,13 @@ def physical_error_budget_scenarios(
 
     The default ``r0_m`` is the value the packaged observing conditions imply
     at 500 nm; ``n_steps`` at 1 kHz covers about ten atmospheric coherence
-    times.
+    times.  ``n_steps`` and ``latency_frames`` must be genuine integers: they
+    are checked before the ``int()`` normalization below, which would
+    otherwise truncate a fractional count before ``ScenarioConfig`` sees it.
     """
 
+    _require_integer("n_steps", n_steps, minimum=2)
+    _require_integer("latency_frames", latency_frames, minimum=0)
     common: dict[str, Any] = {
         "n_steps": int(n_steps),
         "frame_rate_hz": float(frame_rate_hz),

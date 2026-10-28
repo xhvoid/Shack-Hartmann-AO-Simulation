@@ -305,6 +305,24 @@ def test_physical_scenario_matrix_covers_the_required_rows() -> None:
     assert by_name["all_effects"].latency_frames == 2
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("n_steps", 24.9),
+        ("n_steps", "24"),
+        ("latency_frames", 2.9),
+        ("latency_frames", True),
+    ),
+)
+def test_physical_scenario_matrix_rejects_non_integer_frame_counts(
+    field: str, value: object
+) -> None:
+    # The builder normalized with int() before ScenarioConfig's strict check
+    # could see the value, so 24.9 frames silently became 24-frame rows.
+    with pytest.raises(AOErrorBudgetError, match=f"{field} must be an integer"):
+        physical_error_budget_scenarios(**{field: value})
+
+
 def test_default_matrix_still_uses_the_proxy_so_baselines_hold() -> None:
     from shwfs_ao.experiments.error_budget import default_error_budget_scenarios
 
