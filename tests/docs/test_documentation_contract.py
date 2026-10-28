@@ -7,6 +7,7 @@ import importlib.util
 from pathlib import Path
 import re
 import sys
+from typing import cast
 
 from shwfs_ao.calibration.diagnostics import InteractionDiagnostics
 from shwfs_ao.calibration.interaction import InteractionMatrix, ProbeBasis
@@ -273,17 +274,24 @@ def _package_node(module_parts: list[str]) -> str | None:
     return module_parts[0] if module_parts[0] in set(_DIAGRAM_NODES.values()) else None
 
 
-def _source_import_graph() -> dict[tuple[str, str], str]:
+def _source_import_graph(package_root: Path | None = None) -> dict[tuple[str, str], str]:
     """Every intra-package import edge, as ``(source, target) -> 'eager'|'deferred'``.
 
     An edge is eager when at least one import of it sits at module level, and
     deferred when every import of it is inside a function body — the optional
     backends and the factories chosen at build time.
+
+    ``from X import a`` binds either an attribute of ``X`` or the submodule
+    ``X.a``, and only the second is a dependency on another package.  Both
+    readings are therefore resolved: for every module-level path the name can
+    denote, whichever resolves to a package node wins.  Missing that would leave
+    ``from .. import calibration`` — a real cross-package import — deriving no
+    edge at all, so the diagram and this guard would go stale together.
     """
 
     import ast
 
-    package_root = ROOT / "src" / "shwfs_ao"
+    package_root = package_root or ROOT / "src" / "shwfs_ao"
     edges: dict[tuple[str, str], str] = {}
     for path in sorted(package_root.rglob("*.py")):
         parts = list(path.relative_to(package_root).with_suffix("").parts)
@@ -303,17 +311,20 @@ def _source_import_graph() -> dict[tuple[str, str], str]:
         for node in ast.walk(tree):
             imported: list[list[str]] = []
             if isinstance(node, ast.ImportFrom):
+                base: list[str] | None = None
                 if node.level:
                     base = (
                         package_parts[: len(package_parts) - (node.level - 1)]
                         if node.level > 1
                         else package_parts
-                    )
-                    imported = [
-                        base + (node.module.split(".") if node.module else [])
-                    ]
+                    ) + (node.module.split(".") if node.module else [])
                 elif (node.module or "").startswith("shwfs_ao"):
-                    imported = [node.module.split(".")[1:]]
+                    base = cast(str, node.module).split(".")[1:]
+                if base is not None:
+                    # The module itself, and each imported name read as a
+                    # submodule of it — ``from .. import calibration`` names a
+                    # package, not an attribute.
+                    imported = [base] + [base + [alias.name] for alias in node.names]
             elif isinstance(node, ast.Import):
                 imported = [
                     alias.name.split(".")[1:]
@@ -379,3 +390,34 @@ def test_the_package_dependency_diagram_matches_the_real_import_graph():
         "solid means a module-level import and dashed means one deferred to "
         f"call time; these disagree (edge, documented, actual): {wrong_kind}"
     )
+
+
+def test_the_derived_graph_sees_a_package_imported_by_name(tmp_path):
+    """``from .. import <package>`` is a dependency, not an attribute access.
+
+    The guard above is only worth having if it catches a dependency added
+    *later*, and this is the import form whose module path alone resolves to the
+    package root — so reading only that path derives no edge, the diagram stays
+    silent, and the two go stale together while the test still passes.
+    """
+
+    package_root = tmp_path / "shwfs_ao"
+    (package_root / "io").mkdir(parents=True)
+    (package_root / "calibration").mkdir(parents=True)
+    (package_root / "core").mkdir(parents=True)
+    for sub in ("io", "calibration", "core"):
+        (package_root / sub / "__init__.py").write_text("", encoding="utf-8")
+    (package_root / "io" / "reader.py").write_text(
+        # Both readings of the same syntax, and one that must NOT become an edge.
+        "from .. import calibration\n"
+        "from ..core.types import Wavefront\n"
+        "from .reader_helpers import thing\n",
+        encoding="utf-8",
+    )
+
+    derived = _source_import_graph(package_root)
+
+    assert derived.get(("io", "calibration")) == "eager"
+    assert derived.get(("io", "core")) == "eager"
+    # An imported *name* that is not a package invents nothing.
+    assert set(derived) == {("io", "calibration"), ("io", "core")}
