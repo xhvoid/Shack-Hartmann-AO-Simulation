@@ -27,15 +27,18 @@ importable without NumPy; ``tests/ao_explorer/test_validate_contracts.py``
 checks that the restated values still equal the exporters'.  The v2 producer's
 record checks (the ``checks`` mapping every case record carries and the v2
 provenance copies) are read from the source of ``long_series.run_case`` and the
-observers it uses, without importing them (``producer_checks_v2``).
+observers it uses, without importing them (``producer_checks_v2``), and one
+rule judges such a mapping wherever it is read (``producer_check_problems``):
+in the provenance by the validator and in the case record by ``long_export.py``.
 """
 
 from __future__ import annotations
 
 import ast
 from dataclasses import dataclass, field
+import math
 from pathlib import Path
-from typing import Any, Dict, FrozenSet, Optional, Tuple
+from typing import Any, Dict, FrozenSet, List, Optional, Tuple
 
 import long_series
 import protocol
@@ -170,6 +173,63 @@ class ProducerChecks:
     required_true: Tuple[str, ...]
     window_fields: Tuple[str, str]
     diagnostics: Dict[str, Tuple[Tuple[str, ...], bool]]
+
+
+@dataclass(frozen=True)
+class ProducerCheckProblems:
+    """What a ``checks`` mapping lacks against :class:`ProducerChecks`; it conforms when :attr:`ok` is true.
+
+    ``kind`` is the type name when the mapping is not an object (then nothing else is judged); ``missing`` and
+    ``unexpected`` compare its fields with the recorded ones; ``not_true`` lists required checks that are absent
+    or not literally ``True``; ``frames_wrong`` and ``count_wrong`` say the recorded analysis window is not the
+    contract's; ``diagnostics`` lists diagnostic records with other keys, a non-finite value or a negative absolute deviation.
+    """
+
+    kind: Optional[str] = None
+    missing: Tuple[str, ...] = ()
+    unexpected: Tuple[str, ...] = ()
+    not_true: Tuple[str, ...] = ()
+    frames_wrong: bool = False
+    count_wrong: bool = False
+    diagnostics: Tuple[str, ...] = ()
+
+    @property
+    def ok(self) -> bool:
+        return self.kind is None and not (self.missing or self.unexpected or self.not_true or self.frames_wrong or self.count_wrong or self.diagnostics)
+
+
+def _finite_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def producer_check_problems(checks: Any, expected: ProducerChecks, window: Tuple[int, int], count: int) -> ProducerCheckProblems:
+    """Judge a producer ``checks`` mapping against the producer's own contract, without tolerance or coercion.
+
+    The one rule for every reader: exactly the recorded fields; each required check literally ``True`` (a string,
+    number or null is not a pass, and a check the filter cannot see is not a pass either); the analysis frames a
+    list of ints equal to ``[window[0], window[1]]`` and the count the int ``count``; every diagnostic with the
+    producer's keys and finite numbers, absolute deviations non-negative.
+    """
+
+    if not isinstance(checks, dict):
+        return ProducerCheckProblems(kind=type(checks).__name__)
+    missing = tuple(name for name in expected.recorded if name not in checks)
+    unexpected = tuple(sorted(str(name) for name in checks if name not in expected.recorded))
+    not_true = tuple(f"{name}={checks[name]!r}" if name in checks else f"{name} missing" for name in expected.required_true if checks.get(name) is not True)
+    frames_key, count_key = expected.window_fields
+    frames, recorded_count = checks.get(frames_key), checks.get(count_key)
+    bad: List[str] = []
+    for name, (keys, absolute) in expected.diagnostics.items():
+        record = checks.get(name)
+        if not isinstance(record, dict) or sorted(record) != sorted(keys):
+            bad.append(f"{name} keys {sorted(record) if isinstance(record, dict) else type(record).__name__}")
+            continue
+        bad.extend(f"{name}.{key}={record[key]!r}" for key in keys if not _finite_number(record[key]) or (absolute and record[key] < 0))
+    return ProducerCheckProblems(
+        missing=missing, unexpected=unexpected, not_true=not_true,
+        frames_wrong=not (isinstance(frames, list) and all(type(value) is int for value in frames) and frames == list(window)),
+        count_wrong=not (type(recorded_count) is int and recorded_count == count), diagnostics=tuple(bad),
+    )
 
 
 def _function(tree: ast.AST, name: str, owner: Optional[str] = None) -> ast.FunctionDef:
