@@ -78,6 +78,9 @@ code-<build>/galaxy.js          observed-template galaxy view
 code-<build>/playback.js        the one playback state and clock both panels operate
 code-<build>/results.js         topic evidence and lazy appendix rendering
 code-<build>/replay42.js        fixed 42 m recording and independent timeline
+code-<build>/c1-noise.js        the separate static C1 noise summary and its chart
+code-<build>/dm-stroke.js       saved DM stroke and saturation check
+code-<build>/aperture.js        matched 2 m aperture comparison
 code-<build>/ngs-replay.js      synchronized v1/v2 2.2 m wavefront/PSF replay
 code-<build>/charts.js          canvas charts of recorded values
 code-<build>/integrity.js       size + SHA-256 verification, relative resolution

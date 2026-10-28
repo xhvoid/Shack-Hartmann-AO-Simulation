@@ -23,7 +23,10 @@ import { BundleError, fetchVerified, fetchVerifiedImage, fetchVerifiedJson, isFi
 import { PALETTE, lineChart, redrawWhenResized } from "./charts.js";
 import { renderResults, renderProjectEvidence, initNgs22 } from "./results.js";
 import { initNgsReplay, initNgsControl } from "./ngs-replay.js";
-import { initReplay42, initApertureComparison, initDmStroke, initC1Noise } from "./replay42.js";
+import { initReplay42 } from "./replay42.js";
+import { initC1Noise } from "./c1-noise.js";
+import { initDmStroke } from "./dm-stroke.js";
+import { initApertureComparison } from "./aperture.js";
 import { initGalaxy, showGalaxyCase } from "./galaxy.js";
 import * as playback from "./playback.js";
 
