@@ -103,12 +103,23 @@ def test_static_detector_loop_converges_and_command_norm_is_finite_after_50_step
     tail = history.residual_opd_rms[-10:]
     assert history.residual_opd_rms.shape == (50,)
     assert history.command_norm.shape == (50,)
+    assert history.command_rms_nm.shape == (50,)
+    assert history.command_l2_norm_nm.shape == (50,)
     assert history.valid_centroid_frac.shape == (50,)
     assert history.command_history_nm.shape == (50, dm_model.n_actuators)
     assert history.residual_opd_rms[10] < history.residual_opd_rms[0]
     assert history.residual_opd_rms[-1] < 0.05 * history.residual_opd_rms[0]
     assert np.std(tail) < 1.0e-4 * history.residual_opd_rms[0]
     assert np.isfinite(history.command_norm[-1])
+    assert history.command_rms_nm == pytest.approx(
+        np.sqrt(np.mean(history.command_history_nm**2, axis=1))
+    )
+    assert history.command_l2_norm_nm == pytest.approx(
+        np.linalg.norm(history.command_history_nm, axis=1)
+    )
+    assert history.command_l2_norm_nm == pytest.approx(
+        np.sqrt(dm_model.n_actuators) * history.command_rms_nm
+    )
     assert np.all(history.valid_centroid_frac == pytest.approx(1.0))
 
 
@@ -134,8 +145,28 @@ def test_loop_history_summary_and_units_are_reported(closed_loop_case):
     assert summary["source_class"] == "synthetic_assumed"
     assert len(summary["config_hash"]) == 64
     assert history.units["residual_opd_rms"] == "nm_OPD_RMS"
-    assert history.units["command_norm"] == "nm_OPD_equivalent"
+    assert history.units["command_rms_nm"] == "nm_OPD_equivalent_RMS_across_actuators"
+    assert history.units["command_l2_norm_nm"] == "nm_OPD_equivalent_L2_norm"
+    assert history.units["command_norm"] == "nm_OPD_equivalent_L2_norm_compatibility_alias"
     assert history.units["valid_centroid_frac"] == "fraction"
+
+
+def test_loop_hash_tracks_phase_truth_content_not_only_shape(closed_loop_case):
+    calibration, dm_model, poke = closed_loop_case
+    static_phase = _dm_generated_phase(closed_loop_case, command_scale_nm=0.5)
+    config = DetectorLoopConfig(
+        n_steps=4,
+        gain=0.3,
+        include_detector_noise=False,
+        source_note="Loop hash truth-content regression configuration.",
+    )
+
+    first = run_detector_integrator_loop(static_phase, calibration, dm_model, poke, config)
+    identical = run_detector_integrator_loop(static_phase.copy(), calibration, dm_model, poke, config)
+    changed = run_detector_integrator_loop(1.01 * static_phase, calibration, dm_model, poke, config)
+
+    assert first.config_hash == identical.config_hash
+    assert first.config_hash != changed.config_hash
 
 
 def test_dynamic_loop_with_noise_and_latency_has_finite_histories(closed_loop_case):
@@ -180,3 +211,7 @@ def test_loop_config_rejects_invalid_controller_settings():
         DetectorLoopConfig(latency_frames=-1)
     with pytest.raises(ClosedLoopError, match="frame_rate_hz"):
         DetectorLoopConfig(frame_rate_hz=0.0)
+    with pytest.raises(ClosedLoopError, match="latency_frames must be an integer"):
+        DetectorLoopConfig(latency_frames=1.5)  # type: ignore[arg-type]
+    with pytest.raises(ClosedLoopError, match="n_steps must be an integer"):
+        DetectorLoopConfig(n_steps=4.0)  # type: ignore[arg-type]

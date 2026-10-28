@@ -1,0 +1,68 @@
+"""Canonical interaction-matrix calibration and reconstruction."""
+
+from .diagnostics import (
+    DEFAULT_NUMERIC_RANK_RTOL,
+    InteractionDiagnostics,
+    InteractionDiagnosticsError,
+    all_zero_columns,
+    calibration_valid_matrix,
+    interaction_diagnostics,
+)
+from .interaction import (
+    INTERACTION_MATRIX_SCHEMA_ID,
+    INTERACTION_SIGN_CONVENTION,
+    CalibrationMethod,
+    CoordinateKind,
+    CoordinateUnit,
+    DmActuatorProbeBasis,
+    InteractionCalibrationError,
+    InteractionMatrix,
+    InteractionMatrixError,
+    ModalProbeBasis,
+    ProbeBasis,
+    calibrate_interaction_matrix,
+    interaction_matrix_hash,
+)
+from .reconstructors import (
+    LeastSquaresReconstructor,
+    ReconstructionError,
+    ReconstructorCacheInfo,
+    TikhonovReconstructor,
+    TsvdReconstructor,
+    choose_rcond_from_singular_values,
+    kept_modes_for_rcond,
+    noise_amplification_proxy,
+    scan_tsvd_rcond,
+)
+
+
+__all__ = (
+    "DEFAULT_NUMERIC_RANK_RTOL",
+    "InteractionDiagnosticsError",
+    "InteractionDiagnostics",
+    "calibration_valid_matrix",
+    "all_zero_columns",
+    "interaction_diagnostics",
+    "CoordinateKind",
+    "CoordinateUnit",
+    "CalibrationMethod",
+    "INTERACTION_SIGN_CONVENTION",
+    "INTERACTION_MATRIX_SCHEMA_ID",
+    "InteractionMatrixError",
+    "InteractionCalibrationError",
+    "ProbeBasis",
+    "ModalProbeBasis",
+    "DmActuatorProbeBasis",
+    "InteractionMatrix",
+    "calibrate_interaction_matrix",
+    "interaction_matrix_hash",
+    "ReconstructionError",
+    "ReconstructorCacheInfo",
+    "LeastSquaresReconstructor",
+    "TsvdReconstructor",
+    "TikhonovReconstructor",
+    "kept_modes_for_rcond",
+    "noise_amplification_proxy",
+    "choose_rcond_from_singular_values",
+    "scan_tsvd_rcond",
+)

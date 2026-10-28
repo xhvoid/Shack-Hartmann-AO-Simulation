@@ -2,7 +2,10 @@
 
 # Validation Notes
 
-The validation layer adds `src/ao_validation.py`, a small set of pass/fail sanity checks intended for notebook 11 and unit tests.
+The installed `ao_validation` surface preserves its frozen compatibility
+checks for notebook 11 and unit tests. Control-loop checks use the canonical
+`shwfs_ao.control` timing and replay contracts rather than maintaining a
+second production loop engine.
 
 Validation summary:
 
@@ -28,6 +31,13 @@ Higher photon count should not worsen centroid RMS in the same seed ensemble.
 Larger latency should not systematically improve dynamic-loop residual RMS.
 ```
 
+Latency uses the frame-exact controller rule: an increment measured at frame
+`k` first affects frame `k + latency_frames`. Each scan point resets named
+random streams, atmosphere, controller, and DM state and reuses the same truth
+sequence, so the reported trend is not an artifact of sweep order. A `None`
+reconstruction still advances the queue with a zero increment and permits
+older increments and leak to proceed.
+
 The reproducibility check covers:
 
 ```text
@@ -49,4 +59,4 @@ figures/detector_level_SCAO/validation_checks.csv
 figures/detector_level_SCAO/validation_scans.png
 ```
 
-These checks are sanity checks for a synthetic AO demonstrator. They should not be described as on-sky validation or as validation against private AO telemetry.
+These checks are sanity checks for a synthetic AO demonstrator. They should not be described as on-sky validation or as validation against private AO telemetry. See the [AO-REF-009 control-loop contract](refactor/AO_REF_009_CONTROL_LOOP.md) for the timing, state-reset, and history definitions.

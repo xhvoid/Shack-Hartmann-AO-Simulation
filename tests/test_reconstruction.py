@@ -6,6 +6,7 @@ from reconstruction import (
     measure_slopes,
     numerical_gradient,
     reconstruct_modal_coefficients,
+    reconstruct_tikhonov,
     reconstruct_tsvd,
     residual_wavefront,
     rms,
@@ -23,6 +24,52 @@ def test_numerical_gradient_of_linear_wavefront():
 
     assert np.allclose(dwdx[1:-1, 1:-1], 2.0)
     assert np.allclose(dwdy[1:-1, 1:-1], -3.0)
+
+
+def test_masked_linear_wavefront_has_physical_edge_slopes():
+    x, y, _, _, mask, dx = make_pupil_grid(N=72, diameter=1.0)
+    wavefront = np.where(mask, 2.0 * x - 3.0 * y, np.nan)
+
+    dwdx, dwdy = numerical_gradient(wavefront, dx, mask=mask)
+    finite_x = mask & np.isfinite(dwdx)
+    finite_y = mask & np.isfinite(dwdy)
+
+    assert np.mean(finite_x[mask]) > 0.99
+    assert np.mean(finite_y[mask]) > 0.99
+    assert np.allclose(dwdx[finite_x], 2.0, atol=1.0e-12)
+    assert np.allclose(dwdy[finite_y], -3.0, atol=1.0e-12)
+
+    _, slopes = measure_slopes(
+        wavefront,
+        mask,
+        x,
+        y,
+        n_lenslets=8,
+        min_fill=0.4,
+    )
+    assert np.allclose(slopes[:, 0], 2.0, atol=1.0e-12)
+    assert np.allclose(slopes[:, 1], -3.0, atol=1.0e-12)
+
+
+def test_masked_piston_and_quadratic_gradients_match_analytic_values():
+    x, y, _, _, mask, dx = make_pupil_grid(N=72, diameter=1.0)
+
+    piston = np.where(mask, 5.0, np.nan)
+    piston_dx, piston_dy = numerical_gradient(piston, dx, mask=mask)
+    assert np.allclose(piston_dx[np.isfinite(piston_dx)], 0.0)
+    assert np.allclose(piston_dy[np.isfinite(piston_dy)], 0.0)
+
+    quadratic = np.where(mask, 1.5 * x**2 - 0.5 * y**2 + 0.25 * x * y, np.nan)
+    expected_dx = 3.0 * x + 0.25 * y
+    expected_dy = -y + 0.25 * x
+    dwdx, dwdy = numerical_gradient(quadratic, dx, mask=mask)
+    finite_x = mask & np.isfinite(dwdx)
+    finite_y = mask & np.isfinite(dwdy)
+
+    assert np.mean(finite_x[mask]) > 0.99
+    assert np.mean(finite_y[mask]) > 0.99
+    assert np.allclose(dwdx[finite_x], expected_dx[finite_x], atol=1.0e-11)
+    assert np.allclose(dwdy[finite_y], expected_dy[finite_y], atol=1.0e-11)
 
 
 def test_subaperture_masks_return_matching_centers_and_masks():
@@ -60,6 +107,25 @@ def test_tsvd_reconstruction_matches_full_rank_solution_for_identity():
 
     assert np.allclose(coeffs, signal)
     assert np.allclose(singular_values, 1.0)
+
+
+@pytest.mark.parametrize("alpha", [0.0, 1.0e-12, 1.0e-3])
+def test_tikhonov_is_finite_for_rank_deficient_response(alpha):
+    response = np.array(
+        [
+            [1.0, 1.0],
+            [2.0, 2.0],
+            [3.0, 3.0],
+            [4.0, 4.0],
+        ]
+    )
+    signal = response @ np.array([1.0, 1.0])
+
+    coeffs = reconstruct_tikhonov(signal, response, alpha=alpha)
+
+    assert np.all(np.isfinite(coeffs))
+    assert response @ coeffs == pytest.approx(signal, rel=1.0e-6, abs=1.0e-9)
+    assert coeffs[0] == pytest.approx(coeffs[1], rel=1.0e-6, abs=1.0e-9)
 
 
 def test_geometric_modal_reconstruction_reduces_wavefront_rms():

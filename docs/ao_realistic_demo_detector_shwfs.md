@@ -2,7 +2,7 @@
 
 # Detector-Level SH-WFS Notes
 
-The detector-level SH-WFS layer adds `src/synthetic_instrument_data.py` as a small facade around the existing low-level `shwfs_detector.py` utilities. The new module keeps detector and geometry settings in explicit config objects, builds a deterministic zero-phase reference centroid table, and reports `valid_centroid_frac` instead of hiding invalid/zero-flux centroids.
+The detector-level SH-WFS layer is currently implemented in `src/shwfs_ao/legacy/synthetic_instrument_data.py` as a small facade around the relocated low-level `shwfs_detector` utilities. Both remain available through their installed top-level compatibility modules. The facade keeps detector and geometry settings in explicit config objects, builds a deterministic zero-phase reference centroid table, and reports `valid_centroid_frac` instead of hiding invalid/zero-flux centroids.
 
 `DetectorConfig` carries the detector realism terms used by the Notebook 11 path: photon flux, read noise, dark current, background, full-well clipping, bad-pixel masks, PRNU, exposure time, QE, and provenance. These are still synthetic detector settings unless a future public calibration file is added, but the terms are exercised directly by tests rather than left as notebook-only assumptions.
 

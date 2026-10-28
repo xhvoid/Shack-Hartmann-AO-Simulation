@@ -33,6 +33,8 @@ def test_committed_inventory_matches_current_result_tables():
     regenerated = builder.markdown_inventory(inventory)
     committed = INVENTORY_MD.read_text(encoding="utf-8")
 
+    assert regenerated.endswith("\n")
+    assert not regenerated.endswith("\n\n"), "Generated Markdown must use exactly one terminal newline."
     assert _strip_timestamp(regenerated) == _strip_timestamp(committed), (
         "docs/ao_realistic_demo_parameter_source_inventory.md is out of sync with the "
         "generated result tables. Regenerate it with "

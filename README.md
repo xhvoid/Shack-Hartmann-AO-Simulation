@@ -22,7 +22,7 @@ The repository focuses on five connected parts of an AO simulation chain:
 
 * SH-WFS measurement: geometric slopes and detector-level lenslet spot centroiding.
 * Reconstruction: modal response matrices, singular-value diagnostics, and TSVD regularization.
-* Closed-loop correction: simplified DM influence functions, integrator control, gain tuning, and delay tests.
+* Closed-loop correction: typed command projection, applied-command-aware leaky integration, frame-exact latency, fixed telemetry, and replay-safe gain/delay tests.
 * Science diagnostics: residual OPD RMS, Strehl ratio, FWHM, EE50/EE80, and J/H/K PSF comparisons.
 * Extensions: simplified PWFS forward modelling, compact noise / latency / gain-stability scans, a fast 2 m detector-level SCAO integration run, and a public-data-informed upgrade of that 2 m demonstrator (ESO ASM / SVO / Pan-STARRS caches with explicit provenance).
 
@@ -36,6 +36,7 @@ The project requires Python 3.10 or newer. From the repository root:
 
 ```bash
 python3 -m pip install -e ".[test]"
+python3 -c "import shwfs_ao; print(shwfs_ao.__version__)"
 pytest -q
 python3 examples/run_fast_integration.py
 ```
@@ -149,39 +150,78 @@ The detector-level SH-WFS notebooks simulate lenslet spots, finite detector wind
 ## Repository layout
 
 ```text
-src/          reusable AO, WFS, reconstruction, PSF, and PWFS utilities
+src/shwfs_ao/ namespaced AO implementation; shared core, detector, and native backend APIs
+src/*.py      installed compatibility shims for the existing top-level imports
+src/shwfs_ao/resources/  canonical packaged fixtures, schemas, and reference metrics
 notebooks/    narrative simulations from SH-WFS basics to high-order AO
 examples/     lightweight command-line demonstrations
 tests/        numerical sanity checks for the core modules
 configs/      documented synthetic and literature-inspired presets
-data/         tracked public caches, sample fixtures, and reference metrics
+data/         ignored raw-download and cache work areas used by maintenance scripts
 figures/      selected outputs used in this README and generated examples
 docs/         architecture, validation, and provenance documentation
 scripts/      public-data refresh and report-generation utilities
+constraints/  exact Python 3.10 and 3.14 CI/test dependency profiles
 CITATION.cff  citation metadata
 LICENSE       MIT license
+DATA_LICENSES.md  third-party data terms and acknowledgement links
 ```
 
 ## Code architecture
 
-I kept the reusable numerical pieces in `src/` so the notebooks stay readable and the core functions can be tested independently. The notebooks are closer to experiment logs; the modules hold the reusable modelling components. [`docs/architecture.md`](docs/architecture.md) shows the full module pipeline as a diagram.
+The installed implementation is rooted at `shwfs_ao`. Shared unit-explicit result types, component protocols, immutable pupil geometry, canonical hashing, and named random streams live under `shwfs_ao.core`. The canonical Shack-Hartmann domain is exposed by `shwfs_ao.wfs.shack_hartmann`: it separates lenslet geometry, optical spot formation, deterministic detector reference calibration, detector-level measurement, and a detector-free geometric sensor. The repository-level deformable-mirror policy lives under `shwfs_ao.dm`, while transparent NumPy atmosphere, Shack-Hartmann diffraction, science-PSF propagation, DM spatial synthesis, and real Zernike modes live under `shwfs_ao.backends.native`. `shwfs_ao.calibration` owns modal/actuator probe bases, full-row interaction matrices, central/forward calibration, matrix diagnostics, and independent mask-aware least-squares, TSVD, and Tikhonov reconstructors with bounded factorization caches. `shwfs_ao.control` owns typed reconstruction-to-command mapping, applied-command-aware leaky integration, the sole frame-latency queue, backend-independent loop sequencing, fixed-length history, and replay-safe control sweeps. `shwfs_ao.science` owns immutable wavelength quadrature, the backend-independent residual-OPD propagation helper and sampling contract, physical angular-grid semantics, and scalar science metrics. Detector configuration and realized pixel maps, typed frame effects, centroid estimators, and validity policy live under `shwfs_ao.detector`; persistent PRNU is explicit, while existing profiles retain the seeded `per_frame_legacy` mode. The PWFS forward model has one installed experimental owner at `shwfs_ao.experimental.pwfs` and is not presented as a stable SCAO backend. Remaining numerical modules are staged one-for-one under `shwfs_ao.legacy` behind silent installed top-level shims. `shwfs_ao.legacy` is an internal compatibility namespace, not a public API for new code. [`docs/architecture.md`](docs/architecture.md) shows the component boundaries and full pipeline.
 
-| Module              | Main role                                                                                                                                                       |
+| Transitional public import | Main role                                                                                                                                                       |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `zernike.py`        | Pupil grids, Zernike modes, modal synthesis, piston removal, and RMS utilities.                    |
-| `phase_screen.py`   | Atmospheric-like phase screens, seeing / `r0` scaling, OPD conversion, and frozen-flow shifts.     |
-| `reconstruction.py` | Geometric SH-WFS slopes, response matrices, modal reconstruction, and residual metrics.           |
-| `shwfs_detector.py` | Lenslet spots, detector noise, centroiding, reference subtraction, and detector response matrices. |
-| `ao_closed_loop.py` | Gaussian DM influence functions, DM-WFS calibration, command updates, and loop diagnostics.       |
-| `psf_tools.py`      | FFT PSFs, Strehl ratios, radial profiles, Marechal approximation, and wavelength scaling.         |
-| `pwfs_forward.py`   | Simplified Fourier-optics PWFS forward model and `Sx/Sy` signal maps.                            |
-| `synthetic_instrument_data.py` | Detector-level 2 m SH-WFS geometry, reference centroids, noisy measurements, and centroid diagnostics. |
-| `dm_model.py`       | Synthetic DM influence functions, actuator masks, stroke limits, and OPD/phase synthesis.        |
-| `interaction_matrix.py` | Detector-level DM poke matrices, SVD diagnostics, and TSVD command reconstruction.           |
-| `ao_conditions.py`  | Observing-condition presets that keep seeing, photon budget, detector noise, latency, stroke, NCPA, and misregistration separate from numerical integration scale. |
-| `ao_error_budget.py` | Eight-scenario 2 m SCAO error-budget table with OPD, Strehl, EE, command, and centroid metrics. |
-| `ao_validation.py`  | Small pass/fail checks for Marechal consistency, diffraction scale, monotonicity, reproducibility, and DM fitting trend. |
-| `ao_integration.py` | Fast notebook-11 integration runner, exported figures, and reference-metrics JSON.              |
+| `zernike`        | Pupil grids, Zernike modes, modal synthesis, piston removal, and RMS utilities.                    |
+| `phase_screen`   | Atmospheric-like phase screens, seeing / `r0` scaling, OPD conversion, and frozen-flow shifts.     |
+| `reconstruction` | Compatibility facade for geometric SH-WFS arrays, modal synthesis, and historical reconstruction result formats; inverse solves delegate to `shwfs_ao.calibration`. |
+| `shwfs_ao.wfs.shack_hartmann` | Canonical immutable lenslet geometry, backend-neutral spot contract, reference calibration, detector-level measurement, and detector-free geometric sensor. |
+| `shwfs_ao.dm` | Canonical DM configuration and wrapper: physical actuator IDs, OPD-equivalent command validation, stroke/fault policy, diagnostics, metadata, hashes, and provenance. |
+| `shwfs_ao.calibration` | Canonical interaction calibration plus row-aware least-squares, TSVD, and Tikhonov reconstructors with explicit units, matrix identity, diagnostics, and bounded mask caches. |
+| `shwfs_ao.control` | Canonical command projectors, applied-command-aware leaky integrator, exact frame latency, common loop runner, typed histories, and replay-safe sweeps. |
+| `shwfs_ao.science` | Canonical SI bandpasses, backend-independent residual-OPD propagation construction, physical angular grids, and scalar Strehl/FWHM/encircled-energy/halo metrics. |
+| `shwfs_ao.backends.native` | Lazily aggregated NumPy atmosphere, Shack-Hartmann diffraction, science-PSF propagation, and memoryless DM placement/influence/synthesis backends. |
+| `shwfs_ao.detector` | Canonical detector configuration/realization, typed frame effects, centroid estimators, and validity policy. |
+| `shwfs_detector` | Compatibility facade for lenslet spots, detector calls, centroiding, reference subtraction, and detector response matrices. |
+| `ao_closed_loop` | Frozen compatibility facade over canonical calibration, command mapping, controller/loop, and DM owners. |
+| `psf_tools`      | Frozen compatibility facade for phase-grid FFT PSFs, Strehl ratios, radial profiles, Marechal approximation, and wavelength scaling. |
+| `ao_diagnostics` | Frozen compatibility facade for nanometre-facing science bandpasses and J/H/K scalar metric rows. |
+| `shwfs_ao.experimental.pwfs` | Experimental simplified Fourier-optics PWFS forward model and `Sx/Sy` signal maps. |
+| `pwfs_forward`   | Silent compatibility delegate to `shwfs_ao.experimental.pwfs`. |
+| `synthetic_instrument_data` | Compatibility facade for detector-level 2 m SH-WFS geometry, reference centroids, measurements, and diagnostics. |
+| `dm_model`       | Compatibility facade for the historical nanometre API over the canonical DM configuration, wrapper, and native spatial backend. |
+| `interaction_matrix` | Compatibility facade for detector-level poke and reconstruction result formats; calibration, TSVD/Tikhonov policy, and scans delegate to `shwfs_ao.calibration`. |
+| `ao_conditions`  | Observing-condition presets that keep seeing, photon budget, detector noise, latency, stroke, NCPA, and misregistration separate from numerical integration scale. |
+| `ao_error_budget` | Eight-scenario 2 m SCAO error-budget table with OPD, Strehl, EE, command, and centroid metrics. |
+| `ao_validation`  | Small pass/fail checks for Marechal consistency, diffraction scale, monotonicity, reproducibility, and DM fitting trend. |
+| `ao_integration` | Compatibility orchestration for the fast notebook-11 run; execution returns in-memory results and delegates explicit CSV/JSON/figure output to `shwfs_ao.io.artifacts`. |
+
+### Deformable-mirror command contract
+
+The canonical DM accepts a full-layout `DmCommandVector` in
+`m_opd_equivalent`. These values are optical-path-difference correction
+amplitudes, not volts and not reflective mirror-surface displacement. Positive
+commands produce positive correction OPD, and a loop forms
+
+```python
+residual_opd_m = atmosphere_opd_m - dm_correction_opd_m
+```
+
+The repository wrapper owns ordered physical actuator IDs, stroke clipping,
+dead/stuck policy, requested-versus-applied diagnostics, metadata, hashes, and
+provenance. Clipping is diagnosed from the requested command first; dead
+actuators are then forced to zero and stuck actuators to their configured
+clipped value. Native and optional optical backends are memoryless spatial
+synthesizers: they own neither gain/leak nor latency/history.
+
+The canonical backend boundary returns a finite raw OPD array in metres and
+does not remove piston. Historical `nm_OPD_equivalent` fields and
+piston-removed/NaN-masked arrays are handled only by compatibility adapters.
+If a reflective backend accepts physical surface displacement, it sends half
+the requested OPD-equivalent amplitude and lets reflection create twice that
+surface displacement in OPD—exactly one factor-of-two conversion. See the
+[AO-REF-006 DM note](docs/refactor/AO_REF_006_DEFORMABLE_MIRROR.md).
 
 ## Notebook sequence
 
@@ -215,6 +255,14 @@ Install the runtime dependencies (numpy, scipy, matplotlib, pandas):
 python3 -m pip install -e .
 ```
 
+The distribution name remains `shack-hartmann-ao-simulation`; the installed
+package namespace is `shwfs_ao`. Verify the installed metadata-backed version
+with:
+
+```bash
+python3 -c "import shwfs_ao; print(shwfs_ao.__version__)"
+```
+
 Notebook, test, and documentation tools are kept as optional extras so a plain
 install stays lightweight. Add only what you need:
 
@@ -226,7 +274,31 @@ python3 -m pip install -e ".[test,notebooks,docs]" # everything
 ```
 
 `requirements.txt` lists the runtime dependencies only, mirroring the
-`pyproject.toml` core dependencies.
+`pyproject.toml` core dependencies. For an exactly pinned test environment,
+use the constraints file matching the interpreter:
+
+```bash
+python3 -m pip install -c constraints/py310.txt -e ".[test]"  # Python 3.10
+python3 -m pip install -c constraints/py314.txt -e ".[test]"  # Python 3.14
+```
+
+The constraints are CI/test profiles rather than stricter requirements imposed
+on downstream users; see [`constraints/README.md`](constraints/README.md).
+
+### AO-REF-001/012 package and resource migration
+
+All 19 existing top-level module imports remain installed as silent
+compatibility paths. Their warning/removal clock has not started, and the
+examples intentionally continue to use them until canonical component APIs are
+introduced by later tickets. Do not import from `shwfs_ao.legacy` directly.
+Examples and maintenance scripts now require an installed or editable package;
+they no longer modify `sys.path`. Packaged resource names such as
+`data/public/...` remain accepted even though AO-REF-012 moved their sole
+canonical source to `src/shwfs_ao/resources/`. Wheels also contain a generated
+`ao_simulation_data` compatibility alias; it is never edited in the source
+tree. See the
+[AO-REF-001 migration note](docs/refactor/AO_REF_001_MIGRATION.md) for the full
+compatibility and resource-layout contract.
 
 ## Running tests
 
@@ -236,7 +308,10 @@ After installing the `test` extra, run the focused numerical test suite:
 pytest -q
 ```
 
-The GitHub Actions workflow in `.github/workflows/ci.yml` runs `pytest -q` on Python 3.11, executes the two lightweight examples, and then runs a fast detector-level SCAO smoke check:
+The GitHub Actions workflow in `.github/workflows/ci.yml` runs the full suite on
+the declared minimum Python 3.10 and current stable Python 3.14 profiles. The
+3.14 job also executes the two lightweight examples and a fast detector-level
+SCAO smoke check:
 
 ```bash
 python3 examples/run_psf_strehl_demo.py
@@ -266,7 +341,8 @@ python3 examples/run_fast_integration.py
 `run_public_data_informed_ao_demo.py` is a slower local scan because it runs
 several fast integration configurations; it is not part of CI. It records its
 wall-clock runtime in `figures/detector_level_SCAO/public_data_informed_runtime.csv`
-and `.json` with a 30 minute local-run limit flag.
+and `.json` with a 30 minute local-run limit flag. Set `AO_DEMO_OUTPUT_DIR` to
+place the overview, informed scan, and fast-integration artifacts elsewhere.
 
 These scripts write artifacts under `figures/detector_level_SCAO/`:
 
@@ -293,16 +369,24 @@ figures/detector_level_SCAO/fast_error_budget.png
 figures/detector_level_SCAO/fast_error_budget.csv
 figures/detector_level_SCAO/fast_validation.png
 figures/detector_level_SCAO/fast_validation.csv
-data/reference_metrics/fast_reference_metrics.json
+figures/detector_level_SCAO/fast_reference_metrics.json
 ```
 
 For heavier local reruns, the integration API exposes explicit presets:
 
 ```python
+from pathlib import Path
+
 from ao_integration import IntegrationConfig, run_integration
 
-run_integration(IntegrationConfig.from_mode("portfolio"))
-run_integration(IntegrationConfig.from_mode("research"))
+for mode in ("portfolio", "research"):
+    output_dir = Path("outputs") / mode
+    config = IntegrationConfig.from_mode(
+        mode,
+        output_dir=output_dir,
+        reference_metrics_path=output_dir / f"{mode}_reference_metrics.json",
+    )
+    run_integration(config)
 ```
 
 Only `fast` is part of the automated test suite; the heavier presets are for local figure-quality or exploration runs.
@@ -346,13 +430,13 @@ I use four lightweight checks rather than trying to execute every notebook in CI
 * Unit tests validate the numerical core: PSF normalization, Strehl sanity checks, phase/OPD conversion, detector centroiding edge cases, phase-screen RMS scaling, and modal reconstruction.
 * Command-line examples regenerate small PNG and CSV artifacts from deterministic seeds.
 * Notebooks remain the narrative entry points for the broader AO experiments, with notebook 10 explicitly separating clean-model AO performance from noise, latency, and controller-stability stress tests.
-* Notebook 11 is smoke-tested in fast mode and writes `data/reference_metrics/fast_reference_metrics.json` for future regression checks.
+* Notebook 11 is smoke-tested in fast mode with temporary output paths and compares generated metrics against the packaged regression references without overwriting them.
 
 ## Provenance summary
 
 | Source class | Current use | Caveat |
 | ------------ | ----------- | ------ |
-| `direct_public_data` | Small tracked public caches in `data/public/`: SVO `2MASS/2MASS.J/H/Ks` filter curves, IRSA 2MASS PSC NIR photometry, MAST Pan-STARRS DR2 optical photometry, and an ESO Paranal ASM nighttime atmosphere snapshot/time series. | The fast run and optional public-data-informed demo consume cached public products offline; they do not query the internet during tests. |
+| `direct_public_data` | Small tracked public caches under `src/shwfs_ao/resources/public/`, also addressable by the compatible logical names `data/public/...`: SVO `2MASS/2MASS.J/H/Ks` filter curves, IRSA 2MASS PSC NIR photometry, MAST Pan-STARRS DR2 optical photometry, and an ESO Paranal ASM nighttime atmosphere snapshot/time series. | The fast run and optional public-data-informed demo consume cached public products offline; they do not query the internet during tests. |
 | `literature_derived` / `synthetic_literature_inspired` | Atmosphere profile notes, Paranal-like fallback profiles, and synthetic Gaussian DM choices inspired by public literature. | These are not measured AO calibrations. |
 | `synthetic_assumed` | Detector, guide-star flux, loop, error-budget, and fast integration parameters. | Treat these as controlled demonstration settings. |
 | `package_reference` | Reserved for package/library reference values when needed. | Not a substitute for observatory validation. |
@@ -374,11 +458,12 @@ CDS credentials plus a separate meteorological downselection.
 
 ### 1. Detector-level SH-WFS measurement chain
 
-The detector-level Shack-Hartmann model follows the measurement process more explicitly than a geometric slope model:
+The canonical detector-level Shack-Hartmann model follows the measurement process more explicitly than a geometric slope model:
 
 ```text
-local pupil phase
-→ lenslet focal-plane spot
+residual OPD in metres
+→ phase at the explicit WFS wavelength
+→ unit-sum lenslet focal-plane spot plus separate captured throughput
 → finite detector window
 → photon / read / background noise
 → centroid measurement
@@ -387,11 +472,24 @@ local pupil phase
 → modal reconstruction
 ```
 
-I included this branch because real Shack-Hartmann sensors do not measure continuous slopes directly. They measure spot images on detector pixels. Centroiding error, finite sampling, photon statistics, read noise, spot clipping, and thresholding all enter before the reconstruction step.
+The canonical coordinates are detector-column `x` and detector-row `y`; positive physical tilts move spots toward increasing columns and rows. Reference calibration and runtime use the same optical sampling, detector realization, detector-response path, and centroid configuration. The geometric sensor shares the same physical lenslet IDs and `S:x`, `S:y` row order but directly reports wavefront slopes without importing detector code.
+
+This distinction matters because real Shack-Hartmann sensors do not measure continuous slopes directly. They measure spot images on detector pixels. Centroiding error, finite sampling, photon statistics, read noise, spot clipping, and thresholding all enter before the reconstruction step.
 
 ### 2. Response-matrix conditioning and TSVD regularization
 
-The reconstruction problem is treated as a linear inverse problem. Each WFS model produces an interaction matrix whose singular values determine which modal or actuator combinations are strongly or weakly sensed.
+The reconstruction problem is treated as a linear inverse problem. Each WFS model produces an interaction matrix whose singular values determine which modal or actuator combinations are strongly or weakly sensed. New calibration uses `shwfs_ao.calibration.calibrate_interaction_matrix`: central differences are the default, modal coordinates are metres of pupil-RMS OPD, actuator coordinates are metres of OPD-equivalent command, and columns always represent the response to a positive residual OPD basis. The matrix retains every canonical WFS row; unusable rows are NaN plus an explicit mask rather than compressed or filled with zero. See the [AO-REF-007 calibration contract](docs/refactor/AO_REF_007_INTERACTION_MATRIX.md).
+
+Independent `LeastSquaresReconstructor`, `TsvdReconstructor`, and
+`TikhonovReconstructor` objects consume that calibrated matrix. They require
+exact runtime row IDs and units, intersect runtime validity with calibration
+validity, and preserve the full row layout with NaN on unusable rows. A
+bounded mask-keyed cache reuses factorizations for recurring centroid masks,
+so loop frames do not recompute the same SVD. Every estimate records the
+interaction-matrix hash and retains its modal or actuator coordinate identity;
+insufficient usable coverage or rank returns `None` rather than introducing a
+zero-valued pseudo-measurement. See the
+[AO-REF-008 reconstructor contract](docs/refactor/AO_REF_008_RECONSTRUCTORS.md).
 
 The TSVD notebooks show why keeping every singular direction is not always useful. Weak singular directions can amplify noise or unstable command components, while overly aggressive truncation removes controllable modes. The cutoff is a system-level trade-off between fitting error, noise amplification, command conditioning, and image quality.
 
@@ -399,13 +497,44 @@ For the fast 2 m detector-level path, the current poke matrix is intentionally c
 
 ### 3. Closed-loop AO correction
 
-The closed-loop branch uses a simplified deformable mirror with Gaussian influence functions and an integrator controller. The simulations track residual phase RMS, Strehl ratio, command evolution, and gain stability over loop iterations.
+The canonical branch uses `shwfs_ao.control.run_closed_loop` to sequence an
+explicit atmosphere, WFS, reconstructor, typed command projector, controller,
+and DM. `LeakyIntegratorController` is the sole frame-latency owner. It advances
+the delay queue even when reconstruction is unusable, applies gain and leak to
+the last command actually accepted by the DM, and therefore preserves clipping
+and actuator-fault effects in subsequent updates.
 
-The detector-level closed-loop experiment is deliberately simplified, but it no longer uses ideal analytic slopes. The loop is driven by centroid-shift measurements from simulated lenslet spots.
+Frame `k` is timestamped `k / frame_rate_hz`. Its pre- and post-update residual
+metrics use the same atmosphere sample and the sign
+`atmosphere_opd_m - dm_correction_opd_m`. `LoopHistory` records requested and
+applied full-layout command histories, released and reconstructed increment
+norms, residual OPD RMS, saturation, row/subaperture validity, component
+identity, and named random-stream provenance. Gain, latency, photon, read-noise,
+and gain-delay scans reset state at every point so sweep order cannot alter the
+result. See the
+[AO-REF-009 control-loop contract](docs/refactor/AO_REF_009_CONTROL_LOOP.md).
+
+The detector-level experiment remains deliberately synthetic, but its loop is
+driven by centroid-shift measurements from simulated lenslet spots rather than
+ideal analytic slopes. It is an engineering demonstrator, not calibrated RTC
+telemetry.
 
 ### 4. High-order actuator-space AO / NIR PSF performance
 
 Notebook 09 takes the earlier low-order examples into a higher-order actuator-space SH-AO loop.
+
+The canonical construction path is `shwfs_ao.science`: it validates residual
+OPD in metres, pupil geometry, science wavelength, and sampling before
+delegating to the selected backend. The initial implementation lives in
+`shwfs_ao.backends.native.propagation` and returns a unit-total-flux
+`PsfResult` with strictly increasing physical angular axes in radians. Peak
+Strehl compares angular surface-brightness peaks derived from discrete flux and
+physical cell areas; encircled energy and halo fraction integrate discrete
+pixel flux, while FWHM consumes angular surface brightness. None of these
+metrics infers an angular scale from array indices. Bandpass
+quadrature averages scalar monochromatic metric rows only. It does not coadd
+same-index pixels across wavelength-dependent PSF grids. See the
+[AO-REF-010 science contract](docs/refactor/AO_REF_010_SCIENCE.md).
 
 The current high-order run uses:
 
@@ -464,9 +593,9 @@ Because the richer NCPA and misregistration models feed the eight-scenario `all_
 
 ### 7. PWFS extension
 
-The pyramid-WFS branch uses a compact Fourier-optics model. The pupil field is propagated to the focal plane, multiplied by a pyramid-like phase mask, and propagated back to form four re-imaged pupil intensities. Normalized `Sx/Sy` maps are then used as the PWFS measurement vector.
+The pyramid-WFS branch has one installed implementation at `shwfs_ao.experimental.pwfs`; the existing `pwfs_forward` import delegates to it. The compact Fourier-optics model propagates the pupil field to the focal plane, applies a pyramid-like phase mask, and propagates back to form four re-imaged pupil intensities. Normalized `Sx/Sy` maps are then used as the PWFS measurement vector.
 
-This branch should be read as an exploratory extension. It demonstrates the PWFS measurement logic and modal calibration, but it does not yet include a fully validated PWFS modulation, control, and detector-readout model.
+This remains an exploratory API. It preserves the existing numerical model and seeded outputs, but it does not implement the stable Shack-Hartmann protocols and is not a validated PWFS SCAO backend.
 
 ## Validation and limitations
 
@@ -502,4 +631,13 @@ Research interests: adaptive optics, astronomical instrumentation, detector-leve
 
 ## Citation and license
 
-If you use this repository, please cite it using the metadata in [CITATION.cff](CITATION.cff). The project is released under the [MIT License](LICENSE).
+If you use this repository, please cite it using the metadata in
+[CITATION.cff](CITATION.cff). The source metadata currently identify version
+`0.1.0`; this optimization does not create a version tag or published release.
+The future maintainer workflow is documented in
+[`docs/releasing.md`](docs/releasing.md).
+
+Repository-authored software and documentation are available under the
+[MIT License](LICENSE). Cached third-party public data are not independently
+relicensed by that license; review [DATA_LICENSES.md](DATA_LICENSES.md) for
+source terms, acknowledgements, and unresolved redistribution questions.

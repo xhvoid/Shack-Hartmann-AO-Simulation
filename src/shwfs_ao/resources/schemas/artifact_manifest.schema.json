@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shwfs-ao.invalid/schemas/artifact_manifest.schema.json",
+  "title": "SHWFS-AO artifact manifest",
+  "type": "object",
+  "required": ["schema_name", "schema_version", "artifact_kind", "backend", "system_profile", "provenance", "reproducibility", "members"],
+  "properties": {
+    "schema_name": {"const": "shwfs_ao.artifact_manifest"},
+    "schema_version": {"const": 3},
+    "artifact_kind": {"enum": ["run_result", "baseline_candidate", "accepted_regression_baseline"]},
+    "backend": {"type": "string", "minLength": 1},
+    "system_profile": {"type": "string", "minLength": 1},
+    "provenance": {"$ref": "provenance.schema.json"},
+    "reproducibility": {"$ref": "fast_reference_metrics.schema.json#/$defs/reproducibility"},
+    "candidate": {"type": "object", "minProperties": 1},
+    "diff": {"type": "object", "minProperties": 1},
+    "acceptance": {
+      "type": "object",
+      "required": ["reason", "review_reference"],
+      "properties": {
+        "reason": {"type": "string", "minLength": 1},
+        "review_reference": {"type": "string", "minLength": 1}
+      }
+    },
+    "members": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["filename", "schema_name", "schema_version", "content_sha256", "size_bytes"],
+        "properties": {
+          "filename": {"type": "string", "minLength": 1},
+          "schema_name": {"type": "string", "minLength": 1},
+          "schema_version": {"type": "integer", "minimum": 1},
+          "content_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "size_bytes": {"type": "integer", "minimum": 1}
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {"artifact_kind": {"const": "run_result"}},
+      "not": {"anyOf": [{"required": ["candidate"]}, {"required": ["diff"]}, {"required": ["acceptance"]}]}
+    },
+    {
+      "required": ["candidate", "diff"],
+      "properties": {
+        "artifact_kind": {"const": "baseline_candidate"},
+        "reproducibility": {"$ref": "fast_reference_metrics.schema.json#/$defs/governed_source_evidence"}
+      },
+      "not": {"required": ["acceptance"]}
+    },
+    {
+      "required": ["acceptance"],
+      "properties": {
+        "artifact_kind": {"const": "accepted_regression_baseline"},
+        "reproducibility": {"$ref": "fast_reference_metrics.schema.json#/$defs/governed_source_evidence"}
+      },
+      "not": {"anyOf": [{"required": ["candidate"]}, {"required": ["diff"]}]}
+    }
+  ]
+}

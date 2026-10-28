@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shwfs-ao.invalid/schemas/fast_reference_metrics.schema.json",
+  "title": "SHWFS-AO fast reference metrics schema 3",
+  "type": "object",
+  "required": [
+    "schema_name",
+    "schema_version",
+    "artifact_kind",
+    "backend",
+    "system_profile",
+    "workflow",
+    "preset",
+    "reference_scenario",
+    "scenario_count",
+    "scenario_names",
+    "open_rms_nm",
+    "closed_rms_nm",
+    "h_strehl",
+    "valid_centroid_fraction",
+    "kept_modes",
+    "validation_check_count",
+    "validation_pass_count",
+    "runtime_band",
+    "runtime_note",
+    "config_hash",
+    "source_class",
+    "source_note",
+    "tolerances",
+    "tolerance_metadata",
+    "provenance",
+    "component_hashes",
+    "layout_hashes",
+    "conventions",
+    "reproducibility"
+  ],
+  "properties": {
+    "schema_name": {"const": "shwfs_ao.fast_reference_metrics"},
+    "schema_version": {"const": 3},
+    "artifact_kind": {
+      "enum": ["run_result", "baseline_candidate", "accepted_regression_baseline"]
+    },
+    "backend": {"type": "string", "minLength": 1},
+    "system_profile": {"type": "string", "minLength": 1},
+    "workflow": {"type": "string", "minLength": 1},
+    "preset": {"type": "string", "minLength": 1},
+    "reference_scenario": {"type": "string", "minLength": 1},
+    "scenario_count": {"type": "integer", "minimum": 1},
+    "scenario_names": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "open_rms_nm": {"type": "number"},
+    "closed_rms_nm": {"type": "number"},
+    "h_strehl": {"type": "number"},
+    "valid_centroid_fraction": {"type": "number"},
+    "kept_modes": {"type": "integer", "minimum": 1},
+    "validation_check_count": {"type": "integer", "minimum": 0},
+    "validation_pass_count": {"type": "integer", "minimum": 0},
+    "runtime_band": {"type": "string", "minLength": 1},
+    "runtime_note": {"type": "string", "minLength": 1},
+    "config_hash": {"type": "string", "pattern": "^(sha256:)?[0-9a-f]{64}$"},
+    "source_class": {"type": "string", "minLength": 1},
+    "source_note": {"type": "string", "minLength": 1},
+    "tolerances": {"$ref": "#/$defs/tolerances"},
+    "tolerance_metadata": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"$ref": "#/$defs/tolerance_record"}
+    },
+    "provenance": {"$ref": "provenance.schema.json"},
+    "component_hashes": {"$ref": "#/$defs/component_hashes"},
+    "layout_hashes": {"$ref": "#/$defs/layout_hashes"},
+    "conventions": {"$ref": "#/$defs/conventions"},
+    "reproducibility": {"$ref": "#/$defs/reproducibility"},
+    "candidate": {"type": "object", "minProperties": 1},
+    "diff": {"type": "object", "minProperties": 1},
+    "acceptance": {
+      "type": "object",
+      "required": ["reason", "review_reference"],
+      "properties": {
+        "reason": {"type": "string", "minLength": 1},
+        "review_reference": {"type": "string", "minLength": 1}
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {"artifact_kind": {"const": "run_result"}},
+      "not": {"anyOf": [{"required": ["candidate"]}, {"required": ["diff"]}, {"required": ["acceptance"]}]}
+    },
+    {
+      "required": ["candidate", "diff"],
+      "properties": {
+        "artifact_kind": {"const": "baseline_candidate"},
+        "reproducibility": {
+          "allOf": [
+            {"$ref": "#/$defs/reproducibility"},
+            {"$ref": "#/$defs/governed_source_evidence"}
+          ]
+        }
+      },
+      "not": {"required": ["acceptance"]}
+    },
+    {
+      "required": ["acceptance"],
+      "properties": {
+        "artifact_kind": {"const": "accepted_regression_baseline"},
+        "reproducibility": {
+          "allOf": [
+            {"$ref": "#/$defs/reproducibility"},
+            {"$ref": "#/$defs/governed_source_evidence"}
+          ]
+        }
+      },
+      "not": {"anyOf": [{"required": ["candidate"]}, {"required": ["diff"]}]}
+    }
+  ],
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^(sha256:)?[0-9a-f]{64}$"},
+    "tolerances": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "closed_rms_nm_abs",
+        "h_strehl_abs",
+        "kept_modes_abs",
+        "open_rms_nm_abs",
+        "runtime_s_reference_max",
+        "valid_centroid_fraction_abs"
+      ],
+      "properties": {
+        "closed_rms_nm_abs": {"type": "number", "minimum": 0},
+        "h_strehl_abs": {"type": "number", "minimum": 0},
+        "kept_modes_abs": {"type": "number", "minimum": 0},
+        "open_rms_nm_abs": {"type": "number", "minimum": 0},
+        "runtime_s_reference_max": {"type": "number", "minimum": 0},
+        "valid_centroid_fraction_abs": {"type": "number", "minimum": 0}
+      }
+    },
+    "tolerance_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit", "kind", "enforced", "rationale"],
+      "properties": {
+        "unit": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1},
+        "enforced": {"type": "boolean"},
+        "rationale": {"type": "string", "minLength": 1}
+      }
+    },
+    "component_hashes": {
+      "type": "object",
+      "required": ["geometry", "detector", "wfs_calibration", "dm", "interaction_matrix", "command_projector", "controller", "science_sampling"],
+      "properties": {
+        "geometry": {"$ref": "#/$defs/hash"},
+        "detector": {"$ref": "#/$defs/hash"},
+        "wfs_calibration": {"$ref": "#/$defs/hash"},
+        "dm": {"$ref": "#/$defs/hash"},
+        "interaction_matrix": {"$ref": "#/$defs/hash"},
+        "command_projector": {"$ref": "#/$defs/hash"},
+        "controller": {"$ref": "#/$defs/hash"},
+        "science_sampling": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "layout_hashes": {
+      "type": "object",
+      "required": ["measurement_rows", "actuator_commands"],
+      "properties": {
+        "measurement_rows": {"$ref": "#/$defs/hash"},
+        "actuator_commands": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "conventions": {
+      "type": "object",
+      "required": ["wavefront_unit", "command_unit", "residual_definition", "measurement_unit"],
+      "properties": {
+        "wavefront_unit": {"type": "string", "minLength": 1},
+        "command_unit": {"type": "string", "minLength": 1},
+        "residual_definition": {"type": "string", "minLength": 1},
+        "measurement_unit": {"type": "string", "minLength": 1}
+      }
+    },
+    "reproducibility": {
+      "type": "object",
+      "required": ["root_seed", "rng_derivation_scheme_id", "random_stream_ids", "python_version", "numpy_version", "shwfs_ao_version", "backend_version", "constraints_sha256", "generator_version", "source_commit", "source_tree_clean", "source_patch_sha256", "generated_at_utc"],
+      "properties": {
+        "root_seed": {"type": "integer"},
+        "rng_derivation_scheme_id": {"type": "string", "minLength": 1},
+        "random_stream_ids": {"type": "object"},
+        "python_version": {"type": "string", "minLength": 1},
+        "numpy_version": {"type": "string", "minLength": 1},
+        "shwfs_ao_version": {"type": "string", "minLength": 1},
+        "backend_version": {"type": "string", "minLength": 1},
+        "constraints_sha256": {"$ref": "#/$defs/hash"},
+        "generator_version": {"type": "string", "minLength": 1},
+        "source_commit": {"type": ["string", "null"]},
+        "source_tree_clean": {"type": ["boolean", "null"]},
+        "source_patch_sha256": {"anyOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]},
+        "generated_at_utc": {"type": "string", "minLength": 1}
+      }
+    },
+    "governed_source_evidence": {
+      "type": "object",
+      "required": ["source_commit", "source_tree_clean", "source_patch_sha256"],
+      "properties": {
+        "source_commit": {"type": "string", "minLength": 1},
+        "source_tree_clean": {"type": "boolean"},
+        "source_patch_sha256": {"$ref": "#/$defs/hash"}
+      }
+    }
+  }
+}

@@ -25,8 +25,9 @@ from data_sources import load_eso_asm_snapshot, load_literature_atmosphere_profi
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PROFILE_PATH = ROOT / "data" / "literature_profiles" / "paranal_three_layer_literature_inspired.json"
-ESO_ASM_PATH = ROOT / "data" / "public" / "eso_asm_paranal_20240729_0300_0800_snapshot.json"
+DATA_ROOT = ROOT / "src" / "shwfs_ao" / "resources"
+PROFILE_PATH = DATA_ROOT / "literature_profiles" / "paranal_three_layer_literature_inspired.json"
+ESO_ASM_PATH = DATA_ROOT / "public" / "eso_asm_paranal_20240729_0300_0800_snapshot.json"
 
 
 def test_seeing_to_r0_and_wavelength_scaling_follow_fried_formula():
@@ -116,6 +117,7 @@ def test_zero_wind_multilayer_cube_is_static_and_matches_r0_rms():
     )
 
     assert cube.cube_rad.shape == (4, 48, 48)
+    assert cube.time_s == pytest.approx(np.arange(4, dtype=float) * 0.001)
     assert np.all(np.isfinite(cube.cube_rad[:, cube.mask]))
     assert np.all(np.isnan(cube.cube_rad[:, ~cube.mask]))
     assert np.allclose(cube.cube_rad[0][cube.mask], cube.cube_rad[-1][cube.mask])
