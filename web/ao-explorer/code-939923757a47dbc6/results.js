@@ -245,7 +245,6 @@ export async function renderResults(results, resultsUrl, host, indexHost, result
   checkMissingValues(results);
   repository = results.source_repository || null;
   host.replaceChildren();
-  indexHost.innerHTML = results.groups.map((g) => `<li><a href="#result-${esc(g.id)}">${esc(g.id)} ${esc(g.title.split(":")[0])}</a></li>`).join("");
   const note = document.createElement("p");
   note.className = "hint"; note.textContent = results.separation_note;
   host.append(note);
@@ -259,8 +258,48 @@ export async function renderResults(results, resultsUrl, host, indexHost, result
     all.append(document.createTextNode("Complete Research Results record: "), link);
     host.append(all);
   }
-  for (const group of results.groups) host.append(renderGroup(group, resultsUrl));
+  const topics = {
+    R4: ['12 m detector behaviour', 'Measurement availability, reconstruction policy and an unresolved noise-law discrepancy.'],
+    R6: ['Separate analytical MCAO study', 'A separate model family using P3 and MASTSEL, with its own assumptions and checks.'],
+    R5: ['Historical 42 m runs and realization scatter', 'Earlier physical-camera records; their windows and producer identities differ from the new replay.'],
+    R1: ['Sensing and centroid precision', 'Tutorial response calibration, photon budget and measurement availability.'],
+    R2: ['Reconstruction and feedback experiments', 'Small-system correction, delay and controllable-order studies.'],
+    R3: ['Ten-layer atmosphere: full records', 'Layer profile, structure function and the separate 2 m comparison.'],
+    R7: ['Independent backend comparisons', 'Accepted small-fixture results and reduced-scale exploratory evidence.'],
+    R8: ['Numerical sampling, provenance and open questions', 'Profile-specific convergence records and unresolved work.'],
+  };
+  indexHost.innerHTML = '';
+  for (const id of ['R4','R6','R5','R1','R2','R3','R7','R8']) {
+    const group=results.groups.find(g=>g.id===id), [title,description]=topics[id];
+    const detail=document.createElement('details');detail.className='appendix-record panel';detail.id=`result-${id}`;
+    const summary=document.createElement('summary');summary.textContent=title;
+    const note=document.createElement('p');note.className='hint';note.textContent=description;
+    detail.append(summary,note);let built=false;
+    detail.addEventListener('toggle',()=>{
+      if(!detail.open||built)return;built=true;
+      const card=renderGroup(group,resultsUrl);card.id=`record-${id}`;detail.append(card);
+    });host.append(detail);
+  }
   const coverage = document.createElement("details");
-  coverage.innerHTML = `<summary>Coverage of the eight required result groups</summary><div class="table-scroll" role="region" tabindex="0" aria-label="Coverage of the eight required result groups"><table><thead><tr><th>Group</th><th>Figures</th><th>Tables</th><th>Charts</th><th>Key values</th><th>Downloads</th><th>Status</th></tr></thead><tbody>${results.coverage.map((c) => `<tr><td>${esc(c.group)} ${esc(c.title)}</td><td class="num">${c.figures}</td><td class="num">${c.tables}</td><td class="num">${c.charts}</td><td class="num">${c.key_values}</td><td class="num">${c.downloads}</td><td>${esc(c.status.map((s) => STATUS_LABELS[s] || s).join(", "))}</td></tr>`).join("")}</tbody></table></div>`;
+  coverage.innerHTML = `<summary>Archived evidence inventory</summary><div class="table-scroll" role="region" tabindex="0" aria-label="Archived evidence inventory"><table><thead><tr><th>Group</th><th>Figures</th><th>Tables</th><th>Charts</th><th>Key values</th><th>Downloads</th><th>Status</th></tr></thead><tbody>${results.coverage.map((c) => `<tr><td>${esc(c.group)} ${esc(c.title)}</td><td class="num">${c.figures}</td><td class="num">${c.tables}</td><td class="num">${c.charts}</td><td class="num">${c.key_values}</td><td class="num">${c.downloads}</td><td>${esc(c.status.map((s) => STATUS_LABELS[s] || s).join(", "))}</td></tr>`).join("")}</tbody></table></div>`;
   host.append(coverage);
+}
+
+export function renderProjectEvidence(results) {
+  const group=results.groups.find(g=>g.id==='R3');
+  const layers=group.tables.find(t=>t.id==='r3-profile').rows;
+  const host=document.getElementById('layer-profile');host.replaceChildren();
+  for(const layer of [...layers].reverse()) {
+    const row=document.createElement('div');row.className='layer-row';
+    row.innerHTML=`<span>${(layer.altitude_m/1000).toFixed(1)} km</span><span class="layer-track"><i style="width:${layer.cn2_fraction*100}%"></i></span><span>${(layer.cn2_fraction*100).toFixed(1)}%</span><span>${layer.wind_speed_m_per_s.toFixed(1)} m/s</span>`;
+    host.append(row);
+  }
+  const rows=group.tables.find(t=>t.id==='r3-structure').rows;
+  const canvas=document.getElementById('atmosphere-structure');
+  const draw=()=>lineChart(canvas,{title:'Saved ten-layer phase structure function',height:260,
+    x:{label:'Separation',unit:'m',scale:'log'},y:{label:'Measured / von Kármán',range:[.88,1.06]},
+    referenceLines:[{y:1,label:'reference'}],series:[{label:'256-screen measured ratio',points:rows.map(r=>[r.separation_m,r.ratio]),markers:true}]});
+  redrawWhenResized(canvas,draw);draw();
+  const ratios=rows.slice(1).map(r=>r.ratio);
+  document.getElementById('structure-caption').textContent=`Recorded ratios: ${Math.min(...ratios).toFixed(3)}–${Math.max(...ratios).toFixed(3)} beyond one pixel; ${rows[0].ratio.toFixed(3)} at the first separation. This is the archived structure-function experiment, not a new validation of the 42 m detector configuration.`;
 }

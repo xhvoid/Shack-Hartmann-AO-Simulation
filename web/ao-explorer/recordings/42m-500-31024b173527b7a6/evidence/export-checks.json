@@ -1,0 +1,8 @@
+{
+  "direct_full_max_error": 1.3877787807814457e-17,
+  "even_kernel_origin_identity_max_error": 2.7755575615628914e-17,
+  "passed": true,
+  "max_full_convolution_flux_error": 8.881784197001252e-16,
+  "raw_map_rms_error_m": 0.0,
+  "raw_map_hashes_match": true
+}
