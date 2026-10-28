@@ -222,7 +222,16 @@ structural change list (tolerances, criteria, rationale, attribution,
 hashes, environment, generator — not just metric values). At accept time
 each script recomputes its diff from the files on disk and refuses when the
 result differs from the reviewed diff, so any post-review edit to a
-candidate, however small, forces regeneration and a fresh review.
+candidate, however small, forces regeneration and a fresh review. Neither
+script accepts while pytest is running.
+
+Acceptance evidence is persisted, not just printed. The cross-backend
+baseline embeds its `acceptance` block (reason, review reference, UTC
+timestamp). Fast-baseline acceptance writes
+`reference_metrics/fast_baseline_acceptance.json`, a
+`shwfs_ao.fast_baseline_acceptance` v1 record binding the reason and review
+reference to the acceptance timestamp, the SHA-256 of every accepted
+baseline file, and the SHA-256 of the reviewed diff.
 
 Runtime and memory remain informational unless a separately approved,
 platform-specific envelope says otherwise. A structural refactor with

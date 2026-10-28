@@ -150,7 +150,9 @@ candidate and current-baseline bytes and lists every structural change —
 tolerances, criteria, rationale, and provenance included, not just metric
 values. Acceptance recomputes that diff and refuses when anything changed
 after review, so step 4's "unchanged" is enforced byte-for-byte rather than
-assumed.
+assumed. Acceptance reasons and review references are persisted: embedded in
+the cross-backend baseline, and written to a dedicated acceptance record for
+the fast baselines.
 
 The cross-backend accepted record additionally carries generator identity,
 source commit, acceptance timestamp, backend/dependency environment, metric
