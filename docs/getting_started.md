@@ -119,6 +119,11 @@ quick start and CI do:
 AO_DEMO_OUTPUT_DIR=outputs/examples python examples/run_psf_strehl_demo.py
 ```
 
+`examples/run_public_data_informed_ao_demo.py` also reads
+`public_data_summary.csv` and `public_data_photon_budget.csv` from that
+directory, so run `examples/run_public_data_overview.py` with the same
+`AO_DEMO_OUTPUT_DIR` first.
+
 Do not overwrite the accepted packaged reference metrics: numerical
 baseline changes use the candidate/diff/accept workflow described in
 [validation](validation.md). Figures linked from the README have explicit
