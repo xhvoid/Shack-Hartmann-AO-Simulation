@@ -214,8 +214,8 @@ in noise, delay, atmosphere and filtering.
 
 ## Sampling convergence
 
-`scripts/eso_scao_paired_convergence_study.py` (roadmap S3, run 2026-10-18/19
-on `2312502`) refines one sampling at a time from the tier's baseline, with
+`scripts/eso_scao_paired_convergence_study.py` (roadmap S3, run 2026-10-18
+on `2312502`, recorded 2026-10-19) refines one sampling at a time from the tier's baseline, with
 the WFS field of view held at 11.5–11.75 λ/d and paired atmospheric draws
 (every setting's screen is a sub-band of one draw on the finest grid). Three
 realizations of 200 frames per setting, 50-frame burn-in, long exposure at

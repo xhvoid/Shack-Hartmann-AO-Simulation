@@ -754,7 +754,7 @@ row-level detail and are checked against every profile they cover:
 | ATM-2 | ESO E-ELT DRM ten-layer profile, fractions renormalized from 1.001, zenith, every wind toward +x | direct public input (R1) + engineering assumption (directions, ESO A02) | `literature_profiles/eso_elt_drm_ten_layer.json`; `eso_elt_turbulence_profile()` | ESO benchmark, `eso_turbulence_2m_detector@1`, 12 m and 42 m detector profiles | on-axis statistics depend on speeds, not azimuths | layer altitude unused; no anisoplanatism |
 | ATM-3 | One instantaneous atmosphere sample per frame unless `exposure_subsamples > 1` | engineering assumption (ESO A10, detector B10) | `control.loop` | all frame metrics | sub-samples changed the 12 m residual by −3.4 and −4.5 nm (DET-08) | WFS temporal averaging omitted by default |
 | SH-1 | Isolated lenslet blocks: no light from other lenslets on the native physical camera | engineering assumption (B12) | `detector.layout` `isolated_lenslet_blocks.v1` | physical-camera results | — | inter-lenslet contamination untested (LIM-03, S9) |
-| SH-2 | Sampling: 12 pupil samples per lenslet, Nyquist canvas (pad 2, 24 px), 23 px window for the ESO tiers; 15 px windows and R3-band MFT sampling for the 12 m and 42 m detector profiles | engineering assumption (ESO A05a–A05c; B02, B03) | profiles | ESO and detector results | ESO smoke-tier sampling scan missed its 2 % criterion (LIM-07) | convergence at medium and full scale not run (S3); R1's own 6-pixel sampling is not reproduced (recorded in A05c) |
+| SH-2 | Sampling: 12 pupil samples per lenslet, Nyquist canvas (pad 2, 24 px), 23 px window for the ESO tiers; 15 px windows and R3-band MFT sampling for the 12 m and 42 m detector profiles | engineering assumption (ESO A05a–A05c; B02, B03) | profiles | ESO and detector results | ESO smoke-tier sampling scan missed its 2 % criterion (LIM-07); paired finite scans (S3, §7.5) on the 12 m `medium` and 42 m `full` ESO tiers, three realizations of 200 frames per setting: the two finest settings agree within the declared 2 % in peak Strehl in every scan (largest change 0.25 %, 12 m pupil), and in EE50 in pupil and WFS sampling at both scales (largest 0.55 %) and in science sampling at 42 m (1.05 ± 0.26 %) | EE50 failed the 2 % criterion in science sampling at 12 m (pads 3 → 4: 4.3 %, paired 4.27 ± 0.11 %), and at the default pad 2 it reads 7.3 % (12 m) and 3.6 % (42 m) above pad 4; agreement of the two finest settings of a finite scan, not an estimate of the convergence order or the continuum limit; spatial sampling of the ESO tiers only: not the detector profiles' window and MFT sampling, not exposure sub-sampling, not 42 m pupil sampling above 16 per lenslet; R1's own 6-pixel sampling is not reproduced (recorded in A05c) |
 | DET-1 | Camera presets (CCD, EMCCD, CMOS, coupled EMCCD) | engineering assumption (B01) | `benchmarks/detector_camera_presets.v1.json` | every physical-camera result | Monte Carlo against the declared model | no datasheet, no measured camera |
 | DET-2 | Gamma register for `G ≥ 100`, `F² = 2` | external method (Basden et al. 2003; Robbins & Hadwen 2003) | `detector.physical` | EMCCD results | finite-stage `F²` within 2 % at G ≥ 100 (decision D00-13) | serial CIC not modelled |
 | DET-3 | AB photometry with throughput excluding QE, QE applied once; sky 20.5 mag/arcsec² | external method (Oke & Gunn 1983) + declared experiment choice (B06, B07) | `detector.photometry`, `detector_physics.source` | photon budgets, magnitude scans | photometry oracles to 1e-12 (DET-02) | the throughput is a declared number, not an instrument model |
@@ -854,7 +854,7 @@ measured data.
   finest two 0.25 %), WFS (pad 2 → 3 → 4: 0.00 %) and science sampling
   (identical); EE50 converged in pupil (0.55 %) and WFS sampling but **not in
   science sampling** (32.56 → 31.65 → 30.35 mas, finest two 4.3 %, paired
-  4.27 ± 0.11 %). On the 42 m `full` tier (2026-10-19, the same protocol,
+  4.27 ± 0.11 %). On the 42 m `full` tier (also 2026-10-18, the same protocol,
   12 → 16 samples): peak Strehl converged in pupil (0.7832 → 0.7832,
   0.01 % ± 0.04 %), WFS (0.04 %) and science sampling (identical); EE50
   converged in pupil (0.01 %) and WFS sampling (0.12 %) and within 2 % between
@@ -866,7 +866,14 @@ measured data.
   [`paired_convergence_medium.json`](refactor/eso_scao_evidence/paired_convergence_medium.json),
   [`paired_convergence_full.json`](refactor/eso_scao_evidence/paired_convergence_full.json).
   Not covered: the 12 m detector profiles (their sampling knobs are MFT
-  oversampling and window size) and pupil sampling above 16 at 42 m.
+  oversampling and window size) and pupil sampling above 16 at 42 m. Both
+  records are schema v1: their `code_identity` names the invocation that
+  wrote the summary, and their runs carry no producer of their own. Each was
+  one invocation, in an output directory of its own, that launched every one
+  of its runs, so none was reused (run logs and file times, checked
+  2026-10-20 for GPT independent review AR-014). The driver now gives each
+  run its own protocol and producer and refuses to reuse a run that is not
+  its planned run.
 
 ### 7.6 Historical 42 m results
 

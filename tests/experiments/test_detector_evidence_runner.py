@@ -10,6 +10,7 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import re
 import sys
 
 import pytest
@@ -265,8 +266,19 @@ def test_a_gated_run_without_an_enablement_note_refuses_before_running(isolated_
     assert not (isolated_runner / "series.json").exists()
 
 
-def test_the_real_gated_commands_refuse_without_a_note_before_building_anything(isolated_runner: Path) -> None:
+def test_the_real_gated_commands_refuse_without_a_note_before_building_anything(
+    isolated_runner: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # e5 is the 42 m run: the refusal must come before any system is built.
+    # Should the guard ever regress, their run functions fail at once instead
+    # of starting the real 12 m or 42 m runs (review CR-04, 2026-10-20).
+    from shwfs_ao.experiments import detector_level
+
+    def must_not_run(*arguments, **keywords):
+        raise AssertionError("a gated command reached its run function without an enablement note")
+
+    monkeypatch.setattr(detector_level, "science_run", must_not_run)
+    monkeypatch.setattr(detector_level, "open_loop_noise_propagation", must_not_run)
     with pytest.raises(runner.EnablementMissing, match="e5"):
         runner.main(["e5"])
     with pytest.raises(runner.EnablementMissing, match="e2-12m"):
@@ -399,11 +411,13 @@ def test_a_version_2_record_is_neither_continued_nor_reattributed(isolated_runne
     runner._gated_series("legacy.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=Recorder())
     path = isolated_runner / "legacy.json"
     legacy = json.loads(path.read_text())
-    # The version-2 shape: runs carry no producing environment.
+    # The version-2 shape: runs carry no producing environment.  A version-2
+    # record's hashes are the digests of its own payloads (AR-016 checks them).
     legacy["series_protocol_version"] = 2
     for run in legacy["runs"]:
         del run["protocol"]["environment"]
         run["protocol"]["series_protocol_version"] = 2
+        run["protocol_hash"] = runner.protocol_digest(run["protocol"])
     path.write_text(json.dumps(legacy, indent=1) + "\n")
     before = path.read_bytes()
     runner.OPTIONS.resume = True
@@ -428,3 +442,136 @@ def test_appending_needs_a_known_code_identity(isolated_runner: Path, monkeypatc
     start_fresh_invocation()
     runner._gated_series("series.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=Recorder())
     assert (isolated_runner / "series.json").read_bytes() == before  # nothing to add: verified, not written
+
+
+# -- GPT independent review AR-016 (2026-10-20): a saved record agrees with itself --
+
+
+OTHER_ARM = [("other arm", CONFIG, 31)]
+RESUMED_PLANS = {"overlapping": PLAN, "disjoint": OTHER_ARM, "nothing left": PLAN[:1]}
+TAMPERING = {
+    # The review's probes: a corrupt digest, a changed payload under its old
+    # digest, and an outer seed that is not the protocol's.
+    "stored hash": (lambda record: record["runs"][0].update(protocol_hash="invalid-digest"), "not the digest"),
+    "payload under a stale hash": (lambda record: record["runs"][0]["protocol"].update(config_hash="changed"), "not the digest"),
+    "outer seed": (lambda record: record["runs"][0].update(root_seed=999), "root_seed 999"),
+    "outer label": (lambda record: record["runs"][0].update(label="other"), "label 'other'"),
+    "outer configuration hash": (lambda record: record["runs"][0].update(config_hash="other"), "config_hash 'other'"),
+    "outer frame count": (lambda record: record["runs"][0].update(n_steps=1), "n_steps 1"),
+    "run recorded twice": (lambda record: record["runs"].append(json.loads(json.dumps(record["runs"][0]))), "recorded twice"),
+    "header frame count": (lambda record: record.update(n_steps=1), "header's n_steps"),
+    "header code identity": (lambda record: record.update(code_identity={"git_head": "other", "source_changes_sha256": "test"}), "header's code_identity"),
+    "header environment": (lambda record: record.update(numpy="numpy other"), "header's numpy"),
+    "carried-over notes": (lambda record: record.update(resumed_enabled_by_user="one note"), "resumed_enabled_by_user"),
+    "series note": (lambda record: record.update(enabled_by_user=5), "enabled_by_user is not a note"),
+    "outer label missing": (lambda record: record["runs"][0].pop("label"), "label None"),
+    "outer seed missing": (lambda record: record["runs"][0].pop("root_seed"), "root_seed None"),
+}
+
+
+@pytest.mark.parametrize("plan", sorted(RESUMED_PLANS))
+@pytest.mark.parametrize("tampering", sorted(TAMPERING))
+def test_an_inconsistent_record_is_refused_unchanged(isolated_runner: Path, tampering: str, plan: str) -> None:
+    runner._gated_series("series.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=Recorder())
+    path = isolated_runner / "series.json"
+    record = json.loads(path.read_text())
+    change, match = TAMPERING[tampering]
+    change(record)
+    path.write_text(json.dumps(record, indent=2) + "\n")
+    before = path.read_bytes()
+    start_fresh_invocation()
+    runner.OPTIONS.resume = True
+    idle = Recorder()
+    with pytest.raises(runner.EvidenceRecordExists, match="inconsistent in itself.*" + re.escape(match)):
+        runner._gated_series("series.json", "test", RESUMED_PLANS[plan], n_steps=400, burn_in=100, execution=None, runner=idle)
+    assert idle.calls == []
+    assert path.read_bytes() == before
+
+
+def test_a_boolean_in_place_of_an_integer_is_another_protocol(isolated_runner: Path) -> None:
+    # Python's True == 1: the series fields are compared as JSON, so a saved
+    # run of another arm whose frame count reads true does not pass for 1.
+    runner._gated_series("series.json", "test", PLAN[:1], n_steps=1, burn_in=0, execution=None, runner=Recorder())
+    path = isolated_runner / "series.json"
+    record = json.loads(path.read_text())
+    record["n_steps"] = True
+    for run in record["runs"]:
+        run["protocol"]["n_steps"] = True
+        run["protocol_hash"] = runner.protocol_digest(run["protocol"])
+    path.write_text(json.dumps(record, indent=2) + "\n")
+    before = path.read_bytes()
+    start_fresh_invocation()
+    runner.OPTIONS.resume = True
+    idle = Recorder()
+    with pytest.raises(runner.EvidenceRecordExists, match="another protocol"):
+        runner._gated_series("series.json", "test", OTHER_ARM, n_steps=1, burn_in=0, execution=None, runner=idle)
+    assert idle.calls == []
+    assert path.read_bytes() == before
+
+
+def test_a_saved_run_of_another_configuration_is_not_reused(isolated_runner: Path) -> None:
+    # Review R6 (and CR-03): a self-consistent saved run of a planned label
+    # and seed that names another configuration is another protocol.
+    runner._gated_series("series.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=Recorder())
+    path = isolated_runner / "series.json"
+    record = json.loads(path.read_text())
+    record["runs"][0]["protocol"]["config_hash"] = "another configuration"
+    record["runs"][0]["protocol_hash"] = runner.protocol_digest(record["runs"][0]["protocol"])
+    path.write_text(json.dumps(record, indent=2) + "\n")
+    before = path.read_bytes()
+    runner.OPTIONS.resume = True
+    for plan in (PLAN, PLAN[:1]):  # with a run to add, and with nothing left to run
+        start_fresh_invocation()
+        idle = Recorder()
+        with pytest.raises(runner.EvidenceRecordExists, match="another protocol"):
+            runner._gated_series("series.json", "test", plan, n_steps=400, burn_in=100, execution=None, runner=idle)
+        assert idle.calls == []
+        assert path.read_bytes() == before
+
+
+def test_an_unreadable_or_non_series_record_is_refused_unchanged(isolated_runner: Path) -> None:
+    path = isolated_runner / "series.json"
+    runner.OPTIONS.resume = True
+    for content, match in (("{", "not readable JSON"), (json.dumps({"command": "e2", "results": []}), "no list of runs")):
+        path.write_text(content)
+        before = path.read_bytes()
+        start_fresh_invocation()
+        idle = Recorder()
+        with pytest.raises(runner.EvidenceRecordExists, match=match):
+            series(idle)
+        assert idle.calls == []
+        assert path.read_bytes() == before
+    path.unlink()
+    path.mkdir()  # a directory under the record's name
+    start_fresh_invocation()
+    idle = Recorder()
+    with pytest.raises(runner.EvidenceRecordExists, match="not readable JSON"):
+        series(idle)
+    assert idle.calls == [] and path.is_dir() and not any(path.iterdir())
+
+
+def test_a_consistent_record_resumed_twice_stays_consistent(isolated_runner: Path) -> None:
+    path = isolated_runner / "series.json"
+    runner._gated_series("series.json", "test", PLAN[:1], n_steps=400, burn_in=100, execution=None, runner=Recorder())
+    calls = []
+    for plan in (PLAN, PLAN + OTHER_ARM):  # an overlapping, then a disjoint addition
+        start_fresh_invocation()
+        runner.OPTIONS.resume = True
+        recorder = Recorder()
+        runner._gated_series("series.json", "test", plan, n_steps=400, burn_in=100, execution=None, runner=recorder)
+        calls.append(recorder.calls)
+        assert runner._inconsistencies(json.loads(path.read_text())) == []
+    assert calls == [[22], [31]]
+
+
+def test_the_saved_evidence_records_agree_with_themselves() -> None:
+    # Reads only: every committed record whose runs all carry protocols
+    # passes the AR-016 consistency check, so no valid record is refused for it.
+    checked = 0
+    for path in sorted(LEGACY_EVIDENCE_DIR.glob("*.json")):
+        record = json.loads(path.read_text())
+        runs = record.get("runs")
+        if isinstance(runs, list) and runs and all(isinstance(run, dict) and "protocol" in run and "protocol_hash" in run for run in runs):
+            assert runner._inconsistencies(record) == [], path.name
+            checked += 1
+    assert checked > 0

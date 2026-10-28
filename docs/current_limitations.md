@@ -364,7 +364,7 @@ and LIM-07.
 
 ### LIM-11 — Reproducibility and development status are environment-specific
 
-- **Status:** Reproducibility / acceptance boundary. Updated 2026-10-18.
+- **Status:** Reproducibility / acceptance boundary. Updated 2026-10-20.
 - Exact seeded arrays are guaranteed only within the frozen numerical and
   backend environment. Independent native and HCIPy screens are compared
   statistically. Timing and memory depend on the platform. Noisy interaction
@@ -388,6 +388,23 @@ and LIM-07.
   backend, thread settings, OS version and optional packages are not bound.
   Version-2 records stay read-only history; their producers are not
   reconstructed.
+- Updated 2026-10-20 (GPT independent review AR-014, AR-016): a resume of
+  the detector evidence series also refuses a record that contradicts
+  itself -- a stored protocol hash that is not its payload's digest, a run
+  whose label, seed, configuration hash, frame count or burn-in is not its
+  protocol's, or a header that is not its runs' -- before anything runs,
+  leaving the file as it was. The S3 sampling study used to reuse any run
+  file of the same name, and its run names omitted the scale, so a full
+  study could take 12 m runs as its own under the summarizing process's
+  identity. Its runs now carry their own protocol (scale, setting,
+  configuration hash and producer); a resume reuses only the planned runs of
+  one producer, adds runs only under that producer, never rewrites a
+  summary, and refuses version-1 run files; a run made under another
+  producer (the tree or environment changed during the study) stops the
+  study, and once a directory holds runs of two producers a fresh one is
+  needed. The S3 records (produced
+  2026-10-18, committed 2026-10-19 in `949d931`) are version 1; each was
+  one invocation that launched every one of its runs.
 - **Consequence / next evidence:** Record profile versions, overrides, seed,
   dependency versions and source revision/patch with results. Treat an
   implementation, a test pass and an accepted baseline as distinct evidence.
