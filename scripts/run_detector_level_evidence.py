@@ -65,7 +65,14 @@ to one record with ``--resume`` only under the same protocol.  Each run's
 protocol names the environment that produced it (series protocol version 3,
 2026-10-18, GPT pre-refactor audit F-03); version-2 records do not, so they
 cannot be continued, and nothing is attributed to them after the fact.  A
-resume that would add runs also stops when the code identity is unknown.
+resume that would add runs also stops when the code identity is unknown.  A
+saved record must also agree with itself (GPT independent review AR-016,
+2026-10-20): every run's stored protocol hash is recomputed from its stored
+protocol; the label, seed, configuration hash, frame count and burn-in a run
+repeats must equal its protocol's; each label and seed is recorded once; and
+the header's series fields and environment must be its runs'.  An
+inconsistent or unreadable record stops the command before anything runs and
+is left byte for byte as it was.
 """
 
 from __future__ import annotations
@@ -103,15 +110,11 @@ TWO_METRE_PROFILES = (
 
 
 def _header(command: str) -> dict[str, Any]:
-    import scipy
-
     return {
         "command": command,
         "argv": sys.argv,
-        "python": sys.version,
-        "numpy": np.__version__,
-        "scipy": scipy.__version__,
-        "machine": platform.machine(),
+        # The producing environment's four fields, as every run's protocol has them.
+        **producer_environment(),
         "started_unix_s": time.time(),
         # Audit metadata: where this invocation writes.  No protocol,
         # configuration or code identity depends on it.
@@ -253,8 +256,71 @@ def run_protocol(
             n_steps, burn_in, execution, code, producer_environment() if environment is None else environment
         ),
     }
-    encoded = json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
-    return {"protocol_hash": hashlib.sha256(encoded).hexdigest(), "protocol": payload}
+    return {"protocol_hash": protocol_digest(payload), "protocol": payload}
+
+
+def protocol_digest(payload: Any) -> str:
+    """SHA-256 of the key-sorted JSON of a run's protocol payload."""
+
+    return hashlib.sha256(_canonical(payload).encode("utf-8")).hexdigest()
+
+
+def _canonical(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, default=str)
+
+
+# Fields a saved run repeats from its protocol, and header fields that repeat
+# the series protocol of the record's runs (GPT independent review AR-016).
+_REPEATED_RUN_FIELDS = ("label", "root_seed", "config_hash", "n_steps", "burn_in_frames")
+_REPEATED_HEADER_FIELDS = {
+    "series_protocol_version": "series_protocol_version",
+    "n_steps": "n_steps",
+    "burn_in_frames": "burn_in_frames",
+    "code_identity": "code",
+}
+
+
+def _inconsistencies(previous: dict[str, Any]) -> list[str]:
+    """How a saved series record contradicts itself (empty when it does not).
+
+    Every run's stored protocol hash must be the digest of its stored
+    protocol, and the label, seed, configuration hash, frame count and burn-in
+    it repeats must equal its protocol's; a (label, seed) is recorded once.
+    The header's series fields and environment must be its runs', and the
+    enablement notes a resume carries over must be text.
+    """
+
+    problems: list[str] = []
+    seen: set[str] = set()
+    for index, entry in enumerate(previous["runs"]):
+        protocol = entry["protocol"]
+        if not isinstance(protocol, dict) or protocol_digest(protocol) != entry["protocol_hash"]:
+            problems.append(f"run {index}: the stored protocol hash is not the digest of its protocol")
+            continue
+        for name in _REPEATED_RUN_FIELDS:
+            # The label and seed identify the run, so they must be present.
+            if (name in ("label", "root_seed") or name in entry) and _canonical(entry.get(name)) != _canonical(protocol.get(name)):
+                problems.append(f"run {index}: {name} {entry.get(name)!r} is not its protocol's {protocol.get(name)!r}")
+        key = _canonical([entry.get("label"), entry.get("root_seed")])
+        if key in seen:
+            problems.append(f"run {index}: label and seed {key} are recorded twice")
+        seen.add(key)
+    if problems:
+        return problems
+    runs = previous["runs"]
+    for header_name, name in _REPEATED_HEADER_FIELDS.items():
+        if header_name in previous and any(_canonical(entry["protocol"].get(name)) != _canonical(previous[header_name]) for entry in runs):
+            problems.append(f"the header's {header_name} is not its runs'")
+    environments = [entry["protocol"]["environment"] for entry in runs if isinstance(entry["protocol"].get("environment"), dict)]
+    for name in ("python", "numpy", "scipy", "machine"):
+        if name in previous and any(_canonical(environment.get(name)) != _canonical(previous[name]) for environment in environments):
+            problems.append(f"the header's {name} is not its runs' producing environment")
+    if not isinstance(previous.get("enabled_by_user"), (str, type(None))):
+        problems.append("enabled_by_user is not a note")
+    resumed_notes = previous.get("resumed_enabled_by_user", [])
+    if not isinstance(resumed_notes, list) or not all(isinstance(note, str) for note in resumed_notes):
+        problems.append("resumed_enabled_by_user is not a list of notes")
+    return problems
 
 
 def gain_scan(arguments: argparse.Namespace) -> None:
@@ -522,7 +588,33 @@ def _gated_series(
                 f"{path} exists.  Pass --resume to continue it (runs are reused only when "
                 "their protocol identity matches) or --output NAME for a fresh record."
             )
-        previous = json.loads(path.read_text())
+        try:
+            previous = json.loads(path.read_text())
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            raise EvidenceRecordExists(
+                f"{path} is not readable JSON ({exc}); nothing ran and it is unchanged.  Pass "
+                "--output NAME for a fresh record."
+            ) from None
+        if not isinstance(previous, dict) or not isinstance(previous.get("runs"), list):
+            raise EvidenceRecordExists(
+                f"{path} has no list of runs, so it is not a gated-series record; nothing ran and it "
+                "is unchanged.  Pass --output NAME for a fresh record."
+            )
+        for entry in previous["runs"]:
+            if not isinstance(entry, dict) or "protocol_hash" not in entry or "protocol" not in entry:
+                raise EvidenceRecordExists(
+                    f"{path} predates run protocol identities and cannot be resumed; "
+                    "pass --output NAME for a fresh record."
+                )
+        # A saved record must agree with itself before its runs are compared
+        # with this invocation's (GPT independent review AR-016).
+        problems = _inconsistencies(previous)
+        if problems:
+            raise EvidenceRecordExists(
+                f"{path} is inconsistent in itself ({'; '.join(problems[:3])}"
+                f"{'; ...' if len(problems) > 3 else ''}); nothing ran and it is unchanged.  "
+                "Pass --output NAME for a fresh record."
+            )
         # Every retained run, in this plan or not (another comparison arm),
         # must share the series protocol: version, frames, burn-in, execution,
         # code (re-review S2) and producing environment (GPT audit F-03).
@@ -530,18 +622,13 @@ def _gated_series(
         shared = _shared_protocol(n_steps, burn_in, execution, code, environment)
         mismatched = []
         unattributed = []
-        for entry in previous.get("runs", []):
+        for entry in previous["runs"]:
             key = (entry.get("label"), entry.get("root_seed"))
-            if "protocol_hash" not in entry or "protocol" not in entry:
-                raise EvidenceRecordExists(
-                    f"{path} predates run protocol identities and cannot be resumed; "
-                    "pass --output NAME for a fresh record."
-                )
             if "environment" not in entry["protocol"]:
                 unattributed.append(key)
                 continue
             saved = {name: entry["protocol"].get(name) for name in shared}
-            if saved != shared:
+            if _canonical(saved) != _canonical(shared):
                 mismatched.append(key)
             elif key in expected and entry["protocol_hash"] != expected[key]["protocol_hash"]:
                 mismatched.append(key)
