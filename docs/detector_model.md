@@ -54,7 +54,7 @@ For each lenslet block (a centroid window of `w` pixels plus a guard ring of
 | 12 | read noise (per-pixel map for CMOS) | DET-05 |
 | 13 | non-linearity `y + Σ c_k y^(k+2)` → conversion gain → bias + fixed pattern → ADC rounding and digital clip | DET-05 |
 | 14 | RTC processing: `Y = P[(X − B̂ − D̂ − Ŝ) c / F̂]` | DET-06 |
-| 15 | centre of gravity on the window; `detector_covariance_v1` quality; validity gates | DET-07 |
+| 15 | centre of gravity on the window; `detector_covariance_v2` quality; validity gates | DET-07 |
 
 ### Optics (DET-03, DET-04)
 
@@ -151,8 +151,22 @@ declared read-noise dither, `E[round(x + n)]`. That is exactly `rint` for a
 noiseless readout, and differs from `x` by at most 2.3e-3 ADU at
 σ = 0.5 ADU (decision D00-3a).
 
+Because of this dither, with the ADC on the read noise shapes the
+reference response. `CameraConfig.deterministic_response_config`, and with
+it the sensor's `response_hash`, therefore binds the read noise and the
+dither model (`gaussian_read_noise_expectation_v1`). Two sensors that share
+a response hash have identical reference and probe responses. With the ADC
+off the reference does not depend on read noise, and the hash does not
+either. (Before the 2026-10-16 review, R1, the read noise was left out, and
+two references 0.46 ADU apart shared one hash.)
+
 The reference path is not the expected noisy response after saturation,
 non-linearity or clipping. The noisy-response identity is kept separate.
+
+A declared non-linearity acts after read noise, so it must be monotonic over
+the whole output range, widened by six read-noise sigmas on each side. For a
+multiplying EMCCD the range ends at the register capacity, because a Gamma
+register can carry a single input electron far above `G` (review R7).
 
 ## Calibration products (DET-06)
 
@@ -184,8 +198,17 @@ declares a bright internal calibration source. With a source declared:
   subaperture's illuminated area, no sky), so reference centroids and
   interaction-matrix probes no longer depend on the guide-star magnitude;
 - noisy measurements observe the star and the sky;
-- `response_hash` binds the source, and `noisy_response_hash` binds the
-  operating budget.
+- the source is observed without sky, so its frames subtract the bias and
+  dark masters only (`processing.without_sky_master`); before the
+  2026-10-16 review, R3, they also subtracted the operating sky master,
+  which left a negative pedestal of one sky level per pixel;
+- `response_hash` binds the source and that subtraction, and
+  `noisy_response_hash` binds the operating budget.
+
+`PhysicalShackHartmannSensor.measure_operating_expectation` is the noiseless
+expectation of an operating exposure: the star and sky through the
+operating products. It differs from `measure(..., include_noise=False)`,
+which is the calibration observation.
 
 Without a source (every version-1 profile), calibration observes the
 operating flux. Faint stars then have no calibratable rows, and
@@ -200,7 +223,7 @@ at the *start* of the exposure, so integration moves the effective sample
 time later, to `t + τ(n − 1)/(2n)`. At 12 m and m_AB = 8 that lowered the
 residual by 3–5 nm, within the seed scatter (DET-08).
 
-## Uncertainty model `detector_covariance_v1` (DET-07)
+## Uncertainty model `detector_covariance_v2` (DET-07)
 
 With centroid Jacobian `j`, bad-pixel back-projection `u = Pᵀ j`, and
 `w = u / (f G m')`:
@@ -211,7 +234,16 @@ This is the temporal variance, conditional on fixed products, and it is
 what the validity gates use. Kᵀw is evaluated as a local correlation; no
 dense detector covariance is ever formed.
 
-The calibration-ensemble variance adds:
+The conditional mean, and with it the Jacobian, the total flux and the
+SNRs, subtracts the realized additive master that processing actually
+removes, with its bias and offset pedestal taken out. Version 1 used the
+ideal background there. With a one-frame sky master, version 1 put the
+processed flux at 993 e⁻ instead of 822 e⁻, and the scatter 23 % too
+low (review R2). Version 2 matches the measurement to 3e-14 and Monte Carlo
+to within 2.3 %.
+
+The calibration-ensemble variance is linearized about the nominal
+(expected) background instead. It adds:
 - the background-master error;
 - the flat error (normalization is common-mode and moves no centroid);
 - the shared-dark cross-covariance.
@@ -227,6 +259,10 @@ The model is **supported** only for:
 - a plain centre of gravity;
 - no negative clipping;
 - no expected saturation (pixel, register or ADC above 90 % of capacity);
+- every block pixel's expected ADC code, bias and offset map included, at
+  least 5 temporal noise sigmas inside both ADC limits (version 1 checked
+  only the upper limit, without offsets, and accepted zero-bias clipping at
+  code 0 that made the scatter 27 % lower than predicted; review R4);
 - no non-linearity;
 - read noise of at least 0.5 ADU;
 - `SNR_T ≥ 7`.

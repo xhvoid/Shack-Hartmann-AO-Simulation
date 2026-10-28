@@ -7,7 +7,12 @@
   geometry (the scan tier of the 12 m and 42 m profiles);
 * :func:`seed_ensemble` - noise-on closed loops over independent root seeds
   (atmosphere, detector temporal noise, persistent maps and calibration
-  products all redrawn).
+  products all redrawn);
+* :func:`with_matched_photometry` - change the spectral sampling while holding
+  the detected source and sky electrons fixed (E6);
+* :func:`paired_noise_run` - the isolated temporal detector-noise
+  contribution to the residual, from a noise-on loop and its noiseless
+  operating twin.
 
 The Monte-Carlo noise harness (E1) and the open-loop propagation test (E2)
 live in :mod:`shwfs_ao.experiments.detector_noise`.
@@ -23,6 +28,7 @@ from typing import Any
 
 import numpy as np
 
+from ..core.hashing import component_config_hash
 from ..core.provenance import Provenance
 from ..io.configs import ProfileProvenance, RandomSeedConfig, SystemConfig
 from .scao import ScaoExecutionOptions, build_scao_system, run_closed_loop
@@ -42,7 +48,9 @@ __all__ = (
     "interaction_prediction_check",
     "with_physics",
     "with_magnitude",
+    "with_matched_photometry",
     "science_run",
+    "paired_noise_run",
     "summarize_runs",
 )
 
@@ -263,7 +271,7 @@ def open_loop_noise_propagation(
     A static residual (``residual_scale`` times the atmosphere at t = 0, the
     DM flat, loop open), fixed calibration products and a fixed reconstructor
     matrix ``R``.  The slope covariance measured over ``trials`` noisy frames
-    is compared with the independent ``detector_covariance_v1`` prediction
+    is compared with the independent ``detector_covariance_v2`` prediction
     ``Sigma_s,pred`` (independent lenslets: block diagonal), and the measured
     noise-only reconstruction covariance with ``R Sigma_s,pred R^T``.  Trials
     whose row mask is not fully valid are counted and excluded, so R stays
@@ -408,6 +416,46 @@ def with_magnitude(config: SystemConfig, magnitude: float) -> SystemConfig:
     return with_physics(config, source=replace(physics.source, ab_magnitude=float(magnitude)))
 
 
+def with_matched_photometry(config: SystemConfig, reference: SystemConfig) -> SystemConfig:
+    """``config`` with source and sky shifted to ``reference``'s detected electrons.
+
+    The AB source magnitude and sky surface brightness move by
+    ``2.5 log10(N_config / N_reference)``, each from its own ratio, so the
+    detected source electrons per full subaperture and the sky electrons per
+    pixel equal those of ``reference`` while the bandpass and its optical
+    quadrature stay ``config``'s.  This separates a chromatic-optics effect
+    from the electron-budget change a different band brings (review R5).
+    """
+
+    from ..detector.physical_config import physical_budget
+    from .scao import physical_detector_config
+
+    def budget(item: SystemConfig) -> Any:
+        return physical_budget(
+            physical_detector_config(item),
+            wfs_wavelength_m=item.wfs_wavelength_m,
+            full_subaperture_area_m2=1.0,
+            pixel_solid_angle_sr=1.0e-12,
+        )
+
+    physics = config.detector_physics
+    if physics is None:
+        raise ValueError("the configuration has no detector_physics block.")
+    source = physics.source
+    if source.kind != "ab_flat_fnu":
+        raise ValueError("photometry matching needs an ab_flat_fnu source.")
+    current, target = budget(config), budget(reference)
+    changes: dict[str, float] = {
+        "ab_magnitude": float(source.ab_magnitude)
+        + 2.5 * math.log10(current.detected_e_full_subap / target.detected_e_full_subap)
+    }
+    if source.sky_ab_mag_per_arcsec2 is not None:
+        changes["sky_ab_mag_per_arcsec2"] = float(source.sky_ab_mag_per_arcsec2) + 2.5 * math.log10(
+            current.sky_e_per_pixel_full_subap / target.sky_e_per_pixel_full_subap
+        )
+    return with_physics(config, source=replace(source, **changes))
+
+
 def science_run(
     config: SystemConfig,
     *,
@@ -472,6 +520,7 @@ def science_run(
         "per_frame_s": loop_s / run_config.controller.n_steps,
         "process_peak_rss_bytes": peak_bytes,
         "post_update_rms_m": float(np.mean(post)),
+        "post_update_mean_square_m2": float(np.mean(post**2)),
         "open_loop_rms_m": float(np.mean(open_loop)),
         "final_post_update_rms_m": float(post[-1]),
         "valid_measurement_fraction": float(np.mean(valid)),
@@ -492,6 +541,181 @@ def science_run(
     recovery = history.metadata.get("recovery")
     if recovery is not None:
         result["recovery"] = dict(recovery)
+    return result
+
+
+class _OperatingExpectationSensor:
+    """A physical sensor whose every loop measurement is noiseless.
+
+    Each measurement is the sensor's ``measure_operating_expectation``: the
+    guide star and sky at the operating budget, through the operating
+    products, with every detector draw replaced by its mean.  Every other
+    attribute (identities, row layout, geometry) is the sensor's own.
+    """
+
+    def __init__(self, sensor: Any) -> None:
+        self._sensor = sensor
+        self._config_hash = component_config_hash(
+            "physical_shack_hartmann_operating_expectation",
+            {"sensor_config_hash": sensor.config_hash},
+        )
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._sensor, name)
+
+    # The loop checks its protocol members statically, so declare them.
+    @property
+    def config_hash(self) -> str:
+        return self._config_hash
+
+    @property
+    def row_ids(self) -> tuple[str, ...]:
+        return tuple(self._sensor.row_ids)
+
+    def measure(self, residual_opd_m: np.ndarray, *, random_streams: Any, include_noise: bool) -> Any:
+        return self._sensor.measure_operating_expectation((residual_opd_m,), random_streams=random_streams)
+
+    def measure_exposure(
+        self, residual_opd_samples: Sequence[np.ndarray], *, random_streams: Any, include_noise: bool
+    ) -> Any:
+        return self._sensor.measure_operating_expectation(residual_opd_samples, random_streams=random_streams)
+
+
+PAIRED_NOISE_ARMS = ("noise_on", "operating_expectation")
+
+
+class _PupilResidualRecorder:
+    """Keeps each post-update residual map's pupil samples from a start frame."""
+
+    requested_fields = frozenset({"post_update_residual_opd_m"})
+
+    def __init__(self, start_frame: int) -> None:
+        self._start = int(start_frame)
+        self.mask: np.ndarray | None = None
+        self.samples: list[np.ndarray] = []
+
+    def observe(self, observation: Any) -> None:
+        if observation.frame_index < self._start:
+            return
+        opd = np.asarray(observation.post_update_residual_opd_m, dtype=float)
+        if self.mask is None:
+            self.mask = np.isfinite(opd)
+        self.samples.append(opd[self.mask].astype(np.float32))
+
+
+def paired_noise_run(
+    config: SystemConfig,
+    *,
+    root_seed: int,
+    n_steps: int,
+    burn_in_frames: int,
+    execution: ScaoExecutionOptions | None = None,
+    block_frames: int = 25,
+) -> dict[str, Any]:
+    """The temporal detector-noise contribution to the residual, isolated.
+
+    Two identically built systems (same atmosphere, persistent maps, fixed
+    calibration products, reference, interaction matrix and reconstructor)
+    run the same loop.  One measures with detector noise; the other measures
+    the noiseless operating expectation (same star, sky, products and
+    validity gates, which use model expectations).  Fitting, temporal,
+    aliasing and calibration-master errors are common to both arms, and the
+    atmosphere is identical, so the per-frame difference of the post-update
+    residual maps is the DM response to propagated temporal detector noise.
+    ``noise_variance_m2`` is the mean over frames of that difference's
+    squared piston-removed pupil RMS; it has no cross term with the common
+    residual.  The difference of the arms' mean-square residuals is kept as
+    ``mean_square_difference_m2`` for comparison; its cross term
+    ``2 <phi_common, n>`` averages to zero but dominates its scatter when
+    the common residual is large.  Standard errors come from per-frame values
+    averaged in blocks of ``block_frames`` frames, which absorbs the loop's
+    frame-to-frame correlation.
+
+    The noise model's prediction for a flat wavefront is returned with it:
+    the mean temporal centroid variance (x plus y, pixels squared) over the
+    lenslets it supports, and the detected electrons per full subaperture.
+    """
+
+    from ..control.loop import run_closed_loop as run_component_loop
+    from .scao import _exposure_keywords, _loop_config
+
+    run_config = replace(
+        config,
+        random=RandomSeedConfig(root_seed=int(root_seed)),
+        controller=replace(config.controller, n_steps=int(n_steps)),
+    )
+    window = slice(int(burn_in_frames), None)
+    squares: dict[str, np.ndarray] = {}
+    recorders: dict[str, _PupilResidualRecorder] = {}
+    result: dict[str, Any] = {
+        "config_hash": run_config.config_hash,
+        "root_seed": int(root_seed),
+        "n_steps": int(n_steps),
+        "burn_in_frames": int(burn_in_frames),
+        "block_frames": int(block_frames),
+        "arms": {},
+    }
+    started = time.perf_counter()
+    for arm in PAIRED_NOISE_ARMS:
+        system = build_scao_system(run_config, execution=execution)
+        wfs = system.wfs if arm == "noise_on" else _OperatingExpectationSensor(system.wfs)
+        recorders[arm] = _PupilResidualRecorder(int(burn_in_frames))
+        history = run_component_loop(
+            _loop_config(run_config),
+            random_streams=system.random_streams,
+            atmosphere=system.atmosphere,
+            wfs=wfs,
+            dm=system.dm,
+            interaction_matrix=system.interaction_matrix,
+            reconstructor=system.reconstructor,
+            command_projector=system.command_projector,
+            controller=system.controller,
+            include_noise=arm == "noise_on",
+            recovery=system.recovery_policy,
+            observers=(recorders[arm],),
+            **_exposure_keywords(run_config),
+        )
+        post = np.asarray(history.post_update_residual_opd_rms_m, dtype=float)[window]
+        open_loop = np.asarray(history.open_loop_opd_rms_m, dtype=float)[window]
+        squares[arm] = post**2
+        result["arms"][arm] = {
+            "post_update_rms_m": float(np.mean(post)),
+            "post_update_mean_square_m2": float(np.mean(post**2)),
+            "open_loop_rms_m": float(np.mean(open_loop)),
+            "valid_measurement_fraction": float(
+                np.mean(np.asarray(history.valid_measurement_fraction, dtype=float)[window])
+            ),
+            "reconstruction_usable_fraction": float(
+                np.mean(np.asarray(history.reconstruction_usable, dtype=bool)[window])
+            ),
+            "lost_lock": bool(post[-1] > open_loop[-1]),
+        }
+        if arm == "noise_on":
+            quality = system.wfs.noise_model(np.zeros(system.wfs.geometry.pupil_shape))  # type: ignore[attr-defined]
+            supported = np.asarray(quality.supported, dtype=bool)
+            variance = np.sum(np.asarray(quality.centroid_sigma_xy_px, dtype=float) ** 2, axis=1)
+            result["predicted_centroid_variance_px2"] = (
+                float(np.mean(variance[supported])) if np.any(supported) else None
+            )
+            result["supported_lenslet_fraction"] = float(np.mean(supported))
+            result["detected_e_full_subap"] = float(np.max(system.wfs.detected_e_per_subap))  # type: ignore[attr-defined]
+    def mean_and_error(values: np.ndarray) -> tuple[float, float | None]:
+        usable = values[: values.size // block_frames * block_frames]
+        blocks = usable.reshape(-1, block_frames).mean(axis=1)
+        error = float(np.std(blocks, ddof=1) / math.sqrt(blocks.size)) if blocks.size > 1 else None
+        return float(np.mean(values)), error
+
+    on = np.asarray(recorders["noise_on"].samples, dtype=float)
+    off = np.asarray(recorders["operating_expectation"].samples, dtype=float)
+    delta = on - off
+    delta -= np.mean(delta, axis=1, keepdims=True)
+    variance_per_frame = np.mean(delta**2, axis=1)
+    result["noise_variance_m2"], result["noise_variance_standard_error_m2"] = mean_and_error(variance_per_frame)
+    (
+        result["mean_square_difference_m2"],
+        result["mean_square_difference_standard_error_m2"],
+    ) = mean_and_error(squares["noise_on"] - squares["operating_expectation"])
+    result["wall_s"] = time.perf_counter() - started
     return result
 
 

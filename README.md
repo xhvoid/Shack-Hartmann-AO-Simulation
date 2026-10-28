@@ -418,7 +418,7 @@ detector model, which stays the default and is unchanged. The path covers:
 - **RTC processing:** pixel processing that uses *estimated* bias, dark,
   sky and flat masters.
 - **Noise model:** a first-order centroid-noise model,
-  `detector_covariance_v1`, that propagates the full covariance (including
+  `detector_covariance_v2`, that propagates the full covariance (including
   coupling and master-frame errors) and flags the regimes it does not
   support.
 
@@ -494,6 +494,37 @@ Further results:
   - reaches a long-exposure K-band Strehl of **0.753**, against 0.78 for
     the noiseless reference profile;
   - took 1.75 s per frame and peaked at 1.61 GiB.
+- **Isolated detector noise.** A noise-on loop is paired with a noiseless
+  twin: same atmosphere, calibration and gates, with every detector draw
+  replaced by its mean. The difference isolates the detector-noise
+  contribution to the residual variance.
+  - At 2 m it scales as N_e^(−0.978 ± 0.014), consistent with 1/N_e.
+  - At 12 m it scales as N_e^(−1.028 ± 0.010). That fails a strict 1/N_e
+    test, because read noise and charge over the 15 × 15 window steepen the
+    faint end, as the noise model predicts.
+  - Over a factor of 16 in flux it stays within a few per cent of the
+    model's prediction.
+- **Review fixes (2026-10-16).** An external review found seven issues, all
+  now fixed, and the noise model is now `detector_covariance_v2`:
+  - the response identity omitted the read-noise dither;
+  - the noise model used the ideal rather than the realized background;
+  - internal-source frames subtracted the sky;
+  - clipping at ADC code 0 counted as linear;
+  - the E6 monochromatic arm changed the photometry too;
+  - evidence resumption skipped identity checks;
+  - EMCCD non-linearity was checked over too small a range.
+
+  After the fixes:
+  - **2 m:** the evidence was rerun and is unchanged, with the closed loops
+    bit-identical.
+  - **12 m:** the `@3` magnitude scan, camera comparison and noise
+    propagation were rerun and reproduce the published values within 1 nm
+    per run. The exception is a degraded CMOS lock at m_AB = 10, which
+    varies by ±30 nm with no consistent sign.
+  - **E6 control:** a photometry-matched rerun shows that the chromatic
+    optics effect is about 0.6 nm.
+  - **42 m:** the result above comes from the reviewed code; its rerun has
+    not been run.
 
 Both 12 m versions, the 42 m run and the diagnoses are recorded in the
 execution record.

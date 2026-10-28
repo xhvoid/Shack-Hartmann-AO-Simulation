@@ -29,15 +29,34 @@ the trigger of the excursions the reset policy recovers from (reconstructor
 damping, acceptance threshold or leak, each with or without the reset).  Every
 arm appends to one record; the protocol is predeclared in the status file
 ("Excursion trigger at m_AB = 11").
+
+``noise-isolation-2m`` (ungated) and ``noise-isolation-12m`` (gated) run
+paired noise-on / noiseless-operating loops over magnitudes and seeds to
+isolate the temporal detector-noise variance (review 2026-10-16).
+``e6-v3`` reruns E6 on ``det_emccd_12m_medium_derived@3`` with a
+photometry-matched monochromatic arm (gated).
+
+Existing records are never replaced silently (review R6).  A command whose
+record exists stops unless one of the global options says what to do:
+``--output NAME`` writes a fresh record under another name, ``--overwrite``
+replaces a one-shot record, and ``--resume`` continues a gated series.  On
+resume every saved run must carry the protocol identity this invocation would
+give it (configuration hash with seed and frame count, burn-in, execution
+options, and the code identity: git HEAD plus a digest of uncommitted source
+changes); a mismatch stops the command, and a record without identities
+cannot be resumed.  Arms of ``e3-recovery`` and ``e3-excursion`` append to
+one record with ``--resume``.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 from pathlib import Path
 import platform
+import subprocess
 import sys
 import time
 from typing import Any
@@ -45,7 +64,13 @@ from typing import Any
 import numpy as np
 
 
-EVIDENCE_DIR = Path(__file__).resolve().parents[1] / "docs/refactor/detector_level_evidence"
+REPOSITORY = Path(__file__).resolve().parents[1]
+EVIDENCE_DIR = REPOSITORY / "docs/refactor/detector_level_evidence"
+# Protocol identity version of gated-series runs (review R6).
+SERIES_PROTOCOL_VERSION = 2
+# Global options, set by main(): fresh output name, overwrite, resume.
+OPTIONS = argparse.Namespace(output=None, overwrite=False, resume=False, enabled_by_user=None)
+_STARTED: set[Path] = set()
 GAINS = (0.2, 0.3, 0.4, 0.5)
 TWO_METRE_PROFILES = (
     "det_ccd_2m_synthetic",
@@ -69,12 +94,80 @@ def _header(command: str) -> dict[str, Any]:
     }
 
 
-def _write(name: str, record: dict[str, Any]) -> Path:
+class EvidenceRecordExists(SystemExit):
+    """An evidence record exists and no option says how to treat it."""
+
+
+def _record_path(name: str) -> Path:
+    return EVIDENCE_DIR / (OPTIONS.output or name)
+
+
+def _write(name: str, record: dict[str, Any], *, resumed: bool = False) -> Path:
+    """Write a record; the first write of an invocation never replaces silently."""
+
     EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
-    path = EVIDENCE_DIR / name
+    path = _record_path(name)
+    if path not in _STARTED:
+        if path.exists() and not (OPTIONS.overwrite or resumed):
+            raise EvidenceRecordExists(
+                f"{path} exists.  Pass --output NAME for a fresh record, --overwrite to "
+                "replace it, or --resume to continue a gated series."
+            )
+        _STARTED.add(path)
     path.write_text(json.dumps(record, indent=2, default=float) + "\n")
     print(f"wrote {path}")
     return path
+
+
+def code_identity() -> dict[str, Any]:
+    """Git HEAD and a digest of uncommitted changes under ``src`` and ``scripts``."""
+
+    try:
+        head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=REPOSITORY, capture_output=True, text=True, check=True
+        ).stdout.strip()
+        diff = subprocess.run(
+            ["git", "diff", "HEAD", "--", "src", "scripts"], cwd=REPOSITORY, capture_output=True, check=True
+        ).stdout
+        untracked = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard", "--", "src", "scripts"],
+            cwd=REPOSITORY, capture_output=True, text=True, check=True,
+        ).stdout.split()
+    except (OSError, subprocess.CalledProcessError):
+        return {"git_head": None, "source_changes_sha256": None}
+    digest = hashlib.sha256(diff)
+    for name in sorted(untracked):
+        digest.update(name.encode("utf-8"))
+        digest.update((REPOSITORY / name).read_bytes())
+    return {"git_head": head, "source_changes_sha256": digest.hexdigest()}
+
+
+def run_protocol(
+    label: str, config: Any, seed: int, *, n_steps: int, burn_in: int, execution: Any, code: dict[str, Any]
+) -> dict[str, Any]:
+    """The identity a gated-series run must match to be reused on resume."""
+
+    from dataclasses import replace
+
+    from shwfs_ao.io.configs import RandomSeedConfig
+
+    run_config = replace(
+        config,
+        random=RandomSeedConfig(root_seed=int(seed)),
+        controller=replace(config.controller, n_steps=int(n_steps)),
+    )
+    payload = {
+        "series_protocol_version": SERIES_PROTOCOL_VERSION,
+        "label": label,
+        "root_seed": int(seed),
+        "config_hash": run_config.config_hash,
+        "n_steps": int(n_steps),
+        "burn_in_frames": int(burn_in),
+        "execution": repr(execution),
+        "code": code,
+    }
+    encoded = json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
+    return {"protocol_hash": hashlib.sha256(encoded).hexdigest(), "protocol": payload}
 
 
 def gain_scan(arguments: argparse.Namespace) -> None:
@@ -301,57 +394,108 @@ def _gated_series(
     burn_in: int,
     execution: Any,
     enabled_by_user: str = "2026-10-16: every gated run enabled, one at a time",
+    runner: Any = None,
 ) -> None:
-    """Run ``(label, config, root_seed)`` entries one at a time, saving after each."""
+    """Run ``(label, config, root_seed)`` entries one at a time, saving after each.
 
+    ``runner`` (default :func:`~shwfs_ao.experiments.detector_level.science_run`)
+    is called as ``runner(config, root_seed=, n_steps=, burn_in_frames=,
+    execution=)``.  An existing record is continued only with ``--resume``, and
+    only runs whose protocol identity matches are reused (review R6).
+    """
+
+    from shwfs_ao.calibration.interaction import InteractionMatrixError
     from shwfs_ao.experiments.detector_level import science_run, summarize_runs
 
     from shwfs_ao.experiments.scao import ScaoConstructionError
 
-    path = EVIDENCE_DIR / name
+    run = science_run if runner is None else runner
+    path = _record_path(name)
+    code = code_identity()
     record = _header(command)
-    record["enabled_by_user"] = enabled_by_user
+    record["enabled_by_user"] = OPTIONS.enabled_by_user or enabled_by_user
     record["n_steps"] = n_steps
     record["burn_in_frames"] = burn_in
+    record["series_protocol_version"] = SERIES_PROTOCOL_VERSION
+    record["code_identity"] = code
     record["runs"] = []
+    expected = {
+        (label, int(seed)): run_protocol(
+            label, config, seed, n_steps=n_steps, burn_in=burn_in, execution=execution, code=code
+        )
+        for label, config, seed in plan
+    }
+    resumed = False
     if path.exists():
-        # Resume: keep completed runs of an interrupted series.
+        if not OPTIONS.resume:
+            raise EvidenceRecordExists(
+                f"{path} exists.  Pass --resume to continue it (runs are reused only when "
+                "their protocol identity matches) or --output NAME for a fresh record."
+            )
         previous = json.loads(path.read_text())
+        mismatched = []
+        for entry in previous.get("runs", []):
+            key = (entry.get("label"), entry.get("root_seed"))
+            if "protocol_hash" not in entry:
+                raise EvidenceRecordExists(
+                    f"{path} predates run protocol identities and cannot be resumed; "
+                    "pass --output NAME for a fresh record."
+                )
+            if key in expected and entry["protocol_hash"] != expected[key]["protocol_hash"]:
+                mismatched.append(key)
+        if mismatched:
+            raise EvidenceRecordExists(
+                f"{path}: saved runs {mismatched} were made under another protocol "
+                "(configuration, frames, burn-in, execution or code).  Pass --output NAME "
+                "for a fresh record."
+            )
         record["runs"] = list(previous.get("runs", []))
         record["resumed_from_started_unix_s"] = previous.get("started_unix_s")
-    done = {(run["label"], run["root_seed"]) for run in record["runs"]}
+        resumed = True
+    done = {(entry["label"], entry["root_seed"]) for entry in record["runs"]}
     for label, config, seed in plan:
         if (label, seed) in done:
             continue
         try:
-            result = science_run(config, root_seed=seed, n_steps=n_steps, burn_in_frames=burn_in, execution=execution)
-        except ScaoConstructionError as exc:
+            result = run(config, root_seed=seed, n_steps=n_steps, burn_in_frames=burn_in, execution=execution)
+        except (ScaoConstructionError, InteractionMatrixError) as exc:
             # A configuration the system refuses to build (for example a
             # calibration whose rows the validity gates reject) is a result.
             result = {"status": "refused", "reason": str(exc)[:500], "root_seed": seed}
         result["label"] = label
+        result.update(expected[(label, int(seed))])
         record["runs"].append(result)
         groups: dict[str, list[dict[str, Any]]] = {}
-        for run in record["runs"]:
-            if run.get("status") != "refused":
-                groups.setdefault(run["label"], []).append(run)
+        for entry in record["runs"]:
+            if entry.get("status") != "refused" and "post_update_rms_m" in entry:
+                groups.setdefault(entry["label"], []).append(entry)
         record["summary"] = {key: summarize_runs(value) for key, value in groups.items()}
         record["refused"] = [
-            {"label": run["label"], "root_seed": run["root_seed"], "reason": run["reason"]}
-            for run in record["runs"]
-            if run.get("status") == "refused"
+            {"label": entry["label"], "root_seed": entry["root_seed"], "reason": entry["reason"]}
+            for entry in record["runs"]
+            if entry.get("status") == "refused"
         ]
         record["wall_s"] = time.time() - record["started_unix_s"]
-        _write(name, record)
+        _write(name, record, resumed=resumed or path in _STARTED)
         if result.get("status") == "refused":
             print(label, seed, "REFUSED", result["reason"][:120], flush=True)
             continue
-        print(
-            label, seed,
-            f"rms={1e9 * result['post_update_rms_m']:.1f}nm valid={result['valid_measurement_fraction']:.3f}",
-            f"strehl={result['science'][0]['peak_strehl']:.3f} frame={result['per_frame_s']:.3f}s",
-            flush=True,
-        )
+        if "post_update_rms_m" in result:
+            print(
+                label, seed,
+                f"rms={1e9 * result['post_update_rms_m']:.1f}nm valid={result['valid_measurement_fraction']:.3f}",
+                f"strehl={result['science'][0]['peak_strehl']:.3f} frame={result['per_frame_s']:.3f}s",
+                flush=True,
+            )
+        else:
+            print(
+                label, seed,
+                f"noise_var={1e18 * result['noise_variance_m2']:.1f}"
+                f"+-{1e18 * (result['noise_variance_standard_error_m2'] or 0.0):.1f}nm2",
+                f"ms_diff={1e18 * result['mean_square_difference_m2']:.0f}nm2",
+                f"Ne={result['detected_e_full_subap']:.0f} wall={result['wall_s']:.1f}s",
+                flush=True,
+            )
 
 
 def _medium(version: int = 1):
@@ -370,7 +514,7 @@ def e2_12m(arguments: argparse.Namespace) -> None:
     from shwfs_ao.experiments.detector_level import open_loop_noise_propagation
 
     record = _header("e2-12m")
-    record["enabled_by_user"] = "2026-10-16"
+    record["enabled_by_user"] = OPTIONS.enabled_by_user or "2026-10-16"
     result = open_loop_noise_propagation(_medium(), trials=4000, execution=_summary_execution())
     record["results"] = [result]
     record["wall_s"] = time.time() - record["started_unix_s"]
@@ -418,23 +562,37 @@ def e6(arguments: argparse.Namespace, *, version: int = 1) -> None:
     from dataclasses import replace
 
     from shwfs_ao.detector.physical_config import BandpassConfig
-    from shwfs_ao.experiments.detector_level import with_physics
+    from shwfs_ao.experiments.detector_level import with_matched_photometry, with_physics
 
     base = _medium(version)
     physics = base.detector_physics
+    mono = with_physics(
+        base, bandpass=BandpassConfig(kind="monochromatic", band_min_m=5.5e-7, band_max_m=8.5e-7)
+    )
+    # The 550-850 nm band changes the photometry along with the optics: +5.7 %
+    # detected source and sky electrons against the R3 band (review R5).  The
+    # @1/@2 records keep their original label for this arm.
+    mono_label = "monochromatic 700 nm" if version < 3 else "monochromatic 700 nm (band and photometry change together)"
     variants = {
         "baseline (MFT k=4, diffusion 0.2, R3 3 nodes, estimated)": base,
         "point sampling (k=1, no diffusion)": with_physics(
             base, sampling=replace(physics.sampling, oversampling=1, diffusion_sigma_px=0.0)
         ),
-        "monochromatic 700 nm": with_physics(
-            base, bandpass=BandpassConfig(kind="monochromatic", band_min_m=5.5e-7, band_max_m=8.5e-7)
-        ),
+        mono_label: mono,
         "oracle processing": with_physics(base, processing=replace(physics.processing, mode="oracle")),
     }
+    if version >= 3:
+        # The controlled comparison: 700 nm optics with the baseline's electrons.
+        variants["monochromatic 700 nm, photometry matched to the baseline"] = with_matched_photometry(mono, base)
     plan = [(label, config, seed) for label, config in variants.items() for seed in (41, 42, 43)]
     name = "det09_e6_effect_sizes_12m.json" if version == 1 else f"det09_e6_effect_sizes_12m_v{version}.json"
-    _gated_series(name, f"e6 (profile @{version})", plan, n_steps=400, burn_in=100, execution=_summary_execution())
+    enablement = (
+        {"enabled_by_user": arguments.enabled_by_user} if version >= 3 else _enablement(version)
+    )
+    _gated_series(
+        name, f"e6 (profile @{version})", plan, n_steps=400, burn_in=100, execution=_summary_execution(),
+        **enablement,
+    )
 
 
 # Closed-loop recovery arms (controller.recovery), fixed by the predeclared
@@ -553,6 +711,53 @@ def det08(arguments: argparse.Namespace) -> None:
     _gated_series("det08_exposure_subsamples_12m.json", "det08", plan, n_steps=400, burn_in=100, execution=_summary_execution())
 
 
+# Isolated temporal detector-noise variance (review 2026-10-16, DET-09).  The
+# protocol is predeclared in the status file ("Isolated detector-noise
+# variance").
+# The 2 m screen supports about 204 frames of travel, so the 2 m study runs
+# 200 frames over more seeds.  The 2 m profile corrects only to m_AB = 8 (its
+# inherited peak-SNR gate), so the magnitudes are 5-8 (amendments recorded
+# in the status file).
+NOISE_ISOLATION_2M = {
+    "profile": ("det_emccd_2m_synthetic", 1), "magnitudes": (5.0, 6.0, 7.0, 8.0),
+    "seeds": (61, 62, 63, 64, 65, 66, 67, 68), "n_steps": 200, "burn_in": 50,
+}
+NOISE_ISOLATION_12M = {
+    "profile": ("det_emccd_12m_medium_derived", 3), "magnitudes": (8.0, 9.0, 10.0, 11.0),
+    "seeds": (71, 72, 73, 74, 75), "n_steps": 400, "burn_in": 100,
+}
+
+
+def _noise_isolation(settings: dict[str, Any], name: str, command: str, **keywords: Any) -> None:
+    from shwfs_ao.experiments.detector_level import paired_noise_run, with_magnitude
+    from shwfs_ao.io.configs import load_system_profile
+
+    base = load_system_profile(*settings["profile"])
+    plan = [
+        (f"m{magnitude:g}", with_magnitude(base, magnitude), seed)
+        for magnitude in settings["magnitudes"]
+        for seed in settings["seeds"]
+    ]
+    _gated_series(
+        name, command, plan, n_steps=settings["n_steps"], burn_in=settings["burn_in"],
+        execution=_summary_execution(), runner=paired_noise_run, **keywords,
+    )
+
+
+def noise_isolation_2m(arguments: argparse.Namespace) -> None:
+    _noise_isolation(
+        NOISE_ISOLATION_2M, "det09_noise_isolation_2m.json", "noise-isolation-2m",
+        enabled_by_user="not gated: 2 m tier (prompt section 2.5)",
+    )
+
+
+def noise_isolation_12m(arguments: argparse.Namespace) -> None:
+    _noise_isolation(
+        NOISE_ISOLATION_12M, "det09_noise_isolation_12m_v3.json", "noise-isolation-12m (profile @3)",
+        enabled_by_user=arguments.enabled_by_user,
+    )
+
+
 def e5(arguments: argparse.Namespace) -> None:
     from shwfs_ao.io.configs import load_system_profile
 
@@ -569,6 +774,10 @@ def e5(arguments: argparse.Namespace) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--output", help="write a fresh record under this file name in the evidence directory")
+    parser.add_argument("--overwrite", action="store_true", help="replace an existing one-shot record")
+    parser.add_argument("--resume", action="store_true", help="continue a gated series after validating each saved run")
+    parser.add_argument("--enabled-by-user", dest="global_enabled_by_user", help="record this enablement note in a gated record (date and wording of the user's go-ahead)")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("gain-scan")
     commands = {
@@ -579,6 +788,7 @@ def main() -> int:
         "e6-v2": lambda arguments: e6(arguments, version=2),
         "e3-v3": lambda arguments: e3(arguments, version=3),
         "e4-v3": lambda arguments: e4(arguments, version=3),
+        "noise-isolation-2m": noise_isolation_2m,
     }
     for name in commands:
         if name != "gain-scan":
@@ -587,7 +797,16 @@ def main() -> int:
     sub.add_parser("e3-recovery").add_argument("--arm", required=True, choices=sorted(RECOVERY_ARMS))
     commands["e3-excursion"] = e3_excursion
     sub.add_parser("e3-excursion").add_argument("--arm", required=True, choices=sorted(EXCURSION_ARMS))
+    # Gated runs added by the review: record who enabled them, and when.
+    commands["noise-isolation-12m"] = noise_isolation_12m
+    sub.add_parser("noise-isolation-12m").add_argument("--enabled-by-user", required=True)
+    commands["e6-v3"] = lambda arguments: e6(arguments, version=3)
+    sub.add_parser("e6-v3").add_argument("--enabled-by-user", required=True)
     arguments = parser.parse_args()
+    OPTIONS.output = arguments.output
+    OPTIONS.overwrite = arguments.overwrite
+    OPTIONS.resume = arguments.resume
+    OPTIONS.enabled_by_user = arguments.global_enabled_by_user
     commands[arguments.command](arguments)
     return 0
 

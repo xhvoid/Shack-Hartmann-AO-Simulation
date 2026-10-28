@@ -45,7 +45,7 @@ non-linearity or saturation.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import hashlib
 import math
 from numbers import Integral, Real
@@ -69,6 +69,7 @@ __all__ = (
     "raw_to_input_e",
     "build_calibration_products",
     "process_frames",
+    "without_sky_master",
     "interpolation_matrix_rows",
 )
 
@@ -381,6 +382,33 @@ def build_calibration_products(
         conversion_input_e_per_raw=_readonly(conversion),
         frame_counts=counts,
         saturated_calibration_pixels=saturated,
+        content_sha256=digest.hexdigest(),
+    )
+
+
+def without_sky_master(products: CalibrationProducts) -> CalibrationProducts:
+    """The products of an observation taken without sky: bias and dark only.
+
+    An internal calibration source is observed with the sky blocked, so its
+    frames must not have the sky master subtracted.  The derived products keep
+    the flat, the bad-pixel mask and the conversion; their additive master is
+    the bias plus dark master of the same realization, and their content hash
+    is derived from the operating products' hash.  Products without a sky
+    master already subtract bias and dark only and are returned unchanged.
+    """
+
+    if products.sky_raw is None:
+        return products
+    background = np.asarray(products.bias_raw, dtype=float) + np.asarray(
+        products.dark_raw, dtype=float
+    )
+    digest = hashlib.sha256()
+    digest.update(b"without_sky_master_v1")
+    digest.update(products.content_sha256.encode("ascii"))
+    return replace(
+        products,
+        background_raw=_readonly(background),
+        sky_raw=None,
         content_sha256=digest.hexdigest(),
     )
 

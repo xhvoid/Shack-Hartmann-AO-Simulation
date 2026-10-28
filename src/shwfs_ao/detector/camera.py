@@ -50,6 +50,8 @@ __all__ = (
     "CAMERA_MODELS",
     "EM_GAIN_GAMMA_MIN",
     "EM_GAIN_GAMMA_MAX",
+    "REFERENCE_ADC_DITHER_MODEL",
+    "NONLINEARITY_READ_NOISE_EXCURSION_SIGMA",
     "CameraConfigError",
     "CameraConfig",
     "camera_config_from_mapping",
@@ -63,6 +65,13 @@ CAMERA_MODELS: tuple[str, ...] = ("ccd", "emccd", "cmos")
 # Declared high-gain regime of the Gamma(n, G) register model (decision D00-13).
 EM_GAIN_GAMMA_MIN = 100.0
 EM_GAIN_GAMMA_MAX = 10000.0
+# The deterministic reference path keeps the ADC as its expectation under the
+# declared Gaussian read-noise dither (decision D00-3a), so with the ADC on the
+# read noise shapes the reference response and is bound to its identity.
+REFERENCE_ADC_DITHER_MODEL = "gaussian_read_noise_expectation_v1"
+# A declared non-linearity acts after read noise.  It must stay monotonic over
+# the output signal range widened by this many read-noise sigmas each side.
+NONLINEARITY_READ_NOISE_EXCURSION_SIGMA = 6.0
 _ADC_BITS_RANGE = (8, 24)
 
 
@@ -197,7 +206,11 @@ class CameraConfig:
         if not isinstance(self.source_note, str) or not self.source_note.strip():
             raise CameraConfigError("source_note must be a non-empty string.")
         if coefficients:
-            _require_monotonic_nonlinearity(coefficients, self.max_output_signal_e)
+            _require_monotonic_nonlinearity(
+                coefficients,
+                self.max_output_signal_e,
+                NONLINEARITY_READ_NOISE_EXCURSION_SIGMA * float(self.read_noise_e),
+            )
 
     # -- derived quantities -------------------------------------------------
 
@@ -217,11 +230,19 @@ class CameraConfig:
 
     @property
     def max_output_signal_e(self) -> float:
-        """Largest charge-equivalent output signal the chain can produce."""
+        """Largest charge-equivalent output signal the chain can produce.
+
+        A multiplying register's Gamma output is unbounded for any non-zero
+        input charge (``full_well * G`` bounds only its conditional mean), so
+        the register capacity is the bound.  Coupling cannot exceed it: the
+        kernel is non-negative and sums to one.
+        """
 
         if self.model == "emccd":
             assert self.register_full_well_e is not None
-            return float(min(self.full_well_e * self.em_gain, self.register_full_well_e))
+            if self.is_multiplying:
+                return float(self.register_full_well_e)
+            return float(min(self.full_well_e, self.register_full_well_e))
         return float(self.full_well_e)
 
     @property
@@ -269,9 +290,16 @@ class CameraConfig:
 
     @property
     def deterministic_response_config(self) -> dict[str, Any]:
-        """Scalar settings that shape the deterministic reference response."""
+        """Scalar settings that shape the deterministic reference response.
 
-        return {
+        With the ADC on, the reference quantizer is the expectation under the
+        read-noise dither, so the read noise is bound here as well (the CMOS
+        per-pixel read-noise map is bound through the maps realization).  With
+        the ADC off the reference does not depend on read noise, and the
+        record omits it.
+        """
+
+        record = {
             "response_model": PHYSICAL_RESPONSE_MODEL,
             "model": self.model,
             "full_well_e": self.full_well_e,
@@ -286,10 +314,20 @@ class CameraConfig:
             "coupling_nearest": self.coupling_nearest,
             "coupling_diagonal": self.coupling_diagonal,
         }
+        if self.adc_bits is not None:
+            record["reference_adc_dither"] = {
+                "model": REFERENCE_ADC_DITHER_MODEL,
+                "read_noise_e": self.read_noise_e,
+            }
+        return record
 
     @property
     def temporal_noise_config(self) -> dict[str, Any]:
-        """Settings that move only the noise distribution, not the reference."""
+        """Settings of the noise distribution of the stochastic path.
+
+        ``read_noise_e`` also shapes the reference response when the ADC is on;
+        :attr:`deterministic_response_config` binds it there too.
+        """
 
         return {
             "read_noise_e": self.read_noise_e,
@@ -338,9 +376,13 @@ def camera_config_from_mapping(record: dict[str, Any]) -> CameraConfig:
 def _require_monotonic_nonlinearity(
     coefficients: tuple[float, ...],
     max_signal_e: float,
+    read_excursion_e: float,
 ) -> None:
-    # Allow read-noise excursions beyond the charge range before rounding.
-    grid = np.linspace(0.0, 1.05 * max_signal_e, 4097)
+    # The non-linearity acts on the output signal plus read noise, so check
+    # read-noise excursions on both sides of the signal range (never less than
+    # the original 5 % upper margin).
+    upper = max(1.05 * max_signal_e, max_signal_e + read_excursion_e)
+    grid = np.linspace(-read_excursion_e, upper, 8193)
     derivative = np.ones_like(grid)
     for order, coefficient in enumerate(coefficients):
         derivative += (order + 2) * coefficient * grid ** (order + 1)

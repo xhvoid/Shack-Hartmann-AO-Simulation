@@ -5,7 +5,7 @@ inside a block of ``window + 2 * guard`` pixels, an expected detected-source
 image, sky, exposure and the pixel-processing protocol.  Three estimators of
 the centroid scatter are compared:
 
-* :func:`model_prediction` - the ``detector_covariance_v1`` Jacobian model;
+* :func:`model_prediction` - the ``detector_covariance_v2`` Jacobian model;
 * :func:`temporal_trials` - frames with fixed calibration products (the
   frame-to-frame precision the validity gates use);
 * :func:`calibration_trials` - independently regenerated products applied to

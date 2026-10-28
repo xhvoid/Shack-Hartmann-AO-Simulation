@@ -1,0 +1,19 @@
+{
+ "im_frobenius": 33108226.642288264,
+ "reference_centroids_mean_px": [
+  6.999925595317553,
+  7.000387959306504
+ ],
+ "sky_e_per_pixel_max": 0.0005312060649412576,
+ "window_px": 15,
+ "m8": {
+  "post_update_rms_m": 1.8310515475909253e-07,
+  "valid_measurement_fraction": 0.9962500000000002,
+  "lost_lock": false
+ },
+ "m11": {
+  "post_update_rms_m": 9.825982942258057e-07,
+  "valid_measurement_fraction": 0.1788888888888889,
+  "lost_lock": false
+ }
+}

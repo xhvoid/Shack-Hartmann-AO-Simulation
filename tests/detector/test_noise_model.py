@@ -1,4 +1,4 @@
-"""DET-07: the ``detector_covariance_v1`` centroid-noise model against Monte Carlo.
+"""DET-07: the ``detector_covariance_v2`` centroid-noise model against Monte Carlo.
 
 Tolerances.  The standard deviation of ``N`` trials has relative standard
 error ``1/sqrt(2 (N - 1))``: 0.7 % at 10^4 trials, 3.5 % at 400 calibration
@@ -23,7 +23,8 @@ import pytest
 from shwfs_ao.detector.camera import CameraConfig
 from shwfs_ao.detector.centroid import CentroidConfig
 from shwfs_ao.detector.noise_model import MIN_DENOMINATOR_SNR
-from shwfs_ao.detector.processing import PixelProcessingConfig
+from shwfs_ao.detector.physical import apply_physical_camera
+from shwfs_ao.detector.processing import PixelProcessingConfig, process_frames
 from shwfs_ao.experiments.detector_noise import (
     NoiseFixture,
     calibration_trials,
@@ -259,3 +260,121 @@ def test_regimes_outside_the_first_order_domain_are_flagged() -> None:
     faint = fixture(camera(read_noise_e=8.0), 150.0, window=7)
     quality = model_prediction(faint)
     assert quality.total_snr[0] < MIN_DENOMINATOR_SNR and not quality.supported[0]
+
+
+# -- Review 2026-10-16: R2 (conditional mean) and R4 (ADC limits) -------------
+
+ONE_FRAME_MASTERS = PixelProcessingConfig(
+    mode="estimated", n_bias_frames=1, n_dark_frames=1, n_sky_frames=1, n_flat_frames=32,
+    flat_level_e=1.0e4, hot_pixel_threshold_e=1.0e9,
+)
+
+
+def one_frame_master_fixture(**overrides: object) -> NoiseFixture:
+    """A 7x7 CCD window, 1000 e- spot on 100 e- sky, read-noise limited masters."""
+
+    cam = camera(read_noise_e=8.0, dark_e_per_s=0.0, prnu_rms=0.0, offset_map_rms_adu=0.0, adc_bits=None)
+    if overrides:
+        cam = replace(cam, **overrides)  # type: ignore[arg-type]
+    return NoiseFixture(
+        camera=cam, processing=ONE_FRAME_MASTERS, source_e=gaussian_spot(7, 1000.0, 1.2),
+        window_px=7, sky_e_per_pixel=100.0, seed=1,
+    )
+
+
+@pytest.mark.parametrize(
+    "overrides, atol",
+    [
+        ({}, 1e-9),
+        ({"dark_e_per_s": 50.0, "prnu_rms": 0.01, "offset_map_rms_adu": 1.0}, 1e-9),
+        # ADC on: the reference raw is the dithered quantizer expectation, which
+        # differs from the analog value by far less than 1e-6 at 8 ADU read noise.
+        ({"dark_e_per_s": 50.0, "prnu_rms": 0.01, "offset_map_rms_adu": 1.0, "adc_bits": 16}, 1e-6),
+    ],
+    ids=["plain", "dark_prnu_offsets", "adc_on"],
+)
+def test_conditional_mean_is_the_processing_of_the_expected_frame(overrides: dict, atol: float) -> None:
+    # The model must form its mean, Jacobian, flux and SNR with the realized
+    # master the processing subtracts, not the ideal background (review R2).
+    fix = one_frame_master_fixture(**overrides)
+    products = fixture_products(fix, realization=29)
+    expected_raw = apply_physical_camera(
+        fix.source_e[None], fix.sky_e_per_pixel, fix.camera, fix.maps().subset(np.arange(1)),
+        exposure_s=fix.exposure_s, include_noise=False, generators=None, poisson_floor_e=0.0,
+    ).raw
+    processed = process_frames(expected_raw, products, ONE_FRAME_MASTERS)
+    quality = model_prediction(fix, products)
+    np.testing.assert_allclose(quality.expected_processed_e, processed, rtol=0.0, atol=atol)
+    assert quality.total_flux_e[0] == pytest.approx(float(processed.sum()), abs=49 * atol)
+    # This realization's sky master is ~170 e- low over the window, so the
+    # ideal-background flux (about 993 e-) would be far off.
+    assert quality.total_flux_e[0] < 900.0
+
+
+def test_conditional_temporal_scatter_with_one_frame_masters_fast() -> None:
+    # SNR_T ~ 9: linearization ~ 4/SNR_T**2 = 5 %, 1000 trials 2.2 % SE.
+    fix = one_frame_master_fixture()
+    products = fixture_products(fix, realization=29)
+    quality = model_prediction(fix, products)
+    assert quality.supported[0]
+    measured = temporal_trials(fix, 1000, products=products)["centroids_px"].std(axis=0, ddof=1)
+    ratio = measured / quality.centroid_sigma_xy_px[0]
+    assert np.all(np.abs(ratio - 1.0) < 0.15), ratio
+
+
+@pytest.mark.slow
+def test_conditional_temporal_scatter_with_one_frame_masters_within_ten_percent() -> None:
+    # The review fixture: version 1 predicted 23-24 % too little scatter.
+    fix = one_frame_master_fixture()
+    products = fixture_products(fix, realization=29)
+    quality = model_prediction(fix, products)
+    measured = temporal_trials(fix, 10_000, products=products)["centroids_px"].std(axis=0, ddof=1)
+    ratio = measured / quality.centroid_sigma_xy_px[0]
+    assert np.all(np.abs(ratio - 1.0) < 0.10), ratio
+
+
+ORACLE_DIM = PixelProcessingConfig(mode="oracle", flat_level_e=100.0, hot_pixel_threshold_e=1.0e9)
+
+
+def adc_fixture(flux: float = 1000.0, **overrides: object) -> NoiseFixture:
+    cam = camera(read_noise_e=8.0, dark_e_per_s=0.0, prnu_rms=0.0, offset_map_rms_adu=0.0)
+    cam = replace(cam, **overrides)  # type: ignore[arg-type]
+    return NoiseFixture(
+        camera=cam, processing=ORACLE_DIM, source_e=gaussian_spot(7, flux, 1.2),
+        window_px=7, sky_e_per_pixel=0.0, seed=1,
+    )
+
+
+def test_codes_within_the_noise_headroom_of_code_zero_are_flagged() -> None:
+    # Zero bias: read noise clips at code 0 and the scatter falls about 27 %
+    # below the linear model (review R4).  The headroom is 5 sigma = 40 ADU.
+    assert not model_prediction(adc_fixture(bias_adu=0.0)).supported[0]
+    assert not model_prediction(adc_fixture(bias_adu=39.0)).supported[0]
+    assert model_prediction(adc_fixture(bias_adu=41.0)).supported[0]
+    # Offsets count: 50 ADU bias clears the headroom only without the offset map.
+    assert model_prediction(adc_fixture(bias_adu=50.0)).supported[0]
+    offset = adc_fixture(bias_adu=50.0, offset_map_rms_adu=10.0)
+    assert float(np.min(offset.maps().offset_adu)) < -10.0
+    assert not model_prediction(offset).supported[0]
+
+
+def test_codes_within_the_noise_headroom_of_the_top_code_are_flagged() -> None:
+    # EMCCD register noise: peak code about bias + 939 with sigma about 168 ADU
+    # on a 12-bit ADC.  Bias 2400 stays below 0.9 * 4095 but the 5-sigma
+    # excursion passes the top code.
+    em = dict(
+        model="emccd", em_gain=300.0, register_full_well_e=1.0e9, read_noise_e=50.0,
+        conversion_gain_e_per_adu=20.0, adc_bits=12,
+    )
+    assert model_prediction(adc_fixture(600.0, bias_adu=2200.0, **em)).supported[0]
+    assert not model_prediction(adc_fixture(600.0, bias_adu=2400.0, **em)).supported[0]
+
+
+@pytest.mark.slow
+def test_zero_bias_clipping_departs_from_the_linear_model() -> None:
+    # The flagged regime really is non-linear: measured scatter is well below
+    # the linear prediction (10^4 trials, 0.7 % SE).
+    fix = adc_fixture(bias_adu=0.0)
+    quality = model_prediction(fix)
+    measured = temporal_trials(fix, 10_000)["centroids_px"].std(axis=0, ddof=1)
+    assert np.all(measured / quality.centroid_sigma_xy_px[0] < 0.85)

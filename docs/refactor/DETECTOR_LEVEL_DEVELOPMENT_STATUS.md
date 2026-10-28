@@ -11,15 +11,15 @@ was not executed is NOT_RUN_RESOURCE_POLICY, never a pass.
 | Ticket | Status | Milestone | Evidence |
 | --- | --- | --- | --- |
 | DET-00 | DONE | A | entry gate (1986 passed on the base), environment, baseline costs, decisions D00-1…14, ledgers |
-| DET-01 | DONE | A | schema 7, identities pinned, domains, telemetry levels, pixel layout |
+| DET-01 | DONE (reopened by review R1, fixed 2026-10-16) | A | schema 7, identities pinned, domains, telemetry levels, pixel layout; the response identity binds the reference ADC dither (R1) |
 | DET-02 | DONE | A | photometry oracles to 1e-12; QE once in the factory |
-| DET-05 | DONE | A | CCD/EMCCD/CMOS chain, Monte-Carlo moments, saturation ordering, ADC, maps |
-| DET-06 | DONE | A | estimated and oracle products; recovery; 1/N masters; pedestal; bad pixels |
-| DET-07 | DONE | A, B | `detector_covariance_v1`; 10⁴-trial Monte Carlo within 2.1 %; coupling and interpolation; ensembles |
+| DET-05 | DONE (reopened by review R7, fixed 2026-10-16) | A | CCD/EMCCD/CMOS chain, Monte-Carlo moments, saturation ordering, ADC, maps; non-linearity checked to the register capacity ± 6σ read (R7) |
+| DET-06 | DONE (reopened by review R3, fixed 2026-10-16) | A | estimated and oracle products; recovery; 1/N masters; pedestal; bad pixels; internal-source frames subtract bias and dark only (R3) |
+| DET-07 | DONE (reopened by review R2/R4, fixed 2026-10-16) | A, B | `detector_covariance_v2`: mean conditional on the realized master (R2), both ADC limits with offsets and 5σ headroom (R4); 10⁴-trial Monte Carlo within 2.4 % (E1 rerun); coupling and interpolation; ensembles |
 | DET-03 | DONE | B | MFT = FFT to 1e-12; erf ≤ 1e-6; diffusion; coupling covariance; interaction prediction |
 | DET-04 | DONE | B | one sample = mono; exact λ scaling; quadrature convergence; linear cost |
 | DET-08 | DONE | B | software acceptance; 12 m study: n_sub 2 and 4 give −3.4 and −4.5 nm paired (within seed scatter), so the default stays 1 |
-| DET-09 | DONE (with recorded departures) | A, B | seven profiles (12 m @2 post-hoc); E1; E2 at 2 m and 12 m; 2 m ensembles; E3/E4/E6 on @1 (predeclared) and @2; E5 at 42 m: 173.2 nm, K Strehl 0.753 |
+| DET-09 | DONE (with recorded departures; the 42 m E5 rerun under the review fixes is NOT_RUN_RESOURCE_POLICY) | A, B | eight profiles (12 m @2, @3 post-hoc); E1; E2 at 2 m and 12 m; 2 m ensembles; E3/E4/E6 on @1 (predeclared), @2 and @3, with @3 E3/E4/E2 rerun under the fixes (within 1 nm, except a degraded CMOS lock); E5 at 42 m: 173.2 nm, K Strehl 0.753 (reviewed code); isolated detector-noise variance: 2 m slope −0.978 ± 0.014 (pass), 12 m −1.028 ± 0.010 (fails pure 1/N_e at 2.7 SE; the model predicts the steepening); E6 photometry-matched arm: chromatic optics −0.6 nm (R5); evidence runs validate protocol identities (R6) |
 | DET-10 | DONE | A, B | feature-off overhead +1.3–1.8 % (2 m, ci), +0.9–1.0 % (medium); per-feature costs at 2 m, ci and 12 m; packaging; docs |
 
 ### Claim supported by the evidence (clause by clause)
@@ -68,8 +68,14 @@ Still out of bounds:
     m_AB = 11, and the limit lies between 11 and 12.
   - The limit is therefore a property of the profile's reconstruction and
     control settings, not of the camera alone;
-- a resolved 1/N_e noise law: the isolated noise term is resolved only at
-  m_AB = 10 (2.6σ).
+- a pure 1/N_e law across the 12 m faint end:
+  - the paired study isolates the temporal noise variance at every
+    magnitude;
+  - it follows 1/N_e at 2 m (slope −0.978 ± 0.014);
+  - at 12 m the slope is −1.028 ± 0.010, failing the predeclared
+    2-standard-error test, because read noise and CIC over the 15 × 15
+    window steepen it. The noise model predicts that steepening;
+  - in both studies ΔV scales as σ²_model to the power 0.95–0.96 ± 0.01.
 
 ## Execution policy in force
 
@@ -1198,6 +1204,10 @@ on the mean slope-variance and trace ratios, and 10 % per entry.
     outcome. Ledger rows B18 and B19 cover the change.
 
 **E6, effect sizes on `det_emccd_12m_medium_derived@1`, at m_AB = 8.**
+(Review R5, 2026-10-16: the "monochromatic 700 nm" arm uses the 550–850 nm
+band, which also detects 5.7 % more source and sky electrons than the R3
+band. It measures a combined bandpass, photometry and optics change, not
+chromatic optics alone.)
 - Run: `… e6`, 716 s, 437 MiB;
   [`det09_e6_effect_sizes_12m.json`](detector_level_evidence/det09_e6_effect_sizes_12m.json).
   Root seeds 41–43; post-update residual over frames 100–399.
@@ -1349,7 +1359,8 @@ once with leak 0 and once with leak 0.02).
   excludes a control-loop redesign, so the policy is not changed here; it
   is a follow-up. The CMOS collapse at m = 10 sits at a similar SNR_T.
 
-**E6, effect sizes on @2** (post-hoc rerun).
+**E6, effect sizes on @2** (post-hoc rerun). The monochromatic arm is the
+same combined change as on @1 (review R5).
 - Run: `… e6-v2`, 709 s, 473 MiB;
   [`det09_e6_effect_sizes_12m_v2.json`](detector_level_evidence/det09_e6_effect_sizes_12m_v2.json).
   m_AB = 8, root seeds 41–43.
@@ -2252,3 +2263,364 @@ lane, and slow tests.
 3. Optional: test the 42 m `det_ccd_42m_r3band_derived@1`, which keeps
    `alpha = 0.001`, for the same waffle wander. That run needs a gated
    42 m enablement.
+
+## Review fixes (2026-10-16)
+
+The review in `outputs/detector_review_2026-10-16/review.md` (checkout
+`663df16`) reported seven P2 findings, R1–R7, and one open DET-09 acceptance
+gap. On 2026-10-16 the user asked for them to be fixed. This section records
+each fix and its evidence; the results are added below as they exist.
+
+### Isolated detector-noise variance: predeclared protocol (written before any run)
+
+- **Method.** `experiments.detector_level.paired_noise_run` builds the same
+  system twice: same atmosphere, persistent maps, fixed calibration
+  products, reference, interaction matrix and reconstructor. It then runs
+  the same loop on each copy:
+  - **noise on:** bit-identical to `science_run`;
+  - **operating expectation:** the new
+    `PhysicalShackHartmannSensor.measure_operating_expectation`, which
+    observes the same star and sky through the same products and gates
+    with every detector draw replaced by its mean.
+
+  Fitting, temporal, aliasing and calibration-master errors are common to
+  both arms. ΔV, the difference of the arms' mean-square post-update
+  residuals over frames 100–399, is the propagated temporal detector
+  noise. Its per-run standard error comes from 25-frame block means.
+- **2 m study (ungated, prompt §2.5).**
+  - `noise-isolation-2m`: `det_emccd_2m_synthetic@1` at m_AB 7, 8, 9 and
+    10 (about 2060, 820, 326 and 130 detected e⁻ per full subaperture), root
+    seeds 61–65, 400 frames, burn-in 100.
+  - Estimate: about 8 min, under 0.3 GiB, 2 threads.
+  - **Amended before any 2 m result existed.** The first attempt stopped
+    while building its first run: the 2 m phase screen supports only about
+    204 frames of wind travel (52 px). The 2 m study therefore runs 200
+    frames with burn-in 50, over root seeds 61–68 (8 seeds, 1200 analysed
+    frames per magnitude, against 1500 planned). The method and the pass
+    criteria are unchanged.
+  - **Second amendment, after the first complete attempt.** That attempt is
+    kept as
+    [`det09_noise_isolation_2m_attempt1.json`](detector_level_evidence/det09_noise_isolation_2m_attempt1.json).
+    It showed two design faults:
+    - **The estimator was too noisy.** At m_AB 7 and 8 the
+      difference of mean squares scattered from −1547 to +994 nm² per run,
+      often negative. Its cross term 2⟨φ_common, n⟩ with the ~440 nm common
+      residual swamps the noise term.
+    - **The magnitude range was too faint for this profile.** At m_AB = 9
+      both arms were bit-identical: no lenslet passes the profile's
+      inherited `min_peak_snr = 3`, so nothing is corrected. At m_AB = 10
+      the interaction calibration had no valid row and failed.
+
+    The study therefore changes as follows:
+    - **Estimator.** The primary estimator becomes `noise_variance_m2`: the
+      per-frame difference of the two arms' residual maps (identical
+      atmosphere), squared, with piston removed, and averaged. That
+      difference is the DM response to the propagated noise, with no cross
+      term. The difference of mean squares is still reported.
+    - **Magnitudes.** The 2 m magnitudes become m_AB 5, 6, 7 and 8 (about
+      13 000, 5180, 2060 and 820 e⁻). There the noise model supports every
+      lenslet, the minimum peak SNR is 5.1 or more, and no register
+      saturates.
+
+    The pass criteria are unchanged, and the 12 m settings are unchanged.
+- **12 m study (gated; needs enablement).**
+  - `noise-isolation-12m`: `det_emccd_12m_medium_derived@3` at m_AB 8–11,
+    root seeds 71–75, same settings.
+  - Estimate: about 45 min and about 0.45 GiB.
+- **Expectation.** Both sensors are EMCCDs with F² = 2, sub-electron
+  effective read noise and faint sky, so the temporal centroid variance is
+  photon-limited and ΔV should scale as 1/N_e.
+- **Pass criteria.**
+  - Fit log ΔV (the seed mean per magnitude, weighted by its standard error)
+    against log N_e. Pass if the slope is −1 within two standard errors of
+    the fit.
+  - Report alongside it the noise model's own slope (the mean temporal
+    centroid variance at a flat wavefront against N_e) and the ratio
+    ΔV / σ²_model per magnitude.
+- **Exclusions.** A magnitude where any run of either arm loses lock, or has
+  a mean valid fraction below 0.9, is excluded from the fit and reported.
+  Departures are reported, not tuned away.
+
+### Fixes, finding by finding
+
+The review's reproductions were rerun on the fixed code (the R7 case with a
+copy that expects the new rejection; the review's files were not edited).
+
+| Finding | Fix | Evidence |
+| --- | --- | --- |
+| R1: the ADC reference depends on read noise, but the response identity did not bind it | With the ADC on, `CameraConfig.deterministic_response_config` binds `reference_adc_dither = {gaussian_read_noise_expectation_v1, read_noise_e}`, and with it the sensor's `response_hash`. With the ADC off, nothing changes. | The review fixture's references, 0.46 ADU and 0.12 px of tilt response apart, now have different hashes. New tests: `test_the_adc_dither_is_part_of_the_deterministic_response_identity` and `test_equal_response_identities_mean_equal_reference_responses` (ADC on and off). `test_identity_rules_of_the_physical_sensor` is updated to the revised contract: read noise moves the response hash only with the ADC on. |
+| R2: the conditional mean used the ideal background, not the fixed master | `detector_covariance_v2` subtracts the realized master (pedestal removed, converted like the data) for the mean, Jacobian, flux and SNRs. The calibration-ensemble term stays linearized about the nominal background. | On the review fixture the model flux is 821.710 e⁻, equal to the processed flux to 3e-14 (it was 992.8 e⁻). Measured/model sigma is 1.015 and 1.023 over 10⁴ trials (it was 1.227 and 1.237). Tests: `test_conditional_mean_is_the_processing_of_the_expected_frame` (3 cases), fast and slow scatter tests. |
+| R3: internal-source frames lost the operating sky master | `processing.without_sky_master`: reference and probe frames of a declared source subtract bias and dark only. The response identity binds `bias_and_dark_without_sky_v1`. | On the review fixture, processed minus source is now 0 at every pixel (it was −0.7759 e⁻, one sky level). Tests: the oracle and estimated calibration-source tests in `tests/wfs/test_physical_sensor.py`. |
+| R4: lower ADC clipping was admitted as linear | Every block pixel's expected code, with bias and offset map, must lie 5 temporal sigmas (register shot plus read noise) inside both ADC limits. | The review's zero-bias fixture is now unsupported. Tests check code 0 with and without offsets and the top code with EMCCD register noise. A 10⁴-trial test confirms that the flagged zero-bias case scatters below 0.85 of the linear prediction. |
+| R5: the E6 monochromatic arm also changed the photometry | `experiments.detector_level.with_matched_photometry` shifts the source and sky magnitudes by +0.0602 mag, so the 700 nm arm detects the baseline's electrons (equal to 2e-15). `e6-v3` runs both monochromatic arms. The @1 and @2 E6 sections are annotated as a combined change. | `test_matched_photometry_changes_the_optics_band_but_not_the_electrons`. The controlled 12 m run awaits enablement. |
+| R6: resume reused incompatible runs; repeating a command was a no-op | By default the runner never touches an existing record. `--resume` reuses a run only when its protocol hash matches: configuration hash with seed and frame count, burn-in, execution options, and code identity (git HEAD plus a digest of uncommitted `src`/`scripts` changes). Records without identities cannot be resumed. `--output` writes a fresh record and `--overwrite` replaces a one-shot record. | `tests/experiments/test_detector_evidence_runner.py` (6 tests), including the review's stale-resume reproduction, which now refuses with no simulation call. |
+| R7: EMCCD non-linearity was validated below the register's output range | For a multiplying EMCCD, `max_output_signal_e` is the register capacity. Monotonicity is checked from −6σ_read to the larger of 1.05 × and +6σ_read above the maximum. | The review's EMCCD configuration (turnover at 250 e⁻) is rejected at construction. Tests cover the register range and negative read-noise excursions. |
+
+**Identity changes.**
+- **Uncertainty model.** The id is now `detector_covariance_v2`, so every
+  physical sensor's `config_hash` moves.
+- **Response hashes.** Every packaged `det_*` profile has its ADC on, so
+  each `response_hash` moves (R1). The `@2` and `@3` 12 m profiles move
+  again through R3.
+- **Unchanged.** The packaged profile files and their `config_hash` pins
+  (`generator --check`, `tests/io`) and the feature-off compatibility path.
+  All compatibility pins pass.
+- **Old records.** Evidence written at `a31099b`–`663df16` keeps the old
+  identities and was not edited.
+
+### Effect of the fixes on the recorded evidence
+
+The 2 m evidence was rerun (ungated) to new files beside the originals.
+
+| Record | Before (reviewed code) | After (fixed code) | Cost |
+| --- | --- | --- | --- |
+| E1 [`det07_e1_centroid_noise_review.json`](detector_level_evidence/det07_e1_centroid_noise_review.json) | max \|measured/model − 1\| 2.1 % | 2.4 % (CMOS plain 2.15 → 2.38 %; other points within ±0.5 pp) | 49 s, 241 MiB |
+| E2 [`det09_e2_noise_propagation_review.json`](detector_level_evidence/det09_e2_noise_propagation_review.json) | slope-variance ratios 0.996–1.004 | the same to 1e-4 (EMCCD 0.9979 → 0.9978, trace 0.9839 → 0.9837) | 143 s, 118 MiB |
+| 2 m closed-loop ensemble [`det09_closed_loop_ensemble_2m_review.json`](detector_level_evidence/det09_closed_loop_ensemble_2m_review.json) | 313.8–316.6 nm | all 20 runs bit-identical | 50 s, 126 MiB |
+
+**ci tier with `@3` detector physics** (ungated probe;
+[`review_ci_probe.py`](detector_level_evidence/review_ci_probe.py), outputs
+`review_ci_probe_663df16.json` and `review_ci_probe_fixed.json`; root seed 5,
+150 frames).
+- At this setting the sky is 5.3e-4 e⁻ per pixel, so R3's pedestal is
+  negligible. The interaction matrix changes by 5.4e-5 relative, and the mean
+  reference centroid by at most 2e-4 px; the reference no longer subtracts
+  the sky master's noise.
+- At m_AB = 8 the loop moves from 179.8 to 183.1 nm, and the valid fraction
+  from 0.998 to 0.996: R2 changes gate decisions of marginal lenslets.
+- At m_AB = 11 the result is bit-identical.
+
+**12 m and 42 m.** E2-12m, E3, E4, E6, DET-08, E5, the recovery and
+excursion studies, and the `@3` reruns were produced by the reviewed code
+(model v1). Their reruns under v2 were NOT_RUN_RESOURCE_POLICY until
+enabled; the 12 m reruns ran later the same day (see "12 m review reruns:
+results"), and E5 was not enabled. Expected size: R3 is negligible at these sky levels. R2 moves margin-gated
+lenslets: a few nm at m_AB = 8 in the probe, possibly more near the
+faint-end limit.
+
+### Isolated detector-noise variance: 2 m results
+
+Run: `noise-isolation-2m`, 290 s, peak RSS 134 MiB;
+[`det09_noise_isolation_2m.json`](detector_level_evidence/det09_noise_isolation_2m.json).
+The protocol is as amended above: `det_emccd_2m_synthetic@1`, root seeds
+61–68, 200 frames with burn-in 50, and the residual-map estimator.
+
+| m_AB | N_e (full subap.) | ΔV mean ± SE | median | ΔV · N_e | ΔV / σ²_model | σ²_model · N_e | valid |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 5 | 13 001 | 4.27 ± 0.08 nm² | 4.24 | 55 516 | 2554 nm²/px² | 21.7 | 1.000 |
+| 6 | 5 176 | 10.40 ± 0.32 nm² | 10.11 | 53 841 | 2439 | 22.1 | 1.000 |
+| 7 | 2 061 | 25.81 ± 0.44 nm² | 25.41 | 53 180 | 2318 | 22.9 | 1.000 |
+| 8 | 820 | 200.7 ± 105.0 nm² | 94.2 | 164 619 | 6558 | 25.1 | 0.949 |
+
+- **Result: PASS.** The weighted fit of log ΔV against log N_e over all four
+  magnitudes (no lost lock; valid ≥ 0.9) gives a slope of
+  **−0.978 ± 0.014**, 1.6 standard errors from −1. The noise model's own
+  slope is −1.051, slightly steeper because sky, CIC and read noise grow
+  relative to the signal.
+- **Departures, reported, not resolved.**
+  - **Drift in ΔV/σ²_model.** χ²/dof of the fit is 2.46. From m_AB = 5 to
+    7, ΔV/σ²_model drifts by −9 % (2554 → 2318) at about 2 % standard error
+    per point. For a linear loop that ratio should be constant. The
+    measured noise grows slightly more slowly than the flat-wavefront model.
+    A candidate is the master-frame error changing the centroid gain at lower
+    flux; this was not tested.
+  - **An outlier at m_AB = 8.** Seed 68 (933 ± 807 nm²) diverged
+    temporarily, at a minimum peak SNR of 5.1. The median of the eight seeds
+    is 94 nm², and that magnitude's seed mean carries little weight in the
+    fit.
+- **First attempt.** The rejected first attempt is kept as
+  `det09_noise_isolation_2m_attempt1.json`. At m_AB 7 and 8 its
+  difference of mean squares gave −1547…+994 nm² per run, against
+  25.8 ± 0.4 and 94 nm² (median) from the residual-map estimator.
+- **12 m.** The 12 m study (`noise-isolation-12m`) is
+  NOT_RUN_RESOURCE_POLICY until enabled.
+
+### Verification of the review fixes (2026-10-16)
+
+| Check | Result |
+| --- | --- |
+| Regression `-m "not hcipy and not slow and not elt_scale"`, seven batches | **2144 passed, 18 skipped, 2 xfailed, 0 failed** (525 / 628 / 502 / 123 / 244 / 120 / 2; longest batch 267 s; peak 649 MiB) |
+| Slow tests over the detector-level test files | 15 passed |
+| `ruff check src tests scripts examples build_support` | clean |
+| `mypy` | no issues in 130 source files |
+| `scripts/generate_detector_level_profiles.py --check` | profiles, assumption ledger and manifest match |
+
+### Gated reruns awaiting enablement
+
+Every run is serial, with 2 threads, and writes a new record (`--output`)
+beside the original.
+
+Status (2026-10-16): the user enabled the five 12 m runs, which ran (see
+"12 m review reruns: results"). The `e5` rerun was not enabled and stays
+NOT_RUN_RESOURCE_POLICY.
+
+| Run | Configuration | Est. wall time | Est. peak RSS | Purpose |
+| --- | --- | --- | --- | --- |
+| `noise-isolation-12m` | `@3`, m_AB 8–11, seeds 71–75, paired, 400 frames | ~45 min | ~0.5 GiB | DET-09 isolated noise at 12 m |
+| `e6-v3` | `@3`, 5 arms (with the photometry-matched 700 nm arm), seeds 41–43 | ~17 min | ~0.47 GiB | R5 controlled comparison |
+| `e3-v3 --output …_review.json` | `@3`, 30 runs | ~35 min | ~0.45 GiB | R2/R3 effect on the faint-end result |
+| `e4-v3 --output …_review.json` | `@3`, 27 runs | ~26 min | ~0.45 GiB | the same, per camera |
+| `e2-12m --output …_review.json` | `@1`, 4000 open-loop trials | ~9 min | ~0.4 GiB | v2 propagation at 12 m |
+| `e5 --output …_review.json` | 42 m, 2000 frames | ~60 min | ~1.6 GiB | v2 at 42 m |
+
+### 12 m review reruns: enablement and predeclared expectations
+
+**Enabled by the user on 2026-10-16**, one at a time:
+`noise-isolation-12m`, `e6-v3`, then `e3-v3`, `e4-v3` and `e2-12m`, each to
+a new record. The E5 42 m rerun was skipped for now.
+
+Expectations, written before any of these ran:
+
+- **`noise-isolation-12m`.** The protocol and pass criterion are as above:
+  slope −1 within 2 standard errors. With `@3` the loop holds lock at m_AB
+  8–11, so all four magnitudes are expected in the fit. The minimum peak SNR
+  at m = 11 is low, so a single-seed divergence like the 2 m one at m = 8
+  is possible; it would be reported, as there.
+- **`e6-v3`** (`@3`, seeds 41–43).
+  - Point sampling and oracle masters stay within the seed scatter, as on
+    `@2`.
+  - The photometry-matched 700 nm arm differs from the combined 700 nm arm
+    only by 5.7 % in detected electrons, so by about 5 % in detector-noise
+    variance. At m_AB = 8 that is under 1 nm in every seed.
+  - Against the baseline, the matched arm isolates chromatic optics:
+    expected within the seed scatter, with the same sign as the combined arm
+    wherever both are resolved.
+- **`e3-v3 --output …_review.json`.**
+  - At m_AB 8–11, each seed within ±5 nm of the published `@3` run
+    (177.8, 178.4, 179.9 and 195.3 nm means). The differences come only
+    from R2's gate decisions for marginal lenslets; R3 is negligible at this
+    sky level.
+  - The limiting magnitude stays between 11 and 12.
+  - At m_AB 12–13 (no valid lenslet), the same as published.
+- **`e4-v3 --output …_review.json`.**
+  - Per camera and magnitude, within ±5 nm of the published `@3` means
+    where the loop corrects (CCD 184.6, EMCCD 177.8 and 179.7, CMOS 180.7
+    nm).
+  - The CMOS at m_AB = 10 (278.5 ± 53 nm, valid 0.85) has the most
+    marginal lenslets, so it may move more. That is reported, not bounded.
+  - The ordering EMCCD < CMOS < CCD is unchanged.
+- **`e2-12m --output …_review.json`.** Ratios within the declared 5 % (mean)
+  and 10 % (per entry), close to the v1 values (0.999 and trace 1.008).
+
+### 12 m review reruns: results
+
+All five runs ran serially with 2 threads on 2026-10-16, 21:03–23:12, and
+every one exited 0.
+
+| Run | Record | Wall time | Peak RSS |
+| --- | --- | --- | --- |
+| `noise-isolation-12m` | [`det09_noise_isolation_12m_v3.json`](detector_level_evidence/det09_noise_isolation_12m_v3.json) | 2638 s | **1.11 GiB** (estimate ~0.5 GiB; each run holds two built systems and the pupil residual maps) |
+| `e6-v3` | [`det09_e6_effect_sizes_12m_v3.json`](detector_level_evidence/det09_e6_effect_sizes_12m_v3.json) | 904 s | 460 MiB |
+| `e3-v3 --output` | [`det09_e3_magnitude_scan_12m_v3_review.json`](detector_level_evidence/det09_e3_magnitude_scan_12m_v3_review.json) | 2120 s | 450 MiB |
+| `e4-v3 --output` | [`det09_e4_camera_comparison_12m_v3_review.json`](detector_level_evidence/det09_e4_camera_comparison_12m_v3_review.json) | 1580 s | 419 MiB |
+| `e2-12m --output` | [`det09_e2_noise_propagation_12m_review.json`](detector_level_evidence/det09_e2_noise_propagation_12m_review.json) | 519 s | 403 MiB |
+
+**Isolated detector-noise variance at 12 m** (`@3`, root seeds 71–75, 400
+frames, burn-in 100).
+
+| m_AB | N_e | ΔV mean ± SE | ΔV · N_e | ΔV / σ²_model | σ²_model · N_e | valid |
+| --- | --- | --- | --- | --- | --- | --- |
+| 8 | 2541 | 111.6 ± 1.9 nm² | 283 590 | 32 523 ± 558 | 8.72 | 1.000 |
+| 9 | 1012 | 291.4 ± 2.7 nm² | 294 775 | 32 665 ± 302 | 9.02 | 1.000 |
+| 10 | 403 | 740.4 ± 8.4 nm² | 298 187 | 30 463 ± 345 | 9.79 | 1.000 |
+| 11 | 160 | 2291 ± 203 nm² (median 2082) | 367 348 | 32 130 ± 2845 | 11.43 | 0.957 |
+
+- **Result: FAIL against pure 1/N_e** by the predeclared criterion. The
+  fitted slope is **−1.028 ± 0.010**, 2.70 standard errors from −1
+  (χ²/dof 2.50).
+- **The predeclared expectation was wrong in its premise.** It assumed
+  photon-limited centroid noise. The noise model's own slope is −1.097,
+  because the read noise (0.2 e⁻ input-referred) and CIC (0.005 e⁻/px) of
+  every window pixel enter through the centroid lever arms. At N_e = 160
+  they make up about 23 % and 6 % of σ², and σ²_model · N_e grows by 31 %
+  from m = 8 to m = 11.
+- **The measured slope lies between pure 1/N_e and the model.**
+  - ΔV/σ²_model stays within ±3.5 % across a factor of 16 in flux, except
+    m = 10, which sits 6.7 % below m = 9 at about 1.5 % standard error. That
+    dip is unexplained, as is the 2 m drift.
+  - Post hoc, log ΔV against log σ²_model has slope 0.960 ± 0.010 at 12 m
+    and 0.950 ± 0.013 at 2 m.
+  - A candidate explanation, not tested: the model is evaluated at a flat
+    wavefront, while the closed-loop residual broadens the spots. That
+    raises the photon term but not the window-wide read and CIC terms, so
+    the loop is more photon-dominated than the flat-wavefront model assumes.
+- **One outlier.** At m = 11, seed 72 (3094 ± 167 nm², valid 0.951) lies
+  well above the other four seeds (2007–2195 nm²).
+
+**E6 on `@3`** (seeds 41–43, m_AB = 8). The baselines are 172.43, 182.46 and
+170.73 nm, with valid 1.000. The paired effects against the baseline are:
+
+| Arm | Seeds 41 / 42 / 43 | Mean | Full frame |
+| --- | --- | --- | --- |
+| point sampling (k = 1, no diffusion) | 0.00 / −0.11 / −0.13 nm | −0.08 | 0.123 s |
+| oracle masters | +0.16 / −0.02 / −0.12 nm | 0.00 | 0.147 s |
+| 700 nm, band and photometry together (+5.7 % electrons) | −0.41 / −0.52 / −0.68 nm | −0.54 | 0.121 s |
+| **700 nm, photometry matched** (review R5 control) | −0.30 / −0.75 / −0.79 nm | −0.61 | 0.122 s |
+
+- **Photometry contributes nothing measurable.** The two 700 nm arms differ
+  by −0.11, +0.23 and +0.11 nm. At m_AB = 8 the 5.7 % electron difference
+  is negligible.
+- **Chromatic optics is a small, resolved effect.** In all three seeds,
+  700 nm optics leaves the residual about 0.6 nm lower than the three-node
+  R3 band. That is far below the seed scatter (5.3 nm).
+- **On `@3` no other detector feature moves the residual by more than
+  0.2 nm.** `@2` showed ±10 nm swings in seed 42; `@3`'s damping removed
+  that instability.
+- The baseline costs 0.163 s per frame. The k = 4 pixel integration with
+  diffusion (+0.040 s) and the three-node band (+0.042 s) each add about a
+  third, as on `@1`.
+
+**E3 on `@3`, rerun under the fixed code** (seeds 21–25), paired against the
+published `@3` runs:
+
+| m_AB | Residual | Paired change | Per seed | Valid | K Strehl | Lost lock |
+| --- | --- | --- | --- | --- | --- | --- |
+| 8 | 177.8 nm | +0.02 ± 0.07 nm | −0.08 … +0.24 | 1.000 | 0.738 | 0/5 |
+| 9 | 178.2 nm | −0.19 ± 0.15 nm | −0.60 … +0.17 | 1.000 | 0.737 | 0/5 |
+| 10 | 180.2 nm | +0.24 ± 0.12 nm | −0.02 … +0.65 | 1.000 | 0.733 | 0/5 |
+| 11 | 195.2 nm | −0.17 ± 0.27 nm | −0.68 … +0.81 | 0.955 | 0.708 | 0/5 |
+| 12, 13 | 1315.7 nm | 0, bit-identical | — | 0.000 | 0.019 | 0/5 |
+
+The limiting magnitude is still between 11 and 12.
+
+**E4 on `@3`, rerun under the fixed code** (seeds 31–33):
+
+| m_AB | `synthetic_ccd@1` | `synthetic_emccd@1` | `synthetic_cmos@1` |
+| --- | --- | --- | --- |
+| 8 | 184.3 nm (Δ −0.23 ± 0.32) | 177.8 nm (Δ −0.07 ± 0.10) | 180.7 nm (Δ +0.02 ± 0.16) |
+| 10 | no valid lenslet, bit-identical | 179.4 nm, valid 1.000 (within 0.7 nm per seed) | 287.1 nm, valid 0.846 (Δ +15.5, +32.8, −22.2 nm) |
+| 12 | no valid lenslet, bit-identical | no valid lenslet, bit-identical | no valid lenslet, bit-identical |
+
+- **The CMOS at m_AB = 10 holds a degraded lock.** There were no resets,
+  every frame was reconstructed, and the valid fraction moved by under
+  0.008 per seed. Its residual reacts to small gate changes with no
+  consistent sign, so this is sensitivity, not a systematic shift. As
+  predeclared, it is reported, not bounded.
+- **The ordering is unchanged:** EMCCD < CMOS < CCD at m_AB = 8.
+
+**E2 at 12 m under v2.**
+- Slope-variance ratio 0.9988 (0.918–1.060).
+- Command-variance mean ratio 1.0068 and trace 1.0078.
+- Between-lenslet max |c|/SE 5.28.
+- The same as v1 to 1e-4, within the declared 5 %/10 %.
+
+**Predeclared expectations against outcomes (12 m review reruns).**
+
+| Expectation | Outcome |
+| --- | --- |
+| noise isolation: slope −1 within 2 SE | −1.028 ± 0.010 (2.7 SE): **failed**; the model predicts −1.097 from read noise and CIC |
+| noise isolation: all four magnitudes in the fit | yes (no lost lock, valid ≥ 0.957): **met** |
+| E6: point sampling and oracle within the seed scatter | ≤ 0.16 nm: **met** |
+| E6: matched and combined 700 nm arms within 1 nm per seed | ≤ 0.23 nm: **met** |
+| E6: matched arm has the combined arm's sign where resolved | both negative in every seed: **met** |
+| E3: each seed within ±5 nm at m 8–11; limit 11–12; m 12–13 as published | ≤ 0.81 nm; limit unchanged; bit-identical: **met** |
+| E4: within ±5 nm where the loop corrects (CMOS m = 10 reported) | ≤ 0.83 nm except the CMOS at m = 10 (−22 … +33 nm, reported); ordering unchanged: **met** |
+| E2 at 12 m within 5 % (mean) and 10 % (entry) | 0.9988 and 1.0078: **met** |
+
+**What this settles.**
+- The fixed code reproduces the published `@3` 12 m closed-loop results
+  within 1 nm per run wherever the loop holds a solid lock. The exception
+  is the degraded CMOS lock at m_AB = 10.
+- R2 and R3 therefore change no 12 m conclusion.
+- The 42 m E5 result (173.2 nm, K Strehl 0.753) still comes from the
+  reviewed code. Its rerun was not enabled.
