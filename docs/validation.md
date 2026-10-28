@@ -217,7 +217,12 @@ two-stage maintainer operation:
 The reviewed machine-readable diff is content-complete: it hashes the exact
 candidate and current-baseline bytes and lists every structural change —
 tolerances, criteria, rationale, and provenance included, not just metric
-values. Acceptance recomputes that diff and refuses when anything changed
+values. Numerical-input witnesses are summarised rather than printed: for
+each witness the Markdown gives its shape, abbreviated identity hashes, the
+length and SHA-256 of each compressed array and DM payload and, when both
+sides carry it, the largest sample change, the largest |delta| / allowed under
+the fixed roundoff tolerances, NaN-mask equality and the evaluator's verdict,
+so roundoff can be told from real input drift. Acceptance recomputes that diff and refuses when anything changed
 after review, so step 4's "unchanged" is enforced byte-for-byte rather than
 assumed. Acceptance reasons and review references are persisted: embedded in
 the cross-backend baseline, and written to a dedicated acceptance record for

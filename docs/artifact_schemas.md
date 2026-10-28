@@ -247,7 +247,9 @@ candidate and packaged file, and the cross-backend
 `shwfs_ao.cross_backend_diff` document records SHA-256 hashes of the
 candidate bytes and the current packaged baseline plus a complete
 structural change list (tolerances, criteria, rationale, attribution,
-hashes, environment, generator — not just metric values). At accept time
+hashes, environment, generator — not just metric values); since diff
+schema version 2 it also summarises each numerical-input witness with its
+largest sample change against the contract tolerance. At accept time
 each script recomputes its diff from the files on disk and refuses when the
 result differs from the reviewed diff, so any post-review edit to a
 candidate, however small, forces regeneration and a fresh review. Neither

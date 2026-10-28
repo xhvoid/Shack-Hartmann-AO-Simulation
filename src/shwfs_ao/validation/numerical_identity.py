@@ -256,7 +256,12 @@ def numerical_input_failure(
     difference = np.where(np.isnan(reference), 0.0, np.abs(actual - reference))
     allowed = atol + rtol * np.nan_to_num(np.abs(reference))
     if np.any(difference > allowed):
-        index = np.unravel_index(int(np.argmax(difference / allowed)), actual.shape)
+        # Plain ints keep the message identical under numpy 1 and numpy 2,
+        # whose scalar repr would otherwise read ``np.int64(0)`` (NEP 51).
+        index = tuple(
+            int(i)
+            for i in np.unravel_index(int(np.argmax(difference / allowed)), actual.shape)
+        )
         return (
             f"sample {index}: observed={actual[index]:.17g} "
             f"expected={reference[index]:.17g}; abs difference="

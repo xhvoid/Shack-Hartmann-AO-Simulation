@@ -99,9 +99,8 @@ Maintenance destinations follow the new canonical source layout:
 There are still no installed console or GUI entry points. Repository examples
 retain their existing top-level imports and can be invoked with
 `python3 examples/<name>.py` after installation. Repository-derived output
-defaults remain under `figures/detector_level_SCAO/`; the public-data overview,
-public-data-informed scan, and fast integration also honor
-`AO_DEMO_OUTPUT_DIR`. `AO_DEMO_REFERENCE_METRICS` remains an explicit override
+defaults remain under `figures/detector_level_SCAO/`, and every example that
+writes there also honors `AO_DEMO_OUTPUT_DIR`. `AO_DEMO_REFERENCE_METRICS` remains an explicit override
 for the fast integration output.
 
 Public caches are opened by logical resource name, so running an example from a
