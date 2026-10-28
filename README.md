@@ -50,6 +50,14 @@ implementation in one document: models, modes, selection, evidence and
 costs. Open questions are in the [roadmap](docs/roadmap.md), and known
 boundaries in the [limitations register](docs/current_limitations.md).
 
+## Interactive explorer
+
+The [AO Simulation Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/)
+replays eight precomputed 2 m AO cases and presents eight groups of historical
+research results. It performs no online simulation. See the
+[site guide](web/ao-explorer/README.md), [development workflow](DEVELOPMENT.md)
+and [acceptance and limitations](docs/research/ao_2m_interactive_v1/ACCEPTANCE_REPORT.md).
+
 ## What the project demonstrates
 
 | Engineering task | Implementation | Evidence to inspect |
