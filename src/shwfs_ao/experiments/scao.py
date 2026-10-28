@@ -29,6 +29,7 @@ from ..control import (
 )
 from ..control.loop import run_closed_loop as _run_component_loop
 from ..core.hashing import component_config_hash
+from ..core.wavefront import opd_to_phase
 from ..core.protocols import (
     AtmosphereModel,
     CommandProjector,
@@ -399,10 +400,10 @@ def _target_rms_rad(config: SystemConfig) -> float | None:
     if config.atmosphere.target_rms_opd_m is None:
         return None
     return float(
-        2.0
-        * np.pi
-        * config.atmosphere.target_rms_opd_m
-        / config.atmosphere.r0_reference_wavelength_m
+        opd_to_phase(
+            config.atmosphere.target_rms_opd_m,
+            config.atmosphere.r0_reference_wavelength_m,
+        )
     )
 
 
