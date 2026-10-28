@@ -8,6 +8,7 @@ portable wheel-smoke bundle, so it imports only the installed package.
 from __future__ import annotations
 
 import json
+import warnings
 
 import numpy as np
 import pytest
@@ -900,7 +901,17 @@ class TestBuildMemory:
         model = _hcipy_model()
         backend = model._backend
         assert np.shares_memory(model.influence_functions, backend.influence_functions())
-        assert model.influence_functions is model.influence_functions
+        # Every access is a view of the one stack, never a copy, and each view
+        # has its own shape: reshaping one cannot reshape the internal stack
+        # the calibration probes are built from.
+        public = model.influence_functions
+        assert np.shares_memory(public, model.influence_functions)
+        shape = public.shape
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)  # NumPy >= 2.5
+            public.shape = (public.size,)
+        assert model.influence_functions.shape == shape
+        assert backend.influence_functions().shape == shape
         with pytest.raises(ValueError):
             model.influence_functions.setflags(write=True)
 

@@ -569,8 +569,10 @@ def _boolean(field_name: str, value: object) -> bool:
 
 def _readonly_copy(values: np.ndarray, *, dtype: Any) -> np.ndarray:
     if is_immutable_buffer_array(values, dtype=dtype):
-        # Already immutable: sharing it avoids a second dense influence cube.
-        return values
+        # Already immutable: sharing its buffer avoids a second dense influence
+        # cube.  A fresh view keeps shape and dtype metadata private to the
+        # caller, so reshaping the returned array cannot reshape ours.
+        return values.view()
     contiguous = np.ascontiguousarray(np.array(values, dtype=dtype, copy=True))
     result = np.frombuffer(contiguous.tobytes(order="C"), dtype=contiguous.dtype)
     return result.reshape(contiguous.shape)

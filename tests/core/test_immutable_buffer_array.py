@@ -9,6 +9,8 @@ else.
 
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pytest
 
@@ -45,7 +47,18 @@ def test_only_bytes_backed_c_contiguous_arrays_of_the_dtype_qualify() -> None:
 @pytest.mark.parametrize("helper", (_readonly_array, _immutable_array))
 def test_immutable_helpers_share_immutable_inputs_and_copy_the_rest(helper) -> None:
     immutable = _immutable(np.linspace(0.0, 1.0, 10).reshape(2, 5))
-    assert helper(immutable, dtype=float) is immutable
+    shared = helper(immutable, dtype=float)
+    # The buffer is shared, the array object is not: a caller that reshapes
+    # what it received must not reshape the owner's array.
+    assert shared is not immutable
+    assert np.shares_memory(shared, immutable)
+    assert is_immutable_buffer_array(shared, dtype=float)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)  # NumPy >= 2.5
+        shared.shape = (10,)
+    assert immutable.shape == (2, 5)
+    with pytest.raises(ValueError):
+        shared.setflags(write=True)
 
     writeable = np.linspace(0.0, 1.0, 10).reshape(2, 5)
     copied = helper(writeable, dtype=float)
