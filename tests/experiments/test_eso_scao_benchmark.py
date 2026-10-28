@@ -69,6 +69,7 @@ def test_dry_run_estimates_never_build_and_full_scale_is_refused_on_a_desktop(
 ):
     from shwfs_ao.backends.native import dm_operator
 
+    monkeypatch.setenv("AO_RESOURCE_GUARD", "1")
     monkeypatch.setattr(scao, "build_scao_system", _refuse_build)
     monkeypatch.setattr(dm_operator.LinearSplineDmOperator, "__init__", _refuse_build)
     records = {tier: benchmark.dry_run_record(tier) for tier in benchmark.TIERS}

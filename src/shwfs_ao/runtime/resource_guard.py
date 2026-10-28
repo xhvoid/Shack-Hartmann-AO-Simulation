@@ -1,4 +1,8 @@
-"""Desktop-safe memory preflight and process-group supervision.
+"""Optional memory preflight and process-group supervision.
+
+Memory/pressure enforcement is disabled by default. Set
+``AO_RESOURCE_GUARD=1`` to opt in. Timeouts, process cleanup and native-thread
+limits remain active independently of this optional memory policy.
 
 The ESO SCAO development plan (``docs/refactor/eso_scao_development_plan.md``
 section 2.3) requires that scientific runs on the developer's desktop keep the
@@ -55,6 +59,7 @@ __all__ = (
     "DEFAULT_CLEANUP_GRACE_S",
     "UNRELIABLE_HOST_BUDGET_BYTES",
     "ResourcePolicyError",
+    "resource_guard_enabled",
     "ResourceBudgetExceeded",
     "MemoryPressure",
     "HostSnapshot",
@@ -507,6 +512,7 @@ class PreflightDecision:
     reasons: tuple[str, ...]
     snapshot: HostSnapshot
     estimate: ResourceEstimate
+    enforcement_enabled: bool = True
 
     def to_record(self) -> dict[str, Any]:
         return {
@@ -517,7 +523,19 @@ class PreflightDecision:
             "reasons": list(self.reasons),
             "snapshot": self.snapshot.to_record(),
             "estimate": self.estimate.to_record(),
+            "enforcement_enabled": self.enforcement_enabled,
         }
+
+
+def resource_guard_enabled() -> bool:
+    """Return the explicit opt-in setting; absence means no memory enforcement."""
+
+    value = os.environ.get("AO_RESOURCE_GUARD", "0").strip().lower()
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off", ""}:
+        return False
+    raise ResourcePolicyError("AO_RESOURCE_GUARD must be 1/on or 0/off.")
 
 
 def preflight(
@@ -533,7 +551,8 @@ def preflight(
     to raise the desktop limit.  A job is refused when its margin-inflated
     estimate exceeds the budget, when its largest single buffer exceeds the
     scratch ceiling, or when the host currently reports warn/critical memory
-    pressure.
+    pressure when ``AO_RESOURCE_GUARD=1``. Otherwise these reasons are advisory
+    and the record explicitly identifies enforcement as disabled.
     """
 
     if not isinstance(estimate, ResourceEstimate):
@@ -564,14 +583,16 @@ def preflight(
         )
     if not measured.reliable and estimate.required_bytes > UNRELIABLE_HOST_BUDGET_BYTES:
         reasons.append("host monitoring is unreliable; only tiny jobs may run")
+    enforcement_enabled = resource_guard_enabled()
     return PreflightDecision(
-        accepted=not reasons,
+        accepted=not reasons if enforcement_enabled else True,
         budget_bytes=policy_budget,
         budget_rationale=rationale,
         required_bytes=estimate.required_bytes,
         reasons=tuple(reasons),
         snapshot=measured,
         estimate=estimate,
+        enforcement_enabled=enforcement_enabled,
     )
 
 
@@ -648,6 +669,7 @@ class SupervisedResult:
     timeout_s: float
     log_path: str | None
     environment_thread_limits: Mapping[str, str] = field(default_factory=dict)
+    enforcement_enabled: bool = True
 
     def to_record(self) -> dict[str, Any]:
         return {
@@ -663,6 +685,7 @@ class SupervisedResult:
             "timeout_s": self.timeout_s,
             "log_path": self.log_path,
             "environment_thread_limits": dict(self.environment_thread_limits),
+            "enforcement_enabled": self.enforcement_enabled,
         }
 
 
@@ -777,7 +800,8 @@ def run_supervised(
 ) -> SupervisedResult:
     """Run one child in its own process group under the desktop policy.
 
-    The child inherits native-library thread limits.  Every
+    Memory and pressure probes/stops are opt-in via ``AO_RESOURCE_GUARD=1``.
+    The child inherits native-library thread limits. When opted in, every
     ``poll_interval_s`` (at most 0.5 s by policy) the supervisor sums the RSS
     of the whole group and reads the current memory pressure; a budget
     violation, a warn/critical pressure signal, or the wall-clock limit stops
@@ -806,6 +830,7 @@ def run_supervised(
     thread_record = {name: child_env[name] for name in THREAD_ENV_VARS}
     probe_rss = process_group_rss_bytes if rss_probe is None else rss_probe
     probe_pressure = read_memory_pressure if pressure_probe is None else pressure_probe
+    enforcement_enabled = resource_guard_enabled()
 
     log_handle: IO[bytes] | int
     if log_path is not None:
@@ -833,12 +858,12 @@ def run_supervised(
             child_exited_at: float | None = None
             while True:
                 returncode = process.poll()
-                rss = probe_rss(process.pid)
+                rss = probe_rss(process.pid) if enforcement_enabled else None
                 if rss is not None:
                     samples += 1
                     peak = rss if peak is None else max(peak, rss)
-                pressure = probe_pressure()
-                if not levels or levels[-1] != pressure.level:
+                pressure = probe_pressure() if enforcement_enabled else None
+                if pressure is not None and (not levels or levels[-1] != pressure.level):
                     levels.append(pressure.level)
                 if returncode is not None:
                     # The job is the whole process group: workers the child
@@ -863,7 +888,7 @@ def run_supervised(
                     )
                     _terminate_group(process, cleanup_grace_s=cleanup_grace_s)
                     break
-                if pressure.level in stop_pressure_levels:
+                if pressure is not None and pressure.level in stop_pressure_levels:
                     status = "RESOURCE_LIMITED"
                     reason = f"host reported {pressure.level} memory pressure"
                     _terminate_group(process, cleanup_grace_s=cleanup_grace_s)
@@ -908,6 +933,7 @@ def run_supervised(
         timeout_s=float(timeout_s),
         log_path=None if log_path is None else str(log_path),
         environment_thread_limits=MappingProxyType(thread_record),
+        enforcement_enabled=enforcement_enabled,
     )
 
 
