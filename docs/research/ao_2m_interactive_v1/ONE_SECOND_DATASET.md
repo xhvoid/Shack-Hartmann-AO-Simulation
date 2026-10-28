@@ -524,6 +524,10 @@ before the correction); and the generation identity recorded in this dataset, wh
 v1 exporter `render.py` and the shared rule `web_contract.py`, both listed in `CODE_FILES`, changed for the v1
 producer check (`long_export.py` itself unchanged at `67692bca…`), so the development aggregate becomes
 `c534080a59f63859c0b24090ae60808372a357582d1e483385052a1c7964178e`; the generation identity of this dataset stays
+`6e1ad796…`; nothing was exported. **Follow-up, 2026-10-27:** `render.py` (the observation-identity comment, review
+R24-01) and `web_contract.py` (its documentation of the validator's v1 adapter) changed again, `long_export.py` still at
+`67692bca…`, so the development aggregate becomes
+`e862865bff83a9b029c87ad51ff63b04b67f6ad14b29ba6d030a2bd2e3807364`; the generation identity of this dataset stays
 `6e1ad796…`; nothing was exported. `rms_diagnostics.py`, which wrote
 the RMS derivative, is
 `e7e343b4f8dac065f6714618f379f6c245b92040f091fb06f0e64ca85d202cf6`.
@@ -557,6 +561,10 @@ the RMS derivative, is
   provenance record copies are now required to be present and literally true,
   with the [200, 1000) window and 800 frames; raw-evidence mode is tested on
   synthetic archives only and has still not been run against these archives.
+  **Follow-up 2026-10-27:** the same rule now also judges the preserved
+  180-frame dataset's provenance under the v1 contract ([40, 180), 140 frames,
+  the window read from each case record's time domain), exercised on a
+  disposable v1 view; the committed entry still names this dataset.
 - The RMS diagnostic describes the saved wavefronts only. Fitted tilt is not
   image-centroid motion, and the decomposition does not attribute causes.
 
