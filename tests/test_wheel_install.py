@@ -531,6 +531,7 @@ AO_REF_011_SYSTEM_PROFILES = (
     ("portfolio_2m_detector", 1),
     ("portfolio_2m_detector", 2),
     ("portfolio_2m_detector", 3),
+    ("portfolio_2m_detector", 4),
     ("research_2m_detector", 1),
     ("research_2m_detector", 2),
     ("research_2m_detector", 3),
@@ -1755,5 +1756,5 @@ def test_pep660_editable_install_generates_resource_alias_only_in_environment(
         capture_output=True,
         text=True,
     )
-    assert result.stdout.strip() == "editable-resource-alias-ok:54"
+    assert result.stdout.strip() == "editable-resource-alias-ok:55"
     assert not source_alias.exists()

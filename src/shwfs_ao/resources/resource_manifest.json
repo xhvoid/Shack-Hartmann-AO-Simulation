@@ -207,6 +207,10 @@
       "sha256": "6b4479368059506a240686676faec9fa17a021369dc90fecc7c08eb09fb7ef7f"
     },
     {
+      "logical_name": "synthetic_presets/portfolio_2m_detector.v4.json",
+      "sha256": "6ebbd9a364ed381c16a447a4451023a17e041d3234a119b718c4d7ae4fa553a4"
+    },
+    {
       "logical_name": "synthetic_presets/research_2m_detector.v1.json",
       "sha256": "ced584acd4507165d204d2d35363cd741664481d06dc1596c65c2dfd9d569508"
     },
