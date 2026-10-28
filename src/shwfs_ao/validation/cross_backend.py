@@ -588,7 +588,7 @@ def _compare_atmosphere_statistics(context: _ComparisonContext) -> dict[str, Any
 
     short_lag, long_lag = config.structure_function_lags_px
 
-    def statistics(model: Any) -> tuple[float, float]:
+    def statistics(model: Any) -> tuple[np.ndarray, np.ndarray]:
         rms_values = []
         ratio_values = []
         for realization in range(config.atmosphere_realizations):
@@ -599,18 +599,66 @@ def _compare_atmosphere_statistics(context: _ComparisonContext) -> dict[str, Any
                 mean_square_column_difference(screen, long_lag)
                 / mean_square_column_difference(screen, short_lag)
             )
-        return float(np.mean(rms_values)), float(np.mean(ratio_values))
+        return (
+            np.asarray(rms_values, dtype=float),
+            np.asarray(ratio_values, dtype=float),
+        )
 
-    native_rms_m, native_sf_ratio = statistics(native_model)
-    hcipy_rms_m, hcipy_sf_ratio = statistics(hcipy_model)
+    native_rms_values, native_ratio_values = statistics(native_model)
+    hcipy_rms_values, hcipy_ratio_values = statistics(hcipy_model)
+    native_rms_m = float(np.mean(native_rms_values))
+    hcipy_rms_m = float(np.mean(hcipy_rms_values))
+    native_sf_ratio = float(np.mean(native_ratio_values))
+    hcipy_sf_ratio = float(np.mean(hcipy_ratio_values))
     kolmogorov_ratio = (long_lag / short_lag) ** (5.0 / 3.0)
+
+    rms_ratio = hcipy_rms_m / native_rms_m
+    rms_ratio_se = abs(rms_ratio) * math.hypot(
+        _standard_error(hcipy_rms_values) / hcipy_rms_m,
+        _standard_error(native_rms_values) / native_rms_m,
+    )
+    native_sf_se = _standard_error(native_ratio_values)
+    hcipy_sf_se = _standard_error(hcipy_ratio_values)
+
+    # The recorded tolerance claim must be checkable, not narrative: every
+    # gating value has to sit more than three computed standard errors
+    # inside its range, or generation fails instead of minting a criterion
+    # the observed dispersion does not support.
+    gating = (
+        ("rms_ratio_hcipy_over_native", rms_ratio, 0.55, 1.8, rms_ratio_se),
+        (
+            "native_structure_function_lag_ratio",
+            native_sf_ratio,
+            1.6,
+            4.2,
+            native_sf_se,
+        ),
+        (
+            "hcipy_structure_function_lag_ratio",
+            hcipy_sf_ratio,
+            1.6,
+            4.2,
+            hcipy_sf_se,
+        ),
+    )
+    for name, value, low, high, standard_error in gating:
+        margin = min(value - low, high - value)
+        if not margin > 3.0 * standard_error:
+            raise CrossBackendError(
+                f"atmosphere statistic {name!r} sits within three standard "
+                f"errors of its range criterion: value={value}, "
+                f"range=[{low}, {high}], standard_error={standard_error}; "
+                "widen the range or add realizations before regenerating."
+            )
 
     statistical_note = (
         f"{config.atmosphere_realizations} independent realizations per "
         "backend at t=0; estimator: masked pupil RMS and the ratio of "
         f"mean-square column differences at lags {long_lag}px/{short_lag}px; "
-        "uncertainty handled by wide range criteria sized to more than "
-        "three times the observed realization scatter."
+        "uncertainty: first-order standard errors of each ratio estimator "
+        "across the realizations, recorded as informational metrics, and "
+        "every recorded value is verified at generation time to sit more "
+        "than three standard errors inside its range criterion."
     )
     return {
         "comparison_kind": "atmosphere_statistics",
@@ -627,7 +675,7 @@ def _compare_atmosphere_statistics(context: _ComparisonContext) -> dict[str, Any
                 "rms_ratio_hcipy_over_native",
                 "physical_tolerance",
                 "ratio",
-                hcipy_rms_m / native_rms_m,
+                rms_ratio,
                 {"type": "range", "low": 0.55, "high": 1.8},
                 "Same r0, outer scale, and pupil: mean RMS must agree "
                 "within finite-sample von Karman scatter for "
@@ -650,8 +698,41 @@ def _compare_atmosphere_statistics(context: _ComparisonContext) -> dict[str, Any
                 {"type": "range", "low": 1.6, "high": 4.2},
                 "Same physical expectation as the native screen generator.",
             ),
+            _metric(
+                "rms_ratio_standard_error",
+                "informational",
+                "ratio",
+                rms_ratio_se,
+                {"type": "informational"},
+                "First-order standard error of the RMS ratio across the "
+                "independent realizations; recorded so the range criterion "
+                "is checkably wider than the observed scatter.",
+            ),
+            _metric(
+                "native_structure_function_ratio_standard_error",
+                "informational",
+                "ratio",
+                native_sf_se,
+                {"type": "informational"},
+                "Standard error of the native structure-function lag ratio "
+                "across the independent realizations.",
+            ),
+            _metric(
+                "hcipy_structure_function_ratio_standard_error",
+                "informational",
+                "ratio",
+                hcipy_sf_se,
+                {"type": "informational"},
+                "Standard error of the HCIPy structure-function lag ratio "
+                "across the independent realizations.",
+            ),
         ],
     }
+
+
+def _standard_error(values: np.ndarray) -> float:
+    samples = np.asarray(values, dtype=float)
+    return float(np.std(samples, ddof=1) / math.sqrt(samples.size))
 
 
 def _compare_wfs_tip_tilt(context: _ComparisonContext) -> dict[str, Any]:
@@ -879,6 +960,8 @@ def _compare_spot_morphology(context: _ComparisonContext) -> dict[str, Any]:
 
 
 def _compare_dm_influence(context: _ComparisonContext) -> dict[str, Any]:
+    from ..core.types import DmCommandVector
+
     geometry = context.geometry
     native_influences = np.asarray(context.native_dm.influence_functions)
     hcipy_influences = np.asarray(context.hcipy_dm.influence_functions)
@@ -886,13 +969,38 @@ def _compare_dm_influence(context: _ComparisonContext) -> dict[str, Any]:
     max_diff = float(
         np.max(np.abs(hcipy_influences[:, mask] - native_influences[:, mask]))
     )
+
+    def command_surface(model: Any) -> np.ndarray:
+        result = model.opd_from_commands(
+            DmCommandVector(
+                values_opd_m=np.asarray(
+                    context.command_fixture_opd_m,
+                    dtype=float,
+                ),
+                actuator_ids=model.actuator_ids,
+                command_unit="m_opd_equivalent",
+            )
+        )
+        return np.asarray(result.correction_opd_m, dtype=float)
+
+    command_surface_diff_m = float(
+        np.max(
+            np.abs(
+                command_surface(context.hcipy_dm)[mask]
+                - command_surface(context.native_dm)[mask]
+            )
+        )
+    )
     return {
         "comparison_kind": "dm_single_actuator_influence",
         "attribution": (
             "Both mirrors use the same repository actuator layout and the "
             "same analytic Gaussian with in-pupil peak normalization; "
             "outside the pupil the HCIPy surface keeps its analytic tail "
-            "while the native construction stores zeros."
+            "while the native construction stores zeros. The shared seeded "
+            "command fixture drives both mirrors through opd_from_commands, "
+            "so multi-actuator command application is compared on the "
+            "recorded identical input."
         ),
         "metrics": [
             _metric(
@@ -915,6 +1023,16 @@ def _compare_dm_influence(context: _ComparisonContext) -> dict[str, Any]:
                 {"type": "abs_tolerance", "expected": 0.0, "tolerance": 1.0e-9},
                 "Matched Gaussian construction must agree to numerical "
                 "precision inside the pupil.",
+            ),
+            _metric(
+                "max_in_pupil_command_surface_abs_diff_m",
+                "tight_numerical",
+                "m_opd",
+                command_surface_diff_m,
+                {"type": "abs_tolerance", "expected": 0.0, "tolerance": 1.0e-9},
+                "Applying the shared 100 nm-scale random command fixture "
+                "through both mirrors must produce the same in-pupil "
+                "surface to numerical precision.",
             ),
         ],
     }
@@ -1202,15 +1320,37 @@ def _compare_closed_loop(context: _ComparisonContext) -> dict[str, Any]:
         hcipy_history.open_loop_opd_rms_m,
         dtype=float,
     )
+    shared_time_grid = np.asarray(context.time_grid_s, dtype=float)
+    executed_time_grids_match = bool(
+        np.array_equal(
+            np.asarray(native_history.time_s, dtype=float),
+            shared_time_grid,
+        )
+        and np.array_equal(
+            np.asarray(hcipy_history.time_s, dtype=float),
+            shared_time_grid,
+        )
+    )
     return {
         "comparison_kind": "closed_loop_residual",
         "attribution": (
-            "Both loops replay the same native atmosphere realization with "
-            "identical controller settings; only the DM and WFS optics "
-            "backends differ, so residual-trend differences reflect the "
-            "measured optical-gain differences."
+            "Both loops replay the same native atmosphere realization on "
+            "the shared recorded time grid with identical controller "
+            "settings; only the DM and WFS optics backends differ, so "
+            "residual-trend differences reflect the measured optical-gain "
+            "differences."
         ),
         "metrics": [
+            _metric(
+                "executed_time_grid_matches_shared_fixture",
+                "exact",
+                "boolean",
+                executed_time_grids_match,
+                {"type": "equals", "expected": True},
+                "Both replayed loops must sample the shared frozen-flow "
+                "atmosphere on exactly the recorded shared time grid; its "
+                "recorded hash is this comparison's timing contract.",
+            ),
             _metric(
                 "native_backend_name",
                 "exact",

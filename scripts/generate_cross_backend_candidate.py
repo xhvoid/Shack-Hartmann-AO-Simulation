@@ -14,14 +14,16 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
+import sys
 from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 GENERATOR_NAME = "scripts/generate_cross_backend_candidate.py"
-GENERATOR_VERSION = "1"
+GENERATOR_VERSION = "2"
 CANDIDATE_FILE = "cross_backend_candidate.json"
 DIFF_JSON = "cross_backend_diff.json"
 DIFF_MARKDOWN = "cross_backend_diff.md"
@@ -29,7 +31,6 @@ DESTINATION_DIR = (
     ROOT / "src" / "shwfs_ao" / "resources" / "reference_metrics" / "cross_backend"
 )
 BASELINE_NAME = "cross_backend_baseline.json"
-CONSTRAINT_FILE = "constraints/hcipy-py311.txt"
 
 
 def main() -> None:
@@ -114,14 +115,9 @@ def _generate_candidate(candidate_dir: Path) -> None:
     from shwfs_ao.validation.cross_backend import run_cross_backend_report
     from shwfs_ao.validation.regression import validate_cross_backend_report
 
-    constraint_path = ROOT / CONSTRAINT_FILE
-    constraint_sha256 = (
-        hashlib.sha256(constraint_path.read_bytes()).hexdigest()
-        if constraint_path.is_file()
-        else "unrecorded"
-    )
+    constraint_file, constraint_sha256 = _verified_constraint_identity()
     report = run_cross_backend_report(
-        dependency_constraint_file=CONSTRAINT_FILE,
+        dependency_constraint_file=constraint_file,
         dependency_constraint_sha256=constraint_sha256,
     )
     candidate: dict[str, Any] = dict(report)
@@ -129,6 +125,7 @@ def _generate_candidate(candidate_dir: Path) -> None:
         "generator_name": GENERATOR_NAME,
         "generator_version": GENERATOR_VERSION,
         "source_commit": _source_commit(),
+        "source_tree_clean": _source_tree_clean(),
     }
     validate_cross_backend_report(candidate)
 
@@ -450,6 +447,69 @@ def _current_baseline_bytes() -> bytes | None:
     return path.read_bytes()
 
 
+def _constraint_profile_name() -> str:
+    version = sys.version_info
+    return f"constraints/hcipy-py{version.major}{version.minor}.txt"
+
+
+def _verified_constraint_identity() -> tuple[str, str]:
+    """Return the (file, sha256) constraint identity of this environment.
+
+    The named profile is only recorded after verification: the profile must
+    exist for the running Python minor version, must pin numpy and hcipy,
+    and every pinned distribution that is installed must match its pin.  A
+    baseline can therefore never again name a constraint profile that could
+    not have produced the recorded interpreter and library versions.
+    """
+
+    from importlib import metadata
+
+    profile = _constraint_profile_name()
+    path = ROOT / profile
+    if not path.is_file():
+        raise SystemExit(
+            f"Missing constraint profile {profile} for the running Python "
+            f"{sys.version_info.major}.{sys.version_info.minor} "
+            "environment; freeze the maintainer environment into that file "
+            "before generating a candidate."
+        )
+    pins = _parse_constraint_pins(path.read_text(encoding="utf-8"))
+    for required in ("numpy", "hcipy"):
+        if required not in pins:
+            raise SystemExit(
+                f"Constraint profile {profile} does not pin {required}."
+            )
+    mismatches = []
+    for name, pinned in sorted(pins.items()):
+        try:
+            installed = metadata.version(name)
+        except metadata.PackageNotFoundError:
+            continue
+        if installed != pinned:
+            mismatches.append(
+                f"{name}: installed {installed} != pinned {pinned}"
+            )
+    if mismatches:
+        raise SystemExit(
+            f"The running environment does not satisfy {profile}: "
+            + "; ".join(mismatches)
+        )
+    return profile, hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _parse_constraint_pins(text: str) -> dict[str, str]:
+    pins: dict[str, str] = {}
+    for raw_line in text.splitlines():
+        line = raw_line.split("#", 1)[0].split(";", 1)[0].strip()
+        if not line or line.startswith("-"):
+            continue
+        if "==" in line:
+            name, _, version = line.partition("==")
+            canonical = re.sub(r"[-_.]+", "-", name.strip()).lower()
+            pins[canonical] = version.strip()
+    return pins
+
+
 def _source_commit() -> str:
     try:
         result = subprocess.run(
@@ -462,6 +522,27 @@ def _source_commit() -> str:
     except (OSError, subprocess.CalledProcessError):
         return "unknown"
     return result.stdout.strip() or "unknown"
+
+
+def _source_tree_clean() -> bool:
+    """True when no tracked file is modified, matching git describe --dirty.
+
+    Untracked files cannot change the packaged sources, so they do not make
+    the recorded provenance dirty; an unknown git state is recorded as not
+    clean rather than assumed clean.
+    """
+
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return False
+    return result.stdout.strip() == ""
 
 
 def _reject_packaged_destination(

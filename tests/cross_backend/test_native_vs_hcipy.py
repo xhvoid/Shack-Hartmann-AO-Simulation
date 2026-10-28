@@ -9,6 +9,8 @@ and never writes anything.
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import pytest
 
@@ -157,6 +159,42 @@ def test_the_statistical_comparison_documents_its_estimator(report):
     assert f"{realizations} independent realizations" in definition
     assert "estimator" in definition
     assert "uncertainty" in definition
+
+
+def test_recorded_fixtures_are_consumed_and_dispersion_is_recorded(report):
+    # Every recorded fixture hash is evidence of a consumed shared input:
+    # the command fixture drives both mirrors, the executed loop time grids
+    # must equal the shared time-grid fixture, and the statistical
+    # comparison records the realization dispersion its tolerance claim
+    # rests on.
+    by_kind = {
+        comparison["comparison_kind"]: {
+            metric["name"]: metric for metric in comparison["metrics"]
+        }
+        for comparison in report["comparisons"]
+    }
+    influence = by_kind["dm_single_actuator_influence"]
+    assert "max_in_pupil_command_surface_abs_diff_m" in influence
+    assert influence["max_in_pupil_command_surface_abs_diff_m"]["value"] <= (
+        1.0e-9
+    )
+    loop = by_kind["closed_loop_residual"]
+    assert loop["executed_time_grid_matches_shared_fixture"]["value"] is True
+    atmosphere = by_kind["atmosphere_statistics"]
+    for name in (
+        "rms_ratio_standard_error",
+        "native_structure_function_ratio_standard_error",
+        "hcipy_structure_function_ratio_standard_error",
+    ):
+        metric = atmosphere[name]
+        assert metric["level"] == "informational"
+        assert math.isfinite(metric["value"]) and metric["value"] >= 0.0
+    definition = next(
+        comparison
+        for comparison in report["comparisons"]
+        if comparison["comparison_kind"] == "atmosphere_statistics"
+    )["statistical_definition"]
+    assert "three standard errors" in definition
 
 
 def test_the_report_round_trips_into_a_valid_baseline_without_writing(

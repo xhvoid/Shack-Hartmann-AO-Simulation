@@ -167,6 +167,91 @@ class TestDiffContentCompleteness:
         ]
 
 
+class TestEnvironmentVerification:
+    def test_constraint_pins_parse_names_versions_and_ignore_noise(self):
+        pins = script._parse_constraint_pins(
+            "# resolved profile\n"
+            "numpy==2.5.0\n"
+            "ruff==0.14.0  # inline comment\n"
+            "Astropy_IERS-data==1.0\n"
+            "packaging==26.0 ; python_version >= '3.9'\n"
+            "-e git+https://example.invalid/repo.git#egg=self\n"
+            "--find-links wheels/\n"
+        )
+        assert pins == {
+            "numpy": "2.5.0",
+            "ruff": "0.14.0",
+            "astropy-iers-data": "1.0",
+            "packaging": "26.0",
+        }
+
+    def test_generation_refuses_a_missing_profile_for_this_interpreter(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(script, "ROOT", tmp_path)
+        with pytest.raises(SystemExit, match="Missing constraint profile"):
+            script._verified_constraint_identity()
+
+    def test_generation_refuses_a_profile_without_the_backend_pins(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(script, "ROOT", tmp_path)
+        profile = tmp_path / script._constraint_profile_name()
+        profile.parent.mkdir(parents=True)
+        profile.write_text("numpy==1.0\n", encoding="utf-8")
+        with pytest.raises(SystemExit, match="does not pin hcipy"):
+            script._verified_constraint_identity()
+
+    def test_generation_refuses_a_profile_the_environment_contradicts(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        # numpy is installed in every lane, so a numpy pin that matches no
+        # release always contradicts the running environment.
+        monkeypatch.setattr(script, "ROOT", tmp_path)
+        profile = tmp_path / script._constraint_profile_name()
+        profile.parent.mkdir(parents=True)
+        profile.write_text(
+            "numpy==0.0.0.dev0\nhcipy==9.9.9\n",
+            encoding="utf-8",
+        )
+        with pytest.raises(SystemExit, match="does not satisfy"):
+            script._verified_constraint_identity()
+
+    def test_a_matching_profile_is_recorded_with_its_content_hash(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        import hashlib
+        from importlib import metadata
+
+        monkeypatch.setattr(script, "ROOT", tmp_path)
+        try:
+            hcipy_pin = metadata.version("hcipy")
+        except metadata.PackageNotFoundError:
+            # Not installed in this lane: the pin is then not checkable
+            # against an installed distribution and is skipped by design.
+            hcipy_pin = "9.9.9"
+        profile = tmp_path / script._constraint_profile_name()
+        profile.parent.mkdir(parents=True)
+        profile.write_text(
+            f"numpy=={metadata.version('numpy')}\nhcipy=={hcipy_pin}\n",
+            encoding="utf-8",
+        )
+        recorded_name, recorded_sha = script._verified_constraint_identity()
+        assert recorded_name == script._constraint_profile_name()
+        assert recorded_sha == hashlib.sha256(profile.read_bytes()).hexdigest()
+
+    def test_source_tree_cleanliness_is_reported_as_a_boolean(self):
+        assert isinstance(script._source_tree_clean(), bool)
+
+
 class TestAcceptanceFreshness:
     def test_an_untampered_candidate_is_accepted_with_provenance(
         self,
