@@ -30,7 +30,7 @@ from typing import Any
 import numpy as np
 
 from ...core.geometry import PupilGeometry
-from ...core.wavefront import validate_masked_finite
+from ...core.wavefront import opd_to_phase, phase_to_opd, validate_masked_finite
 from . import require_hcipy
 
 
@@ -206,7 +206,7 @@ def wavefront_from_opd(
     _validated_grid_for_mask(grid, mask, hcipy=hcipy)
 
     phase_rad = np.zeros(array.shape, dtype=float)
-    phase_rad[mask] = array[mask] * (2.0 * math.pi / wavelength)
+    phase_rad[mask] = opd_to_phase(array[mask], wavelength)
     electric_field = np.zeros(array.shape, dtype=complex)
     electric_field[mask] = np.exp(1j * phase_rad[mask])
     field = hcipy.Field(electric_field.ravel(order="C"), grid)
@@ -251,7 +251,7 @@ def opd_m_from_wavefront(
         )
     phase_rad = np.angle(electric_field[mask])
     result = np.full(mask.shape, fill, dtype=float)
-    result[mask] = phase_rad * (wavelength / (2.0 * math.pi))
+    result[mask] = phase_to_opd(phase_rad, wavelength)
     return result
 
 
