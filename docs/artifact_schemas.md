@@ -35,10 +35,11 @@ Reports/baselines use `artifact_schema_name`, `artifact_schema_version`,
 `fixture_hashes`, `numerical_inputs`, `environment`, and `comparisons`; an accepted baseline adds
 `generator` and `acceptance`. The packaged `cross_backend_baseline.json` and
 the candidate script use this contract, and the installed
-`cross_backend_baseline.schema.json` describes exactly the same shape: the
-packaged baseline validates against the packaged schema, and CI enforces
-that cross-validation. An earlier draft of the schema resource described a
-normalized `schema_name`/`artifact_kind`/`shared_input_hashes` envelope that
+`cross_backend_baseline.schema.json` describes the same shape, up to the JSON
+Schema limits stated below: the packaged baseline validates against the
+packaged schema, and CI enforces that cross-validation. An earlier draft of
+the schema resource described a normalized
+`schema_name`/`artifact_kind`/`shared_input_hashes` envelope that
 no writer ever emitted; it was superseded by the runtime contract.
 
 Each numerical-input witness contains its shape, losslessly compressed
@@ -46,11 +47,24 @@ little-endian float64 samples, data SHA-256, raw source hash and semantic
 configuration hash. DM witnesses also include their canonical model and backend
 configuration hash preimages, binding the source hash to the influence samples
 and exact semantic fields (including reflective factors and array ordering).
-Version 2 verifies complete arrays at fixed roundoff
+Direct array fixture witnesses have no hash preimage (their raw hash is the
+stable hash of the witnessed array), so both payload fields are `null`; DM
+witnesses must carry both. Version 2 verifies complete arrays at fixed roundoff
 tolerances across platforms while keeping scientific metric criteria unchanged;
 version 1's exact hash gate incorrectly required identical low bits from
 different math and FFT libraries. Existing version-1 documents require an
-explicit regenerated and reviewed baseline; they are not silently upgraded.
+explicit regenerated and reviewed baseline; they are not silently upgraded, and
+both the runtime validator and the schema gate refuse them by their version,
+not by a missing version-2 field.
+
+The schema states the witness shape per input: `null` payloads for fixtures,
+non-empty payload strings for the DMs, padded standard base64 `data`, and
+exactly 64-character hashes. It cannot state everything the runtime checks.
+JSON Schema counts an integer-valued number such as `48.0` as an integer, so
+the schema accepts it as a `shape` entry while the runtime requires a JSON
+integer. The bound on the number of samples, the decoded data length and
+`values_sha256`, and every binding between a raw hash, its preimage and the
+witnessed array are checked only at runtime.
 
 The strict schema pins the complete thirteen-kind comparison inventory in
 canonical order, requires acceptance reason/review-reference/timestamp and

@@ -446,20 +446,12 @@ def _validate_report_structure(
 
     if not isinstance(document, Mapping):
         raise BaselineContractError("document must be a JSON object mapping.")
+    # The identity comes first: which fields are required depends on the
+    # version, so a document of another version must be named as such rather
+    # than reported as missing whatever this version added.
     _require_fields(
         document,
-        (
-            "artifact_schema_name",
-            "artifact_schema_version",
-            "comparison_config",
-            "root_seed",
-            "conventions",
-            "component_hashes",
-            "fixture_hashes",
-            "numerical_inputs",
-            "environment",
-            "comparisons",
-        ),
+        ("artifact_schema_name", "artifact_schema_version"),
         label="report",
     )
     if document["artifact_schema_name"] not in (
@@ -473,15 +465,33 @@ def _validate_report_structure(
     # ``type`` rather than ``==`` alone: ``True`` equals 1 in Python, so a
     # document whose version field is a boolean would otherwise be read as
     # version 1 and validated against a contract it never declared.
-    if (
-        type(document["artifact_schema_version"]) is not int
-        or document["artifact_schema_version"]
-        != CROSS_BACKEND_BASELINE_SCHEMA_VERSION
-    ):
+    version = document["artifact_schema_version"]
+    if type(version) is int and version == 1:
         raise BaselineContractError(
-            "unsupported artifact_schema_version "
-            f"{document['artifact_schema_version']!r}."
+            "artifact_schema_version 1 is no longer accepted: version-1 "
+            "cross-backend documents gate on exact input hashes and carry no "
+            "numerical input witnesses, so they are not upgraded. Regenerate "
+            f"a version-{CROSS_BACKEND_BASELINE_SCHEMA_VERSION} candidate and "
+            "accept it after review."
         )
+    if type(version) is not int or version != CROSS_BACKEND_BASELINE_SCHEMA_VERSION:
+        raise BaselineContractError(
+            f"unsupported artifact_schema_version {version!r}."
+        )
+    _require_fields(
+        document,
+        (
+            "comparison_config",
+            "root_seed",
+            "conventions",
+            "component_hashes",
+            "fixture_hashes",
+            "numerical_inputs",
+            "environment",
+            "comparisons",
+        ),
+        label="report",
+    )
     config = document["comparison_config"]
     if not isinstance(config, Mapping) or "config_hash" not in config:
         raise BaselineContractError(
@@ -536,6 +546,18 @@ def _validate_report_structure(
             numerical_input_values(record)
         except ValueError as exc:
             raise BaselineContractError(f"numerical_inputs[{key!r}]: {exc}") from exc
+        # A direct array fixture's raw hash is the stable hash of the witnessed
+        # array itself, so it has no hash preimage to record.  Text there would
+        # ride along unverified, and the JSON Schema refuses it as well.
+        if NUMERICAL_INPUTS[key][0] == "fixture_hashes" and (
+            record["source_payload"] is not None
+            or record["backend_source_payload"] is not None
+        ):
+            raise BaselineContractError(
+                f"numerical_inputs[{key!r}]: a direct array fixture witness "
+                "records no hash preimage; source_payload and "
+                "backend_source_payload must be null."
+            )
     _require_fields(
         document["environment"],
         _REQUIRED_ENVIRONMENT_FIELDS,
@@ -759,7 +781,17 @@ def validate_baseline_against_schema(document: Mapping[str, Any]) -> None:
         ) from exc
     schema = json.loads(schema_text)
     validator = jsonschema.Draft202012Validator(schema)
-    errors = sorted(validator.iter_errors(document), key=lambda error: list(error.path))
+    # Identity errors are reported first, as the runtime contract does: a
+    # document of another version is named as such, not as one missing the
+    # root fields that this version requires.
+    errors = sorted(
+        validator.iter_errors(document),
+        key=lambda error: (
+            list(error.path)[:1]
+            not in (["artifact_schema_name"], ["artifact_schema_version"]),
+            list(error.path),
+        ),
+    )
     if errors:
         first = errors[0]
         location = "/".join(str(part) for part in first.path) or "<root>"
