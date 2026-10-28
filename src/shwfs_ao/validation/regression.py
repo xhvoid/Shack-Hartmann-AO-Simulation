@@ -33,6 +33,9 @@ CROSS_BACKEND_BASELINE_SCHEMA_VERSION = 1
 CROSS_BACKEND_BASELINE_RESOURCE = (
     "reference_metrics/cross_backend/cross_backend_baseline.json"
 )
+CROSS_BACKEND_BASELINE_SCHEMA_RESOURCE = (
+    "schemas/cross_backend_baseline.schema.json"
+)
 
 COMPARISON_LEVELS = (
     "exact",
@@ -57,6 +60,151 @@ REQUIRED_COMPARISON_KINDS = (
 )
 _CRITERION_TYPES = ("equals", "abs_tolerance", "range", "informational")
 _CONTENT_HASH_64 = re.compile(r"[0-9a-f]{64}")
+_SOURCE_COMMIT_40 = re.compile(r"[0-9a-f]{40}")
+
+REQUIRED_COMPONENT_HASH_KEYS = (
+    "dm_actuator_ids",
+    "hcipy_dm",
+    "hcipy_science",
+    "hcipy_wfs_optics",
+    "native_dm",
+    "native_science",
+    "native_wfs_optics",
+    "pupil_geometry",
+    "shack_hartmann_geometry",
+    "wfs_row_ids",
+)
+REQUIRED_FIXTURE_HASH_KEYS = (
+    "atmosphere_opd_cube_m",
+    "command_fixture_opd_m",
+    "static_opd_m",
+    "tilt_x_opd_m",
+    "tilt_y_opd_m",
+    "time_grid_s",
+)
+_REQUIRED_HASH_KEYS: Mapping[str, tuple[str, ...]] = {
+    "component_hashes": REQUIRED_COMPONENT_HASH_KEYS,
+    "fixture_hashes": REQUIRED_FIXTURE_HASH_KEYS,
+}
+
+# The complete AO-REF-018 metric inventory, per comparison kind.  Validation
+# requires exactly this set, so a required row-identity, shared-input, or
+# scientific gate cannot disappear — and an unreviewed extra metric cannot
+# appear — without a deliberate change here and in the packaged JSON Schema.
+REQUIRED_METRIC_NAMES: Mapping[str, frozenset[str]] = {
+    "pupil_mask_and_throughput": frozenset(
+        (
+            "mask_round_trip_identical",
+            "illuminated_sample_count",
+            "native_mean_window_capture",
+            "hcipy_mean_window_capture",
+        )
+    ),
+    "zernike_modes": frozenset(
+        (
+            "tip_x_alignment_defect",
+            "tip_x_relative_sign",
+            "tip_y_alignment_defect",
+            "tip_y_relative_sign",
+            "defocus_alignment_defect",
+            "defocus_relative_sign",
+            "astig_45_alignment_defect",
+            "astig_45_relative_sign",
+            "astig_0_alignment_defect",
+            "astig_0_relative_sign",
+        )
+    ),
+    "atmosphere_statistics": frozenset(
+        (
+            "rms_ratio_hcipy_over_native",
+            "native_structure_function_lag_ratio",
+            "hcipy_structure_function_lag_ratio",
+            "rms_ratio_standard_error",
+            "native_structure_function_ratio_standard_error",
+            "hcipy_structure_function_ratio_standard_error",
+        )
+    ),
+    "wfs_tip_tilt_response": frozenset(
+        (
+            "native_x_response_sign",
+            "hcipy_x_response_sign",
+            "native_cross_axis_fraction",
+            "hcipy_cross_axis_fraction",
+            "native_tilt_gain",
+            "hcipy_tilt_gain",
+            "tilt_gain_ratio_hcipy_over_native",
+            "y_gain_ratio_hcipy_over_native",
+        )
+    ),
+    "lenslet_spot_morphology": frozenset(
+        (
+            "native_ee50_over_diffraction",
+            "hcipy_ee50_over_diffraction",
+            "ee50_ratio_hcipy_over_native",
+            "centroid_gain_ratio_hcipy_over_native",
+        )
+    ),
+    "dm_single_actuator_influence": frozenset(
+        (
+            "actuator_ids_identical",
+            "max_in_pupil_influence_abs_diff",
+            "max_in_pupil_command_surface_abs_diff_m",
+        )
+    ),
+    "dm_static_fitting": frozenset(
+        (
+            "native_fitting_residual_fraction",
+            "fitting_residual_relative_difference",
+        )
+    ),
+    "interaction_matrix_identity": frozenset(
+        (
+            "matrix_shapes_identical",
+            "row_ids_identical",
+            "coordinate_ids_identical",
+            "rank_difference",
+        )
+    ),
+    "normalized_singular_spectrum": frozenset(
+        (
+            "spectrum_length_difference",
+            "max_normalized_sigma_abs_diff",
+        )
+    ),
+    "psf_normalization": frozenset(
+        (
+            "native_total_flux_error",
+            "hcipy_total_flux_error",
+        )
+    ),
+    "strehl_ratio": frozenset(
+        (
+            "native_strehl",
+            "hcipy_strehl",
+            "strehl_abs_difference",
+        )
+    ),
+    "closed_loop_residual": frozenset(
+        (
+            "executed_time_grid_matches_shared_fixture",
+            "both_loops_consumed_shared_opd_cube",
+            "native_backend_name",
+            "hcipy_backend_name",
+            "native_correction_effect",
+            "hcipy_correction_effect",
+            "mean_residual_ratio_hcipy_over_native",
+        )
+    ),
+    "runtime_and_memory": frozenset(
+        (
+            "native_wfs_propagation_s",
+            "hcipy_wfs_propagation_s",
+            "native_psf_propagation_s",
+            "hcipy_psf_propagation_s",
+            "comparison_peak_traced_memory_mb",
+        )
+    ),
+}
 
 _REQUIRED_ENVIRONMENT_FIELDS = (
     "python_version",
@@ -81,11 +229,16 @@ __all__ = (
     "CROSS_BACKEND_BASELINE_SCHEMA_NAME",
     "CROSS_BACKEND_BASELINE_SCHEMA_VERSION",
     "CROSS_BACKEND_BASELINE_RESOURCE",
+    "CROSS_BACKEND_BASELINE_SCHEMA_RESOURCE",
     "COMPARISON_LEVELS",
     "REQUIRED_COMPARISON_KINDS",
+    "REQUIRED_COMPONENT_HASH_KEYS",
+    "REQUIRED_FIXTURE_HASH_KEYS",
+    "REQUIRED_METRIC_NAMES",
     "BaselineContractError",
     "validate_cross_backend_report",
     "validate_cross_backend_baseline",
+    "validate_baseline_against_schema",
     "baseline_from_report",
     "load_cross_backend_baseline",
     "evaluate_report_against_baseline",
@@ -159,6 +312,17 @@ def validate_cross_backend_report(document: Mapping[str, Any]) -> Mapping[str, A
                     f"{group}[{key!r}] must be a 64-character lowercase "
                     "hexadecimal content hash."
                 )
+        # A required row-identity, actuator-identity, or shared-input hash
+        # cannot silently disappear, and an unreviewed extra one cannot
+        # appear: the recorded keys must be exactly the AO-REF-018 inventory.
+        required_keys = _REQUIRED_HASH_KEYS[group]
+        if set(hashes) != set(required_keys):
+            missing = sorted(set(required_keys) - set(hashes))
+            unexpected = sorted(set(hashes) - set(required_keys))
+            raise BaselineContractError(
+                f"{group} must record exactly the required keys; "
+                f"missing={missing}, unexpected={unexpected}."
+            )
     _require_fields(
         document["environment"],
         _REQUIRED_ENVIRONMENT_FIELDS,
@@ -186,6 +350,20 @@ def validate_cross_backend_report(document: Mapping[str, Any]) -> Mapping[str, A
             f"canonical order; missing={missing}, unexpected={unexpected}, "
             f"observed={kinds}."
         )
+    # Each comparison must record exactly its complete metric inventory, so a
+    # scientific gate cannot be dropped and an unreviewed metric cannot appear
+    # without a deliberate change to REQUIRED_METRIC_NAMES and the schema.
+    for comparison in comparisons:
+        kind = comparison["comparison_kind"]
+        names = {metric["name"] for metric in comparison["metrics"]}
+        required_names = REQUIRED_METRIC_NAMES[kind]
+        if names != required_names:
+            missing = sorted(required_names - names)
+            unexpected = sorted(names - required_names)
+            raise BaselineContractError(
+                f"comparison {kind!r} must record exactly its required "
+                f"metrics; missing={missing}, unexpected={unexpected}."
+            )
     return document
 
 
@@ -214,6 +392,19 @@ def validate_cross_backend_baseline(document: Mapping[str, Any]) -> Mapping[str,
         _REQUIRED_ACCEPTANCE_FIELDS,
         label="acceptance",
     )
+    # Provenance must be verifiable, not forgeable: a failed or "unknown"
+    # commit lookup is rejected, and the clean-state field must be present so
+    # a dirty-tree baseline cannot masquerade as a reproducible one.
+    source_commit = document["generator"]["source_commit"]
+    if not _SOURCE_COMMIT_40.fullmatch(str(source_commit)):
+        raise BaselineContractError(
+            "generator.source_commit must be a 40-character lowercase git "
+            f"commit hash; got {source_commit!r}."
+        )
+    if not isinstance(document["generator"].get("source_tree_clean"), bool):
+        raise BaselineContractError(
+            "generator.source_tree_clean must be recorded as a boolean."
+        )
     for comparison in document["comparisons"]:
         for metric in comparison["metrics"]:
             rationale = metric.get("rationale")
@@ -223,7 +414,8 @@ def validate_cross_backend_baseline(document: Mapping[str, Any]) -> Mapping[str,
                     f"{comparison['comparison_kind']!r} is missing its "
                     "scientific rationale."
                 )
-            criterion_type = metric["pass_criterion"]["type"]
+            criterion = metric["pass_criterion"]
+            criterion_type = criterion["type"]
             if criterion_type in ("abs_tolerance", "range") and not (
                 _finite_number(metric["value"])
             ):
@@ -232,6 +424,15 @@ def validate_cross_backend_baseline(document: Mapping[str, Any]) -> Mapping[str,
                     f"{comparison['comparison_kind']!r} carries a numeric "
                     "criterion, so its recorded value must be a finite "
                     "number."
+                )
+            # An exact metric's recorded value is the expectation it gates on,
+            # so the two must agree; otherwise the baseline could record one
+            # value and gate on another.
+            if criterion_type == "equals" and criterion["expected"] != metric["value"]:
+                raise BaselineContractError(
+                    f"baseline metric {metric['name']!r} in comparison "
+                    f"{comparison['comparison_kind']!r} gates on equality, so "
+                    "its recorded value must equal the criterion expectation."
                 )
     return document
 
@@ -269,6 +470,43 @@ def load_cross_backend_baseline() -> Mapping[str, Any]:
             f"packaged baseline is not valid JSON: {exc}"
         ) from exc
     return validate_cross_backend_baseline(document)
+
+
+def validate_baseline_against_schema(document: Mapping[str, Any]) -> None:
+    """Validate a document against the packaged JSON Schema.
+
+    The custom validators enforce the semantic contract; the JSON Schema is
+    the independent structural gate the acceptance workflow must also pass, so
+    a required field, hash key, or metric cannot disappear without a
+    deliberate, versioned schema change.  ``jsonschema`` is a development and
+    validation dependency, imported lazily so importing this module never
+    requires it.
+    """
+
+    try:
+        import jsonschema
+    except ModuleNotFoundError as exc:  # pragma: no cover - dev dependency
+        raise BaselineContractError(
+            "jsonschema is required to validate against the packaged schema; "
+            "install the test or validation dependency profile."
+        ) from exc
+    try:
+        schema_text = read_text_resource(CROSS_BACKEND_BASELINE_SCHEMA_RESOURCE)
+    except (FileNotFoundError, KeyError, ValueError) as exc:
+        raise BaselineContractError(
+            f"cannot load packaged schema "
+            f"{CROSS_BACKEND_BASELINE_SCHEMA_RESOURCE!r}: {exc}"
+        ) from exc
+    schema = json.loads(schema_text)
+    validator = jsonschema.Draft202012Validator(schema)
+    errors = sorted(validator.iter_errors(document), key=lambda error: list(error.path))
+    if errors:
+        first = errors[0]
+        location = "/".join(str(part) for part in first.path) or "<root>"
+        raise BaselineContractError(
+            f"document violates the packaged JSON Schema at {location}: "
+            f"{first.message}"
+        )
 
 
 def evaluate_report_against_baseline(
@@ -318,9 +556,16 @@ def evaluate_report_against_baseline(
                 continue
             observed_entry = report_metrics.get((kind, name))
             if observed_entry is None:
+                # Report the same complete context a value violation would —
+                # the expected value or range, tolerance, units, and hashes —
+                # so a missing gate is as debuggable as a failed one.
                 failures.append(
-                    f"comparison={kind} metric={name}: missing from the "
-                    f"fresh report; {hash_context}"
+                    format_metric_failure(
+                        kind,
+                        metric,
+                        "<absent: missing from the fresh report>",
+                        hash_context=hash_context,
+                    )
                 )
                 continue
             failure = _evaluate_metric(
@@ -499,6 +744,13 @@ def _validate_comparison(comparison: object) -> None:
                 f"metric {metric['name']!r} level and criterion type must "
                 "agree on informational status."
             )
+        # An exact metric must gate on equality, never on a tolerance or a
+        # range that a later edit could widen into an always-passing check.
+        if metric["level"] == "exact" and criterion["type"] != "equals":
+            raise BaselineContractError(
+                f"metric {metric['name']!r} is exact, so its pass_criterion "
+                f"must be 'equals', not {criterion['type']!r}."
+            )
         if metric["name"] in seen_names:
             raise BaselineContractError(
                 f"duplicate metric name {metric['name']!r} in comparison "
@@ -526,12 +778,21 @@ def _metric_index(
 
 
 def _hash_context(document: Mapping[str, Any]) -> str:
+    # Full, untruncated hashes for every compared input and component: a
+    # failure message must let a reader confirm exactly which configuration,
+    # shared fixtures, and component identities the comparison ran against.
     config_hash = str(document["comparison_config"]["config_hash"])
-    fixture_hashes = document["fixture_hashes"]
-    fixture_text = ",".join(
-        f"{key}={str(value)[:8]}" for key, value in sorted(fixture_hashes.items())
+
+    def _render(group: str) -> str:
+        return ",".join(
+            f"{key}={value}" for key, value in sorted(document[group].items())
+        )
+
+    return (
+        f"config_hash={config_hash} "
+        f"components[{_render('component_hashes')}] "
+        f"fixtures[{_render('fixture_hashes')}]"
     )
-    return f"config_hash={config_hash[:8]} fixtures[{fixture_text}]"
 
 
 def _require_fields(

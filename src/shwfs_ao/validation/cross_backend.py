@@ -15,7 +15,12 @@ Design rules:
   identical.  Fixtures deliberately avoid FFT-derived data.
 - Independently generated native and HCIPy atmospheres are compared only by
   statistical diagnostics; equal seeds do not imply equal realizations
-  across libraries, and no screen array is hashed.
+  across libraries, and no generator screen array is hashed.
+- The closed-loop comparison replays one recorded OPD-cube fixture: the
+  native frozen-flow realization is sampled once over the shared time grid,
+  the cube's hash is recorded beside the other shared-input fixtures, and
+  both backend loops consume that identical recording through a fail-closed
+  replay component that rejects any off-grid sample.
 - Every physical tolerance carries a written rationale.  Runtime and memory
   are informational only and never gate.
 - No claim of complete equivalence is made: each comparison names the
@@ -34,7 +39,8 @@ import platform
 import sys
 import time
 import tracemalloc
-from typing import Any, ClassVar
+from types import MappingProxyType
+from typing import Any, ClassVar, Mapping
 
 import numpy as np
 
@@ -201,6 +207,76 @@ def run_cross_backend_report(
     return report
 
 
+class _RecordedOpdCubeAtmosphere:
+    """Fail-closed replay of the recorded shared OPD-cube fixture.
+
+    Both backend loops consume this identical recording, so every
+    atmospheric input sample — not only the time grid — is one hashed
+    shared-input fixture.  A query off the recorded grid or for a different
+    realization is a contract violation, never an interpolation.
+    """
+
+    def __init__(
+        self,
+        *,
+        opd_cube_m: np.ndarray,
+        time_grid_s: np.ndarray,
+        root_seed: int,
+        cube_hash: str,
+        source_config_hash: str,
+    ) -> None:
+        self._cube = np.asarray(opd_cube_m, dtype=float)
+        self._time_grid_s = np.asarray(time_grid_s, dtype=float)
+        if self._cube.ndim != 3 or self._cube.shape[0] != self._time_grid_s.size:
+            raise CrossBackendError(
+                "the recorded OPD cube must hold one sample per shared "
+                "time-grid entry."
+            )
+        self._root_seed = int(root_seed)
+        self._cube_hash = cube_hash
+        self._source_config_hash = source_config_hash
+
+    @property
+    def backend_name(self) -> str:
+        return "shared_fixture_replay"
+
+    @property
+    def config_hash(self) -> str:
+        return self._cube_hash
+
+    @property
+    def root_seed(self) -> int:
+        return self._root_seed
+
+    @property
+    def metadata(self) -> Mapping[str, Any]:
+        return MappingProxyType(
+            {
+                "backend_name": self.backend_name,
+                "config_hash": self._cube_hash,
+                "root_seed": self._root_seed,
+                "realization_index": 0,
+                "source_atmosphere_config_hash": self._source_config_hash,
+                "n_recorded_samples": int(self._cube.shape[0]),
+            }
+        )
+
+    def reset(self, *, realization_index: int = 0) -> None:
+        if realization_index != 0:
+            raise CrossBackendError(
+                "the shared OPD-cube fixture records realization 0 only."
+            )
+
+    def opd_at(self, time_s: float) -> np.ndarray:
+        matches = np.flatnonzero(self._time_grid_s == float(time_s))
+        if matches.size != 1:
+            raise CrossBackendError(
+                "the closed-loop comparison may sample the shared OPD-cube "
+                f"fixture only on its recorded time grid; got t={time_s!r} s."
+            )
+        return self._cube[int(matches[0])].copy()
+
+
 class _ComparisonContext:
     """Shared deterministic components and fixtures for every comparison."""
 
@@ -351,6 +427,41 @@ class _ComparisonContext:
         )
         time_grid_s = np.arange(config.loop_steps, dtype=float) / config.frame_rate_hz
 
+        # AO-REF-018 shared-input contract for the closed-loop comparison:
+        # sample the frozen-flow realization exactly once over the shared
+        # time grid and hash the resulting OPD cube.  Both backend loops
+        # replay this recording, so identical atmospheric input is recorded
+        # evidence, not an assumption about seeded reconstruction.
+        from ..backends.native.atmosphere import (
+            FrozenFlowAtmosphere,
+            FrozenFlowAtmosphereConfig,
+        )
+
+        source_atmosphere = FrozenFlowAtmosphere(
+            FrozenFlowAtmosphereConfig(
+                grid_size=pupil.pupil_shape[0],
+                delta_m=pupil.pixel_spacing_xy_m[0],
+                pupil_diameter_m=config.telescope_diameter_m,
+                r0_m=config.loop_r0_m,
+                outer_scale_m=config.outer_scale_m,
+                wind_m_per_s=config.wind_m_per_s,
+                root_seed=config.root_seed,
+            ),
+            pupil_mask=geometry.pupil_mask,
+        )
+        source_atmosphere.reset(realization_index=0)
+        atmosphere_opd_cube_m = np.stack(
+            [source_atmosphere.opd_at(float(sample_s)) for sample_s in time_grid_s]
+        )
+        atmosphere_cube_hash = _fixture_hash(atmosphere_opd_cube_m)
+        shared_atmosphere = _RecordedOpdCubeAtmosphere(
+            opd_cube_m=atmosphere_opd_cube_m,
+            time_grid_s=time_grid_s,
+            root_seed=config.root_seed,
+            cube_hash=atmosphere_cube_hash,
+            source_config_hash=source_atmosphere.config_hash,
+        )
+
         centers_m, pitch_m, _ = square_grid_actuator_layout(
             config.telescope_diameter_m,
             config.n_actuators_across,
@@ -362,6 +473,7 @@ class _ComparisonContext:
             "tilt_y_opd_m": _fixture_hash(tilt_y_opd_m),
             "command_fixture_opd_m": _fixture_hash(command_fixture_opd_m),
             "time_grid_s": _fixture_hash(time_grid_s),
+            "atmosphere_opd_cube_m": atmosphere_cube_hash,
         }
         component_hashes = {
             "pupil_geometry": pupil.geometry_hash,
@@ -402,6 +514,7 @@ class _ComparisonContext:
             tilt_y_opd_m=tilt_y_opd_m,
             command_fixture_opd_m=command_fixture_opd_m,
             time_grid_s=time_grid_s,
+            shared_atmosphere=shared_atmosphere,
             actuator_centers_m=centers_m,
             actuator_pitch_m=pitch_m,
             fixture_hashes=fixture_hashes,
@@ -1331,14 +1444,20 @@ def _compare_closed_loop(context: _ComparisonContext) -> dict[str, Any]:
             shared_time_grid,
         )
     )
+    shared_cube_hash = context.shared_atmosphere.config_hash
+    both_loops_consumed_shared_cube = bool(
+        native_history.metadata["component_hashes"]["atmosphere"]
+        == hcipy_history.metadata["component_hashes"]["atmosphere"]
+        == shared_cube_hash
+    )
     return {
         "comparison_kind": "closed_loop_residual",
         "attribution": (
-            "Both loops replay the same native atmosphere realization on "
-            "the shared recorded time grid with identical controller "
-            "settings; only the DM and WFS optics backends differ, so "
-            "residual-trend differences reflect the measured optical-gain "
-            "differences."
+            "Both loops replay the identical recorded OPD-cube fixture "
+            "(hash recorded in fixture_hashes) on the shared recorded time "
+            "grid with identical controller settings; only the DM and WFS "
+            "optics backends differ, so residual-trend differences reflect "
+            "the measured optical-gain differences."
         ),
         "metrics": [
             _metric(
@@ -1347,9 +1466,19 @@ def _compare_closed_loop(context: _ComparisonContext) -> dict[str, Any]:
                 "boolean",
                 executed_time_grids_match,
                 {"type": "equals", "expected": True},
-                "Both replayed loops must sample the shared frozen-flow "
-                "atmosphere on exactly the recorded shared time grid; its "
+                "Both replayed loops must sample the shared OPD-cube "
+                "fixture on exactly the recorded shared time grid; its "
                 "recorded hash is this comparison's timing contract.",
+            ),
+            _metric(
+                "both_loops_consumed_shared_opd_cube",
+                "exact",
+                "boolean",
+                both_loops_consumed_shared_cube,
+                {"type": "equals", "expected": True},
+                "Each loop's recorded atmosphere component hash must equal "
+                "the shared OPD-cube fixture hash, proving both backends "
+                "consumed the identical recorded atmospheric input.",
             ),
             _metric(
                 "native_backend_name",
@@ -1509,10 +1638,6 @@ def _interaction_matrices(context: _ComparisonContext) -> tuple[Any, Any]:
 
 
 def _run_loop(context: _ComparisonContext, *, backend: str) -> Any:
-    from ..backends.native.atmosphere import (
-        FrozenFlowAtmosphere,
-        FrozenFlowAtmosphereConfig,
-    )
     from ..calibration import LeastSquaresReconstructor
     from ..control import (
         IdentityCommandProjector,
@@ -1532,18 +1657,9 @@ def _run_loop(context: _ComparisonContext, *, backend: str) -> Any:
         mirror = context.hcipy_dm
         interaction = context.hcipy_interaction
 
-    atmosphere = FrozenFlowAtmosphere(
-        FrozenFlowAtmosphereConfig(
-            grid_size=context.pupil.pupil_shape[0],
-            delta_m=context.pupil.pixel_spacing_xy_m[0],
-            pupil_diameter_m=config.telescope_diameter_m,
-            r0_m=config.loop_r0_m,
-            outer_scale_m=config.outer_scale_m,
-            wind_m_per_s=config.wind_m_per_s,
-            root_seed=config.root_seed,
-        ),
-        pupil_mask=context.geometry.pupil_mask,
-    )
+    # Both backend loops consume the identical recorded OPD-cube fixture;
+    # the recording's hash is this comparison's shared-input evidence.
+    atmosphere = context.shared_atmosphere
     return run_closed_loop(
         LoopConfig(
             n_steps=config.loop_steps,
