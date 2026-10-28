@@ -1,8 +1,8 @@
 {
   "acceptance": {
-    "accepted_at_utc": "2026-07-19T19:56:00.996554+00:00",
-    "reason": "Wire the recorded command and time-grid fixtures into consumed comparisons, record the realization standard errors backing the atmosphere range criteria, and record the verified constraints/hcipy-py314.txt generation environment; gating values are unchanged except ULP-level HCIPy drift from the AO-REF-002 conversion routing, far inside every tolerance.",
-    "review_reference": "AO-REF-018 implementation review F6/F7/F13"
+    "accepted_at_utc": "2026-07-21T10:22:06.319256+00:00",
+    "reason": "Record the shared OPD-cube fixture and the both_loops_consumed_shared_opd_cube gate for the AO-REF-018 closed-loop comparison, so identical atmospheric input to both backends is hashed recorded evidence; every physical gating value is unchanged, only the new shared-input fixture, the new boolean gate, and informational runtime figures differ.",
+    "review_reference": "AO-REF-018 implementation review round 2: shared OPD-cube fixture (F4) and report/baseline contract hardening (F5-F10, F16)"
   },
   "artifact_schema_name": "shwfs_ao.cross_backend_baseline",
   "artifact_schema_version": 1,
@@ -666,7 +666,7 @@
       ]
     },
     {
-      "attribution": "Both loops replay the same native atmosphere realization on the shared recorded time grid with identical controller settings; only the DM and WFS optics backends differ, so residual-trend differences reflect the measured optical-gain differences.",
+      "attribution": "Both loops replay the identical recorded OPD-cube fixture (hash recorded in fixture_hashes) on the shared recorded time grid with identical controller settings; only the DM and WFS optics backends differ, so residual-trend differences reflect the measured optical-gain differences.",
       "comparison_kind": "closed_loop_residual",
       "metrics": [
         {
@@ -676,7 +676,18 @@
             "expected": true,
             "type": "equals"
           },
-          "rationale": "Both replayed loops must sample the shared frozen-flow atmosphere on exactly the recorded shared time grid; its recorded hash is this comparison's timing contract.",
+          "rationale": "Both replayed loops must sample the shared OPD-cube fixture on exactly the recorded shared time grid; its recorded hash is this comparison's timing contract.",
+          "units": "boolean",
+          "value": true
+        },
+        {
+          "level": "exact",
+          "name": "both_loops_consumed_shared_opd_cube",
+          "pass_criterion": {
+            "expected": true,
+            "type": "equals"
+          },
+          "rationale": "Each loop's recorded atmosphere component hash must equal the shared OPD-cube fixture hash, proving both backends consumed the identical recorded atmospheric input.",
           "units": "boolean",
           "value": true
         },
@@ -752,7 +763,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.005250791708628337
+          "value": 0.00534418070067962
         },
         {
           "level": "informational",
@@ -762,7 +773,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.0023770139863093695
+          "value": 0.0023361803808559975
         },
         {
           "level": "informational",
@@ -772,7 +783,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.0011028749868273735
+          "value": 0.0010593609573940437
         },
         {
           "level": "informational",
@@ -782,7 +793,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "seconds",
-          "value": 0.0009164303385963043
+          "value": 0.0010093610423306625
         },
         {
           "level": "informational",
@@ -792,7 +803,7 @@
           },
           "rationale": "Runtime and memory are platform dependent and informational only; they never gate correctness CI.",
           "units": "mebibytes",
-          "value": 2.527377128601074
+          "value": 2.5275678634643555
         }
       ]
     }
@@ -825,6 +836,7 @@
     "shwfs_ao_version": "0.1.0"
   },
   "fixture_hashes": {
+    "atmosphere_opd_cube_m": "d797cde7e9e9ab3b955a2273dafc29f592be21b1bed5a17ef996fba840bd5884",
     "command_fixture_opd_m": "997061fe2fb838576bfd26c6150aa8217efa20045f586ab97b8a821302ff2785",
     "static_opd_m": "54276f51397c266d8868ed774f0f3fd010006a3939eb96aa3144129cb782fcc6",
     "tilt_x_opd_m": "8e785db43cbb6442ece5b9dc4e48f395094d38edada49816d73da660a321ff70",
@@ -834,7 +846,7 @@
   "generator": {
     "generator_name": "scripts/generate_cross_backend_candidate.py",
     "generator_version": "2",
-    "source_commit": "075c94d20531d18ceac258e2fc62d556e4e3efdc",
+    "source_commit": "d1209bb3e4f2d4b59f614035bea8339d75b09e23",
     "source_tree_clean": true
   },
   "root_seed": 118
