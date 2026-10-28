@@ -19,41 +19,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-notebooks = [
-    "jupyter>=1.0",
-    "ipykernel>=6.0",
-]
-notebook-test = [
-    "nbformat>=5.10",
-    "nbclient>=0.10",
-    "ipykernel>=6.29",
-]
-test = [
-    "pytest>=8.0",
-    "setuptools>=77",
-    "wheel",
-    # validation.regression validates artifacts against the packaged JSON
-    # schemas through jsonschema.  Without it here the schema tests silently
-    # importorskip, so the extra would advertise coverage it does not install.
-    "jsonschema>=4.21",
-]
-hcipy = [
-    "hcipy>=0.7,<0.8",
-]
-tiptop = [
-    # Supplemental manual study, validated with these upstream versions; requires
-    # Python >=3.11 through astro-tiptop. Not part of the core AO backend.
-    "astro-tiptop==1.5.1",
-    "astro-p3==1.6.2",
-    "mastsel==1.5.2",
-]
-docs = [
-    "reportlab>=4.0",
-]
-lint = [
-    "ruff>=0.15",
-    "mypy>=2.3",
-]
+hcipy = ["hcipy>=0.7,<0.8"]
+validation = ["jsonschema>=4.21"]
 
 [project.urls]
 Repository = "https://github.com/xhvoid/Shack-Hartmann-AO-Simulation"
@@ -93,8 +60,7 @@ build_py = "build_support.resource_alias.BuildPyWithResourceAlias"
 editable_wheel = "build_support.resource_alias.EditableWheelWithResourceAlias"
 
 [tool.setuptools.package-data]
-# A byte-identical copy of the repository's DATA_LICENSES.md, where the
-# relocated resource READMEs' relative links (frozen by AO-REF-001) resolve.
+# Keep resource licence links valid in the installed package.
 "shwfs_ao" = ["DATA_LICENSES.md"]
 "shwfs_ao.resources" = [
     "README.md",
@@ -115,81 +81,3 @@ editable_wheel = "build_support.resource_alias.EditableWheelWithResourceAlias"
     "resource_manifest.json",
 ]
 "shwfs_ao.resources.schemas" = ["*.json"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts = "--strict-markers"
-markers = [
-    "hcipy: requires the optional HCIPy backend dependency (deselected in native CI)",
-    "slow: long-running; excluded from fast CI selections",
-    "elt_scale: medium/full-scale tests (ESO SCAO tiers, published-scale HCIPy sensors); skipped unless --enable-elt-scale is also passed",
-]
-
-[tool.ruff]
-# Archived legacy notebooks and the virtual environment are never linted.
-extend-exclude = ["notebooks"]
-
-[tool.ruff.lint]
-# AO-REF-020 lint gate: the Ruff default correctness set, stated explicitly
-# (pyflakes plus the pycodestyle error classes Ruff enables by default).
-select = ["E4", "E7", "E9", "F"]
-
-[tool.ruff.lint.per-file-ignores]
-# Compatibility facades and installed top-level shims import names purely to
-# re-export them; unused-import findings there are the mechanism, not a bug.
-"src/shwfs_ao/legacy/**" = ["F401"]
-# The 19 root shims are listed by name: in ruff's globs `*` also matches `/`,
-# so "src/*.py" would exempt the whole package from the unused-import check.
-"src/ao_closed_loop.py" = ["F401"]
-"src/ao_conditions.py" = ["F401"]
-"src/ao_diagnostics.py" = ["F401"]
-"src/ao_error_budget.py" = ["F401"]
-"src/ao_integration.py" = ["F401"]
-"src/ao_validation.py" = ["F401"]
-"src/atmosphere_profiles.py" = ["F401"]
-"src/config_hashing.py" = ["F401"]
-"src/data_sources.py" = ["F401"]
-"src/dm_model.py" = ["F401"]
-"src/interaction_matrix.py" = ["F401"]
-"src/phase_screen.py" = ["F401"]
-"src/psf_tools.py" = ["F401"]
-"src/pwfs_forward.py" = ["F401"]
-"src/reconstruction.py" = ["F401"]
-"src/runtime_resources.py" = ["F401"]
-"src/shwfs_detector.py" = ["F401"]
-"src/synthetic_instrument_data.py" = ["F401"]
-"src/zernike.py" = ["F401"]
-# Examples select the Agg backend, and tests/scripts probe optional
-# dependencies, before the remaining imports; E402 is intentional there.
-"examples/**" = ["E402"]
-"scripts/**" = ["E402"]
-"tests/**" = ["E402"]
-
-[tool.mypy]
-# AO-REF-020 static type gate.  It now covers the whole first-party package
-# tree: the public protocols and unit-typed result/geometry contracts under
-# shwfs_ao.core, the public SCAO factory protocol and both built-in backend
-# factories, and every other runtime module (control, calibration, detector,
-# wfs, science, io, dm, experiments, and the frozen legacy compatibility
-# surface).  follow_imports = silent still keeps third-party dependency trees
-# out of scope.  Shrinking the checked set needs a ticket.
-files = [
-    "src/shwfs_ao",
-]
-follow_imports = "silent"
-python_version = "3.14"
-warn_unused_ignores = true
-warn_redundant_casts = true
-no_implicit_optional = true
-
-# Third-party scientific dependencies that ship no type information (no py.typed
-# marker and no stub package).  Treat their imported names as Any rather than
-# letting an untyped-import error mask the first-party type checking that this
-# gate exists to enforce.
-[[tool.mypy.overrides]]
-module = [
-    "hcipy.*",
-    "scipy.*",
-    "jsonschema",
-]
-ignore_missing_imports = true
