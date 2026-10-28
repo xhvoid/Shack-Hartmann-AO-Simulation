@@ -218,6 +218,37 @@ def test_quality_preserves_ccd_snr_and_clipping_equations() -> None:
     assert 0.0 < quality.centroid_sigma_px < UNDEFINED_CENTROID_SIGMA_PX
 
 
+def test_quality_keeps_clipping_optical_when_the_source_budget_differs() -> None:
+    cropped = np.array([[0.0, 0.2], [0.3, 0.1]])
+    full = np.array([[0.0, 0.2], [0.3, 0.5]])
+    # A unit-sum allocation hands the renormalized window the full budget.
+    unit_sum_source = cropped / np.sum(cropped)
+
+    quality = centroid_quality(
+        cropped,
+        full,
+        _detector(),
+        source_spot_norm=unit_sum_source,
+    )
+
+    # Source: 100 photons * 0.5 QE, no longer scaled by the 0.6 capture.
+    assert quality.total_flux_e == pytest.approx(50.0)
+    assert quality.clipping_fraction == pytest.approx(0.4)
+    assert centroid_quality(
+        cropped,
+        full,
+        _detector(),
+        source_spot_norm=cropped,
+    ) == centroid_quality(cropped, full, _detector())
+    with pytest.raises(ValueError, match="window shape"):
+        centroid_quality(
+            cropped,
+            full,
+            _detector(),
+            source_spot_norm=np.full((3, 3), 1.0 / 9.0),
+        )
+
+
 def test_zero_photon_quality_uses_legacy_uncertainty_sentinel() -> None:
     spot = np.full((2, 2), 0.25)
     quality = centroid_quality(spot, spot, _detector(photons=0.0))
