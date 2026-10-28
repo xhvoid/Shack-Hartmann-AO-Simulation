@@ -390,12 +390,15 @@ def write_integration_artifacts(
     Version-2 return order is the historical order: scenario CSV, scenario
     figure (when enabled), validation CSV, validation figure (when enabled),
     reference JSON (when enabled).  Additional version-3 files follow that
-    prefix in deterministic runtime/sidecar/manifest order.
+    prefix in deterministic runtime/sidecar/manifest order.  Without an
+    explicit ``prefix`` the files are named after the result's preset, so a
+    physical result, whose ``mode`` is the fast instrument scale, cannot take
+    the fast result's file names.
     """
 
     _validate_integration_result(result)
     config = artifact_config
-    prefix = str(result.mode) if config.prefix is None else config.prefix
+    prefix = _result_preset(result) if config.prefix is None else config.prefix
     _validate_prefix(prefix)
     output_dir = Path(config.output_dir)
     metadata = _v3_metadata(config) if config.schema_version == 3 else None
@@ -1216,14 +1219,18 @@ def _validate_integration_result(result: object) -> None:
         raise ArtifactError("Result config_hash conflicts with reference_metrics.config_hash.")
 
 
-def _integration_runtime_record(result: IntegrationArtifactResult) -> dict[str, Any]:
+def _result_preset(result: IntegrationArtifactResult) -> str:
     # ``mode`` is the numerical instrument scale, not the workflow preset: the
-    # physical workflow runs the fast instrument under ``physical_2m``.  Label
-    # the runtime record with the same preset as the reference JSON and fall
-    # back to ``mode`` only when the reference mapping does not carry one.
+    # physical workflow runs the fast instrument under ``physical_2m``.  Use
+    # the same preset as the reference JSON and fall back to ``mode`` only
+    # when the reference mapping does not carry one.
+    return str(result.reference_metrics.get("preset", result.mode))
+
+
+def _integration_runtime_record(result: IntegrationArtifactResult) -> dict[str, Any]:
     return {
         "workflow": str(result.reference_metrics.get("workflow", "integration")),
-        "preset": str(result.reference_metrics.get("preset", result.mode)),
+        "preset": _result_preset(result),
         "runtime_seconds": float(result.runtime_s),
         "runtime_band": str(result.reference_metrics.get("runtime_band", "informational")),
         "source_class": str(result.source_class),
