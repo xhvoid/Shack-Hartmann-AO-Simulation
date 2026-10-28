@@ -64,7 +64,7 @@
     },
     {
       "logical_name": "reference_metrics/cross_backend/cross_backend_baseline.json",
-      "sha256": "202705374570596849ee399d0a9bf98e78bb9d9ea2248050146717d437a13289"
+      "sha256": "6903d27e51b0ee641be97c515e1d98ab449079204da6979fb548dfe2a462d9bd"
     },
     {
       "logical_name": "reference_metrics/fast_error_budget_regression_baseline.csv",
@@ -128,7 +128,7 @@
     },
     {
       "logical_name": "schemas/cross_backend_baseline.schema.json",
-      "sha256": "a6ee0471d50e9f79f1e95d33c3c13339609d1ca2999207d81760e5d813ce50b1"
+      "sha256": "54077af77ec88041b448fc406aaa29affc14e8a477353659292f0af2afe125f9"
     },
     {
       "logical_name": "schemas/fast_reference_metrics.schema.json",
