@@ -5,7 +5,7 @@
 // Charts are derived displays of the recorded rows they name; selectors only
 // highlight recorded rows/runs and never produce an uncomputed value.
 
-import { BundleError, fetchVerified } from "./integrity.js";
+import { BundleError, fetchVerified, fetchVerifiedJson, require } from "./integrity.js";
 import { barChart, lineChart, redrawWhenResized } from "./charts.js";
 
 const STATUS_LABELS = {
@@ -302,4 +302,87 @@ export function renderProjectEvidence(results) {
   redrawWhenResized(canvas,draw);draw();
   const ratios=rows.slice(1).map(r=>r.ratio);
   document.getElementById('structure-caption').textContent=`Recorded ratios: ${Math.min(...ratios).toFixed(3)}–${Math.max(...ratios).toFixed(3)} beyond one pixel; ${rows[0].ratio.toFixed(3)} at the first separation. This is the archived structure-function experiment, not a new validation of the 42 m detector configuration.`;
+}
+
+// This additive section selects archived statistics; no simulation or metric
+// calculation runs in the browser. The preparation ledger remains unchanged.
+export function initNgs22(entry, entryUrl) {
+  const root = document.getElementById('ngs22');
+  if (!root) return;
+  const node = name => document.getElementById(`ngs22-${name}`);
+  const buttons = [...root.querySelectorAll('[data-ngs-window]')];
+  const labels = {original_2m:'Saved 2 m · ±1 µm OPD', draft_22m_v1:'2.2 m original draft · v1', repaired_22m_v2:'2.2 m revision · v2'};
+  let ready, manifest, base, results, ledger;
+  const member = name => { require(manifest?.files[name], `NGS evidence member missing: ${name}`); return {href:name,...manifest.files[name]}; };
+  const fail = error => {node('error').hidden=false;node('error').textContent=`NGS evidence unavailable: ${error.message}. Reload to retry.`;node('status').textContent='The saved NGS evidence could not be verified.';};
+  function showWindow(key) {
+    require(['primary','secondary'].includes(key),'Unknown NGS interval');
+    node('table-body').replaceChildren(...Object.entries(results[key]).map(([id,x]) => {
+      const tr=document.createElement('tr');
+      const percent=(n,p)=>`${n}/${x.frames} (${p.toFixed(2)}%)`;
+      const values=[labels[id],String(x.frames),x.mean.toFixed(4),x.population_sd.toFixed(4),`${(100*x.cv).toFixed(2)}%`,
+        percent(x.clipped_frames,x.clipped_frames_pct),percent(x.applied_boundary_frames,x.applied_boundary_frames_pct),String(x.unusable_frames)];
+      values.forEach((text,i)=>{const cell=document.createElement(i?'td':'th');if(!i)cell.scope='row';cell.textContent=text;tr.append(cell);});
+      return tr;
+    }));
+    buttons.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.ngsWindow===key)));
+    node('window-note').textContent=key==='primary'
+      ? 'Primary interval [0.2, 1.0) s: 800 saved 2 m frames and 600 frames per 2.2 m run. Different physical scenarios; no framewise pairing with the 2 m baseline.'
+      : 'Longer interval [0.2, 2.0) s: 1350 frames per 2.2 m run, with the same atmosphere. The saved 2 m baseline ends at 1.0 s and is omitted here.';
+  }
+  function valueCell(value) {
+    const cell=document.createElement('td');const text=JSON.stringify(value);
+    if(text.length<100)cell.textContent=text;
+    else {const details=document.createElement('details'),summary=document.createElement('summary'),pre=document.createElement('pre');summary.textContent='Show full value';pre.textContent=JSON.stringify(value,null,2);details.append(summary,pre);cell.append(details);}
+    return cell;
+  }
+  function showLedger() {
+    const query=node('filter').value.trim().toLowerCase();
+    const rows=ledger.parameters.filter(row=>JSON.stringify(row).toLowerCase().includes(query));
+    node('ledger-count').textContent=`${rows.length} of ${ledger.parameters.length} original field annotations shown. Revision overrides are listed above.`;
+    node('ledger-body').replaceChildren(...rows.map(row=>{
+      const tr=document.createElement('tr'),path=document.createElement('th'),status=document.createElement('td'),note=document.createElement('td');
+      path.scope='row';path.textContent=row.path;status.textContent=`${row.classification.replaceAll('_',' ')}${row.sources.length?' · '+row.sources.join(', '):''}`;note.textContent=row.note;
+      tr.append(path,valueCell(row.baseline_value),valueCell(row.candidate_value),status,note);return tr;
+    }));
+  }
+  async function load() {
+    if(ready)return ready;
+    ready=(async()=>{
+      node('status').textContent='Checking saved NGS results and source identities…';
+      const e=entry.ngs22;require(e?.schema==='ao-explorer.ngs-entry.v1','No supported NGS entry');
+      const m=await fetchVerifiedJson({href:e.manifest,bytes:e.manifest_bytes,sha256:e.manifest_sha256,media_type:'application/json'},entryUrl);
+      manifest=m.value;base=m.url;require(manifest.schema==='ao-explorer.ngs-manifest.v1'&&manifest.id===e.id,'NGS evidence identity mismatch');
+      const [r,l,v]=await Promise.all(['results.json','draft/parameter-ledger.json','validation.json'].map(name=>fetchVerifiedJson(member(name),base)));
+      results=r.value;ledger=l.value;
+      require(results.science_wavelength_m===1.65e-6 && results.primary.original_2m.frames===800 && results.primary.repaired_22m_v2.frames===600 && results.secondary.repaired_22m_v2.frames===1350,'Unexpected NGS comparison definition');
+      require(ledger.parameters.length===131 && results.atmosphere_frames_bitwise_identical===1500 && results.calibration_arrays_identical,'NGS assumptions or pairing evidence incomplete');
+      require(v.value.all_1500_atmosphere_maps_matched_bitwise && v.value.baseline_files_unchanged===12,'NGS validation record incomplete');
+      showWindow('primary');showLedger();buttons.forEach(b=>b.disabled=false);node('filter').disabled=false;
+      const image=await fetchVerified(member('comparison.png'),base,{expectType:'image/png'});
+      const imageUrl=URL.createObjectURL(new Blob([image.buffer],{type:'image/png'}));
+      node('figure').src=imageUrl;await node('figure').decode();node('figure').hidden=false;node('figure-full').href=imageUrl;
+      node('validation').textContent='All 1500 atmosphere maps and the calibration arrays match between v1 and v2; the saved 2 m archive is unchanged.';
+      const downloads=[['Methods and definitions','README.md'],['Numerical results','results.json'],['Original 2 m frames (CSV)','original_2m.csv'],
+        ['Original 2.2 m frames (CSV)','draft_22m_v1.csv'],['Revised 2.2 m frames (CSV)','repaired_22m_v2.csv'],['Figure (PDF)','comparison.pdf'],
+        ['Original parameter draft · historical checkpoint','draft/PARAMETERS.md'],['Original configuration bundle','draft/candidate-config.json'],
+        ['All 131 field annotations','draft/parameter-ledger.json'],['Literature source ledger','draft/sources.json'],['Revision assumptions','revision-assumptions.json'],
+        ['Executed original 2 m configuration','baseline-2m-config.json'],['Executed 2.2 m v1 configuration','effective-config-v1.json'],['Executed 2.2 m v2 configuration','effective-config-v2.json'],
+        ['Loss-of-lock diagnosis','diagnosis.json'],['Recorded verification','validation.json'],['Publication and source hashes','publication.json']];
+      for(const [label,name] of downloads){
+        const link=document.createElement('a');link.textContent=label;link.href=new URL(name,base);
+        link.addEventListener('click',async event=>{
+          event.preventDefault();link.textContent=`Checking ${label}…`;
+          try{const {buffer}=await fetchVerified(member(name),base);const url=URL.createObjectURL(new Blob([buffer],{type:member(name).media_type}));
+            const save=document.createElement('a');save.href=url;save.download=name.split('/').pop();save.click();setTimeout(()=>URL.revokeObjectURL(url),30000);link.textContent=label;
+          }catch(error){link.textContent=`${label} unavailable: ${error.message}`;}
+        });node('downloads').append(link);
+      }
+      node('status').textContent='Saved results verified · original draft preserved · no simulation run for publication';
+    })();return ready;
+  }
+  buttons.forEach(button=>button.addEventListener('click',()=>{try{showWindow(button.dataset.ngsWindow);}catch(error){fail(error);}}));
+  node('filter').addEventListener('input',showLedger);
+  if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){observer.disconnect();load().catch(fail);}},{rootMargin:'200px'});observer.observe(root);}
+  else load().catch(fail);
 }

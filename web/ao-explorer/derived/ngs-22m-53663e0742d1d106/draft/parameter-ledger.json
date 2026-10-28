@@ -1,0 +1,1345 @@
+{
+  "baseline": "outputs/ao_dm_stroke_comparison/20261024-2m-stroke-ab/config-A.json",
+  "classification_note": "Lists every serialized system config leaf and camera field. Lists/arrays are one field. Inherited does not mean validated.",
+  "parameters": [
+    {
+      "path": "system_profile.config.backend",
+      "baseline_value": "native",
+      "candidate_value": "native",
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Existing native implementation retained."
+    },
+    {
+      "path": "system_profile.config.wfs_model",
+      "baseline_value": "detector_level",
+      "candidate_value": "detector_level",
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Diffraction and detector-level SH-WFS model selected."
+    },
+    {
+      "path": "system_profile.config.atmosphere_model",
+      "baseline_value": "native_frozen_flow_v2",
+      "candidate_value": "native_layered",
+      "changed": true,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "On-axis native frozen-flow layer sum; layer altitude does not introduce Fresnel propagation or anisoplanatism."
+    },
+    {
+      "path": "system_profile.config.telescope_diameter_m",
+      "baseline_value": 2.0,
+      "candidate_value": 2.2,
+      "changed": true,
+      "classification": "published_hardware",
+      "sources": [
+        "S1"
+      ],
+      "note": "UH 2.2 m nominal aperture."
+    },
+    {
+      "path": "system_profile.config.pupil_pixels",
+      "baseline_value": 52,
+      "candidate_value": 256,
+      "changed": true,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "256 samples across the model grid; 16 per nominal lenslet. Convergence not tested."
+    },
+    {
+      "path": "system_profile.config.lenslets_across",
+      "baseline_value": 5,
+      "candidate_value": 16,
+      "changed": true,
+      "classification": "published_operating_mode",
+      "sources": [
+        "S3 section 3"
+      ],
+      "note": "Selected documented 16-across NGS mode."
+    },
+    {
+      "path": "system_profile.config.actuators_across",
+      "baseline_value": 5,
+      "candidate_value": 17,
+      "changed": true,
+      "classification": "published_hardware",
+      "sources": [
+        "S1 section 2.3"
+      ],
+      "note": "17 across pupil, represented by a local circularly clipped square grid, not all device channels."
+    },
+    {
+      "path": "system_profile.config.wfs_wavelength_m",
+      "baseline_value": 7e-07,
+      "candidate_value": 7.5e-07,
+      "changed": true,
+      "classification": "published_simulation_assumption",
+      "sources": [
+        "S2 Table 5"
+      ],
+      "note": "NGS reference wavelength from the as-built simulation, not laser wavelength."
+    },
+    {
+      "path": "system_profile.config.science_wavelengths_m",
+      "baseline_value": [
+        1.25e-06,
+        1.65e-06,
+        2.2e-06
+      ],
+      "candidate_value": [
+        6.2e-07,
+        1.25e-06,
+        1.65e-06
+      ],
+      "changed": true,
+      "classification": "assumed",
+      "sources": [
+        "S1 section 2.5.3",
+        "S2 section 2.1"
+      ],
+      "note": "Monochromatic r/J/H representatives. 620 nm enables a literature-style diagnostic; J/H retain shared baseline wavelengths. Not integrated science-filter images."
+    },
+    {
+      "path": "system_profile.config.atmosphere.r0_m",
+      "baseline_value": 0.1263371938263465,
+      "candidate_value": 0.113,
+      "changed": true,
+      "classification": "published_simulation_assumption",
+      "sources": [
+        "S2 section 3.1"
+      ],
+      "note": "Integrated r0 including dome component."
+    },
+    {
+      "path": "system_profile.config.atmosphere.r0_reference_wavelength_m",
+      "baseline_value": 5e-07,
+      "candidate_value": 5e-07,
+      "changed": false,
+      "classification": "published_simulation_assumption",
+      "sources": [
+        "S2 section 3.1"
+      ],
+      "note": "Reference wavelength of the reported Fried parameter."
+    },
+    {
+      "path": "system_profile.config.atmosphere.outer_scale_m",
+      "baseline_value": 25.0,
+      "candidate_value": 25.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "No RMS rescaling; outer scale 25 m remains a baseline assumption, not a site measurement."
+    },
+    {
+      "path": "system_profile.config.atmosphere.wind_m_per_s",
+      "baseline_value": [
+        10.0,
+        0.0
+      ],
+      "candidate_value": [
+        0.0,
+        0.0
+      ],
+      "changed": true,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Required zero block-level velocity when per-layer winds are supplied."
+    },
+    {
+      "path": "system_profile.config.atmosphere.target_rms_opd_m",
+      "baseline_value": null,
+      "candidate_value": null,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "No RMS rescaling; outer scale 25 m remains a baseline assumption, not a site measurement."
+    },
+    {
+      "path": "system_profile.config.atmosphere.normalize_rms",
+      "baseline_value": false,
+      "candidate_value": false,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "No RMS rescaling; outer scale 25 m remains a baseline assumption, not a site measurement."
+    },
+    {
+      "path": "system_profile.config.atmosphere.layers",
+      "baseline_value": [],
+      "candidate_value": [
+        {
+          "altitude_m": 0,
+          "cn2_fraction": 0.183,
+          "wind_m_per_s": [
+            0.00736043666994744,
+            0.008174593080251336
+          ]
+        },
+        {
+          "altitude_m": 0,
+          "cn2_fraction": 0.204,
+          "wind_m_per_s": [
+            6.8,
+            0.0
+          ]
+        },
+        {
+          "altitude_m": 5,
+          "cn2_fraction": 0.298,
+          "wind_m_per_s": [
+            1.6450688900777402,
+            6.598010938676776
+          ]
+        },
+        {
+          "altitude_m": 15,
+          "cn2_fraction": 0.08,
+          "wind_m_per_s": [
+            -0.2373165775770065,
+            6.795857623729851
+          ]
+        },
+        {
+          "altitude_m": 37,
+          "cn2_fraction": 0.048,
+          "wind_m_per_s": [
+            -6.696692720483014,
+            -1.180807608135127
+          ]
+        },
+        {
+          "altitude_m": 197,
+          "cn2_fraction": 0.018,
+          "wind_m_per_s": [
+            -1.7599695066971401,
+            -6.5682956187656645
+          ]
+        },
+        {
+          "altitude_m": 357,
+          "cn2_fraction": 0.005,
+          "wind_m_per_s": [
+            -1.2491397351303002e-15,
+            -6.8
+          ]
+        },
+        {
+          "altitude_m": 804,
+          "cn2_fraction": 0.037,
+          "wind_m_per_s": [
+            6.795173495784236,
+            -1.1981724259018198
+          ]
+        },
+        {
+          "altitude_m": 3171,
+          "cn2_fraction": 0.034,
+          "wind_m_per_s": [
+            7.84169899889689,
+            2.3974479787264413
+          ]
+        },
+        {
+          "altitude_m": 7307,
+          "cn2_fraction": 0.054,
+          "wind_m_per_s": [
+            18.54193779135519,
+            10.277963949222345
+          ]
+        },
+        {
+          "altitude_m": 14636,
+          "cn2_fraction": 0.039,
+          "wind_m_per_s": [
+            11.225931348892086,
+            25.213854630935785
+          ]
+        }
+      ],
+      "changed": true,
+      "classification": "derived",
+      "sources": [
+        "S2 Table 6"
+      ],
+      "note": "Table 6 fractions/heights/speeds/angles mapped to Cartesian velocities. Angle convention and on-axis propagation are declared local choices."
+    },
+    {
+      "path": "system_profile.config.detector.enabled",
+      "baseline_value": true,
+      "candidate_value": true,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Enable detector-level measurements."
+    },
+    {
+      "path": "system_profile.config.detector.photons_per_subap_frame",
+      "baseline_value": null,
+      "candidate_value": null,
+      "changed": false,
+      "classification": "inactive_compatibility",
+      "sources": [],
+      "note": "Physical detector block supersedes legacy noise fields; zeros/unity here do not describe the camera."
+    },
+    {
+      "path": "system_profile.config.detector.read_noise_e",
+      "baseline_value": 0.0,
+      "candidate_value": 0.0,
+      "changed": false,
+      "classification": "inactive_compatibility",
+      "sources": [],
+      "note": "Physical detector block supersedes legacy noise fields; zeros/unity here do not describe the camera."
+    },
+    {
+      "path": "system_profile.config.detector.dark_e_per_s",
+      "baseline_value": 0.0,
+      "candidate_value": 0.0,
+      "changed": false,
+      "classification": "inactive_compatibility",
+      "sources": [],
+      "note": "Physical detector block supersedes legacy noise fields; zeros/unity here do not describe the camera."
+    },
+    {
+      "path": "system_profile.config.detector.background_e_per_pixel_frame",
+      "baseline_value": 0.0,
+      "candidate_value": 0.0,
+      "changed": false,
+      "classification": "inactive_compatibility",
+      "sources": [],
+      "note": "Physical detector block supersedes legacy noise fields; zeros/unity here do not describe the camera."
+    },
+    {
+      "path": "system_profile.config.detector.full_well_e",
+      "baseline_value": null,
+      "candidate_value": null,
+      "changed": false,
+      "classification": "inactive_compatibility",
+      "sources": [],
+      "note": "Physical detector block supersedes legacy noise fields; zeros/unity here do not describe the camera."
+    },
+    {
+      "path": "system_profile.config.detector.qe",
+      "baseline_value": 1.0,
+      "candidate_value": 1.0,
+      "changed": false,
+      "classification": "inactive_compatibility",
+      "sources": [],
+      "note": "Physical detector block supersedes legacy noise fields; zeros/unity here do not describe the camera."
+    },
+    {
+      "path": "system_profile.config.detector.prnu_rms",
+      "baseline_value": 0.0,
+      "candidate_value": 0.0,
+      "changed": false,
+      "classification": "inactive_compatibility",
+      "sources": [],
+      "note": "Physical detector block supersedes legacy noise fields; zeros/unity here do not describe the camera."
+    },
+    {
+      "path": "system_profile.config.detector.exposure_s",
+      "baseline_value": 0.001,
+      "candidate_value": 0.0013333333333333333,
+      "changed": true,
+      "classification": "derived",
+      "sources": [
+        "S2 Table 7 NGS-only"
+      ],
+      "note": "One full 750 Hz frame; no dead time assumed."
+    },
+    {
+      "path": "system_profile.config.detector.prnu_mode",
+      "baseline_value": "persistent",
+      "candidate_value": "persistent",
+      "changed": false,
+      "classification": "inactive_compatibility",
+      "sources": [],
+      "note": "Physical detector block supersedes legacy noise fields; zeros/unity here do not describe the camera."
+    },
+    {
+      "path": "system_profile.config.detector.bad_pixel_fraction",
+      "baseline_value": 0.0,
+      "candidate_value": 0.0,
+      "changed": false,
+      "classification": "inactive_compatibility",
+      "sources": [],
+      "note": "Physical detector block supersedes legacy noise fields; zeros/unity here do not describe the camera."
+    },
+    {
+      "path": "system_profile.config.wfs.min_fill_fraction",
+      "baseline_value": 0.35,
+      "candidate_value": 0.35,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Inherited centroid estimator and quality gates, pending calibration/conditioning checks; not the instrument RTC settings."
+    },
+    {
+      "path": "system_profile.config.wfs.pad_factor",
+      "baseline_value": 3,
+      "candidate_value": null,
+      "changed": true,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Null required because MFT has explicit angular sampling."
+    },
+    {
+      "path": "system_profile.config.wfs.detector_window_px",
+      "baseline_value": 23,
+      "candidate_value": 7,
+      "changed": true,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Seven-pixel numerical window to satisfy the native odd-width symmetry rule. Not a measured HNu128 NGS window/binning; see G4."
+    },
+    {
+      "path": "system_profile.config.wfs.centroid_estimator",
+      "baseline_value": "center_of_gravity",
+      "candidate_value": "center_of_gravity",
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Inherited centroid estimator and quality gates, pending calibration/conditioning checks; not the instrument RTC settings."
+    },
+    {
+      "path": "system_profile.config.wfs.threshold_fraction",
+      "baseline_value": 0.0,
+      "candidate_value": 0.0,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Inherited centroid estimator and quality gates, pending calibration/conditioning checks; not the instrument RTC settings."
+    },
+    {
+      "path": "system_profile.config.wfs.subtract_minimum",
+      "baseline_value": false,
+      "candidate_value": false,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Inherited centroid estimator and quality gates, pending calibration/conditioning checks; not the instrument RTC settings."
+    },
+    {
+      "path": "system_profile.config.wfs.min_flux_e",
+      "baseline_value": 30.0,
+      "candidate_value": 30.0,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Inherited centroid estimator and quality gates, pending calibration/conditioning checks; not the instrument RTC settings."
+    },
+    {
+      "path": "system_profile.config.wfs.min_peak_snr",
+      "baseline_value": 3.0,
+      "candidate_value": 3.0,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Inherited centroid estimator and quality gates, pending calibration/conditioning checks; not the instrument RTC settings."
+    },
+    {
+      "path": "system_profile.config.wfs.max_centroid_sigma_px",
+      "baseline_value": 0.5,
+      "candidate_value": 0.5,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Inherited centroid estimator and quality gates, pending calibration/conditioning checks; not the instrument RTC settings."
+    },
+    {
+      "path": "system_profile.config.wfs.max_window_clipping_fraction",
+      "baseline_value": 0.15,
+      "candidate_value": 0.15,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Inherited centroid estimator and quality gates, pending calibration/conditioning checks; not the instrument RTC settings."
+    },
+    {
+      "path": "system_profile.config.wfs.central_obstruction_ratio",
+      "baseline_value": 0.0,
+      "candidate_value": 0.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Zero is an idealized-pupil placeholder; actual secondary mask remains missing."
+    },
+    {
+      "path": "system_profile.config.wfs.spider_width_m",
+      "baseline_value": 0.0,
+      "candidate_value": 0.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Zero omits actual telescope spiders; not a measured width."
+    },
+    {
+      "path": "system_profile.config.wfs.photon_allocation",
+      "baseline_value": "throughput_scaled",
+      "candidate_value": "throughput_scaled",
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Inherited centroid estimator and quality gates, pending calibration/conditioning checks; not the instrument RTC settings."
+    },
+    {
+      "path": "system_profile.config.wfs.clip_negative_pixels",
+      "baseline_value": false,
+      "candidate_value": false,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Inherited centroid estimator and quality gates, pending calibration/conditioning checks; not the instrument RTC settings."
+    },
+    {
+      "path": "system_profile.config.wfs.lenslet_axis",
+      "baseline_value": "geometry_cell_center",
+      "candidate_value": "geometry_cell_center",
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Inherited centroid estimator and quality gates, pending calibration/conditioning checks; not the instrument RTC settings."
+    },
+    {
+      "path": "system_profile.config.dm.influence_model",
+      "baseline_value": "gaussian",
+      "candidate_value": "gaussian",
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Ideal linear DM and no defective channels; actual maps/dynamics unavailable."
+    },
+    {
+      "path": "system_profile.config.dm.coupling_width_pitch",
+      "baseline_value": 0.4,
+      "candidate_value": 0.4950469779745098,
+      "changed": true,
+      "classification": "derived",
+      "sources": [
+        "S4"
+      ],
+      "note": "sigma/pitch=1/sqrt(-2 ln(0.13)); matches a continuous Gaussian neighbour-height ratio only. Sampled-pupil normalization changes edge interpretation."
+    },
+    {
+      "path": "system_profile.config.dm.stroke_limit_opd_m",
+      "baseline_value": 1e-06,
+      "candidate_value": 3.5e-06,
+      "changed": true,
+      "classification": "derived",
+      "sources": [
+        "S4"
+      ],
+      "note": "Half of 7 um nominal total wavefront stroke, assuming centred bias, near-normal incidence and no reserved stroke. No second factor of two."
+    },
+    {
+      "path": "system_profile.config.dm.include_edge_actuators",
+      "baseline_value": true,
+      "candidate_value": true,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Use 17 endpoints spanning diameter; circular mask gives 197 centres, not a verified instrument channel mask."
+    },
+    {
+      "path": "system_profile.config.dm.actuator_margin_fraction",
+      "baseline_value": 0.0,
+      "candidate_value": 0.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "No extra guard ring; avoid inventing a measured actuator map from actuator counts."
+    },
+    {
+      "path": "system_profile.config.dm.dead_actuator_indices",
+      "baseline_value": [],
+      "candidate_value": [],
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Ideal linear DM and no defective channels; actual maps/dynamics unavailable."
+    },
+    {
+      "path": "system_profile.config.dm.stuck_actuator_indices",
+      "baseline_value": [],
+      "candidate_value": [],
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Ideal linear DM and no defective channels; actual maps/dynamics unavailable."
+    },
+    {
+      "path": "system_profile.config.dm.stuck_command_opd_m",
+      "baseline_value": 0.0,
+      "candidate_value": 0.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Ideal linear DM and no defective channels; actual maps/dynamics unavailable."
+    },
+    {
+      "path": "system_profile.config.calibration.source",
+      "baseline_value": "build",
+      "candidate_value": "build",
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Future noise-free central differences with 10 nm OPD probes; existing 2 m calibration cannot be reused. No calibration built."
+    },
+    {
+      "path": "system_profile.config.calibration.method",
+      "baseline_value": "central",
+      "candidate_value": "central",
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Future noise-free central differences with 10 nm OPD probes; existing 2 m calibration cannot be reused. No calibration built."
+    },
+    {
+      "path": "system_profile.config.calibration.probe_kind",
+      "baseline_value": "dm_actuator",
+      "candidate_value": "dm_actuator",
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Future noise-free central differences with 10 nm OPD probes; existing 2 m calibration cannot be reused. No calibration built."
+    },
+    {
+      "path": "system_profile.config.calibration.amplitude_m",
+      "baseline_value": 1e-08,
+      "candidate_value": 1e-08,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Future noise-free central differences with 10 nm OPD probes; existing 2 m calibration cannot be reused. No calibration built."
+    },
+    {
+      "path": "system_profile.config.calibration.include_noise",
+      "baseline_value": false,
+      "candidate_value": false,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Future noise-free central differences with 10 nm OPD probes; existing 2 m calibration cannot be reused. No calibration built."
+    },
+    {
+      "path": "system_profile.config.calibration.repeats",
+      "baseline_value": 1,
+      "candidate_value": 1,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Future noise-free central differences with 10 nm OPD probes; existing 2 m calibration cannot be reused. No calibration built."
+    },
+    {
+      "path": "system_profile.config.calibration.resource_name",
+      "baseline_value": null,
+      "candidate_value": null,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Future noise-free central differences with 10 nm OPD probes; existing 2 m calibration cannot be reused. No calibration built."
+    },
+    {
+      "path": "system_profile.config.reconstructor.kind",
+      "baseline_value": "tsvd",
+      "candidate_value": "tsvd",
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [
+        "S2 section 3.1"
+      ],
+      "note": "Zonal TSVD is a local regularized least-squares surrogate; not the published matrix or optimized cutoff."
+    },
+    {
+      "path": "system_profile.config.reconstructor.rcond",
+      "baseline_value": 1e-08,
+      "candidate_value": 0.001,
+      "changed": true,
+      "classification": "numerical_choice",
+      "sources": [
+        "S2 section 3.1"
+      ],
+      "note": "Zonal TSVD is a local regularized least-squares surrogate; not the published matrix or optimized cutoff."
+    },
+    {
+      "path": "system_profile.config.reconstructor.alpha",
+      "baseline_value": null,
+      "candidate_value": null,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [
+        "S2 section 3.1"
+      ],
+      "note": "Zonal TSVD is a local regularized least-squares surrogate; not the published matrix or optimized cutoff."
+    },
+    {
+      "path": "system_profile.config.reconstructor.min_valid_fraction",
+      "baseline_value": 0.75,
+      "candidate_value": 0.75,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [
+        "S2 section 3.1"
+      ],
+      "note": "Zonal TSVD is a local regularized least-squares surrogate; not the published matrix or optimized cutoff."
+    },
+    {
+      "path": "system_profile.config.reconstructor.min_rank",
+      "baseline_value": 1,
+      "candidate_value": 1,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [
+        "S2 section 3.1"
+      ],
+      "note": "Zonal TSVD is a local regularized least-squares surrogate; not the published matrix or optimized cutoff."
+    },
+    {
+      "path": "system_profile.config.reconstructor.max_cached_masks",
+      "baseline_value": 32,
+      "candidate_value": 32,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [
+        "S2 section 3.1"
+      ],
+      "note": "Zonal TSVD is a local regularized least-squares surrogate; not the published matrix or optimized cutoff."
+    },
+    {
+      "path": "system_profile.config.command_projector.kind",
+      "baseline_value": "identity",
+      "candidate_value": "identity",
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Identity; no independent tip-tilt channel or offload (G1)."
+    },
+    {
+      "path": "system_profile.config.command_projector.mapping_resource",
+      "baseline_value": null,
+      "candidate_value": null,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Identity; no independent tip-tilt channel or offload (G1)."
+    },
+    {
+      "path": "system_profile.config.controller.n_steps",
+      "baseline_value": 1000,
+      "candidate_value": 1500,
+      "changed": true,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "1500 frames would span 2 seconds at 750 Hz; scenario only, not executed."
+    },
+    {
+      "path": "system_profile.config.controller.gain",
+      "baseline_value": 0.2,
+      "candidate_value": 0.4,
+      "changed": true,
+      "classification": "published_simulation_assumption",
+      "sources": [
+        "S2 section 3.1"
+      ],
+      "note": "Published simulation loop gain; interpretation uses this repository controller."
+    },
+    {
+      "path": "system_profile.config.controller.leak",
+      "baseline_value": 0.02,
+      "candidate_value": 0.0,
+      "changed": true,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Zero leak; no documented NGS leak coefficient."
+    },
+    {
+      "path": "system_profile.config.controller.latency_frames",
+      "baseline_value": 2,
+      "candidate_value": 2,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Two-frame queue at 750 Hz is 2.667 ms; not measured total sensor-to-DM latency."
+    },
+    {
+      "path": "system_profile.config.controller.frame_rate_hz",
+      "baseline_value": 1000.0,
+      "candidate_value": 750.0,
+      "changed": true,
+      "classification": "published_simulation_assumption",
+      "sources": [
+        "S2 Table 7 NGS-only"
+      ],
+      "note": "750 Hz chosen from NGS-only study settings; not a verified current on-sky rate or an optimization for this AB source."
+    },
+    {
+      "path": "system_profile.config.controller.include_noise",
+      "baseline_value": true,
+      "candidate_value": true,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Noise-on scenario planned."
+    },
+    {
+      "path": "system_profile.config.science.psf_pad_factor",
+      "baseline_value": 3,
+      "candidate_value": 3,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Existing PSF padding; convergence not assessed."
+    },
+    {
+      "path": "system_profile.config.random.root_seed",
+      "baseline_value": 1,
+      "candidate_value": 1,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Seed retained for reproducibility, not a claim of paired atmospheric realization after geometry/model changes."
+    },
+    {
+      "path": "system_profile.config.random.derivation_scheme_id",
+      "baseline_value": "shwfs_ao.random.sha256-json-pcg64-v1",
+      "candidate_value": "shwfs_ao.random.sha256-json-pcg64-v1",
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Seed retained for reproducibility, not a claim of paired atmospheric realization after geometry/model changes."
+    },
+    {
+      "path": "system_profile.config.scalable",
+      "baseline_value": null,
+      "candidate_value": null,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Dense reference route; no allocation or runtime assessment performed."
+    },
+    {
+      "path": "system_profile.config.detector_physics.camera.preset_name",
+      "baseline_value": "synthetic_emccd",
+      "candidate_value": "robo_ao2_ngs_emccd_proxy",
+      "changed": true,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Refers to the explicit bundled camera_preset, not synthetic_emccd or a packaged hardware preset."
+    },
+    {
+      "path": "system_profile.config.detector_physics.camera.preset_version",
+      "baseline_value": 1,
+      "candidate_value": 1,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Refers to the explicit bundled camera_preset, not synthetic_emccd or a packaged hardware preset."
+    },
+    {
+      "path": "system_profile.config.detector_physics.layout.scheme",
+      "baseline_value": "isolated_lenslet_blocks.v1",
+      "candidate_value": "isolated_lenslet_blocks.v1",
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Physical EMCCD path with independent local camera draft; not registered."
+    },
+    {
+      "path": "system_profile.config.detector_physics.layout.guard_px",
+      "baseline_value": 0,
+      "candidate_value": 0,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Physical EMCCD path with independent local camera draft; not registered."
+    },
+    {
+      "path": "system_profile.config.detector_physics.source.kind",
+      "baseline_value": "ab_flat_fnu",
+      "candidate_value": "ab_flat_fnu",
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "AB-flat-fnu source magnitude 7; same nominal number as baseline, not the published R/I magnitude zero point. No ND attenuation."
+    },
+    {
+      "path": "system_profile.config.detector_physics.source.ab_magnitude",
+      "baseline_value": 7.0,
+      "candidate_value": 7.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "AB-flat-fnu source magnitude 7; same nominal number as baseline, not the published R/I magnitude zero point. No ND attenuation."
+    },
+    {
+      "path": "system_profile.config.detector_physics.source.incident_photons_per_full_subap_frame",
+      "baseline_value": null,
+      "candidate_value": null,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "AB-flat-fnu source magnitude 7; same nominal number as baseline, not the published R/I magnitude zero point. No ND attenuation."
+    },
+    {
+      "path": "system_profile.config.detector_physics.source.detected_e_per_full_subap_frame",
+      "baseline_value": null,
+      "candidate_value": null,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "AB-flat-fnu source magnitude 7; same nominal number as baseline, not the published R/I magnitude zero point. No ND attenuation."
+    },
+    {
+      "path": "system_profile.config.detector_physics.source.throughput_excluding_qe",
+      "baseline_value": 0.4,
+      "candidate_value": 0.3,
+      "changed": true,
+      "classification": "published_simulation_assumption",
+      "sources": [
+        "S2 Table 5"
+      ],
+      "note": "S2 total optical throughput excluding QE. Do not additionally multiply by the 90% NGS beamsplitter."
+    },
+    {
+      "path": "system_profile.config.detector_physics.source.sky_ab_mag_per_arcsec2",
+      "baseline_value": 20.5,
+      "candidate_value": 18.5,
+      "changed": true,
+      "classification": "assumed",
+      "sources": [
+        "S2 Table 5"
+      ],
+      "note": "Use reported sky number 18.5 as an AB-band proxy; original sky magnitude convention is not independently established."
+    },
+    {
+      "path": "system_profile.config.detector_physics.bandpass.kind",
+      "baseline_value": "monochromatic",
+      "candidate_value": "gauss_legendre",
+      "changed": true,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Polychromatic Gauss-Legendre quadrature."
+    },
+    {
+      "path": "system_profile.config.detector_physics.bandpass.band_min_m",
+      "baseline_value": 5.5e-07,
+      "candidate_value": 6.4e-07,
+      "changed": true,
+      "classification": "assumed",
+      "sources": [
+        "S2 sections 2.1 and 3.1"
+      ],
+      "note": "Uniform 640-900 nm top-hat inherited from paper section 2.1; its Table 1 bandwidth differs. Use the stated endpoints explicitly; no measured transmission curve."
+    },
+    {
+      "path": "system_profile.config.detector_physics.bandpass.band_max_m",
+      "baseline_value": 8.5e-07,
+      "candidate_value": 9e-07,
+      "changed": true,
+      "classification": "assumed",
+      "sources": [
+        "S2 sections 2.1 and 3.1"
+      ],
+      "note": "Uniform 640-900 nm top-hat inherited from paper section 2.1; its Table 1 bandwidth differs. Use the stated endpoints explicitly; no measured transmission curve."
+    },
+    {
+      "path": "system_profile.config.detector_physics.bandpass.n_samples",
+      "baseline_value": 1,
+      "candidate_value": 3,
+      "changed": true,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Three spectral nodes, convergence not tested."
+    },
+    {
+      "path": "system_profile.config.detector_physics.sampling.kind",
+      "baseline_value": "legacy_fft",
+      "candidate_value": "mft_pixel_integrated",
+      "changed": true,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Pixel-integrated MFT, two quadrature nodes per axis, no diffusion; convergence untested."
+    },
+    {
+      "path": "system_profile.config.detector_physics.sampling.pixel_scale_rad",
+      "baseline_value": null,
+      "candidate_value": 3.462954865068114e-06,
+      "changed": true,
+      "classification": "derived",
+      "sources": [
+        "S1 section 2.6"
+      ],
+      "note": "5 arcsec / 7 numerical pixels. This matches a nominal field extent, not a measured pixel scale or an upstream focal-stop propagation."
+    },
+    {
+      "path": "system_profile.config.detector_physics.sampling.oversampling",
+      "baseline_value": 1,
+      "candidate_value": 2,
+      "changed": true,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Pixel-integrated MFT, two quadrature nodes per axis, no diffusion; convergence untested."
+    },
+    {
+      "path": "system_profile.config.detector_physics.sampling.diffusion_sigma_px",
+      "baseline_value": 0.0,
+      "candidate_value": 0.0,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "Pixel-integrated MFT, two quadrature nodes per axis, no diffusion; convergence untested."
+    },
+    {
+      "path": "system_profile.config.detector_physics.processing.mode",
+      "baseline_value": "estimated",
+      "candidate_value": "estimated",
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Baseline synthetic calibration-master counts, pixel masking and processing retained; not the actual RTC pipeline."
+    },
+    {
+      "path": "system_profile.config.detector_physics.processing.n_bias_frames",
+      "baseline_value": 32,
+      "candidate_value": 32,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Baseline synthetic calibration-master counts, pixel masking and processing retained; not the actual RTC pipeline."
+    },
+    {
+      "path": "system_profile.config.detector_physics.processing.n_dark_frames",
+      "baseline_value": 32,
+      "candidate_value": 32,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Baseline synthetic calibration-master counts, pixel masking and processing retained; not the actual RTC pipeline."
+    },
+    {
+      "path": "system_profile.config.detector_physics.processing.n_sky_frames",
+      "baseline_value": 32,
+      "candidate_value": 32,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Baseline synthetic calibration-master counts, pixel masking and processing retained; not the actual RTC pipeline."
+    },
+    {
+      "path": "system_profile.config.detector_physics.processing.n_flat_frames",
+      "baseline_value": 32,
+      "candidate_value": 32,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Baseline synthetic calibration-master counts, pixel masking and processing retained; not the actual RTC pipeline."
+    },
+    {
+      "path": "system_profile.config.detector_physics.processing.flat_level_e",
+      "baseline_value": 1000.0,
+      "candidate_value": 1000.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Baseline synthetic calibration-master counts, pixel masking and processing retained; not the actual RTC pipeline."
+    },
+    {
+      "path": "system_profile.config.detector_physics.processing.hot_pixel_threshold_e",
+      "baseline_value": 0.5,
+      "candidate_value": 0.5,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Baseline synthetic calibration-master counts, pixel masking and processing retained; not the actual RTC pipeline."
+    },
+    {
+      "path": "system_profile.config.detector_physics.processing.flat_low_threshold",
+      "baseline_value": 0.5,
+      "candidate_value": 0.5,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Baseline synthetic calibration-master counts, pixel masking and processing retained; not the actual RTC pipeline."
+    },
+    {
+      "path": "system_profile.config.detector_physics.processing.flat_high_threshold",
+      "baseline_value": 1.5,
+      "candidate_value": 1.5,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Baseline synthetic calibration-master counts, pixel masking and processing retained; not the actual RTC pipeline."
+    },
+    {
+      "path": "system_profile.config.detector_physics.processing.bad_pixel_policy",
+      "baseline_value": "zero_weight",
+      "candidate_value": "zero_weight",
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Baseline synthetic calibration-master counts, pixel masking and processing retained; not the actual RTC pipeline."
+    },
+    {
+      "path": "system_profile.config.detector_physics.processing.gain_treatment",
+      "baseline_value": "known_per_pixel",
+      "candidate_value": "known_per_pixel",
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Baseline synthetic calibration-master counts, pixel masking and processing retained; not the actual RTC pipeline."
+    },
+    {
+      "path": "system_profile.config.detector_physics.processing.clip_negative",
+      "baseline_value": false,
+      "candidate_value": false,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Baseline synthetic calibration-master counts, pixel masking and processing retained; not the actual RTC pipeline."
+    },
+    {
+      "path": "system_profile.config.detector_physics.exposure_subsamples",
+      "baseline_value": 1,
+      "candidate_value": 1,
+      "changed": false,
+      "classification": "numerical_choice",
+      "sources": [],
+      "note": "One atmosphere sample per exposure; finite-exposure temporal integration remains approximate."
+    },
+    {
+      "path": "camera_preset.model",
+      "baseline_value": "emccd",
+      "candidate_value": "emccd",
+      "changed": false,
+      "classification": "published_hardware",
+      "sources": [
+        "S1 section 2.6"
+      ],
+      "note": "EMCCD technology; detailed response remains a proxy."
+    },
+    {
+      "path": "camera_preset.preset_name",
+      "baseline_value": "synthetic_emccd",
+      "candidate_value": "robo_ao2_ngs_emccd_proxy",
+      "changed": true,
+      "classification": "metadata",
+      "sources": [],
+      "note": "Independent local draft identity and mixed provenance."
+    },
+    {
+      "path": "camera_preset.preset_version",
+      "baseline_value": 1,
+      "candidate_value": 1,
+      "changed": false,
+      "classification": "metadata",
+      "sources": [],
+      "note": "Independent local draft identity and mixed provenance."
+    },
+    {
+      "path": "camera_preset.quantum_efficiency",
+      "baseline_value": 0.9,
+      "candidate_value": 0.67,
+      "changed": true,
+      "classification": "published_simulation_assumption",
+      "sources": [
+        "S2 Table 5"
+      ],
+      "note": "NGS scalar camera/noise input from the as-built simulation."
+    },
+    {
+      "path": "camera_preset.full_well_e",
+      "baseline_value": 80000.0,
+      "candidate_value": 80000.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.dark_e_per_s",
+      "baseline_value": 0.002,
+      "candidate_value": 0.01,
+      "changed": true,
+      "classification": "published_simulation_assumption",
+      "sources": [
+        "S2 Table 5"
+      ],
+      "note": "NGS scalar camera/noise input from the as-built simulation."
+    },
+    {
+      "path": "camera_preset.hot_pixel_fraction",
+      "baseline_value": 0.001,
+      "candidate_value": 0.001,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.hot_pixel_dark_e_per_s",
+      "baseline_value": 1.0,
+      "candidate_value": 1.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.prnu_rms",
+      "baseline_value": 0.01,
+      "candidate_value": 0.01,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.dead_pixel_fraction",
+      "baseline_value": 0.0005,
+      "candidate_value": 0.0005,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.read_noise_e",
+      "baseline_value": 60.0,
+      "candidate_value": 117.0,
+      "changed": true,
+      "classification": "derived",
+      "sources": [
+        "S2 Table 5"
+      ],
+      "note": "Output-referred 117 e- = input-referred 0.39 e- times assumed EM gain 300."
+    },
+    {
+      "path": "camera_preset.conversion_gain_e_per_adu",
+      "baseline_value": 15.0,
+      "candidate_value": 15.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.bias_adu",
+      "baseline_value": 500.0,
+      "candidate_value": 500.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.offset_map_rms_adu",
+      "baseline_value": 1.0,
+      "candidate_value": 1.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.adc_bits",
+      "baseline_value": 16,
+      "candidate_value": 16,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.em_gain",
+      "baseline_value": 300.0,
+      "candidate_value": 300.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Assumed high gain 300; Poisson plus Gamma multiplication approximates ENF sqrt(2), consistent with rounded 1.41. Actual EM gain unknown."
+    },
+    {
+      "path": "camera_preset.cic_e_per_pixel_read",
+      "baseline_value": 0.005,
+      "candidate_value": 0.005,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.register_full_well_e",
+      "baseline_value": 800000.0,
+      "candidate_value": 800000.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.cmos_gain_map_rms",
+      "baseline_value": 0.0,
+      "candidate_value": 0.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.cmos_read_noise_lognormal_sigma",
+      "baseline_value": 0.0,
+      "candidate_value": 0.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.nonlinearity_coefficients",
+      "baseline_value": [],
+      "candidate_value": [],
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.coupling_nearest",
+      "baseline_value": 0.0,
+      "candidate_value": 0.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.coupling_diagonal",
+      "baseline_value": 0.0,
+      "candidate_value": 0.0,
+      "changed": false,
+      "classification": "assumed",
+      "sources": [],
+      "note": "Inherited synthetic camera value; not an HNu128 datasheet or measured operating value."
+    },
+    {
+      "path": "camera_preset.source_class",
+      "baseline_value": "synthetic_assumed",
+      "candidate_value": "synthetic_literature_inspired",
+      "changed": true,
+      "classification": "metadata",
+      "sources": [],
+      "note": "Independent local draft identity and mixed provenance."
+    },
+    {
+      "path": "camera_preset.source_note",
+      "baseline_value": "Synthetic engineering preset (synthetic_assumed): values chosen as representative orders of magnitude for a visible SH-WFS camera of this type; no datasheet (D6) is cited and no commercial camera is implied. EM gain 300 lies in the declared Gamma high-gain regime (D1, D2); CIC is pre-register only.",
+      "candidate_value": "S2 Table 5 NGS effective-noise proxy: QE 0.67, dark 0.01 e-/s/pixel, input-referred read noise 0.39 e-. EM gain 300 is assumed, so output read noise is 117 e-. Other electronics and pixel defects are inherited synthetic assumptions; not a calibrated HNu128 camera.",
+      "changed": true,
+      "classification": "metadata",
+      "sources": [],
+      "note": "Independent local draft identity and mixed provenance."
+    }
+  ]
+}

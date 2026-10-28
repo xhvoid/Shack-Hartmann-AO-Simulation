@@ -1,0 +1,444 @@
+{
+  "schema_name": "ao_research.robo_ao2_ngs_candidate_bundle",
+  "schema_version": 1,
+  "status": "draft_unregistered_not_executed",
+  "created_date": "2026-10-24",
+  "target": {
+    "telescope": "University of Hawaii 2.2 m",
+    "instrument": "Robo-AO-2",
+    "mode": "on-axis NGS-only, 16x16, internal MEMS",
+    "documented_epoch": "mid-2025 NGS operation through July-2026 publication",
+    "exclude": [
+      "LGS",
+      "HAPA",
+      "adaptive secondary"
+    ]
+  },
+  "loading_note": "The nested system_profile is schema v7. Its camera is bundled here and is intentionally absent from the packaged camera registry. Stock profile loading requires later explicit bundle integration or registration; no runtime loader is added in this task.",
+  "system_profile": {
+    "schema_name": "shwfs_ao.system_profile",
+    "schema_version": 7,
+    "profile_name": "robo_ao2_22m_ngs_draft",
+    "profile_version": 1,
+    "baseline_rationale": "Independent unregistered NGS-only research draft. Public internal-MEMS geometry plus published as-built simulation inputs and explicit assumptions. See PARAMETERS.md and parameter-ledger.json. Not an instrument-validated preset.",
+    "provenance": {
+      "schema_name": "shwfs_ao.provenance",
+      "schema_version": 2,
+      "source_class": "synthetic_literature_inspired",
+      "note": "Mixed public hardware specifications, published simulation assumptions, and local model approximations. No simulation or calibration executed.",
+      "source_id": "shwfs_ao.system_profile.robo_ao2_22m_ngs_draft.v1",
+      "url": "https://arxiv.org/html/2407.14677v1",
+      "access_time": "2026-10-24",
+      "fallback_used": false,
+      "references": [
+        "https://arxiv.org/html/2407.00582v1",
+        "https://arxiv.org/html/2407.14677v1",
+        "https://arxiv.org/html/2607.02826v1",
+        "https://bostonmicromachines.com/products/deformable-mirrors/standard-deformable-mirrors/",
+        "docs/research/robo_ao2_ngs_v1/parameter-ledger.json"
+      ]
+    },
+    "config": {
+      "backend": "native",
+      "wfs_model": "detector_level",
+      "atmosphere_model": "native_layered",
+      "telescope_diameter_m": 2.2,
+      "pupil_pixels": 256,
+      "lenslets_across": 16,
+      "actuators_across": 17,
+      "wfs_wavelength_m": 7.5e-07,
+      "science_wavelengths_m": [
+        6.2e-07,
+        1.25e-06,
+        1.65e-06
+      ],
+      "atmosphere": {
+        "r0_m": 0.113,
+        "r0_reference_wavelength_m": 5e-07,
+        "outer_scale_m": 25.0,
+        "wind_m_per_s": [
+          0.0,
+          0.0
+        ],
+        "target_rms_opd_m": null,
+        "normalize_rms": false,
+        "layers": [
+          {
+            "altitude_m": 0,
+            "cn2_fraction": 0.183,
+            "wind_m_per_s": [
+              0.00736043666994744,
+              0.008174593080251336
+            ]
+          },
+          {
+            "altitude_m": 0,
+            "cn2_fraction": 0.204,
+            "wind_m_per_s": [
+              6.8,
+              0.0
+            ]
+          },
+          {
+            "altitude_m": 5,
+            "cn2_fraction": 0.298,
+            "wind_m_per_s": [
+              1.6450688900777402,
+              6.598010938676776
+            ]
+          },
+          {
+            "altitude_m": 15,
+            "cn2_fraction": 0.08,
+            "wind_m_per_s": [
+              -0.2373165775770065,
+              6.795857623729851
+            ]
+          },
+          {
+            "altitude_m": 37,
+            "cn2_fraction": 0.048,
+            "wind_m_per_s": [
+              -6.696692720483014,
+              -1.180807608135127
+            ]
+          },
+          {
+            "altitude_m": 197,
+            "cn2_fraction": 0.018,
+            "wind_m_per_s": [
+              -1.7599695066971401,
+              -6.5682956187656645
+            ]
+          },
+          {
+            "altitude_m": 357,
+            "cn2_fraction": 0.005,
+            "wind_m_per_s": [
+              -1.2491397351303002e-15,
+              -6.8
+            ]
+          },
+          {
+            "altitude_m": 804,
+            "cn2_fraction": 0.037,
+            "wind_m_per_s": [
+              6.795173495784236,
+              -1.1981724259018198
+            ]
+          },
+          {
+            "altitude_m": 3171,
+            "cn2_fraction": 0.034,
+            "wind_m_per_s": [
+              7.84169899889689,
+              2.3974479787264413
+            ]
+          },
+          {
+            "altitude_m": 7307,
+            "cn2_fraction": 0.054,
+            "wind_m_per_s": [
+              18.54193779135519,
+              10.277963949222345
+            ]
+          },
+          {
+            "altitude_m": 14636,
+            "cn2_fraction": 0.039,
+            "wind_m_per_s": [
+              11.225931348892086,
+              25.213854630935785
+            ]
+          }
+        ]
+      },
+      "detector": {
+        "enabled": true,
+        "photons_per_subap_frame": null,
+        "read_noise_e": 0.0,
+        "dark_e_per_s": 0.0,
+        "background_e_per_pixel_frame": 0.0,
+        "full_well_e": null,
+        "qe": 1.0,
+        "prnu_rms": 0.0,
+        "exposure_s": 0.0013333333333333333,
+        "prnu_mode": "persistent",
+        "bad_pixel_fraction": 0.0
+      },
+      "wfs": {
+        "min_fill_fraction": 0.35,
+        "pad_factor": null,
+        "detector_window_px": 7,
+        "centroid_estimator": "center_of_gravity",
+        "threshold_fraction": 0.0,
+        "subtract_minimum": false,
+        "min_flux_e": 30.0,
+        "min_peak_snr": 3.0,
+        "max_centroid_sigma_px": 0.5,
+        "max_window_clipping_fraction": 0.15,
+        "central_obstruction_ratio": 0.0,
+        "spider_width_m": 0.0,
+        "photon_allocation": "throughput_scaled",
+        "clip_negative_pixels": false,
+        "lenslet_axis": "geometry_cell_center"
+      },
+      "dm": {
+        "influence_model": "gaussian",
+        "coupling_width_pitch": 0.4950469779745098,
+        "stroke_limit_opd_m": 3.5e-06,
+        "include_edge_actuators": true,
+        "actuator_margin_fraction": 0.0,
+        "dead_actuator_indices": [],
+        "stuck_actuator_indices": [],
+        "stuck_command_opd_m": 0.0
+      },
+      "calibration": {
+        "source": "build",
+        "method": "central",
+        "probe_kind": "dm_actuator",
+        "amplitude_m": 1e-08,
+        "include_noise": false,
+        "repeats": 1,
+        "resource_name": null
+      },
+      "reconstructor": {
+        "kind": "tsvd",
+        "rcond": 0.001,
+        "alpha": null,
+        "min_valid_fraction": 0.75,
+        "min_rank": 1,
+        "max_cached_masks": 32
+      },
+      "command_projector": {
+        "kind": "identity",
+        "mapping_resource": null
+      },
+      "controller": {
+        "n_steps": 1500,
+        "gain": 0.4,
+        "leak": 0.0,
+        "latency_frames": 2,
+        "frame_rate_hz": 750.0,
+        "include_noise": true
+      },
+      "science": {
+        "psf_pad_factor": 3
+      },
+      "random": {
+        "root_seed": 1,
+        "derivation_scheme_id": "shwfs_ao.random.sha256-json-pcg64-v1"
+      },
+      "scalable": null,
+      "detector_physics": {
+        "camera": {
+          "preset_name": "robo_ao2_ngs_emccd_proxy",
+          "preset_version": 1
+        },
+        "layout": {
+          "scheme": "isolated_lenslet_blocks.v1",
+          "guard_px": 0
+        },
+        "source": {
+          "kind": "ab_flat_fnu",
+          "ab_magnitude": 7.0,
+          "incident_photons_per_full_subap_frame": null,
+          "detected_e_per_full_subap_frame": null,
+          "throughput_excluding_qe": 0.3,
+          "sky_ab_mag_per_arcsec2": 18.5
+        },
+        "bandpass": {
+          "kind": "gauss_legendre",
+          "band_min_m": 6.4e-07,
+          "band_max_m": 9e-07,
+          "n_samples": 3
+        },
+        "sampling": {
+          "kind": "mft_pixel_integrated",
+          "pixel_scale_rad": 3.462954865068114e-06,
+          "oversampling": 2,
+          "diffusion_sigma_px": 0.0
+        },
+        "processing": {
+          "mode": "estimated",
+          "n_bias_frames": 32,
+          "n_dark_frames": 32,
+          "n_sky_frames": 32,
+          "n_flat_frames": 32,
+          "flat_level_e": 1000.0,
+          "hot_pixel_threshold_e": 0.5,
+          "flat_low_threshold": 0.5,
+          "flat_high_threshold": 1.5,
+          "bad_pixel_policy": "zero_weight",
+          "gain_treatment": "known_per_pixel",
+          "clip_negative": false
+        },
+        "exposure_subsamples": 1
+      }
+    }
+  },
+  "camera_preset": {
+    "model": "emccd",
+    "preset_name": "robo_ao2_ngs_emccd_proxy",
+    "preset_version": 1,
+    "quantum_efficiency": 0.67,
+    "full_well_e": 80000.0,
+    "dark_e_per_s": 0.01,
+    "hot_pixel_fraction": 0.001,
+    "hot_pixel_dark_e_per_s": 1.0,
+    "prnu_rms": 0.01,
+    "dead_pixel_fraction": 0.0005,
+    "read_noise_e": 117.0,
+    "conversion_gain_e_per_adu": 15.0,
+    "bias_adu": 500.0,
+    "offset_map_rms_adu": 1.0,
+    "adc_bits": 16,
+    "em_gain": 300.0,
+    "cic_e_per_pixel_read": 0.005,
+    "register_full_well_e": 800000.0,
+    "cmos_gain_map_rms": 0.0,
+    "cmos_read_noise_lognormal_sigma": 0.0,
+    "nonlinearity_coefficients": [],
+    "coupling_nearest": 0.0,
+    "coupling_diagonal": 0.0,
+    "source_class": "synthetic_literature_inspired",
+    "source_note": "S2 Table 5 NGS effective-noise proxy: QE 0.67, dark 0.01 e-/s/pixel, input-referred read noise 0.39 e-. EM gain 300 is assumed, so output read noise is 117 e-. Other electronics and pixel defects are inherited synthetic assumptions; not a calibrated HNu128 camera."
+  },
+  "hardware_reference": {
+    "dm_model": "BMC DM492-3.5",
+    "dm_total_actuators": 492,
+    "dm_full_array_across": 24,
+    "dm_physical_stroke_total_m": 3.5e-06,
+    "dm_wavefront_stroke_total_m": 7e-06,
+    "dm_physical_pitch_m": 0.0004,
+    "ngs_camera": "NuVu HNu128 / astro-processed Teledyne e2v CCD60",
+    "ngs_reimaged_pupil_diameter_m": 0.0024,
+    "ngs_field_stop_arcsec": 5.0,
+    "sources": [
+      "S1 sections 2.3 and 2.6",
+      "S4 model row"
+    ]
+  },
+  "scenario": {
+    "guide_star": "AB 7 flat-fnu assumption; not an identified observed target",
+    "duration_s_if_later_run": 2.0,
+    "analysis_discard_s_if_later_run": 0.2,
+    "rationale": "Retain baseline nominal magnitude while selecting an available 750 Hz NGS model setting; no claim of optimal settings or equality to the paper magnitude convention.",
+    "trajectory_comparison": "This changes many parameters and is not a one-variable DM-stroke experiment. Original 2 m trajectories remain separately valid."
+  },
+  "atmosphere_source_table": {
+    "source": "S2 Table 6",
+    "height_m": [
+      0,
+      0,
+      5,
+      15,
+      37,
+      197,
+      357,
+      804,
+      3171,
+      7307,
+      14636
+    ],
+    "fraction": [
+      0.183,
+      0.204,
+      0.298,
+      0.08,
+      0.048,
+      0.018,
+      0.005,
+      0.037,
+      0.034,
+      0.054,
+      0.039
+    ],
+    "speed_m_per_s": [
+      0.011,
+      6.8,
+      6.8,
+      6.8,
+      6.8,
+      6.8,
+      6.8,
+      6.9,
+      8.2,
+      21.2,
+      27.6
+    ],
+    "direction_deg": [
+      48,
+      0,
+      76,
+      92,
+      190,
+      255,
+      270,
+      350,
+      17,
+      29,
+      66
+    ],
+    "conversion": "vx=v*cos(theta), vy=v*sin(theta), theta measured counterclockwise from model +x; absolute sky orientation unverified.",
+    "rounding_note": "Use dome speed 0.011 from Table 6; nearby prose states 0.0113. No renormalization of listed fractions."
+  },
+  "model_gaps": [
+    {
+      "id": "G1",
+      "topic": "Separate tip-tilt mirror",
+      "target": "Independent tip-tilt correction in S1/S2; hysteresis reported in S3.",
+      "draft": "Single DM carries tilt and higher orders; no tip-tilt dynamics or offload.",
+      "impact": "Changes stroke demand and temporal residuals; cannot validate real DM saturation or Strehl stability."
+    },
+    {
+      "id": "G2",
+      "topic": "DM actuator map and influence functions",
+      "target": "Installed registration, used-channel mask, edge influence and flat bias.",
+      "draft": "17-across circularly clipped grid (197 centres), Gaussian influences, no extra guard actuators.",
+      "impact": "Not a measured channel map; edge peaks are normalized on the sampled pupil and commands are model OPD coefficients."
+    },
+    {
+      "id": "G3",
+      "topic": "Pupil obscuration and spiders",
+      "target": "Exact NGS pupil mask with secondary, spiders and vignetting.",
+      "draft": "Unobscured circular pupil (zero obstruction/spider placeholders).",
+      "impact": "Affects flux, valid subapertures and diffraction reference. Zero is an omission, not a hardware measurement."
+    },
+    {
+      "id": "G4",
+      "topic": "WFS pixel scale and field stop",
+      "target": "Measured NGS magnification, binning, spot windows and focal-plane stop.",
+      "draft": "7x7 isolated windows at 5/7 arcsec/pixel; odd width required by current native schema. A 5 arcsec detector field is a numerical proxy.",
+      "impact": "Not a physical 128x128 camera readout. No optical propagation through the actual upstream field stop; actual NGS binning is not established."
+    },
+    {
+      "id": "G5",
+      "topic": "Timing, servo and reconstructor",
+      "target": "Actual NGS gain/leak, transfer function, delay distribution and regularization.",
+      "draft": "Standalone 750 Hz integral loop, two queued frames, TSVD cutoff 0.001.",
+      "impact": "750 Hz and gain 0.4 are literature-model choices, not confirmed operating settings; the original 1500 Hz master/750 Hz WFS cadence is not reproduced."
+    },
+    {
+      "id": "G6",
+      "topic": "Camera calibration and photometry",
+      "target": "Measured QE spectrum, EM gain, CIC, full wells, conversion gain, passband and stellar SED.",
+      "draft": "Scalar published noise targets plus synthetic electronics; AB 7 flat-fnu star and top-hat band.",
+      "impact": "Not a calibrated magnitude/throughput/noise model of a particular star or camera. Published magnitude zero point is not silently treated as AB."
+    },
+    {
+      "id": "G7",
+      "topic": "Instrument aberrations and dynamics",
+      "target": "ADC residuals, static/non-common-path aberrations, vibration and DM settling.",
+      "draft": "Zero static offsets, ideal instantaneous linear DM, no separate telescope/ADC errors.",
+      "impact": "No on-sky Strehl prediction or claimed equivalence to measured/lucky-imaging science images."
+    }
+  ],
+  "execution": {
+    "simulation_run": false,
+    "calibration_built": false,
+    "ci_run": false,
+    "registration_performed": false,
+    "baseline_replaced": false
+  }
+}

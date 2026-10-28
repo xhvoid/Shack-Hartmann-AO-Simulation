@@ -1,6 +1,6 @@
 # AO Simulation Explorer
 
-A static, buildless site with five sections:
+A static, buildless site with six sections:
 
 - **Explore 2 m** — a precomputed native 2 m Shack-Hartmann SCAO experiment
   (`det_emccd_2m_synthetic@1`, seed 1) in eight recorded cases. The active
@@ -37,6 +37,12 @@ A static, buildless site with five sections:
   an ELT M4 parameter comparison and mechanical/OPD unit conventions. Stroke
   affects the comparison, but its contribution to steadier Strehl is not causally
   isolated. No simulation is performed for this section.
+- **2.2 m NGS study** — the saved Robo-AO-2-inspired draft, its loss of lock
+  at 0.981333 s, and the repaired trajectory. A common [0.2, 1.0) s window
+  compares both with the unchanged 2 m baseline; [0.2, 2.0) s compares the
+  paired 2.2 m runs. New clipping and persistent boundary occupancy are
+  reported separately. The original preparation draft and all 131 field
+  annotations remain intact; revision settings are explicit local assumptions.
 - **Appendix** — collapsed records for the 12 m detector studies, analytical
   MCAO, historical 42 m runs and other experiments. All eight original groups
   (R1–R8), evidence downloads and deep links are retained. Full methods and
@@ -92,6 +98,8 @@ derived/rms-<...>/manifest.json RMS diagnostics: residual RMS after tip/tilt rem
                                 residual map, bound by the `diagnostics` block of data/current.json
 derived/rms-<...>/cases/<id>/   rms.json per case (1000 values, window means, source digests)
 recordings/42m-500-<hash>/      immutable 42 m data, atlases, scientific source and run evidence
+derived/ngs-22m-<hash>/         saved NGS results, diagnosis, figure, scalar histories,
+                                original draft ledger, configurations and revision assumptions
 ```
 
 A galaxy derivative has its own identities and manifest and names the dataset
@@ -217,3 +225,23 @@ update; the plot shifts it one update forward to align with the held command
 and pre-update optical metrics. The real M4 comparison cites the 2022 ESO paper
 and distinguishes a conditional mechanical-to-OPD conversion from a calibrated
 hardware specification.
+
+## Saved 2.2 m natural-guide-star study
+
+The `ngs22` entry binds an immutable evidence bundle by manifest size and
+SHA-256. The section at `#ngs22` verifies tables, the original scientific
+figure, the searchable assumption ledger and downloads before use.
+`scripts/ao_explorer/ngs_publication.py` packages the completed first-trajectory
+and repair archives and extracts saved scalar columns; it runs no simulation.
+The byte-identical original preparation documents retain their historical
+not-run wording, explained separately on the page and in the bundle README.
+
+The comparison uses H-band instantaneous pre-update peak Strehl, population
+temporal SD and CV, retaining rejected frames after the predeclared 0.2 s
+startup exclusion. The 2 m comparison is descriptive across different physical
+configurations; the two 2.2 m runs share all 1500 atmosphere maps and calibration
+arrays exactly. Stronger regularization prevented loss of lock on this one
+input; the added recovery safeguard did not activate. Neither the selected
+cutoff nor recovery policy is presented as a measured hardware setting or
+long-term validation. The public bundle includes source hashes and scalar
+records; full wavefront stacks remain in the local archives.
