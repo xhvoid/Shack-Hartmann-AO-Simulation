@@ -1,0 +1,28 @@
+{
+  "schema": "ao-explorer.aperture-local-checks.v1",
+  "base_commit": "d6ef6f714d08f934a0cc85d29e9e36aaf734eea3",
+  "code_build": "b495d8042c73ac5f",
+  "derivative": {
+    "schema": "ao-explorer.aperture-entry.v1",
+    "id": "aperture-comparison-9e23a2d666039918",
+    "manifest": "../derived/aperture-comparison-9e23a2d666039918/manifest.json",
+    "manifest_bytes": 2773,
+    "manifest_sha256": "e592b56a705e60a74d1bd0da783178bc61fc586ff8185a94532136d3844f20f3"
+  },
+  "scope": "Local publication checks; no simulation, full test suite or CI. Deployment pending authentication.",
+  "checks": {
+    "manifest_and_all_15_members_size_sha256": true,
+    "original_recording_entry_bindings_unchanged": true,
+    "crop_summary_equal_to_completed_analysis": true,
+    "public_text_has_no_workstation_paths": true,
+    "html_ids_unique": true,
+    "portable_analysis_source_syntax": true,
+    "content_addressed_code_consistent": true,
+    "browser_default_100ms_and_8ms_500ms_switch": true,
+    "browser_crop_location": true,
+    "browser_animation_play_stop": true,
+    "browser_control_parameter_table": true,
+    "browser_2m_initial_load": true
+  },
+  "animation_conversion": "All 99 decoded lossless WebP RGB frames equal the original GIF; checked by packager."
+}

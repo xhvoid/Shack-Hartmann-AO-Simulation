@@ -1,0 +1,10 @@
+{
+  "schema": "ao-explorer.aperture-publication.v1",
+  "original_manifest_sha256": "2d07213ef07fae7b605887220f7064e117a3aad4aeeef7e4fe5d9355f8bdec01",
+  "original_animation_sha256": "1419135579cd20599c1679c309c6ca125e3d99467b4495217c066534a62bbe77",
+  "animation_conversion": "Lossless WebP; all decoded RGB frames equal original GIF frames.",
+  "animation_frames": 99,
+  "frame_duration_ms": 160,
+  "analysis_source_adaptation": "Input/output arguments and portable font lookup only; no numerical algorithm changes.",
+  "packager_sha256": "4f261643bfaed43813d2d1eecdedcf0cc328dd59d5acbdcf4f8294fa26c46dfd"
+}

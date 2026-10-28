@@ -1,0 +1,16 @@
+{
+  "time_arrays_match_recorded_frames": true,
+  "2m_time_and_index_hashes_match": true,
+  "independent_bilinear_max_error_nm": 4.547473508864641e-13,
+  "verified_raw42_frames": 400,
+  "animation": {
+    "frames": 99,
+    "duration_ms": 160,
+    "size": [
+      820,
+      745
+    ]
+  },
+  "all_exports_from_existing_data": true,
+  "recorded_input_files_unchanged_at_completion": true
+}
