@@ -8,6 +8,7 @@ from importlib.resources import files
 import inspect
 import json
 import math
+from pathlib import Path
 
 import pytest
 
@@ -549,6 +550,126 @@ def test_wfs_negative_pixel_clipping_is_a_schema_v3_field() -> None:
     assert kept.component_config_hashes["wfs"] != current.component_config_hashes["wfs"]
     with pytest.raises(SystemConfigError, match="clip_negative_pixels must be a boolean"):
         replace(current.wfs, clip_negative_pixels=0)
+
+
+def test_wfs_lenslet_axis_is_a_schema_v6_field_for_hcipy_only() -> None:
+    """Schema v6 records state where the HCIPy lens vertices sit.
+
+    Every earlier record keeps the cell-centred vertices it was published
+    with.  A configuration may opt into block-centred vertices only under
+    schema v6 and only for the HCIPy detector-level sensor, the one sensor
+    that places lens vertices (AO-REF-016A).
+    """
+
+    assert PROFILE_SCHEMA_VERSION >= 6
+    assert (
+        WfsConfig.__dataclass_fields__["lenslet_axis"].default
+        == configs._PRE_V6_LENSLET_AXIS
+        == "geometry_cell_center"
+    )
+    for key in available_system_profiles():
+        assert load_system_profile(*key).wfs.lenslet_axis == "geometry_cell_center"
+
+    hcipy_v3 = load_system_profile("high_order_10m_hcipy", 3)
+    current = replace(hcipy_v3, record_schema_version=6)
+    record = system_config_to_mapping(current)
+    assert record["config"]["wfs"]["lenslet_axis"] == "geometry_cell_center"
+    assert system_config_from_mapping(record) == current
+
+    block = replace(
+        current, wfs=replace(current.wfs, lenslet_axis="pixel_block_center")
+    )
+    block_record = system_config_to_mapping(block)
+    assert block_record["config"]["wfs"]["lenslet_axis"] == "pixel_block_center"
+    assert system_config_from_mapping(block_record) == block
+    assert block.config_hash != current.config_hash
+    assert (
+        block.component_config_hashes["wfs"]
+        != current.component_config_hashes["wfs"]
+    )
+    assert block.observing_conditions_hash == hcipy_v3.observing_conditions_hash
+
+    # A v5 record may not carry the field, and a v6 record may not omit it.
+    v5_record = copy.deepcopy(record)
+    v5_record["schema_version"] = 5
+    with pytest.raises(SystemConfigError, match="unknown=\\['lenslet_axis'\\]"):
+        system_config_from_mapping(v5_record)
+    del v5_record["config"]["wfs"]["lenslet_axis"]
+    assert system_config_from_mapping(v5_record).record_schema_version == 5
+    del record["config"]["wfs"]["lenslet_axis"]
+    with pytest.raises(SystemConfigError, match="missing=\\['lenslet_axis'\\]"):
+        system_config_from_mapping(record)
+
+    # No earlier schema can express block-centred vertices, as a record or
+    # as a nested hash.
+    for older in range(1, 6):
+        with pytest.raises(SystemConfigError, match="cannot express"):
+            block.wfs.config_hash_for_record_schema(older)
+    with pytest.raises(SystemConfigError, match="cannot express"):
+        replace(hcipy_v3, wfs=replace(hcipy_v3.wfs, lenslet_axis="pixel_block_center"))
+
+    # Only the HCIPy detector-level sensor consults the field.
+    native = replace(
+        load_system_profile("portfolio_2m_detector", 4), record_schema_version=6
+    )
+    with pytest.raises(SystemConfigError, match="HCIPy detector-level sensor only"):
+        replace(native, wfs=replace(native.wfs, lenslet_axis="pixel_block_center"))
+    with pytest.raises(SystemConfigError, match="lenslet_axis"):
+        replace(current.wfs, lenslet_axis="nearest_pixel")  # type: ignore[arg-type]
+
+
+def test_draft_high_order_10m_hcipy_v4_is_v3_with_only_block_centred_axes() -> None:
+    """The unpublished @4 draft changes exactly the HCIPy lens vertices.
+
+    The draft lives in ``docs/refactor/drafts`` and is not registered, so it
+    has no published identity yet: ``load_system_profile`` still refuses
+    ``high_order_10m_hcipy@4``.  Publishing it means moving the file into
+    ``synthetic_presets``, registering it, and pinning its two hashes here,
+    after the closed-loop confirmation AO-REF-016A lists as not run.
+    """
+
+    draft_path = (
+        Path(__file__).resolve().parents[2]
+        / "docs"
+        / "refactor"
+        / "drafts"
+        / "high_order_10m_hcipy.v4.json"
+    )
+    if not draft_path.is_file():
+        pytest.skip("the @4 draft is a source-checkout document, not a package resource")
+    draft_record = json.loads(draft_path.read_text(encoding="utf-8"))
+    draft = system_config_from_mapping(draft_record)
+    assert system_config_to_mapping(draft) == draft_record
+    assert draft.profile.profile_id == "high_order_10m_hcipy@4"
+    assert draft.record_schema_version == 6
+    assert ("high_order_10m_hcipy", 4) not in available_system_profiles()
+
+    v3 = load_system_profile("high_order_10m_hcipy", 3)
+    assert draft.wfs.lenslet_axis == "pixel_block_center"
+    assert replace(draft.wfs, lenslet_axis="geometry_cell_center") == v3.wfs
+    assert (
+        replace(
+            draft,
+            profile=v3.profile,
+            wfs=v3.wfs,
+            record_schema_version=v3.record_schema_version,
+        )
+        == v3
+    )
+    assert draft.observing_conditions_hash == v3.observing_conditions_hash
+    assert {
+        key
+        for key, value in draft.component_config_hashes.items()
+        if value != v3.component_config_hashes.get(key)
+    } == {"profile", "wfs", "scalable"}
+    assert draft.component_config_hashes["scalable"] == configs.component_config_hash(
+        "scao.scalable_path_config", None
+    )
+    assert {
+        key
+        for key in draft_record["provenance"]
+        if draft_record["provenance"][key] != system_config_to_mapping(v3)["provenance"][key]
+    } == {"note", "source_id", "references"}
 
 
 def test_wfs_photon_allocation_is_required_serialized_and_hashed() -> None:

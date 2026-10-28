@@ -548,6 +548,14 @@ def build_scao_system(
         config=_dm_config(config),
     )
     detector_config = _detector_config(config)
+    # Like the batch size, the lens-vertex keyword is passed only to a profile
+    # that opts in (schema v6, HCIPy only), so every published profile and any
+    # factory written before it builds unchanged.
+    wfs_keywords: dict[str, Any] = (
+        {"lenslet_batch_size": options.lenslet_batch_size} if scalable else {}
+    )
+    if config.wfs.lenslet_axis != "geometry_cell_center":
+        wfs_keywords["lenslet_axis"] = config.wfs.lenslet_axis
     wfs = factory.build_wfs(
         model=config.wfs_model,
         geometry=geometry,
@@ -560,7 +568,7 @@ def build_scao_system(
         random_streams=streams,
         photon_allocation=config.wfs.photon_allocation,
         clip_negative_pixels=config.wfs.clip_negative_pixels,
-        **({"lenslet_batch_size": options.lenslet_batch_size} if scalable else {}),
+        **wfs_keywords,
     )
     science_propagator = factory.build_science_propagator(
         geometry=geometry,

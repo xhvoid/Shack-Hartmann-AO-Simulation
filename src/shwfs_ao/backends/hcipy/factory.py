@@ -15,7 +15,10 @@ zero-padding, this backend by the equivalent lenslet f-number
 ``pad_factor * pixel_pitch_m / wavelength_m`` (the derivation the accepted
 cross-backend baseline uses) — and ``wfs.detector_window_px`` must equal the
 fixed block window ``pupil_pixels // lenslets_across`` that the HCIPy
-lenslet model actually measures on.
+lenslet model actually measures on.  ``wfs.lenslet_axis`` (schema v6) is
+consulted by this backend only: it places the microlens vertices
+(:class:`~shwfs_ao.backends.hcipy.shwfs.HcipyShackHartmannOptics`), and the
+experiment layer passes it only for a profile that opts in.
 """
 
 from __future__ import annotations
@@ -49,7 +52,7 @@ from .atmosphere import (
 )
 from .dm import build_hcipy_deformable_mirror
 from .propagation import HcipySciencePropagator, focal_sampling_from_psf_sampling
-from .shwfs import HcipyShackHartmannOptics
+from .shwfs import HcipyShackHartmannOptics, LensletAxis
 
 
 __all__ = (
@@ -169,6 +172,7 @@ class HcipyScaoComponentFactory:
             "throughput_scaled"
         ),
         clip_negative_pixels: bool = True,
+        lenslet_axis: LensletAxis = "geometry_cell_center",
     ) -> WavefrontSensor:
         if model != "detector_level":
             raise HcipyScaoFactoryError(
@@ -191,6 +195,7 @@ class HcipyScaoComponentFactory:
             geometry,
             wfs_wavelength_m,
             f_number=f_number,
+            lenslet_axis=lenslet_axis,
         )
         return DetectorShackHartmannSensor.calibrate(
             geometry,
