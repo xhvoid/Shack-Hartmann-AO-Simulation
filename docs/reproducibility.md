@@ -100,10 +100,17 @@ calibration hash, which binds reference centroids computed through the FFT and
 the realization hash over a PRNU map drawn through libm; both differ in their
 low bits between hosts, and keyed on the calibration hash a one-ULP reference
 difference redrew every frame. One seed therefore selects the same noise
-streams on every host, and noisy measurements agree to roundoff rather than
-bitwise: expected images still carry platform FFT/libm roundoff, and NumPy's
-Poisson and normal samplers could in principle round a draw differently at a
-libm decision boundary. The calibration hash remains provenance. Measurement
+streams on every host. NumPy's Poisson sampler consumes no variate for an
+exactly zero expectation but at least one for any positive value, and whether
+an unlit pixel is exactly zero or a roundoff residue depends on host FFT bits;
+shot noise drawn from these streams therefore treats expectations below
+`64 * eps` times the declared budget (source photons times QE plus per-pixel
+background) as exactly zero, so the number of variates consumed is
+host-independent too. Noisy measurements then agree to
+roundoff rather than bitwise: expected images still carry platform FFT/libm
+roundoff, and the samplers could in principle round a draw differently at a
+libm decision boundary or for an expectation within roundoff of that floor.
+The calibration hash remains provenance. Measurement
 metadata records `noise_stream_identity` and `noise_stream_identity_schema`,
 and the sensor `config_hash` covers the identity, so results from the earlier
 calibration-hash keying are distinguishable. Portability also requires the

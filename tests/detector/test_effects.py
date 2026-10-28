@@ -686,3 +686,51 @@ def test_effects_module_has_no_control_wfs_or_legacy_imports():
         elif isinstance(node, ast.ImportFrom) and node.module:
             imported_parts.update(node.module.split("."))
     assert imported_parts.isdisjoint(forbidden)
+
+
+@pytest.mark.parametrize("prnu_mode", ["persistent", "per_frame_legacy"])
+def test_unlit_pixel_roundoff_does_not_shift_canonical_noise_draws(prnu_mode):
+    # Whether an unlit pixel's expectation is exactly zero or a roundoff
+    # residue depends on host FFT bits.  NumPy's Poisson sampler consumes no
+    # variate for lam == 0 and at least one otherwise, so without the
+    # roundoff floor the residue would shift every later draw of the stream.
+    intensity = np.zeros((6, 6))
+    intensity[1:4, 2:5] = np.arange(1.0, 10.0).reshape(3, 3)
+    intensity /= intensity.sum()
+    residue = np.where(intensity == 0.0, 1.0e-30, intensity)
+    config = DetectorConfig(
+        photons_per_subap_frame=500.0,
+        read_noise_e=1.5,
+        prnu_rms=0.02 if prnu_mode == "persistent" else 0.0,
+        prnu_mode=prnu_mode,
+    )
+
+    def two_frames(image):
+        streams, realization = _detector_state(config, image.shape, root_seed=41)
+        return [
+            apply_detector_effects(
+                image, config, realization, random_streams=streams
+            ).image_e
+            for _ in range(2)
+        ]
+
+    exact, perturbed = two_frames(intensity), two_frames(residue)
+    assert np.count_nonzero(intensity == 0.0) == 27
+    for exact_frame, perturbed_frame in zip(exact, perturbed):
+        np.testing.assert_array_equal(perturbed_frame, exact_frame)
+
+
+def test_explicit_legacy_seed_keeps_historical_poisson_draws():
+    intensity = np.zeros((4, 4))
+    intensity[1:3, 1:3] = 0.25
+    residue = np.where(intensity == 0.0, 1.0e-30, intensity)
+    config = DetectorConfig(
+        photons_per_subap_frame=400.0, prnu_mode="per_frame_legacy"
+    )
+    streams, realization = _detector_state(config, intensity.shape)
+    for image in (intensity, residue):
+        frame = apply_detector_effects(
+            image, config, realization, random_streams=streams, legacy_seed=9
+        )
+        expected = np.random.default_rng(9).poisson(400.0 * image)
+        np.testing.assert_array_equal(frame.image_e, expected)
