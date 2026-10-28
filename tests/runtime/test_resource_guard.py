@@ -238,6 +238,104 @@ def test_timeout_terminates_the_whole_process_group_including_grandchildren(
         pytest.fail("grandchild survived process-group cleanup")
 
 
+def _wait_until_dead(pid: int, *, seconds: float = 5.0) -> bool:
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def _spawning_child(pid_file: Path, done_file: Path, *, sleep_s: float) -> str:
+    """A child that starts a worker in its own process group, then exits."""
+
+    worker = (
+        f"import time; time.sleep({sleep_s}); "
+        f"open({str(done_file)!r}, 'w').write('done')"
+    )
+    return (
+        "import subprocess, sys;"
+        f"worker = subprocess.Popen([sys.executable, '-c', {worker!r}]);"
+        f"open({str(pid_file)!r}, 'w').write(str(worker.pid))"
+    )
+
+
+def test_workers_left_by_the_child_stay_supervised_until_they_exit(tmp_path: Path):
+    pid_file, done_file = tmp_path / "worker.pid", tmp_path / "worker.done"
+    result = run_supervised(
+        [sys.executable, "-c", _spawning_child(pid_file, done_file, sleep_s=1.0)],
+        budget_bytes=512 * MIB,
+        timeout_s=20.0,
+        pressure_probe=_normal,
+        poll_interval_s=0.1,
+    )
+    # COMPLETED only once the whole group is gone, not when the child exits.
+    assert result.status == "COMPLETED"
+    assert done_file.read_text() == "done"
+    assert "outlived it" in result.reason
+    assert _wait_until_dead(int(pid_file.read_text()), seconds=0.5)
+
+
+def test_workers_left_by_the_child_are_stopped_at_the_limits(tmp_path: Path):
+    pid_file, done_file = tmp_path / "worker.pid", tmp_path / "worker.done"
+    result = run_supervised(
+        [sys.executable, "-c", _spawning_child(pid_file, done_file, sleep_s=60.0)],
+        budget_bytes=512 * MIB,
+        timeout_s=1.5,
+        pressure_probe=_normal,
+        poll_interval_s=0.1,
+    )
+    assert result.status == "INTERRUPTED"
+    assert "left running in its group" in result.reason
+    assert _wait_until_dead(int(pid_file.read_text()))
+    assert not done_file.exists()
+
+
+def test_a_failing_probe_stops_the_group_instead_of_orphaning_it(tmp_path: Path):
+    pid_file = tmp_path / "child.pid"
+    calls = {"rss": 0}
+
+    def flaky_rss(pgid: int) -> int:
+        calls["rss"] += 1
+        if pid_file.exists():
+            raise PermissionError("process listing refused")
+        return 1
+
+    script = (
+        "import os, time;"
+        f"open({str(pid_file)!r}, 'w').write(str(os.getpid()));"
+        "time.sleep(60)"
+    )
+    result = run_supervised(
+        [sys.executable, "-c", script],
+        budget_bytes=512 * MIB,
+        timeout_s=20.0,
+        rss_probe=flaky_rss,
+        pressure_probe=_normal,
+        poll_interval_s=0.1,
+    )
+    assert result.status == "INTERRUPTED"
+    assert "PermissionError" in result.reason and "stopped" in result.reason
+    assert _wait_until_dead(int(pid_file.read_text()))
+    assert result.wall_s < 10.0
+
+
+def test_group_rss_falls_back_to_ps_when_process_listing_is_refused(monkeypatch):
+    import shwfs_ao.runtime.resource_guard as guard
+
+    class _RefusingPsutil:
+        @staticmethod
+        def process_iter(attrs=None):
+            raise PermissionError("process listing refused")
+
+    monkeypatch.setattr(guard, "_psutil", lambda: _RefusingPsutil)
+    rss = process_group_rss_bytes(os.getpgid(0))
+    assert rss is not None and rss > 0  # this test's own group, measured by ps
+
+
 def test_a_child_ignoring_sigterm_is_killed_after_the_grace_period(tmp_path: Path):
     script = (
         "import signal, time;"
