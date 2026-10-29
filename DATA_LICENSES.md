@@ -58,3 +58,19 @@ ten-layer profile beside it is `literature_derived` and listed above.
   attribution and linked terms.
 - Keep source URLs, query parameters, access timestamps, and provenance fields
   with every redistributed cache or derived table.
+
+## Orion F164N science image presentation
+
+`site/derived/orion-f164n-*` contains a spatial subset and derived display
+products from public JWST/NIRCam MAST product
+`jw01288-o001_t011_nircam_f150w2-f164n_i2d.fits` (ERS 1288, PDRs4All,
+PI Olivier Berne). Credit NASA/ESA/CSA JWST and MAST at STScI. The public
+pipeline product is the source, not the team's custom reduction. Original
+range hashes, calibration headers, processing and data-use links are retained
+in the bundle. The software MIT licence does not replace the source data terms.
+
+See [MAST data use](https://archive.stsci.edu/publishing/data-use) and the
+bundle's README for the acknowledgement, source URL, scientific assumptions
+and distinction between calibrated intensity and false-colour display files.
+The earlier NGC 602 colour illustration remains an archived derivative with
+its original ESA/Webb credits and CC BY 4.0 notice.

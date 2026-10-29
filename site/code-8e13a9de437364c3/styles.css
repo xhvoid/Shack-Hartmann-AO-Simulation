@@ -290,17 +290,17 @@ tr.excluded th, tr.excluded td { color: var(--muted); font-style: italic; }
 @media(max-width:600px) { .ngsr-panel { scroll-margin-top:16px; } .ngsr-grid { gap:7px; } .ngsr-grid h3 { font-size:12px; } .ngsr-grid figcaption { font-size:10px; } }
 
 /* Full-field NGC 602 context and linked native-sampling details. */
-.ngc602-section {border-top:1px solid var(--rule);margin-top:24px;padding-top:16px;scroll-margin-top:150px}
-.ngc602-overviews,.ngc602-grid {display:grid;gap:12px}
-.ngc602-overviews {grid-template-columns:repeat(2,minmax(0,1fr))}
-.ngc602-grid {grid-template-columns:repeat(4,minmax(0,1fr))}
-.ngc602-overviews figure,.ngc602-grid figure {margin:0;min-width:0}
-.ngc602-overviews canvas,.ngc602-grid canvas {display:block;width:100%;height:auto;background:#101318}
-.ngc602-grid figcaption {font-size:.8rem;line-height:1.45;margin-top:8px;min-height:3em;color:var(--muted)}
-.ngc602-section h4 {margin:10px 0}
-.ngc602-credit {font-size:.8rem;line-height:1.6}
-@media(max-width:800px){.ngc602-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:600px){.ngc602-overviews{grid-template-columns:1fr}.ngc602-section{scroll-margin-top:120px}.ngc602-grid{gap:8px}}
+.science-section {border-top:1px solid var(--rule);margin-top:24px;padding-top:16px;scroll-margin-top:150px}
+.science-overviews,.science-grid {display:grid;gap:12px}
+.science-overviews {grid-template-columns:repeat(2,minmax(0,1fr))}
+.science-grid {grid-template-columns:repeat(4,minmax(0,1fr))}
+.science-overviews figure,.science-grid figure {margin:0;min-width:0}
+.science-overviews canvas,.science-grid canvas {display:block;width:100%;height:auto;background:#101318}
+.science-grid figcaption {font-size:.8rem;line-height:1.45;margin-top:8px;min-height:3em;color:var(--muted)}
+.science-section h4 {margin:10px 0}
+.science-credit {font-size:.8rem;line-height:1.6}
+@media(max-width:800px){.science-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.science-overviews{grid-template-columns:1fr}.science-section{scroll-margin-top:120px}.science-grid{gap:8px}}
 
 /* 42 m experience: entry points, recording facts, per-frame strip, transport and the separate C1 summary. */
 
@@ -350,3 +350,7 @@ tr.excluded th, tr.excluded td { color: var(--muted); font-style: italic; }
 
 .setup-notes + .panel { margin-top: 12px; }
 .ngs-chain strong { display: block; margin-bottom: 3px; }
+
+.science-intensity{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0;color:var(--muted);font-size:.85rem}
+.science-intensity canvas{width:256px;height:16px;max-width:100%;border-radius:2px}
+.science-context canvas{display:block;width:100%;height:auto;max-width:1060px;border:1px solid var(--line);margin:12px auto}
