@@ -8,12 +8,12 @@ export function initNgsReplay(entry, entryUrl) {
   if(!root)return;
   const $=name=>document.getElementById(`ngsr-${name}`);
   const roles=['atmosphere','residual-v1','residual-v2','psf-u','psf-v1','psf-v2'];
-  let data,manifest,base,ngc602,ngc602Manifest,ngc602Base,ngc602Reference,referenceMode=0,loading,index=0,requested=-1,ticket=0,playing=false,timer=null,busy=false,failed=false;
+  let data,manifest,base,science,scienceManifest,scienceBase,scienceReference,referenceMode=0,loading,index=0,requested=-1,ticket=0,playing=false,timer=null,busy=false,failed=false;
   let duration=matchMedia('(prefers-reduced-motion: reduce)').matches?60:40;
-  const cache=new Map(),ngc602Cache=new Map();
-  const ngc602File=name=>{require(ngc602Manifest.files[name],`NGC 602 member missing: ${name}`);return {href:name,...ngc602Manifest.files[name]};};
+  const cache=new Map(),scienceCache=new Map();
+  const scienceFile=name=>{require(scienceManifest.files[name],`F164N science member missing: ${name}`);return {href:name,...scienceManifest.files[name]};};
   const file=name=>{require(manifest.files[name],`Replay member missing: ${name}`);return {href:name,...manifest.files[name]};};
-  function pause(){playing=false;clearTimeout(timer);$('play').textContent='Play';$('play').setAttribute('aria-pressed','false');$('ngc602-play').textContent='Play';$('ngc602-play').setAttribute('aria-pressed','false');}
+  function pause(){playing=false;clearTimeout(timer);$('play').textContent='Play';$('play').setAttribute('aria-pressed','false');$('science-play').textContent='Play';$('science-play').setAttribute('aria-pressed','false');}
   function fail(error){
     failed=true;pause();++ticket;busy=false;
     $('error').hidden=false;$('error').textContent=`Replay unavailable: ${error.message}. The viewer is paused at the last checked frame. Reload to try again.`;
@@ -35,51 +35,60 @@ export function initNgsReplay(entry, entryUrl) {
     }
     const item=cache.get(k);cache.delete(k);cache.set(k,item);return item.promise;
   }
-  function ngc602Atlas(k){
-    if(!ngc602Cache.has(k)){
+  function scienceAtlas(k){
+    if(!scienceCache.has(k)){
       const item={};
-      item.promise=fetchVerifiedImage(ngc602File(`frames/${String(k).padStart(4,'0')}.webp`),ngc602Base,{expectType:'image/webp'}).then(({bitmap})=>{
-        require(bitmap.width===ngc602.atlas[0]&&bitmap.height===ngc602.atlas[1],'Unexpected NGC 602 atlas dimensions');item.bitmap=bitmap;return bitmap;
-      });ngc602Cache.set(k,item);
+      item.promise=fetchVerifiedImage(scienceFile(`frames/${String(k).padStart(4,'0')}.webp`),scienceBase,{expectType:'image/webp'}).then(({bitmap})=>{
+        require(bitmap.width===science.atlas[0]&&bitmap.height===science.atlas[1],'Unexpected F164N science atlas dimensions');item.bitmap=bitmap;return bitmap;
+      });scienceCache.set(k,item);
     }
-    return ngc602Cache.get(k).promise;
+    return scienceCache.get(k).promise;
   }
   function reference(){
-    if(!ngc602Reference)return;
-    const c=$('ngc602-reference');c.getContext('2d').drawImage(ngc602Reference,referenceMode*ngc602.detail,0,ngc602.detail,ngc602.detail,0,0,c.width,c.height);
-    $('ngc602-reference-caption').textContent=referenceMode?'Observed JWST + ideal 2.2 m pupil PSF':'Observed JWST · resampled, original JWST PSF retained';
-    $('ngc602-observed').setAttribute('aria-pressed',String(referenceMode===0));$('ngc602-ideal').setAttribute('aria-pressed',String(referenceMode===1));
+    if(!scienceReference)return;
+    const c=$('science-reference');c.getContext('2d').drawImage(scienceReference,referenceMode*science.detail,0,science.detail,science.detail,0,0,c.width,c.height);
+    $('science-reference-caption').textContent=referenceMode?'Observed JWST + ideal 2.2 m pupil PSF':'Observed JWST · resampled, original JWST PSF retained';
+    $('science-observed').setAttribute('aria-pressed',String(referenceMode===0));$('science-ideal').setAttribute('aria-pressed',String(referenceMode===1));
   }
-  async function loadNgc602(){
-    const e=entry.ngc602Replay;require(e?.schema==='ao-explorer.ngc602-replay-entry.v1','Missing NGC 602 scene');
+  async function loadScience(){
+    const e=entry.scienceReplay;require(e?.schema==='ao-explorer.science-replay-entry.v1','Missing F164N science scene');
     const r=await fetchVerifiedJson({href:e.manifest,bytes:e.manifest_bytes,sha256:e.manifest_sha256,media_type:'application/json'},entryUrl);
-    ngc602Manifest=r.value;ngc602Base=r.url;require(ngc602Manifest.schema==='ao-explorer.ngc602-replay-manifest.v1'&&ngc602Manifest.id===e.id,'NGC 602 identity mismatch');
-    ngc602=(await fetchVerifiedJson(ngc602File('data.json'),ngc602Base)).value;
-    require(ngc602.schema==='ao-explorer.ngc602-replay-data.v1'&&ngc602.detail===384&&ngc602.parent_replay_id===entry.ngsReplay.id,'NGC 602 parent mismatch');
-    require(ngc602.parent_replay_data_sha256===manifest.files['data.json'].sha256&&JSON.stringify(ngc602.indices)===JSON.stringify(data.indices),'NGC 602 timestamps or source differ');
-    require(ngc602.wavelength_m===data.wavelength_m&&ngc602.loss_frame===data.loss_frame&&ngc602.loss_time_s===data.loss_time_s,'NGC 602 physics/timing mismatch');
-    const rimg=await fetchVerifiedImage(ngc602File('reference.png'),ngc602Base);
-    require(rimg.bitmap.width===2*ngc602.detail&&rimg.bitmap.height===ngc602.detail,'Invalid NGC 602 reference');ngc602Reference=rimg.bitmap;reference();
-    require(JSON.stringify(ngc602.overview)==='[576,465]'&&JSON.stringify(ngc602.atlas)==='[1152,849]','Unexpected NGC 602 layout');
-    const field=ngc602.source.field_arcsec;
-    $('ngc602-field').textContent=`Complete field: ${(field[0]/60).toFixed(2)}′ × ${(field[1]/60).toFixed(2)}′. Gold boxes locate the identical ${ngc602.detail_field_arcsec.toFixed(2)}″ × ${ngc602.detail_field_arcsec.toFixed(2)}″ detail below. Same colour transfer, angular scale and timestamp in each comparison.`;
-    $('ngc602-quality').textContent=`All ${ngc602.checks.sampled_strehl_values} replay Strehl values and ${ngc602.checks.saved_psf_checks} archived PSFs agree with the original records. Main panels retain the full source footprint; only the linked magnifiers crop a region. Lossless frames use one fixed sRGB transfer, with no separate brightness adjustment.`;
-    for(const [label,name] of [['Download 40 s animation (WebP preview)','ngc602-comparison.webp'],['Animation timing','movie-timing.json'],['Image methods','README.md'],['Source and checks','provenance.json'],['Original full-resolution image','source-original.jpg'],['Offline image exporter','exporter.py']]){
-      const a=document.createElement('a');a.href=new URL(name,ngc602Base);a.textContent=label;
-      a.addEventListener('click',async e=>{e.preventDefault();try{const {buffer}=await fetchVerified(ngc602File(name),ngc602Base);const u=URL.createObjectURL(new Blob([buffer],{type:ngc602File(name).media_type}));const link=document.createElement('a');link.href=u;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(u),30000);}catch(error){a.textContent=`${label} unavailable: ${error.message}`;}});$('ngc602-downloads').append(a);
+    scienceManifest=r.value;scienceBase=r.url;require(scienceManifest.schema==='ao-explorer.science-replay-manifest.v1'&&scienceManifest.id===e.id,'F164N science identity mismatch');
+    science=(await fetchVerifiedJson(scienceFile('data.json'),scienceBase)).value;
+    require(science.schema==='ao-explorer.science-replay-data.v1'&&science.detail===384&&science.parent_replay_id===entry.ngsReplay.id,'F164N science parent mismatch');
+    require(science.parent_replay_data_sha256===manifest.files['data.json'].sha256&&JSON.stringify(science.indices)===JSON.stringify(data.indices),'F164N science timestamps or source differ');
+    require(science.wavelength_m===data.wavelength_m&&science.loss_frame===data.loss_frame&&science.loss_time_s===data.loss_time_s,'F164N science physics/timing mismatch');
+    const rimg=await fetchVerifiedImage(scienceFile('reference.png'),scienceBase);
+    require(rimg.bitmap.width===2*science.detail&&rimg.bitmap.height===science.detail,'Invalid F164N science reference');scienceReference=rimg.bitmap;reference();
+    require(JSON.stringify(science.overview)==='[576,465]'&&JSON.stringify(science.atlas)==='[1152,849]','Unexpected F164N science layout');
+    const field=science.source.field_arcsec;
+    $('science-field').textContent=`Science field: ${field[0].toFixed(2)}″ × ${field[1].toFixed(2)}″. Gold boxes locate the identical ${science.detail_field_arcsec.toFixed(2)}″ detail below. All panels share one surface-brightness scale, angular sampling and timestamp.`;
+    $('science-quality').textContent=`All ${science.checks.sampled_strehl_values} replay Strehl values and ${science.checks.saved_psf_checks} archived PSFs agree with the original records. The full mosaic is available for context. Lossless frames use one fixed asinh scale after linear convolution; no per-panel brightness fitting.`;
+    require(science.source.bunit==='MJy/sr'&&science.source.pivot_wavelength_um===1.645&&science.display.fixed_for_all_frames_and_panels===true,'Scientific image units or display mismatch');
+    for(const [name,id] of [['source-context.png','science-context'],['intensity-scale.png','science-scale']]){
+      const {bitmap}=await fetchVerifiedImage(scienceFile(name),scienceBase);const canvas=$(id);canvas.width=bitmap.width;canvas.height=bitmap.height;canvas.getContext('2d').drawImage(bitmap,0,0);bitmap.close();
+    }
+    const q=science.source.quality,pert=science.checks.missing_context_max_perturbation_mjy_sr;
+    const maxDetail=Math.max(...Object.entries(pert).filter(([k])=>k.startsWith('detail_')).map(([,v])=>v));
+    const maxWide=Math.max(...Object.entries(pert).filter(([k])=>k.startsWith('wide_')).map(([,v])=>v));
+    const exclusion=science.checks.overview_exclusion;
+    $('science-missing').textContent=`The magnifier contains ${q.detail.display_bad_resampled_pixels} directly filled source pixels; its maximum zero/twice-fill change is ${maxDetail.toPrecision(3)} MJy/sr. In the wider field, gray hatching excludes ${(100*exclusion.masked_fraction).toFixed(2)}% of pixels using the same mask at every time: these exceeded ${exclusion.threshold_mjy_sr.toFixed(1)} MJy/sr in the fill-sensitivity test. Unmasked overview cells stay below that threshold in this test. This does not bound unknown saturated flux; the full results include the excluded regions.`;
+    for(const [label,name] of [['Download 40 s animation (WebP preview)','science-comparison.webp'],['Animation timing','movie-timing.json'],['Image methods','README.md'],['Source and checks','provenance.json'],['Calibrated detail (FITS.gz)','source-detail.fits.gz'],['Linear output samples','linear-samples.npz'],['Missing-data sensitivity','sensitivity.json'],['Overview exclusion mask','overview-exclusion-mask.png'],['Sensitivity map','missing-sensitivity-map.npz'],['Resampled science context','wide-scene.npz'],['Resampled detail context','detail-scene.npz'],['Offline image exporter','exporter.py']]){
+      const a=document.createElement('a');a.href=new URL(name,scienceBase);a.textContent=label;
+      a.addEventListener('click',async e=>{e.preventDefault();try{const {buffer}=await fetchVerified(scienceFile(name),scienceBase);const u=URL.createObjectURL(new Blob([buffer],{type:scienceFile(name).media_type}));const link=document.createElement('a');link.href=u;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(u),30000);}catch(error){a.textContent=`${label} unavailable: ${error.message}`;}});$('science-downloads').append(a);
     }
   }
-  async function loadNgcVideo(){
-    const e=entry.ngc602Video;require(e?.schema==='ao-explorer.ngc602-video-entry.v1','No MP4 export entry');
+  async function loadScienceVideo(){
+    const e=entry.scienceVideo;require(e?.schema==='ao-explorer.science-video-entry.v1','No MP4 export entry');
     const r=await fetchVerifiedJson({href:e.manifest,bytes:e.manifest_bytes,sha256:e.manifest_sha256,media_type:'application/json'},entryUrl);
-    const m=r.value;require(m.schema==='ao-explorer.ngc602-video-manifest.v1'&&m.id===e.id,'MP4 identity mismatch');
+    const m=r.value;require(m.schema==='ao-explorer.science-video-manifest.v1'&&m.id===e.id,'MP4 identity mismatch');
     const member=name=>{require(m.files[name],`MP4 member missing: ${name}`);return {href:name,...m.files[name]};};
     const v=(await fetchVerifiedJson(member('data.json'),r.url)).value;
-    require(v.schema==='ao-explorer.ngc602-video-data.v1'&&v.parent_replay_entry.id===entry.ngc602Replay.id&&v.parent_replay_entry.manifest_sha256===entry.ngc602Replay.manifest_sha256,'MP4 parent mismatch');
-    require(v.parent_movie_sha256===ngc602Manifest.files['ngc602-comparison.webp'].sha256&&v.parent_scene_data_sha256===ngc602Manifest.files['data.json'].sha256,'MP4 source mismatch');
-    require(JSON.stringify(v.source_indices)===JSON.stringify(ngc602.indices)&&v.loss_frame===data.loss_frame&&v.loss_time_s===data.loss_time_s&&v.duration_s===40&&v.fps===60&&v.video_frames===2400&&v.simulation_rerun===false&&v.temporal_interpolation===false,'MP4 timing mismatch');
-    const p=$('ngc602-video');p.textContent='Share this comparison: ';
-    for(const [label,name] of [[`Download MP4 · 40 s · ${(m.files['ngc602-2p2m-ao-comparison.mp4'].bytes/1e6).toFixed(1)} MB`,'ngc602-2p2m-ao-comparison.mp4'],['Video timing & checks','data.json']]){
+    require(v.schema==='ao-explorer.science-video-data.v1'&&v.parent_replay_entry.id===entry.scienceReplay.id&&v.parent_replay_entry.manifest_sha256===entry.scienceReplay.manifest_sha256,'MP4 parent mismatch');
+    require(v.parent_movie_sha256===scienceManifest.files['science-comparison.webp'].sha256&&v.parent_scene_data_sha256===scienceManifest.files['data.json'].sha256,'MP4 source mismatch');
+    require(JSON.stringify(v.source_indices)===JSON.stringify(science.indices)&&v.loss_frame===data.loss_frame&&v.loss_time_s===data.loss_time_s&&v.duration_s===40&&v.fps===60&&v.video_frames===2400&&v.simulation_rerun===false&&v.temporal_interpolation===false,'MP4 timing mismatch');
+    const p=$('science-video');p.textContent='Share this comparison: ';
+    for(const [label,name] of [[`Download MP4 · 40 s · ${(m.files['orion-f164n-2p2m-ao-comparison.mp4'].bytes/1e6).toFixed(1)} MB`,'orion-f164n-2p2m-ao-comparison.mp4'],['Video timing & checks','data.json']]){
       const a=document.createElement('a');a.href=new URL(name,r.url);a.textContent=label;
       a.addEventListener('click',async event=>{event.preventDefault();try{const {buffer}=await fetchVerified(member(name),r.url);const u=URL.createObjectURL(new Blob([buffer],{type:member(name).media_type}));const link=document.createElement('a');link.href=u;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(u),30000);}catch(error){a.textContent=`${label} unavailable: ${error.message}`;}});
       p.append(a,document.createTextNode(' · '));
@@ -102,8 +111,8 @@ export function initNgsReplay(entry, entryUrl) {
     $('seek').value=index;$('seek').setAttribute('aria-valuetext',`Frame ${k}, ${t.toFixed(6)} seconds, sample ${index+1} of ${data.indices.length}`);
     $('readout').textContent=`Frame ${k} / 1499 · ${t.toFixed(6)} s / 2.000 s · snapshot ${index+1}/${data.indices.length} · ${k<150?'startup exclusion':'analysis window'}`;
     $('readout').dataset.frame=String(k);
-    $('ngc602-time').textContent=`${t.toFixed(6)} s · frame ${k} · ${k>=736?'v1 reconstruction rejected':'before first v1 rejection'}`;
-    $('ngc602-time').dataset.frame=String(k);
+    $('science-time').textContent=`${t.toFixed(6)} s · frame ${k} · ${k>=736?'v1 reconstruction rejected':'before first v1 rejection'}`;
+    $('science-time').dataset.frame=String(k);
     $('event').textContent=k<data.loss_frame
       ? `Before v1's first rejected reconstruction (${((data.loss_time_s-t)*1000).toFixed(3)} ms before frame 736).`
       : k===data.loss_frame?'Loss marker: frame 736 is v1’s first rejected reconstruction; v2 remains usable.'
@@ -120,8 +129,8 @@ export function initNgsReplay(entry, entryUrl) {
     const until=index+1<data.indices.length?m.time_s[data.indices[index+1]]:2;
     $('timing').textContent=`One pass: ${duration} s (${duration/2}× slower). This snapshot is held to ${until.toFixed(6)} s of recorded time. No interpolation; loading or background tabs may extend playback.`;
     $('status').textContent='';
-    $('ngc602-u-caption').textContent=`No correction · point-source Strehl ${m.uncorrected_strehl[k].toFixed(4)}`;
-    for(const id of ['v1','v2'])$(`ngc602-${id}-caption`).textContent=`${id==='v1'?'Original v1':'Revised v2'} · point-source Strehl ${m[id].strehl[k].toFixed(4)}`;
+    $('science-u-caption').textContent=`No correction · point-source Strehl ${m.uncorrected_strehl[k].toFixed(4)}`;
+    for(const id of ['v1','v2'])$(`science-${id}-caption`).textContent=`${id==='v1'?'Original v1':'Revised v2'} · point-source Strehl ${m[id].strehl[k].toFixed(4)}`;
     $('previous').disabled=index===0;$('next').disabled=index===data.indices.length-1;
   }
   async function show(next){
@@ -130,15 +139,15 @@ export function initNgsReplay(entry, entryUrl) {
     const token=++ticket,k=data.indices[next];requested=k;busy=true;
     $('seek').value=index;$('status').textContent=`Loading and checking frame ${k}… displayed frame remains ${data.indices[index]}.`;
     try{
-      const [bitmap,scene]=await Promise.all([atlas(k),ngc602Atlas(k)]);
+      const [bitmap,scene]=await Promise.all([atlas(k),scienceAtlas(k)]);
       if(token!==ticket)return false;
       // One atlas prevents mixed-frame before/after images, even on fast seeks.
       roles.forEach((role,n)=>{const c=$(role);c.getContext('2d').drawImage(bitmap,n*data.tile,0,data.tile,data.tile,0,0,c.width,c.height);c.dataset.frame=String(k);});
-      const [ow,oh]=ngc602.overview;
-      ['v1','v2'].forEach((role,n)=>{const c=$(`ngc602-full-${role}`),ctx=c.getContext('2d');ctx.drawImage(scene,n*ow,0,ow,oh,0,0,c.width,c.height);const [x,y,w,h]=ngc602.detail_box_fraction;ctx.strokeStyle='#ffe7a5';ctx.lineWidth=2;ctx.strokeRect(x*c.width,y*c.height,w*c.width,h*c.height);c.dataset.frame=String(k);});
-      ['u','v1','v2'].forEach((role,n)=>{const c=$(`ngc602-${role}`);c.getContext('2d').drawImage(scene,n*ngc602.detail,oh,ngc602.detail,ngc602.detail,0,0,c.width,c.height);c.dataset.frame=String(k);});
+      const [ow,oh]=science.overview;
+      ['v1','v2'].forEach((role,n)=>{const c=$(`science-full-${role}`),ctx=c.getContext('2d');ctx.drawImage(scene,n*ow,0,ow,oh,0,0,c.width,c.height);const [x,y,w,h]=science.detail_box_fraction;ctx.strokeStyle='#ffe7a5';ctx.lineWidth=2;ctx.strokeRect(x*c.width,y*c.height,w*c.width,h*c.height);c.dataset.frame=String(k);});
+      ['u','v1','v2'].forEach((role,n)=>{const c=$(`science-${role}`);c.getContext('2d').drawImage(scene,n*science.detail,oh,science.detail,science.detail,0,0,c.width,c.height);c.dataset.frame=String(k);});
       index=next;labels();chart();trim();
-      for(const [key,item] of ngc602Cache){if(ngc602Cache.size<=12)break;if(item.bitmap&&key!==k){item.bitmap.close();ngc602Cache.delete(key);}}
+      for(const [key,item] of scienceCache){if(scienceCache.size<=12)break;if(item.bitmap&&key!==k){item.bitmap.close();scienceCache.delete(key);}}
       return true;
     }catch(error){if(token===ticket)fail(error);return false;}
     finally{if(token===ticket)busy=false;}
@@ -158,7 +167,7 @@ export function initNgsReplay(entry, entryUrl) {
     if(playing){pause();return;}
     if(busy||failed)return;
     if(index===data.indices.length-1 && !await show(0))return;
-    playing=true;$('play').textContent='Pause';$('play').setAttribute('aria-pressed','true');$('ngc602-play').textContent='Pause';$('ngc602-play').setAttribute('aria-pressed','true');schedule();
+    playing=true;$('play').textContent='Pause';$('play').setAttribute('aria-pressed','true');$('science-play').textContent='Pause';$('science-play').setAttribute('aria-pressed','true');schedule();
   }
   function bars(){
     const wave=[ [34,82,151],[232,237,239],[220,92,62] ];
@@ -197,8 +206,8 @@ export function initNgsReplay(entry, entryUrl) {
         require(m[key].usable.length===1500&&m[key].usable.every(v=>typeof v==='boolean'),`Invalid ${key} validity`);
       }
       for(const field of ['uncorrected_strehl','atmosphere_rms_nm'])require(m[field].length===1500&&m[field].every(Number.isFinite),`Incomplete ${field}`);
-      await loadNgc602();
-      loadNgcVideo().catch(error=>{$('ngc602-video').textContent=`MP4 download unavailable: ${error.message}`;});
+      await loadScience();
+      loadScienceVideo().catch(error=>{$('science-video').textContent=`MP4 download unavailable: ${error.message}`;});
       index=data.indices.indexOf(1499);require(index>=0,'Missing final frame');
       $('seek').max=data.indices.length-1;$('duration').value=String(duration);bars();
       root.querySelectorAll('button,input,select').forEach(e=>e.disabled=false);
@@ -207,11 +216,11 @@ export function initNgsReplay(entry, entryUrl) {
       await show(index);redrawWhenResized($('strehl'),chart);
     })();return loading;
   }
-  $('ngc602-observed').addEventListener('click',()=>{referenceMode=0;reference();});
-  $('ngc602-ideal').addEventListener('click',()=>{referenceMode=1;reference();});
-  $('ngc602-play').addEventListener('click',()=>{toggle().catch(fail);});
-  $('ngc602-loss').addEventListener('click',()=>seek(data.indices.indexOf(736)));
-  $('ngc602-late').addEventListener('click',()=>seek(data.indices.indexOf(1499)));
+  $('science-observed').addEventListener('click',()=>{referenceMode=0;reference();});
+  $('science-ideal').addEventListener('click',()=>{referenceMode=1;reference();});
+  $('science-play').addEventListener('click',()=>{toggle().catch(fail);});
+  $('science-loss').addEventListener('click',()=>seek(data.indices.indexOf(736)));
+  $('science-late').addEventListener('click',()=>seek(data.indices.indexOf(1499)));
   $('play').addEventListener('click',()=>{toggle().catch(fail);});
   $('previous').addEventListener('click',()=>seek(index-1));$('next').addEventListener('click',()=>seek(index+1));
   $('restart').addEventListener('click',()=>seek(0));$('seek').addEventListener('input',e=>seek(Number(e.target.value)));
@@ -220,8 +229,8 @@ export function initNgsReplay(entry, entryUrl) {
   document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
   const open=()=>load().catch(fail);
   if('IntersectionObserver' in window){const o=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){o.disconnect();open();}},{rootMargin:'200px'});o.observe(root);}else open();
-  window.addEventListener('hashchange',()=>{if(['#ngs22-replay','#ngs22-ngc602','#ngs22-orion'].includes(location.hash))open();});
-  if(['#ngs22-replay','#ngs22-ngc602','#ngs22-orion'].includes(location.hash))open();
+  window.addEventListener('hashchange',()=>{if(['#ngs22-replay','#ngs22-science','#ngs22-ngc602','#ngs22-orion'].includes(location.hash))open();});
+  if(['#ngs22-replay','#ngs22-science','#ngs22-ngc602','#ngs22-orion'].includes(location.hash))open();
 }
 
 // Native telemetry has its own frame selector: it includes every recorded frame,
