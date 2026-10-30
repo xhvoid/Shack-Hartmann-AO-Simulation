@@ -1,0 +1,430 @@
+{
+ "agreement": {
+  "i": {
+   "detilted_within_10pct": [
+    true,
+    true,
+    true
+   ],
+   "tilt_over_O": [
+    0.9934192223456136,
+    0.9978965455758458,
+    0.9999539840830189
+   ],
+   "tilt_within_15pct": [
+    true,
+    true,
+    true
+   ]
+  },
+  "ii": {
+   "detilted_within_10pct": [
+    true,
+    true,
+    true
+   ],
+   "tilt_over_O": [
+    0.9934136544639105,
+    0.9978612785252616,
+    1.000376150073722
+   ],
+   "tilt_within_15pct": [
+    true,
+    true,
+    true
+   ]
+  },
+  "iii": {
+   "detilted_within_10pct": [
+    true,
+    true,
+    true
+   ],
+   "tilt_over_O": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "tilt_within_15pct": [
+    true,
+    true,
+    true
+   ]
+  }
+ },
+ "archive": {
+  "residual_detilted_rms_nm": [
+   193.92670040721703,
+   196.80639156097493,
+   214.19350639900694
+  ],
+  "residual_tilt_rms_nm": [
+   54.62961171660537,
+   191.5282433656586,
+   291.6379751902069
+  ]
+ },
+ "case": "baseline",
+ "component_hashes_match_archive": {
+  "atmosphere": true,
+  "command_projector": true,
+  "controller": true,
+  "dm": true,
+  "interaction_matrix": true,
+  "pupil_geometry": true,
+  "random_streams": true,
+  "reconstructor": true,
+  "science_propagator": true,
+  "wfs": true
+ },
+ "contribution_fractions_of_O": {
+  "noise": [
+   0.006586345536089523,
+   0.0021387214747383807,
+   -0.000376150073721962
+  ],
+  "stroke": [
+   -5.5678817031151676e-06,
+   -3.526705058420561e-05,
+   0.00042216599070302483
+  ]
+ },
+ "derivation_scheme_matches": true,
+ "hashes": {
+  "frames/atmosphere_opd_m.npy": {
+   "matches_case_record": true,
+   "sha256": "01dca7e0c170fc28cf86cfeac55a8db67704c8eff698248900c6a8a9fc465e89"
+  },
+  "frames/pre_update_residual_opd_m.npy": {
+   "matches_case_record": true,
+   "sha256": "ebc2c3263c32ca93a4dad644fcc99d2d07e2b0ca853677a9c984abe3e5922fe4"
+  },
+  "frames/time_s.npy": {
+   "matches_case_record": true,
+   "sha256": "0a7463877457285787c97db8e23fd07706ac22777d1f65b28bb17ae91f2ae773"
+  }
+ },
+ "kappa": 2.83068275997066,
+ "noise_call_sequence": "one measure(include_noise=True) per frame, in frame order, after random_streams.reset(); calibration drew nothing (include_noise=False)",
+ "noise_spread": {
+  "n": 2,
+  "tilt_rms_difference_nm_mean": [
+   0.04429432050463333,
+   0.09139303782491481,
+   -0.1475501493917193
+  ],
+  "tilt_rms_difference_nm_std": [
+   0.15449341333234068,
+   0.06594603737837462,
+   0.13367852788741819
+  ]
+ },
+ "paired": {
+  "i_vs_archive": {
+   "detilted_rms_difference_nm": [
+    0.03619751928985693,
+    0.42151238882618713,
+    0.810416533737282
+   ],
+   "max_abs_tilt_coefficient_difference_nm_per_m": 100.11914241699716,
+   "paired_tilt_map_rms_nm": [
+    2.96172577116941,
+    2.5894695555039413,
+    2.4354946726514966
+   ],
+   "tilt_rms_difference_nm": [
+    -0.3595053280524425,
+    -0.4028709308579721,
+    -0.013419988854877829
+   ]
+  },
+  "ii_vs_archive": {
+   "detilted_rms_difference_nm": [
+    0.03612680902827492,
+    0.014925676862645787,
+    -0.008372541797569966
+   ],
+   "max_abs_tilt_coefficient_difference_nm_per_m": 14.350296000786187,
+   "paired_tilt_map_rms_nm": [
+    2.9621966080199735,
+    2.5892849402575773,
+    2.237927571125312
+   ],
+   "tilt_rms_difference_nm": [
+    -0.3598094992679677,
+    -0.4096255671050528,
+    0.10969964586792003
+   ]
+  },
+  "iii_vs_archive": {
+   "detilted_rms_difference_nm": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "max_abs_tilt_coefficient_difference_nm_per_m": 4.2351647362715017e-13,
+   "paired_tilt_map_rms_nm": [
+    1.162851963271817e-14,
+    1.6916522831805774e-14,
+    2.271476134009064e-14
+   ],
+   "tilt_rms_difference_nm": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "noise": {
+   "detilted_rms_difference_nm": [
+    -0.03612680902827492,
+    -0.014925676862645787,
+    0.008372541797569966
+   ],
+   "max_abs_tilt_coefficient_difference_nm_per_m": 14.350296000786214,
+   "paired_tilt_map_rms_nm": [
+    2.962196608019972,
+    2.5892849402575746,
+    2.237927571125309
+   ],
+   "tilt_rms_difference_nm": [
+    0.3598094992679677,
+    0.4096255671050528,
+    -0.10969964586792003
+   ]
+  },
+  "stroke": {
+   "detilted_rms_difference_nm": [
+    -7.071026158200766e-05,
+    -0.40658671196354135,
+    -0.8187890755348519
+   ],
+   "max_abs_tilt_coefficient_difference_nm_per_m": 99.53841708639003,
+   "paired_tilt_map_rms_nm": [
+    0.0009231792469776586,
+    0.007283803003516285,
+    0.4752685014100383
+   ],
+   "tilt_rms_difference_nm": [
+    -0.000304171215525173,
+    -0.006754636247080725,
+    0.12311963472279785
+   ]
+  }
+ },
+ "per_frame_vs_archive": {
+  "i": {
+   "applied_commands": {
+    "max_abs_difference_nm": 554.6393723397191,
+    "normalized_by_archive_rms": 1.2525338567976767
+   },
+   "residual_maps": {
+    "max_abs_difference_nm": 555.610589144002,
+    "normalized_by_archive_rms": 1.3874361028807805,
+    "per_frame_rms_difference_nm_max": 84.50279671611987
+   },
+   "tilt_coefficients": {
+    "max_abs_difference_nm_per_m": 100.11914241699716,
+    "normalized_by_archive_rms": 0.25257324631040173
+   }
+  },
+  "ii": {
+   "applied_commands": {
+    "max_abs_difference_nm": 55.546569058443886,
+    "normalized_by_archive_rms": 0.12543999190168714
+   },
+   "residual_maps": {
+    "max_abs_difference_nm": 56.89713365921018,
+    "normalized_by_archive_rms": 0.14207997279325008,
+    "per_frame_rms_difference_nm_max": 18.085108814169505
+   },
+   "tilt_coefficients": {
+    "max_abs_difference_nm_per_m": 14.350296000786187,
+    "normalized_by_archive_rms": 0.03620187667347032
+   }
+  },
+  "iii": {
+   "applied_commands": {
+    "max_abs_difference_nm": 2.1175823681357508e-13,
+    "normalized_by_archive_rms": 4.78210481066111e-16
+   },
+   "residual_maps": {
+    "max_abs_difference_nm": 8.470329472543003e-13,
+    "normalized_by_archive_rms": 2.115157835923716e-15,
+    "per_frame_rms_difference_nm_max": 1.0709539903263708e-13
+   },
+   "tilt_coefficients": {
+    "max_abs_difference_nm_per_m": 4.2351647362715017e-13,
+    "normalized_by_archive_rms": 1.0684163690137933e-15
+   }
+  }
+ },
+ "realizations": {
+  "1": {
+   "generation_wall_s": 249.6384331677109,
+   "ii": {
+    "clipped_frames": 241,
+    "residual_detilted_rms_nm": [
+     154.7884604105084,
+     164.9202386341052,
+     175.64269682071128
+    ],
+    "residual_tilt_rms_nm": [
+     325.4338431590408,
+     394.9238786116353,
+     117.91013516559349
+    ],
+    "stopped_at": null
+   },
+   "iii": {
+    "clipped_frames": 241,
+    "residual_detilted_rms_nm": [
+     154.96595069166636,
+     165.15344453458655,
+     175.63405199539062
+    ],
+    "residual_tilt_rms_nm": [
+     325.3688941393295,
+     394.9686407592376,
+     117.85711000977
+    ],
+    "stopped_at": null
+   },
+   "noise_paired": {
+    "detilted_rms_difference_nm": [
+     0.17749028115795795,
+     0.2332059004813516,
+     -0.008644825320658356
+    ],
+    "paired_tilt_map_rms_nm": [
+     3.0242833825579765,
+     2.7640042385451022,
+     2.648205459069617
+    ],
+    "tilt_rms_difference_nm": [
+     -0.06494901971132094,
+     0.044762147602284585,
+     -0.05302515582349088
+    ]
+   },
+   "realization_stream_id": "shwfs_ao.random.sha256-json-pcg64-v1:f57580c89921e0f147a0445a8c0e84554b687e069d7930a8a65a8198fb875cd3"
+  },
+  "2": {
+   "generation_wall_s": 260.10818716697395,
+   "ii": {
+    "stopped_at": 482
+   },
+   "iii": {
+    "stopped_at": 482
+   },
+   "noise_paired": {},
+   "realization_stream_id": "shwfs_ao.random.sha256-json-pcg64-v1:5125999ceabfee21e869947be893323960b19c93a31a89bd7ff06e64dcc54d9a"
+  },
+  "3": {
+   "generation_wall_s": 266.29975466709584,
+   "ii": {
+    "clipped_frames": 172,
+    "residual_detilted_rms_nm": [
+     193.0979951572732,
+     195.93706611807767,
+     173.15335714053785
+    ],
+    "residual_tilt_rms_nm": [
+     278.22463902289894,
+     136.68448431649682,
+     118.38661962893035
+    ],
+    "stopped_at": null
+   },
+   "iii": {
+    "clipped_frames": 162,
+    "residual_detilted_rms_nm": [
+     192.94412692052134,
+     195.99203428976747,
+     173.16413474161254
+    ],
+    "residual_tilt_rms_nm": [
+     278.37817668361953,
+     136.82250824454437,
+     118.1445444859704
+    ],
+    "stopped_at": null
+   },
+   "noise_paired": {
+    "detilted_rms_difference_nm": [
+     -0.1538682367518618,
+     0.05496817168980783,
+     0.010777601074693166
+    ],
+    "paired_tilt_map_rms_nm": [
+     3.067156061880178,
+     3.159251750188021,
+     3.215142443433271
+    ],
+    "tilt_rms_difference_nm": [
+     0.1535376607205876,
+     0.13802392804754504,
+     -0.2420751429599477
+    ]
+   },
+   "realization_stream_id": "shwfs_ao.random.sha256-json-pcg64-v1:1e1fc667c08deaded6726d6476cd4540160bf00608453a1a92226f18bfbd4ee6"
+  }
+ },
+ "realizations_note": "Variants (ii) and (iii) on three further atmosphere realizations (realization_index 1-3 of the same profile), each with the detector streams reset to the same identities and call order. This is the same detector-noise stream sequence replayed against different wavefronts, not an independent detector-noise ensemble; the spread of (iii) - (ii) across them describes how the noise term varies with the wavefront sequence and carries no general uncertainty claim.",
+ "realizations_reused_from": "outputs/independent_validation/b1_results/step5/b1_1_step5_results_run1.json",
+ "stream_ids_match_archive": {
+  "atmosphere(realization)": true,
+  "calibration": true,
+  "detector.read_noise": true,
+  "detector.realization": true,
+  "detector.shot_noise": true,
+  "ncpa": true
+ },
+ "variants": {
+  "i": {
+   "clipped_frames": 0,
+   "residual_detilted_rms_nm": [
+    193.96289792650688,
+    197.22790394980112,
+    215.00392293274422
+   ],
+   "residual_tilt_rms_nm": [
+    54.270106388552925,
+    191.12537243480062,
+    291.624555201352
+   ],
+   "stopped_at": null,
+   "wall_s": 5.9741107085719705
+  },
+  "ii": {
+   "clipped_frames": 310,
+   "residual_detilted_rms_nm": [
+    193.9628272162453,
+    196.82131723783758,
+    214.18513385720937
+   ],
+   "residual_tilt_rms_nm": [
+    54.2698022173374,
+    191.11861779855354,
+    291.7476748360748
+   ],
+   "stopped_at": null,
+   "wall_s": 5.781625374220312
+  },
+  "iii": {
+   "clipped_frames": 306,
+   "residual_detilted_rms_nm": [
+    193.92670040721703,
+    196.80639156097493,
+    214.19350639900694
+   ],
+   "residual_tilt_rms_nm": [
+    54.62961171660537,
+    191.5282433656586,
+    291.6379751902069
+   ],
+   "stopped_at": null,
+   "wall_s": 7.346245499327779
+  }
+ },
+ "wall_s": 20.499117665924132
+}

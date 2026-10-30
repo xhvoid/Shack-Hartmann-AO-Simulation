@@ -5,7 +5,7 @@ The page's scripts and style live in ``site/code-<build>/``, where
 of ``index.html`` (its build references normalized) and every file of that
 directory.  ``index.html`` names the directory, and the modules import each
 other relative to it, so a page always runs the code of its own build: a
-changed file is a new URL, never a cached older one (external review ER-F05).  The
+changed file is a new URL, never a cached older one.  The
 dataset entry ``data/current.json`` records the build it was published with,
 and the code refuses an entry of another build -- a cached older page that
 meets a newer entry -- instead of mixing versions.
@@ -31,7 +31,7 @@ import sys
 from typing import Any, Dict, List, Optional
 
 
-CODE_FILES = ("app.js", "charts.js", "galaxy.js", "integrity.js", "playback.js", "ngs-replay.js", "replay42.js", "c1-noise.js",
+CODE_FILES = ("app.js", "navigation.js", "charts.js", "galaxy.js", "integrity.js", "playback.js", "ngs-replay.js", "replay42.js", "c1-noise.js",
               "studies42.js", "flux42.js", "delay42.js", "gain42.js", "dm-stroke.js", "aperture.js", "results.js", "styles.css")
 BUILD_DIGITS = 16
 _DIR = re.compile(rf"^code-([0-9a-f]{{{BUILD_DIGITS}}})$")
