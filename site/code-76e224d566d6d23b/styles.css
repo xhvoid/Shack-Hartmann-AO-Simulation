@@ -424,6 +424,10 @@ p { max-width: 82ch; }
 .opening-result { margin: 0; padding: 20px; background: #f3f5f5; }
 .opening-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .opening-pair img { width: 100%; height: auto; image-rendering: pixelated; display: block; background: #000004; }
+.opening-atlas { position: relative; aspect-ratio: 1; overflow: hidden; background: #000004; }
+.opening-pair .opening-atlas img { position: absolute; top: 0; width: 700%; max-width: none; height: 100%; }
+.opening-atlas--uncorrected img { left: -300%; }
+.opening-atlas--corrected img { left: -400%; }
 .opening-pair span { display: block; font-size: 13px; margin-top: 6px; }
 .opening-result figcaption { margin-top: 15px; font-size: 12px; color: var(--muted); line-height: 1.6; }
 .opening-result figcaption strong { color: var(--ink); }
