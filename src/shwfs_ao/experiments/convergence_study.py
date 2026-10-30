@@ -1,4 +1,4 @@
-"""Fixed-physics convergence runs for the detector-level profiles (ticket T2, 2026-10-21).
+"""Fixed-physics convergence runs for the detector-level profiles .
 
 One *setting* of a numerical axis is a :class:`~shwfs_ao.io.configs.SystemConfig`
 built in code from a packaged profile by :func:`scan_configuration` (pupil

@@ -57,7 +57,7 @@ PROFILE_SCHEMA_NAME = "shwfs_ao.system_profile"
 # Schema v6 adds wfs.lenslet_axis, where the HCIPy microlens vertices sit.
 # Every earlier record ran with "geometry_cell_center", whose axes drift
 # across their detector windows; "pixel_block_center" centres them
-# (docs/refactor/AO_REF_016A_HCIPY_LENSLET_AXIS.md).  v1-v5 records omit the
+# Older v1–v5 records omit the
 # field and keep the vertices they were published with.
 # Schema v7 adds the optional ``detector_physics`` block, which selects the
 # physical camera path (shwfs_ao.detector.physical_camera.v1): a packaged

@@ -1,7 +1,7 @@
 """Deprecated compatibility shim for :mod:`shwfs_ao.legacy.psf_tools`.
 
 Importing this root-level module emits a DeprecationWarning built from
-the packaged AO-REF-021 clock and inventory metadata; the re-exported
+the packaged deprecation metadata; the re-exported
 objects stay identical to the shwfs_ao implementations throughout the
 compatibility window.
 """

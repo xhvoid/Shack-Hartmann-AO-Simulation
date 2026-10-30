@@ -2,7 +2,7 @@
 
 """Error-budget scenario runner for the realistic 2 m AO demonstrator.
 
-This module is the physical owner of the frozen AO-REF-011 error-budget
+This module is the physical owner of the frozen error-budget
 scenario API.  The installed legacy module is an identity-preserving facade.
 
 This module assembles the detector calibration, DM model, interaction matrix, loop history, and science metrics into a compact
@@ -31,12 +31,12 @@ from ..dm import DMConfig
 from ..core.wavefront import opd_to_phase
 from ..science.bandpass import ScienceBandpass, top_hat_bandpass
 
-# AO-REF-021 Phase A: the frozen scenario engine still consumes the
+# Compatibility: the frozen scenario engine still consumes the
 # behavior-compatibility adapter surface (legacy-shaped calibration, DM,
 # poke-matrix, nm-unit loop, and nm-unit diagnostics).  These adapters
 # delegate all physics to the canonical packages and never warn on import;
 # the exact allowlist below is pinned by the packaged deprecation inventory
-# and by tests/compat/test_phase_a_isolation.py.  Phase B relocates or
+# and by tests/compat/test_phase_a_isolation.py.  A later migration may relocate or
 # removes them together with this dependency.
 from ..legacy.ao_closed_loop import (
     DetectorLoopConfig,

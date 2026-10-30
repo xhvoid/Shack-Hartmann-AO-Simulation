@@ -3,7 +3,7 @@
 The suite demonstrates that the native backend is a transparent reference
 implementation and HCIPy is an independently implemented physical backend.
 It runs thirteen comparisons on one small deterministic profile, groups
-every metric into the AO-REF-018 tolerance levels (``exact``,
+every metric into the tolerance levels (``exact``,
 ``tight_numerical``, ``physical_tolerance``, ``informational``), and returns
 a JSON report document evaluated by :mod:`shwfs_ao.validation.regression`.
 
@@ -476,7 +476,7 @@ class _ComparisonContext:
         )
         time_grid_s = np.arange(config.loop_steps, dtype=float) / config.frame_rate_hz
 
-        # AO-REF-018 shared-input contract for the closed-loop comparison:
+        # shared-input contract for the closed-loop comparison:
         # sample the frozen-flow realization exactly once over the shared
         # time grid and hash the resulting OPD cube.  Both backend loops
         # replay this recording, so identical atmospheric input is recorded
@@ -919,7 +919,7 @@ def _compare_atmosphere_statistics(context: _ComparisonContext) -> dict[str, Any
         "every recorded value is verified at generation time to sit more "
         "than three standard errors inside its range criterion."
     )
-    # The four elements AO-REF-018 requires of an estimated comparison are
+    # The four elements requires of an estimated comparison are
     # recorded as separate fields, not as a sentence a reader has to parse: a
     # sample count, an estimator, the bins or lags it was evaluated over, and
     # the uncertainty method.  Every one of them is derived from the same

@@ -32,7 +32,7 @@ When these caches materially contribute to a publication or released derived
 product, use the acknowledgement wording currently requested by each official
 source linked above. Also cite the catalog/service and canonical papers already
 recorded in each cache's `source_note` and in
-`docs/ao_realistic_demo_parameter_source_inventory.md`.
+the versioned source ledgers in `src/shwfs_ao/resources/benchmarks/`.
 
 The repository deliberately links to the official, maintained wording instead
 of freezing potentially outdated acknowledgement text here.

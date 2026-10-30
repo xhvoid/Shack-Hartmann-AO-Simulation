@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "shack-hartmann-ao-simulation"
 version = "0.1.0"
-description = "Compact Python simulations for Shack-Hartmann wavefront sensing and adaptive optics."
+description = "Shack-Hartmann sensing and adaptive-optics simulations for learning and investigation."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -19,10 +19,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+test = ["pytest>=8"]
 hcipy = ["hcipy>=0.7,<0.8"]
 validation = ["jsonschema>=4.21"]
 
 [project.urls]
+Website = "https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/"
 Repository = "https://github.com/xhvoid/Shack-Hartmann-AO-Simulation"
 Issues = "https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/issues"
 

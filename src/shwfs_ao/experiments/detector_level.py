@@ -1,8 +1,8 @@
-"""Detector-level evidence experiments (DET-07/DET-09).
+"""Detector-level closed-loop experiments.
 
 * :func:`max_pole_modulus` - discrete-time stability of the delayed leaky
   integrator, the check applied before any gain is scanned;
-* :func:`gain_scan` - the predeclared controller-gain selection (B11);
+* :func:`gain_scan` - the controller-gain comparison;
 * :func:`derive_physical_config` - the same detector physics on another
   geometry (the scan tier of the 12 m and 42 m profiles);
 * :func:`seed_ensemble` - noise-on closed loops over independent root seeds
@@ -14,7 +14,7 @@
   contribution to the residual, from a noise-on loop and its noiseless
   operating twin;
 * :func:`paired_noise_run_traced` - the same two arms, bit for bit, observed
-  per frame (S4 contract, ticket T1): per-frame ``DeltaV_t``, the difference
+  per frame : per-frame ``DeltaV_t``, the difference
   of mean squares and their cross term, both arms' effective row masks and
   loop telemetry, the sensor's per-lenslet telemetry of every frame and the
   operating-state centroid residuals (E0), returned as arrays for a sidecar;
@@ -1415,7 +1415,7 @@ def paired_noise_run_traced(
     retain_residual_maps: bool = False,
     propagation_weights: bool = True,
 ) -> dict[str, Any]:
-    """:func:`paired_noise_run` with the S4 per-frame trace (ticket T1).
+    """:func:`paired_noise_run` with the S4 per-frame trace .
 
     The two arms run in the legacy order with the legacy map recorder plus a
     passive telemetry observer, so every legacy scalar of the result is bit

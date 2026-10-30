@@ -126,7 +126,7 @@ class LayeredAtmosphereOptions:
     """Identity-bearing fixed-physics pairing options of the native layered atmosphere.
 
     Unlike :class:`ScaoExecutionOptions`, these change the atmosphere's
-    realization and identity (ticket T2, G1, 2026-10-21).
+    realization and identity .
     ``band_draw_reference_screen_size`` draws the periodic band on a reference
     grid that smaller screens read at their own signed FFT indices;
     ``band_limit_screen_size`` keeps the common band of a pupil scan;

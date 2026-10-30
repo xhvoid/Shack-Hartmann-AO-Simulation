@@ -1,10 +1,4 @@
-"""Installed compatibility facade for :mod:`shwfs_ao.experiments.error_budget`.
-
-AO-REF-011 moved the physical scenario implementation to the experiments
-package.  Every historical non-private runtime name remains an explicit
-identity re-export so editable and wheel installations keep the frozen
-compatibility surface.
-"""
+"""Compatibility imports for the error-budget helpers in experiments.error_budget."""
 
 from __future__ import annotations
 

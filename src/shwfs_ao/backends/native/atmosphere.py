@@ -663,7 +663,7 @@ def fourier_von_karman_phase_realization(
     """Draw one raw Fourier von Karman phase realization in radians.
 
     This is the repository's single canonical implementation of the frozen
-    Fourier phase-screen spectrum (AO-REF-021): it consumes exactly two
+    Fourier phase-screen spectrum: it consumes exactly two
     ``rng.normal`` draws of shape ``(size, size)`` and returns the full
     finite screen before any piston removal or RMS normalization.  Both the
     native frozen-flow atmosphere and the retained

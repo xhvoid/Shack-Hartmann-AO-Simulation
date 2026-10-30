@@ -1,6 +1,6 @@
 """Atmosphere-driven error-budget disturbance.
 
-:mod:`shwfs_ao.experiments.error_budget` owns the frozen AO-REF-011 scenario
+:mod:`shwfs_ao.experiments.error_budget` owns the frozen scenario
 API, whose public surface is mirrored exactly by a legacy facade and therefore
 cannot grow.  The physically-conditioned disturbance introduced here is new
 capability rather than a change to that surface, so it lives in its own module

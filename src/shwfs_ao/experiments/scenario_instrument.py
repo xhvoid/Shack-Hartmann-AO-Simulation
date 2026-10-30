@@ -10,10 +10,10 @@ here are the scenario-shaped ones, distinct from the canonical
 
 from __future__ import annotations
 
-# AO-REF-021 Phase A: this canonical surface re-exports the retained
+# This module re-exports the retained
 # legacy-shape instrument builders.  The exact allowlist is pinned by the
 # packaged deprecation inventory and tests/compat/test_phase_a_isolation.py;
-# Phase B relocates or removes the adapters together with this dependency.
+# A later migration may relocate or remove the adapters together with this dependency.
 from ..legacy.dm_model import DMConfig, DMModel, build_dm_model
 from ..legacy.interaction_matrix import (
     DEFAULT_POKE_AMPLITUDE_GRID_NM,

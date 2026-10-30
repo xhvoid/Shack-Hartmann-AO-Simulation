@@ -3,7 +3,7 @@
 The adapter owns every repository-facing convention; HCIPy provides only the
 parabolic microlens array and the Fresnel propagation to its focal plane:
 
-- ``spot_intensities(residual_opd_m)`` returns the Section 4
+- ``spot_intensities(residual_opd_m)`` returns a
   ``SpotIntensityResult`` and nothing detector-specific: one finite,
   non-negative, unit-sum, full-window spot per retained repository
   subaperture ID, in the exact geometry order, with relative lenslet
@@ -12,8 +12,8 @@ parabolic microlens array and the Fresnel propagation to its focal plane:
 - The microlens array has one lens per nominal lenslet cell — including
   cells the geometry rejected, so their light is still focused by a lens
   instead of leaking unphysically — and HCIPy's closest-centre lenslet
-  assignment provably reproduces the repository index-block partition;
-  construction verifies that equivalence and fails loudly on any drift.
+  assignment is checked against the index-block partition;
+  construction verifies that equivalence and rejects a mismatch.
 - The detector plane is the pupil-sampled focal plane: each retained
   subaperture's window is its own pixel block, ``pixel_scale_rad`` is the
   detector pixel pitch divided by the lenslet focal length, and the window
@@ -28,7 +28,7 @@ parabolic microlens array and the Fresnel propagation to its focal plane:
   on opposite sides of the pupil, that a closed loop holds as static focus.
   ``"pixel_block_center"`` puts each vertex at the mean of its block's sample
   coordinates, so every window is symmetric about its axis
-  (``docs/refactor/AO_REF_016A_HCIPY_LENSLET_AXIS.md``).
+.
 - The repository phase convention ``phase = 2π · OPD / λ`` and detector
   orientation are preserved: increasing positive x-tilt moves the reported
   spot toward increasing detector column x, and positive y-tilt toward

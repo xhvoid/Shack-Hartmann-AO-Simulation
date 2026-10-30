@@ -3,7 +3,7 @@
 The adapter owns every repository-facing convention; HCIPy provides only the
 influence-function evaluation and the reflective-mirror surface arithmetic:
 
-- Commands are OPD-equivalent influence amplitudes in metres (AO-REF-006).
+- Commands are OPD-equivalent influence amplitudes in metres.
   ``hcipy.DeformableMirror`` actuators are *reflective surface displacement*,
   so the adapter sends exactly half the requested OPD-equivalent amplitude
   and reads back ``DeformableMirror.opd`` — HCIPy's own single doubling from

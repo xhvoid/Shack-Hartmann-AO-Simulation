@@ -3,7 +3,7 @@
 :class:`CameraConfig` describes one ``ccd``, ``emccd`` or ``cmos`` camera of
 response model ``shwfs_ao.detector.physical_camera.v1``.  Its presence selects
 the physical response chain of :mod:`shwfs_ao.detector.physical`; its absence
-keeps the frozen AO-REF-004 compatibility chain.  Packaged presets are
+keeps the frozen compatibility chain.  Packaged presets are
 ``synthetic_assumed`` engineering values without a commercial camera name;
 they are loaded by name and version through
 :func:`shwfs_ao.io.camera_presets.load_camera_preset`.

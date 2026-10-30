@@ -1,20 +1,7 @@
-"""AO-REF-021 Phase A deprecation metadata and warning-message helpers.
+"""Compatibility-import metadata and warning helpers.
 
-The single sources of truth are two packaged resources:
-
-- ``shwfs_ao/resources/deprecation_clock.json`` records the deprecation
-  release/tag, the publication UTC date, the planned removal release, and the
-  recorded earliest-removal UTC date.
-- ``shwfs_ao/resources/deprecation_inventory.json`` records every installed
-  root-level shim, resource alias, legacy module, and public symbol with its
-  replacement.
-
-The installed root shims build their import-time ``DeprecationWarning``
-messages from these records so warning text, migration documentation, and the
-machine-readable clock cannot drift apart.  This module must stay import-light:
-it is pulled in by every root shim and must not import optional dependencies
-or any physics module.
-"""
+Release dates and installed aliases are read from the packaged deprecation
+records. Planned releases do not satisfy the removal conditions."""
 
 from __future__ import annotations
 
@@ -132,7 +119,7 @@ def deprecation_clock() -> _Mapping[str, _Any]:
 
 @_lru_cache(maxsize=1)
 def deprecation_inventory() -> _Mapping[str, _Any]:
-    """Return the machine-readable Phase A deprecation inventory."""
+    """Return the compatibility-import inventory."""
 
     inventory = _load_json_resource(INVENTORY_RESOURCE_NAME)
     if inventory.get("schema_name") != "shwfs_ao.deprecation_inventory":
@@ -154,7 +141,7 @@ def parse_utc_date(value: object) -> _datetime.date:
 
 
 def earliest_removal_utc_date(clock: _Mapping[str, _Any]) -> _datetime.date:
-    """Compute the earliest legal Phase B removal date from clock fields.
+    """Compute the earliest removal date from the release metadata.
 
     The boundary is the later of the publication date plus
     ``minimum_window_days`` and every *published* subsequent-minor-release
@@ -183,7 +170,7 @@ def removal_boundaries_satisfied(
     clock: _Mapping[str, _Any],
     on_utc_date: _datetime.date,
 ) -> bool:
-    """Return whether both Phase B boundaries have elapsed on ``on_utc_date``.
+    """Return whether both Later boundaries have elapsed on ``on_utc_date``.
 
     Both the recorded time window and the announced release boundary must
     hold: the date must not precede the computed earliest-removal date, the
