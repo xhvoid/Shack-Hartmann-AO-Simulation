@@ -7,7 +7,7 @@
 <title>AO Simulation Explorer</title>
 <meta content="A personal adaptive-optics simulation: explore a 2 m loop, diagnose loss of lock, and compare gain and delay in a 42 m model." name="description"/>
 <link href="data:," rel="icon"/>
-<link href="code-328e6ce1a87b8271/styles.css" rel="stylesheet"/>
+<link href="code-1f3dd78e45107a5e/styles.css" rel="stylesheet"/>
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script onerror="aoCodeUnavailable()" src="code-328e6ce1a87b8271/app.js" type="module"></script>
+<script onerror="aoCodeUnavailable()" src="code-1f3dd78e45107a5e/app.js" type="module"></script>
 </head>
 <body>
 <noscript><p class="wrap">The overview images are static. Enable JavaScript to open the recorded experiments and study views.</p></noscript><a class="skip" href="#main">Skip to content</a>
@@ -44,7 +44,7 @@ function aoCodeUnavailable() {
 <a href="#ngs22"><span>02 · 2.2 m investigation</span><strong>Why did the loop stop correcting?</strong><p>Trace lost measurements and large commands, then compare stronger regularization on the same atmosphere.</p></a>
 <a href="#gain42"><span>03 · 42 m comparison</span><strong>Does lower gain help when correction is delayed?</strong><p>Compare whole-window image quality with a smaller late-run excursion.</p></a></section>
 <p class="scope-note">These are simplified on-axis models, informed by published sources and synthetic assumptions. They have not been calibrated against an operating instrument. <a href="#methods-home">Read the methods and evidence →</a></p></section><section aria-labelledby="studies-title" class="wrap section page-view" data-nav="studies" data-view="" hidden="" id="studies"><p class="eyebrow">Selected studies</p><span id="studies42-title"></span><h1 id="studies-title">What the loop taught me</h1><p class="lede">A demonstration, a failure diagnosis and a controller comparison. Each has its own configuration and recorded time interval.</p><div class="reading-list">
-<a href="#explore"><span>2 m · 1 s · synthetic detector model</span><strong>How does correction change an image?</strong><p>Eight saved settings connect wavefront error, mirror commands and point-source images. Start with the baseline.</p></a>
+<a href="#explore"><span>2 m · 1 s · synthetic detector model</span><strong>How does correction change an image?</strong><p>One baseline connects wavefront error, mirror commands and point-source images.</p></a>
 <a href="#ngs22"><span>2.2 m · 2 s · same-atmosphere comparison</span><strong>Why did the loop stop correcting?</strong><p>The original reconstruction becomes unusable at 0.981 s. Stronger regularization keeps the revised run usable for the recorded two seconds.</p></a>
 <a href="#gain42"><span>42 m · 1 s · three paired atmospheres</span><strong>Does lower gain help when correction is delayed?</strong><p>Gain 0.3 gives better whole-window image quality among the tested settings. Gain 0.2 reduces the observed late excursion, at an image-quality cost.</p></a></div><p class="scope-note">The 42 m geometry follows a historical E-ELT reference, not the current 39 m telescope. <a href="#methods-home">Assumptions and supporting records →</a></p></section><section aria-labelledby="methods-home-title" class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="methods-home"><p class="eyebrow">Methods &amp; evidence</p><h1 id="methods-home-title">What is in the model?</h1><p class="lede">The recordings follow one on-axis wavefront through a Shack–Hartmann sensor, a reconstructed DM command and a feedback loop. Science images come from propagated residual wavefronts.</p>
 <div class="method-grid"><section><h2>Atmosphere and optics</h2><p>Frozen-flow phase screens translate across the pupil. The 2 m demo uses one screen; the 42 m model combines ten von Kármán layers. The sensor propagates lenslet spots to a detector model. DM shapes and reconstructors differ between configurations.</p><a href="#project">Atmosphere and implementation details →</a></section><section><h2>Timing and image metrics</h2><p>The displayed residual is measured before that frame’s controller update. Delayed commands affect later exposures. PSFs keep tilt and are not recentered. An averaged PSF is a mean of intensities; its peak Strehl is different from the mean instantaneous Strehl.</p><a href="#methods">Definitions and recording conventions →</a></section></div>
@@ -62,10 +62,10 @@ function aoCodeUnavailable() {
 <p class="scope-note">Raw wavefront and PSF archives remain local. The public site carries compact records, configuration identities, source hashes and the evidence needed for the selected claims. <a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/main/docs/reproducing.md">What can be reproduced from the public files →</a></p></section>
 <section aria-labelledby="explore-title" class="wrap section page-view" data-nav="explore" data-view="" hidden="" id="explore">
 <h1 id="explore-title">Explore the loop</h1>
-<p class="lede" id="explore-lede">Compare eight recorded settings. Press Play to follow the wavefronts, point-source images and NGC 1705 on the same timeline.</p>
+<p class="lede" id="explore-lede">A single 2 m baseline recording. Press Play to follow the wavefront, point-source images and NGC 1705 before and after correction.</p>
 <div aria-live="polite" class="status" id="status" role="status">Loading the dataset manifest…</div>
 <div class="error" hidden="" id="error" role="alert"></div>
-<section aria-labelledby="scenario-title" class="panel">
+<section aria-labelledby="scenario-title" class="panel" hidden="">
 <h2 id="scenario-title">Choose a saved run</h2>
 <p class="hint">Each button opens a saved run with one setting changed from the same baseline. The options cannot be combined.</p>
 <div class="groups" id="groups"></div>
@@ -195,7 +195,7 @@ function aoCodeUnavailable() {
 </details>
 </section>
 <details aria-labelledby="summary-title" class="panel">
-<summary id="summary-title">Window summaries and baseline comparison</summary>
+<summary id="summary-title">Baseline analysis-window summary</summary>
 <p class="table-title" id="summary-table-title"></p>
 <div aria-labelledby="summary-table-title" class="table-scroll" id="summary-table" role="region" tabindex="0"></div>
 <p class="hint" id="pairing-note"></p>
