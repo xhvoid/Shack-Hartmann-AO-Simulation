@@ -589,7 +589,7 @@ function renderSummaryTable() {
   $("summary-table").innerHTML = `<table aria-labelledby="summary-table-title"><thead><tr><th>Quantity</th><th>${state.case.json.label}</th>${isBase ? "" : "<th>Baseline</th><th>Difference</th>"}<th>Unit</th></tr></thead><tbody>${rows.map(([label, key, unit, d]) => `<tr><th scope="row">${label}</th><td class="num">${fmt(s[key], d)}</td>${isBase ? "" : `<td class="num">${fmt(b[key], d)}</td><td class="num">${s[key] - b[key] >= 0 ? "+" : ""}${fmt(s[key] - b[key], d)}</td>`}<td>${unit}</td></tr>`).join("")}</tbody></table>`;
   const pairing = state.case.json.pairing;
   $("pairing-note").textContent = isBase
-    ? "The baseline is the reference case for the comparisons."
+    ? "Summary of the displayed baseline recording."
     : pairing.status === "paired"
       ? `Paired comparison: all ${pairing.matching_frames} atmosphere samples are byte-identical to the baseline's (streamed digest per frame), so the difference isolates the changed parameter in this one realization.`
       : `Not a paired comparison: ${pairing.matching_frames} of ${pairing.frames} atmosphere samples match the baseline. ${pairing.note.charAt(0).toUpperCase()}${pairing.note.slice(1)}.`;
@@ -767,7 +767,7 @@ function renderMethods() {
   const m = state.manifest; const d = state.diagnostics; const t = td(); const sc = m.screen;
   $("methods-2m").innerHTML = `
 <li>Profile <code>det_emccd_2m_synthetic@1</code> (native optics, 2 m, 52 pupil samples, 5 × 5 lenslets and actuators, 700 nm WFS, synthetic EMCCD with noise on, TSVD reconstructor, leaky integrator). Explorer overrides: ${t.frames} frames at 1 kHz (the physical interval [0.000, ${t.physical_interval_s[1].toFixed(3)}) s), root seed 1, realization 0, science at 1.65 µm. The profile resource is unchanged.</li>
-<li>Eight recorded cases: baseline; r0 × 1.25 and × 0.80; guide AB magnitude 6 and 8; gain 0.10 and 0.30; queued delay 4 frames. Every other parameter is fixed and equals the recorded configuration of the earlier 180-frame series. Only these eight cases were run.</li>
+<li>This viewer displays the baseline recording. Its configuration matches the earlier 180-frame baseline; the longer atmosphere realization is described below. Other archived cases are retained in the source manifest.</li>
 <li>Atmosphere: <code>native_frozen_flow_v2</code>, generated at ${sc.generated_screen_px} × ${sc.generated_screen_px} pixels through an explicit construction option (the historical default is ${sc.historical_default_px} × ${sc.historical_default_px}); the size is part of every atmosphere identity. With the ${sc.pupil_px}-pixel pupil (${(sc.delta_m * 100).toFixed(2)} cm per pixel) and ${sc.wind_m_per_s[0]} m/s wind the screen supports ${sc.travel_budget_px} px of travel, ${sc.supported_travel_duration_s.toFixed(3)} s. Before any trajectory ran, every request time was checked against that budget: the last frame start (${ms(t.sample_times_s[1])}) travels ${sc.max_requested_travel_px.toFixed(3)} px, and the runtime travel equalled the admitted value. The larger screen is a different realization of the same seed, so this dataset does not reproduce the earlier 180-frame trajectory.</li>
 <li>Frames 0–${START() - 1} are a startup exclusion declared before the run, an analysis choice rather than a demonstrated settling time. The averages use the half-open window [${START()}, ${t.frames}), exactly ${COUNT()} equal-weight frames; they describe this 0.200–1.000 s window, whose convergence to a long-exposure ensemble result has not been established.</li>
 <li>Within each case r0, the outer scale and the wind are fixed. The frozen-flow realization moves across the pupil, so the realized wavefront RMS inside the pupil can change substantially although the configured turbulence strength does not change with time. A working AO loop keeps tracking that changing input, so residual fluctuations, or a late rise, do not by themselves show controller divergence or a failure to settle.</li>
@@ -784,39 +784,14 @@ ${state.rms ? `<li>RMS diagnostics <code>${state.rms.manifest.derived_id}</code>
 <li>Raw numerical evidence (pupil maps and PSFs of every frame, full-precision mean PSFs, histories, the galaxy observations of every frame) stays in the producer's output directories and is not part of this site.</li>`;
   $("footer-identity").textContent = `Dataset ${m.dataset_id}.`;
   const lede = $("explore-lede");
-  if (lede) lede.textContent = `Choose one of eight recorded settings and press Play. Wavefronts, point-source images and the NGC 1705 comparison share one timeline. Each run covers ${t.physical_interval_s[1].toFixed(0)} second at 1 kHz. The images and chart cursor share the same timestamp.`;
+  if (lede) lede.textContent = `A single 2 m baseline recording. Press Play to follow the wavefronts, point-source images and NGC 1705 before and after correction. Each run covers ${t.physical_interval_s[1].toFixed(0)} second at 1 kHz. The images and chart cursor share the same timestamp.`;
   const hint = $("curves-hint");
   if (hint) hint.textContent = `All ${t.frames} frames, including the startup exclusion (shaded, frames 0–${START() - 1}). Summaries use ${windowText()} only (${COUNT()} equal-weight samples). The cursor marks the displayed frame.`;
 }
 
 // Start
 
-function buildGroups() {
-  const m = state.manifest;
-  const host = $("groups");
-  host.innerHTML = "";
-  const groups = [
-    { label: "Reference", nodes: [m.default_case] },
-    ...m.groups.map(group => ({ ...group, nodes: group.nodes.filter(id => id !== m.default_case) })),
-  ];
-  for (const group of groups) {
-    const box = document.createElement("div");
-    box.className = "group";
-    box.innerHTML = `<h3>${group.label}</h3>`;
-    const nodes = document.createElement("div");
-    nodes.className = "nodes";
-    for (const id of group.nodes) {
-      const button = document.createElement("button");
-      button.type = "button"; button.className = "node"; button.dataset.case = id;
-      button.setAttribute("aria-pressed", "false");
-      button.innerHTML = `${m.cases[id].label}`;
-      button.addEventListener("click", () => selectCase(id));
-      nodes.append(button);
-    }
-    box.append(nodes);
-    host.append(box);
-  }
-}
+function buildGroups() { $("groups").replaceChildren(); }
 
 function bindControls() {
   $("btn-play").addEventListener("click", () => playback.toggle());
@@ -891,12 +866,7 @@ async function start() {
     setupColorbars();
     renderMethods();
     setupPlayback();
-    const requested = new URLSearchParams(location.search).get("case");
     await selectCase(manifest.default_case);
-    if (requested && requested !== manifest.default_case) {
-      if (manifest.cases[requested]) await selectCase(requested);
-      else showError(`The requested case “${requested}” is not a recorded case of this dataset.`, " Only the listed scenario buttons exist; the baseline is shown.");
-    }
     if (wantsResults()) await loadResults();
     // Restore a direct section link after the asynchronous 2 m tables settle.
     if (location.hash === initialHash && ["#project", "#replay42", "#c1-noise", "#studies42", "#flux42", "#delay42", "#flux42-methods", "#delay42-methods", "#gain42", "#gain42-table", "#gain42-late", "#gain42-methods", "#studies42-history","#aperture-comparison", "#dm-stroke", "#elt-m4-stroke", "#ngs22", "#ngs22-replay", "#ngs22-control", "#evidence-2m", "#evidence-42m", "#evidence-ngs22", "#references", "#appendix", "#results"].includes(initialHash)) {
