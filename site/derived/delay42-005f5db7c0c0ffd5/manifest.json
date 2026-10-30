@@ -1,0 +1,36 @@
+{
+  "schema": "ao-explorer.delay42-manifest.v1",
+  "id": "delay42-005f5db7c0c0ffd5",
+  "files": {
+    "README.md": {
+      "bytes": 2699,
+      "sha256": "a591a736f4cde94ec07652b708e62d99593e6f4aaee21def41e9462eb49b1fa8",
+      "media_type": "text/markdown"
+    },
+    "data.json": {
+      "bytes": 197463,
+      "sha256": "bd356cd8855ad6819097694c6a2e0fff4b474c8e6bd941bce601d18bf3ec365e",
+      "media_type": "application/json"
+    },
+    "exporter.py": {
+      "bytes": 60450,
+      "sha256": "1a5e77ccbb146c0a0060998611848a959fc4d2da5bff9a20480ef070a0900127",
+      "media_type": "text/plain"
+    },
+    "frames.csv": {
+      "bytes": 427293,
+      "sha256": "c31736d496204b1b442c2f9fa1f6482baa037fbceaa35c91c99d9551cf43eaa8",
+      "media_type": "text/csv"
+    },
+    "provenance.json": {
+      "bytes": 20204,
+      "sha256": "230a5f33b7cbf396f6ad6ac92878c7d9a41ec51917e6d60a3aa6703afa5e5db4",
+      "media_type": "application/json"
+    },
+    "psf_panels.png": {
+      "bytes": 319792,
+      "sha256": "d14ea8ba89d3e5d5becc66798e1a69e605096e1c887df997570a7e68e69471b4",
+      "media_type": "image/png"
+    }
+  }
+}

@@ -1,0 +1,475 @@
+{
+  "schema": "ao-explorer.delay42-provenance.v1",
+  "source": {
+    "archive": "private project evidence archive",
+    "branch": "study/42m-latency-20261029-f4ba53",
+    "closing_commit": "30a788048e5b1e7f30760990294d7f9fa5845554",
+    "compact_stage_commit": "4a64096494568900147df8ce7582c4b95472d54d",
+    "compact_archive_sha256": "ae76a2170935734068a0961073cb8a7d18372061f3b48c1fb65026339a75f4c9",
+    "accepted": "2026-10-29 latency review, with wording corrections LAT-R01 to LAT-R04"
+  },
+  "producer_source": {
+    "commit": "642a5b76de97e1fbe46fc49dd5fad232fb725219",
+    "tree": "2538aee871f8a8959a08ed0f4bab6c0a6c9d70c9"
+  },
+  "compact_listing": {
+    "schema": "lat42m_compact_package.v1",
+    "sha256": "0291f861bb55f13e94e831aa429a2141999afc6be95d2b508a564be511fe9340"
+  },
+  "inputs": {
+    "analysis/figures/fig4_psf_panels.png": {
+      "bytes": 319792,
+      "sha256": "d14ea8ba89d3e5d5becc66798e1a69e605096e1c887df997570a7e68e69471b4"
+    },
+    "analysis/lat_results.json": {
+      "bytes": 200970,
+      "sha256": "a5b611a6cca62bcd973b58398f1369d55f61baa12104d9502941f4f394e4d603"
+    },
+    "attempt2/runs/LEDGER.json": {
+      "bytes": 2532,
+      "sha256": "56ce96d6f081d7f076dd5260ed895d43173009d66e83b4aa2befeecb7b65af74"
+    },
+    "attempt2/runs/lat3-flux100000-r2/output/atmosphere_digest.json": {
+      "bytes": 36180,
+      "sha256": "7fcdfe74745e3cd2586ddb5992423f1b18477edc9b607ccb327f6607c3c2a88b"
+    },
+    "attempt2/runs/lat3-flux100000-r2/output/build_identities.json": {
+      "bytes": 17538,
+      "sha256": "e02832334126b875b777570a54737f7ec7afdc49214b9ea2d923d5a285effe5d"
+    },
+    "attempt2/runs/lat3-flux100000-r2/output/config.json": {
+      "bytes": 8450,
+      "sha256": "7f3e57e6fdcfcdb69843e0cf203db690f080d77f060ce17c23f9b1023c660652"
+    },
+    "attempt2/runs/lat3-flux100000-r2/output/history.npz": {
+      "bytes": 95786,
+      "sha256": "19c76b089a265804931dab166a5d439193cae008d7a1edc1887a71fcebf60da7"
+    },
+    "attempt2/runs/lat3-flux100000-r2/output/history_metadata.json": {
+      "bytes": 677039,
+      "sha256": "1498bbcb1ef0b622d189d8259bef79772cf2b6bbccc2633490ae988743a0e232"
+    },
+    "attempt2/runs/lat3-flux100000-r2/output/identity.json": {
+      "bytes": 2917,
+      "sha256": "01508d9629f522b011deaeaf3861e583122c0ac00757e02e97b06a0ac97ca771"
+    },
+    "attempt2/runs/lat3-flux100000-r2/output/run_summary.json": {
+      "bytes": 4326,
+      "sha256": "cf47ccf6f92eb8be47da313baa6fcb8a16b811d1004fbc4d453371c44132b979"
+    },
+    "attempt2/runs/lat3-flux100000-r2/output/science_record.json": {
+      "bytes": 5556,
+      "sha256": "cd9714f4b1a106a1d087b7a074d625d658ddda6e950ac939e9a193e10794b926"
+    },
+    "records/baseline/flux100000-r0/atmosphere_digest.json": {
+      "bytes": 36180,
+      "sha256": "39d23bc25c7315bc7d2f55ac4dec5a9dfa89139fad7b4a6aa5d64d37d5c1053f"
+    },
+    "records/baseline/flux100000-r0/build_identities.json": {
+      "bytes": 15895,
+      "sha256": "7d5a495c07bdbc7c32f64ce891ed99de8860204457219677239b6bdc78816911"
+    },
+    "records/baseline/flux100000-r0/config.json": {
+      "bytes": 7886,
+      "sha256": "cc466e52f3aa244cd89b1a5dd22cbcb18c9b29bacca17ba2a7eb30395de68650"
+    },
+    "records/baseline/flux100000-r0/history.npz": {
+      "bytes": 87032,
+      "sha256": "0ddedaadd40b581069418ba5261566f0f325de024bff26c88e62146bfa51b62e"
+    },
+    "records/baseline/flux100000-r0/history_metadata.json": {
+      "bytes": 675683,
+      "sha256": "8906c2117d1a623a56b67504a6a9f8db7804fcdffee76aaa5b479ce9250a913a"
+    },
+    "records/baseline/flux100000-r0/identity.json": {
+      "bytes": 1907,
+      "sha256": "04b27f4d53fc7370937cbee40fa6bd8b81f7ebf0e7bd94552e29f688e5cb9b1a"
+    },
+    "records/baseline/flux100000-r0/run_summary.json": {
+      "bytes": 4119,
+      "sha256": "d7fee19c583e6cd79d74b1e45339b60063c2ce43a00b5305f0f2a4bc3541a9bd"
+    },
+    "records/baseline/flux100000-r0/science_record.json": {
+      "bytes": 5547,
+      "sha256": "f3bd9e28b720f8311877851b80925e7c2331709ef18c5bbb0fdb12bfc63b34c6"
+    },
+    "records/baseline/flux100000-r1/atmosphere_digest.json": {
+      "bytes": 36180,
+      "sha256": "4ac78988e78a5e83bc874ffef39a2184959995baaa0e491f8054bbc305383894"
+    },
+    "records/baseline/flux100000-r1/build_identities.json": {
+      "bytes": 15894,
+      "sha256": "2cf13cf72bed324519570570479cb6eb874fd8143aa5aa1345e3874499b9737a"
+    },
+    "records/baseline/flux100000-r1/config.json": {
+      "bytes": 7886,
+      "sha256": "cc466e52f3aa244cd89b1a5dd22cbcb18c9b29bacca17ba2a7eb30395de68650"
+    },
+    "records/baseline/flux100000-r1/history.npz": {
+      "bytes": 88834,
+      "sha256": "a8562bc27b45d23c240fb5eadb5ad882be294c2a8bdbfec0078fcdc00eab1321"
+    },
+    "records/baseline/flux100000-r1/history_metadata.json": {
+      "bytes": 675683,
+      "sha256": "8cb5521e2afd301e7a235af700e914a5246cf86a9bdfd12fcff1d45ca654199b"
+    },
+    "records/baseline/flux100000-r1/identity.json": {
+      "bytes": 1907,
+      "sha256": "692f7f05e722038fd51f60fc93a92c0f2d58f10b4aff1a79e086f303032b5e05"
+    },
+    "records/baseline/flux100000-r1/run_summary.json": {
+      "bytes": 4116,
+      "sha256": "05ca41c077e140ac3b87e2da175c9ee8613b6817f6f5588b64da7b68937dfc8d"
+    },
+    "records/baseline/flux100000-r1/science_record.json": {
+      "bytes": 5564,
+      "sha256": "c5f1b7438d098a6d6406a09ca60f143e1f845878140857b7677f559878affa16"
+    },
+    "records/baseline/flux100000-r2/atmosphere_digest.json": {
+      "bytes": 36180,
+      "sha256": "2095808d670b1bd008f78dcfb722057ec662f033970d92c2c8d744c4cba3ccf9"
+    },
+    "records/baseline/flux100000-r2/build_identities.json": {
+      "bytes": 15894,
+      "sha256": "a9a93d51e8f32a3804be6ee1d31cf7637a8111907f3dca8e70eec3167c4b737a"
+    },
+    "records/baseline/flux100000-r2/config.json": {
+      "bytes": 7886,
+      "sha256": "cc466e52f3aa244cd89b1a5dd22cbcb18c9b29bacca17ba2a7eb30395de68650"
+    },
+    "records/baseline/flux100000-r2/history.npz": {
+      "bytes": 88584,
+      "sha256": "2f5af021a307bf0de6a62e4abcd17087a251c08e17d2dc6b4f5f2a3aeb6727a6"
+    },
+    "records/baseline/flux100000-r2/history_metadata.json": {
+      "bytes": 675683,
+      "sha256": "b8a17a49feb6870e814f24e1e86536e5a9b7a4813b9157adff7fe071d268365d"
+    },
+    "records/baseline/flux100000-r2/identity.json": {
+      "bytes": 1906,
+      "sha256": "c0300a5f7c21a71a52beff4dfc395926ff9f8c019191be1eb700e66a0e4b7d4f"
+    },
+    "records/baseline/flux100000-r2/run_summary.json": {
+      "bytes": 4118,
+      "sha256": "da022e372522928b9709d21c9dcc5b19c7f9971f53e69d4f700f461c71f7783b"
+    },
+    "records/baseline/flux100000-r2/science_record.json": {
+      "bytes": 5562,
+      "sha256": "9985390b5a9f0e4e71e9b4916b67c558623d7993384f88dfe51a4624b25b587b"
+    },
+    "records/new/lat1-flux100000-r0/output/atmosphere_digest.json": {
+      "bytes": 36180,
+      "sha256": "c002d1710fbc247531c3070e19ca9ae7005dce80ebee2827e733646d63276f10"
+    },
+    "records/new/lat1-flux100000-r0/output/build_identities.json": {
+      "bytes": 17538,
+      "sha256": "9e841e26241913ee9dfdf20bf606e4079c05b0e4f409f20c611668542ace0071"
+    },
+    "records/new/lat1-flux100000-r0/output/config.json": {
+      "bytes": 8450,
+      "sha256": "3633e426a7a09c655269e28f2ca44f01fbe62e670a0452998ccb2595d3548176"
+    },
+    "records/new/lat1-flux100000-r0/output/history.npz": {
+      "bytes": 85261,
+      "sha256": "f06d57a2e7dc788a1c3312bcaf1a2fa1ba4df069e834cb5c4fc62037163042e6"
+    },
+    "records/new/lat1-flux100000-r0/output/history_metadata.json": {
+      "bytes": 677039,
+      "sha256": "b843b337a644b41949122bdc09d9ed74cc021882f9ec9ce41f579eed01158f3f"
+    },
+    "records/new/lat1-flux100000-r0/output/identity.json": {
+      "bytes": 2902,
+      "sha256": "c86b8ec48bbb09f91a3d174ba776beac53280ccec30f2f6f0591c4294bd03137"
+    },
+    "records/new/lat1-flux100000-r0/output/run_summary.json": {
+      "bytes": 4338,
+      "sha256": "0f44d934f026217ea87778da9e16b1a90aead2a1fb06d4ae43dce325156ef182"
+    },
+    "records/new/lat1-flux100000-r0/output/science_record.json": {
+      "bytes": 5547,
+      "sha256": "2f6d853c68c51d97cb9e02a0c5db40f63d8e19e7b55fcd40ccf6020b481e2dbd"
+    },
+    "records/new/lat1-flux100000-r1/output/atmosphere_digest.json": {
+      "bytes": 36180,
+      "sha256": "3129ef3ff31182a41bfdfe722031b7c71c3ec98f3cb30097b1f0bf39bfd86e18"
+    },
+    "records/new/lat1-flux100000-r1/output/build_identities.json": {
+      "bytes": 17539,
+      "sha256": "5ca99d41459fed34d6d8b3deee96ad3ad9ae65db8d8c979bf8e68a9df26605cf"
+    },
+    "records/new/lat1-flux100000-r1/output/config.json": {
+      "bytes": 8450,
+      "sha256": "3633e426a7a09c655269e28f2ca44f01fbe62e670a0452998ccb2595d3548176"
+    },
+    "records/new/lat1-flux100000-r1/output/history.npz": {
+      "bytes": 85664,
+      "sha256": "30fcf86cb5f960cb30cb39cc86d89e355c8b0e8713798f78138c2a826c3b556b"
+    },
+    "records/new/lat1-flux100000-r1/output/history_metadata.json": {
+      "bytes": 677039,
+      "sha256": "71787fea0c45e1381c6786914afb9afa0d9ce6cb422c2124d3cba60504fb5f5c"
+    },
+    "records/new/lat1-flux100000-r1/output/identity.json": {
+      "bytes": 2902,
+      "sha256": "755f6a23acca4107b89dbd039f4c30a9970cd06680e6c69e3857d1a350f0b22b"
+    },
+    "records/new/lat1-flux100000-r1/output/run_summary.json": {
+      "bytes": 4333,
+      "sha256": "06a3ad0874e007c7f9f78f537f5cd229170714a27b15080f1259e869278a23f1"
+    },
+    "records/new/lat1-flux100000-r1/output/science_record.json": {
+      "bytes": 5543,
+      "sha256": "870ac0e640a54ccab9711043d9cc31b443cb7eae3cacf23d23605ad539db1d8c"
+    },
+    "records/new/lat1-flux100000-r2/output/atmosphere_digest.json": {
+      "bytes": 36180,
+      "sha256": "bf9b506d5a194791607f9f403c80083c90e2f06667b3ebef73780f8b4c06cfbc"
+    },
+    "records/new/lat1-flux100000-r2/output/build_identities.json": {
+      "bytes": 17539,
+      "sha256": "1a310f5e66c9217e66e1b82313121def992d8161f4e56f8e0bce7fc16d66083d"
+    },
+    "records/new/lat1-flux100000-r2/output/config.json": {
+      "bytes": 8450,
+      "sha256": "3633e426a7a09c655269e28f2ca44f01fbe62e670a0452998ccb2595d3548176"
+    },
+    "records/new/lat1-flux100000-r2/output/history.npz": {
+      "bytes": 86957,
+      "sha256": "494b56fcbb390b9f5937d79536a3285c780c38e5c5dff77df4b328cd1fad9f48"
+    },
+    "records/new/lat1-flux100000-r2/output/history_metadata.json": {
+      "bytes": 677039,
+      "sha256": "6afaa964b3e57756c8b75aa81bf74ad63c1ea385b7121d3ff3066bd90982b0df"
+    },
+    "records/new/lat1-flux100000-r2/output/identity.json": {
+      "bytes": 2901,
+      "sha256": "9ea5dd2896173e2ab911fd715bee5091383ca6cf63e1fd9f4483f606b0bbec00"
+    },
+    "records/new/lat1-flux100000-r2/output/run_summary.json": {
+      "bytes": 4342,
+      "sha256": "878069894c287850d8f8395a8aaec9f0eb4d31c1262fc27ade00c07335d9c11d"
+    },
+    "records/new/lat1-flux100000-r2/output/science_record.json": {
+      "bytes": 5547,
+      "sha256": "8c95324604bf4091c7eaa539d067fee43015dc89224ee3febd5f572d8085c8dd"
+    },
+    "records/new/lat3-flux100000-r0/output/atmosphere_digest.json": {
+      "bytes": 36180,
+      "sha256": "83dec854afdcfb7e680faf77617cba16e250ab8df279a1f7cfcd76baf0095d9f"
+    },
+    "records/new/lat3-flux100000-r0/output/build_identities.json": {
+      "bytes": 17533,
+      "sha256": "e2e2ad39579b7c7aaab2c8e338968d604e469f13201dcc63992fdf5388b78baf"
+    },
+    "records/new/lat3-flux100000-r0/output/config.json": {
+      "bytes": 8450,
+      "sha256": "7f3e57e6fdcfcdb69843e0cf203db690f080d77f060ce17c23f9b1023c660652"
+    },
+    "records/new/lat3-flux100000-r0/output/history.npz": {
+      "bytes": 92859,
+      "sha256": "de1ca62ed588a8e48233a246a79bc2e41a9a70aa416da78428eadab7d4b059bf"
+    },
+    "records/new/lat3-flux100000-r0/output/history_metadata.json": {
+      "bytes": 677039,
+      "sha256": "d1f9182f8c49d69a1e90f7204c7992ab95d915a7481935ecad6020f795f27416"
+    },
+    "records/new/lat3-flux100000-r0/output/identity.json": {
+      "bytes": 2902,
+      "sha256": "9a423b9db1f29cdb6d1366f96fb48641bbd930c7199ee22684ca7d29c5bdd792"
+    },
+    "records/new/lat3-flux100000-r0/output/run_summary.json": {
+      "bytes": 4332,
+      "sha256": "4723bd8f36c29bce9eaf71e1b54780ca07410e8996f0a34c940d22b74e15a2aa"
+    },
+    "records/new/lat3-flux100000-r0/output/science_record.json": {
+      "bytes": 5564,
+      "sha256": "f4b32e1e42c543b45ebbab9c1ab0dce78eed3b552a331e7a3c89c5b34462505f"
+    },
+    "records/new/lat3-flux100000-r1/output/atmosphere_digest.json": {
+      "bytes": 36180,
+      "sha256": "5b6120271fada1bfe46374ef7a767c54a369c85a52e98cb688bd37881738236d"
+    },
+    "records/new/lat3-flux100000-r1/output/build_identities.json": {
+      "bytes": 17539,
+      "sha256": "6b58e80e2f27b4590b78bc7addd5bb5a7b6f1c4fbe439108d2cf7e0477e4f811"
+    },
+    "records/new/lat3-flux100000-r1/output/config.json": {
+      "bytes": 8450,
+      "sha256": "7f3e57e6fdcfcdb69843e0cf203db690f080d77f060ce17c23f9b1023c660652"
+    },
+    "records/new/lat3-flux100000-r1/output/history.npz": {
+      "bytes": 92954,
+      "sha256": "2a6f97c03b8c1088753f11ed0580a4094cb5784f6114e069f35f08512ef59a31"
+    },
+    "records/new/lat3-flux100000-r1/output/history_metadata.json": {
+      "bytes": 677039,
+      "sha256": "6859ba37e3e751113d75d0d79a9fbd3710fc95b7f36cbf3c240950a6d370c677"
+    },
+    "records/new/lat3-flux100000-r1/output/identity.json": {
+      "bytes": 2902,
+      "sha256": "305f1863dd2075dc5f1764dee9f35a8e9c5910939139505793907b39070dcb51"
+    },
+    "records/new/lat3-flux100000-r1/output/run_summary.json": {
+      "bytes": 4335,
+      "sha256": "6b15f7e6ba2b7f24ee5b57cc17aa73092a8f583e3239181cb2b5e2ab7338576d"
+    },
+    "records/new/lat3-flux100000-r1/output/science_record.json": {
+      "bytes": 5558,
+      "sha256": "7024bd56bf0f4e7d106709c1a479484abe4051c43b79f267f598120a3e70c24f"
+    }
+  },
+  "records": [
+    {
+      "run_key": "lat1-flux100000-r0",
+      "delay_frames": 1,
+      "realization": 0,
+      "source": "new",
+      "directory": "records/new/lat1-flux100000-r0/output",
+      "history_sha256": "f06d57a2e7dc788a1c3312bcaf1a2fa1ba4df069e834cb5c4fc62037163042e6",
+      "attempt": {
+        "selected_attempt": 1
+      }
+    },
+    {
+      "run_key": "flux100000-r0",
+      "delay_frames": 2,
+      "realization": 0,
+      "source": "reused baseline",
+      "directory": "records/baseline/flux100000-r0",
+      "history_sha256": "0ddedaadd40b581069418ba5261566f0f325de024bff26c88e62146bfa51b62e",
+      "attempt": {
+        "selected_attempt": 1
+      },
+      "baseline_stage_commit": "7fd5bc0d789a09c7b3cdcc4ef41f5eb813b90c3c",
+      "baseline_archive_sha256": "176b77e1ded98e631983d42663285c3aeb8f538a19818e6dc303f24eec4fde06"
+    },
+    {
+      "run_key": "lat3-flux100000-r0",
+      "delay_frames": 3,
+      "realization": 0,
+      "source": "new",
+      "directory": "records/new/lat3-flux100000-r0/output",
+      "history_sha256": "de1ca62ed588a8e48233a246a79bc2e41a9a70aa416da78428eadab7d4b059bf",
+      "attempt": {
+        "selected_attempt": 1
+      }
+    },
+    {
+      "run_key": "lat1-flux100000-r1",
+      "delay_frames": 1,
+      "realization": 1,
+      "source": "new",
+      "directory": "records/new/lat1-flux100000-r1/output",
+      "history_sha256": "30fcf86cb5f960cb30cb39cc86d89e355c8b0e8713798f78138c2a826c3b556b",
+      "attempt": {
+        "selected_attempt": 1
+      }
+    },
+    {
+      "run_key": "flux100000-r1",
+      "delay_frames": 2,
+      "realization": 1,
+      "source": "reused baseline",
+      "directory": "records/baseline/flux100000-r1",
+      "history_sha256": "a8562bc27b45d23c240fb5eadb5ad882be294c2a8bdbfec0078fcdc00eab1321",
+      "attempt": {
+        "selected_attempt": 1
+      },
+      "baseline_stage_commit": "50297544da2a2cb613d42fff4b5cd592b095114a",
+      "baseline_archive_sha256": "46bc7b24b3a9ad5a8d03515ee40965930b4656c0276bf86bd471ffaf34613f06"
+    },
+    {
+      "run_key": "lat3-flux100000-r1",
+      "delay_frames": 3,
+      "realization": 1,
+      "source": "new",
+      "directory": "records/new/lat3-flux100000-r1/output",
+      "history_sha256": "2a6f97c03b8c1088753f11ed0580a4094cb5784f6114e069f35f08512ef59a31",
+      "attempt": {
+        "selected_attempt": 1
+      }
+    },
+    {
+      "run_key": "lat1-flux100000-r2",
+      "delay_frames": 1,
+      "realization": 2,
+      "source": "new",
+      "directory": "records/new/lat1-flux100000-r2/output",
+      "history_sha256": "494b56fcbb390b9f5937d79536a3285c780c38e5c5dff77df4b328cd1fad9f48",
+      "attempt": {
+        "selected_attempt": 1
+      }
+    },
+    {
+      "run_key": "flux100000-r2",
+      "delay_frames": 2,
+      "realization": 2,
+      "source": "reused baseline",
+      "directory": "records/baseline/flux100000-r2",
+      "history_sha256": "2f5af021a307bf0de6a62e4abcd17087a251c08e17d2dc6b4f5f2a3aeb6727a6",
+      "attempt": {
+        "selected_attempt": 1
+      },
+      "baseline_stage_commit": "48cb01c2245cfc674191e8208de0908d364141d7",
+      "baseline_archive_sha256": "4f5d55eeefb27bf4ba0c7d23145e9940a851320b3719a620123211b69a9e25d0"
+    },
+    {
+      "run_key": "lat3-flux100000-r2",
+      "delay_frames": 3,
+      "realization": 2,
+      "source": "new",
+      "directory": "attempt2/runs/lat3-flux100000-r2/output",
+      "history_sha256": "19c76b089a265804931dab166a5d439193cae008d7a1edc1887a71fcebf60da7",
+      "attempt": {
+        "selected_attempt": 2,
+        "amendment": "AM3",
+        "excluded_attempt": 1,
+        "excluded_status": "lost to a computing-container restart during the closed loop; no completed history; kept as failed/incomplete history"
+      }
+    }
+  ],
+  "attempt_selection": {
+    "lat3-flux100000-r2": {
+      "selected_attempt": 2,
+      "selected_dir": "attempt2/runs/lat3-flux100000-r2/output",
+      "amendment": "AM3",
+      "excluded_attempt": 1,
+      "excluded_dir": "records/new/lat3-flux100000-r2",
+      "excluded_status": "lost to a computing-container restart during the closed loop; no completed history; kept as failed/incomplete history"
+    }
+  },
+  "accounting": "six new successful trajectories (delays 1 and 3) and three reused delay-2 baselines from the photon-budget study: nine analyzed records, three realization pairs per comparison. Seven new scientific attempts were made; the interrupted first delay-3/r2 attempt is excluded.",
+  "static_figure": {
+    "member": "psf_panels.png",
+    "source": "analysis/figures/fig4_psf_panels.png",
+    "sha256": "d14ea8ba89d3e5d5becc66798e1a69e605096e1c887df997570a7e68e69471b4",
+    "note": "copied byte for byte from the accepted analysis; mean PSFs over frames 100-499 at 2.2 um; not regenerated"
+  },
+  "exporter": {
+    "name": "export_42m_studies.py",
+    "version": 1,
+    "sha256": "1a5e77ccbb146c0a0060998611848a959fc4d2da5bff9a20480ef070a0900127"
+  },
+  "definitions": {
+    "pre_update_residual_rms_nm": "piston-removed residual OPD RMS over the pupil before the control update of the frame, in nm",
+    "mean_pre_update_rms_nm": "arithmetic mean of the per-frame RMS values over [100,500), 400 frames (not the root mean square of frame RMS values, which is also given for reference)",
+    "paired_difference": "delay L minus delay 2 within the same realization; the interval is an exploratory 95 % paired t interval with df = 2 over three conditional realizations (one seed, native scoped noise policy); the 400 correlated frames are not replicates",
+    "image_metrics": "peak Strehl and EE50 of the mean intensity image over [100,500) at 2.2 um; Fourier-reference EE50 primary, production EE50 secondary and sampling-sensitive"
+  },
+  "wording_corrections": "LAT-R01 to LAT-R04 of the 2026-10-29 latency review are applied in this bundle and on the page; the frozen study reports are unchanged.",
+  "checks": {
+    "simulation_run": false,
+    "analysis_hash_accepted": true,
+    "histories_match_analysis_hashes": true,
+    "frames_per_record": 500,
+    "records": 9,
+    "time_from_frame_index": true,
+    "configs_differ_from_baseline_only_in_delay": true,
+    "atmosphere_matched_within_realization": true,
+    "realizations_distinct": true,
+    "failed_attempt_excluded": true,
+    "window_means_levels_and_intervals_match_analysis_and_anchors": true,
+    "unusable_frames": 0,
+    "saturated_frames": 0
+  }
+}

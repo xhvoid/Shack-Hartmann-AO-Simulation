@@ -7,7 +7,7 @@
 <meta name="description" content="A personal adaptive-optics project with interactive simulation replays, a 2.2 m loss-of-lock case study, and notes on methods and assumptions.">
 <link rel="icon" href="data:,">
 <!-- Code and style come from the content-addressed build directory; see scripts/ao_explorer/site_build.py. -->
-<link rel="stylesheet" href="code-703cee05d3ea4190/styles.css">
+<link rel="stylesheet" href="code-197afb259a42c02b/styles.css">
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script type="module" src="code-703cee05d3ea4190/app.js" onerror="aoCodeUnavailable()"></script>
+<script type="module" src="code-197afb259a42c02b/app.js" onerror="aoCodeUnavailable()"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -253,7 +253,7 @@ function aoCodeUnavailable() {
   <p class="lede">This run uses a ten-layer atmosphere and a simplified 42 m telescope model. Step through the saved frames to follow the wavefront, the deformable-mirror correction and the resulting images. The simulation was run offline; playback adds no frames or noise.</p>
   <p class="hint">500 frames at 500 Hz · 1 s simulated time · 126 snapshots (every fourth frame and the final frame). Averages use frames 100–499; metrics are measured before each control update.</p>
   <p class="hint">Simplified annular pupil based on the <a href="https://www.eso.org/sci/facilities/eelt/science/drm/tech_data/telescope/">historical 42 m E-ELT reference geometry</a>. The <a href="https://elt.eso.org/about/">current ELT is 39 m</a>; this run does not predict an ELT instrument’s performance.</p>
-  <p class="hint r42-jumps"><a href="#evidence-42m">Setup and limitations ↓</a> · <a href="#c1-noise">A separate detector-noise calculation ↓</a> · <a href="#replay42-methods">Full configuration and checks →</a></p>
+  <p class="hint r42-jumps"><a href="#evidence-42m">Setup and limitations ↓</a> · <a href="#c1-noise">A separate detector-noise calculation ↓</a> · <a href="#flux42">Fainter guide star, 2 s ↓</a> · <a href="#delay42">Controller delay ↓</a> · <a href="#gain42">Integrator gain and delay ↓</a> · <a href="#replay42-methods">Full configuration and checks →</a></p>
   <div id="r42-status" class="status" role="status">The 42 m recording loads when this section is in view.</div><div id="r42-error" class="error" role="alert" hidden></div>
   <section class="panel r42-keys" id="r42-viewer" aria-labelledby="r42-viewer-title">
     <div class="viewer-head"><h2 id="r42-viewer-title">Wavefronts and images</h2><fieldset class="segmented"><legend>Image panels show</legend><label><input type="radio" name="r42-mode" value="frame" checked disabled> This frame (instantaneous)</label><label><input type="radio" name="r42-mode" value="mean" disabled> Mean intensity, frames 100–499</label></fieldset></div>
@@ -332,6 +332,173 @@ function aoCodeUnavailable() {
       <div id="c1-downloads" class="downloads"></div>
     </div></details>
   </section>
+  <section id="studies42" class="panel studies42-intro" aria-labelledby="studies42-title">
+    <h2 id="studies42-title">Further experiments with the same 42 m model</h2>
+    <p class="prose">Within each experiment, the matched comparisons differ only in the stated input. The replay is a separate recorded case; durations, analysis windows and atmospheric realizations are identified below. These results are not pooled. The gain–delay study reuses six of the earlier records.</p>
+    <dl class="studies42-kinds">
+      <div><dt><a href="#r42-viewer">Replay</a></dt><dd>one recorded run · 1 s · wavefronts and images</dd></div>
+      <div><dt><a href="#c1-noise">C1 calculation</a></dt><dd>static noise prediction · no closed loop, no images</dd></div>
+      <div><dt><a href="#flux42">Guide-star flux</a></dt><dd>two new runs · 2 s · one atmosphere (r2) · 100,000 or 1,000 e⁻</dd></div>
+      <div><dt><a href="#delay42">Controller delay</a></dt><dd>nine records · 1 s each · three atmospheres (r0–r2) · delay 1, 2 or 3 frames</dd></div>
+      <div><dt><a href="#gain42">Integrator gain and delay</a></dt><dd>six new + six reused records · gains 0.2/0.3 · delays 2/3 · three paired atmospheres</dd></div>
+    </dl>
+  </section>
+  <section id="flux42" class="panel studies42-panel" aria-labelledby="flux42-title">
+    <p class="evidence-kind">New closed-loop runs · 2 s each · one atmospheric realization (r2)</p>
+    <h2 id="flux42-title">Does a fainter guide star change the loop over two seconds?</h2>
+    <div class="prose">
+      <p>I ran the 42 m loop twice for 1,000 frames at 500 Hz (2 s), both times through the same simulated atmosphere. Only the guide-star flux differs: <strong>100,000</strong> or <strong>1,000</strong> detected electrons (e⁻) per fully illuminated subaperture per frame. Gain, delay, damping and detector model are the replay’s; the atmosphere is realization r2, followed for twice as long. The curves show the residual wavefront error measured before each control update.</p>
+      <p id="flux42-lead"></p>
+    </div>
+    <div id="flux42-status" class="status" role="status">The flux comparison loads when this panel is in view.</div><div id="flux42-error" class="error" role="alert" hidden></div>
+    <div class="studies42-controls">
+      <fieldset class="segmented"><legend>Time range</legend><label><input type="radio" name="flux42-range" value="post" checked disabled> After startup · 0.2–2.0 s</label><label><input type="radio" name="flux42-range" value="full" disabled> Full run · 0–2.0 s</label></fieldset>
+      <fieldset class="segmented"><legend>Summary window (shaded)</legend><label><input type="radio" name="flux42-window" value="early" checked disabled> 0.2–1.0 s · 400 frames</label><label><input type="radio" name="flux42-window" value="late" disabled> 1.0–2.0 s · 500 frames</label><label><input type="radio" name="flux42-window" value="full" disabled> 0.2–2.0 s · 900 frames</label></fieldset>
+    </div>
+    <div class="charts">
+      <figure class="chart studies42-chart"><canvas id="flux42-chart-rms" width="900" height="240" role="img" aria-label="Pre-update residual RMS of the bright and faint runs over time"></canvas><figcaption>Pre-update residual RMS per frame, nm OPD (piston removed). Blue: 100,000 e⁻; orange: 1,000 e⁻. The dashed line at frame 500 (1.0 s) separates the two analysis windows; the loop was not restarted there.</figcaption></figure>
+      <figure class="chart studies42-chart"><canvas id="flux42-chart-diff" width="900" height="190" role="img" aria-label="Faint minus bright residual RMS of the same frame over time"></canvas><figcaption>Faint minus bright, same frame, nm. Above the dotted zero line, the faint run has the larger residual.</figcaption></figure>
+    </div>
+    <div class="studies42-inspect"><label for="flux42-frame">Inspect a frame</label><input type="range" id="flux42-frame" min="100" max="999" value="500" step="1" disabled><output id="flux42-readout" class="studies42-readout" for="flux42-frame"></output></div>
+    <p class="hint">Hover over a chart, or focus the slider and use the arrow keys, to read the recorded values of one frame. Times are frame index ÷ 500 Hz.</p>
+    <p id="flux42-live" class="visually-hidden" aria-live="polite"></p>
+    <div class="table-scroll" tabindex="0" role="region" aria-labelledby="flux42-window-caption">
+      <table class="studies42-table"><caption id="flux42-window-caption">Summary window</caption><thead><tr><th scope="col">Quantity</th><th scope="col">Bright · 100,000 e⁻</th><th scope="col">Faint · 1,000 e⁻</th><th scope="col">Faint − bright</th></tr></thead><tbody id="flux42-table-body"></tbody></table>
+    </div>
+    <p class="takeaway"><strong>What this shows:</strong> in this one matched atmosphere, the faint run’s residual grows much more after the first second than the bright run’s. The bright window means are nearly unchanged, but the bright trace is not flat: its mean over the last 50 frames is about 5 nm higher than over frames 450–499. <strong>What it does not show:</strong> a change of flux also changes the simulated sensor-noise derivation and the calibration and reconstructor built from it, so measurement noise alone is not isolated. One realization gives no ensemble or long-term stability result, and no conclusion about damping.</p>
+    <details id="flux42-methods"><summary>Flux comparison · definitions, history and source records</summary><div class="prose">
+      <p><strong>Settings.</strong> Profile <code>det_ccd_42m_r3band_derived@1</code>, a synthetic configuration derived from the historical 42 m design ledger; it does not predict current 39 m ELT hardware. 500 Hz; gain 0.3; leak 0; two queued frames; production damping α 0.001; root seed 1; atmospheric realization r2; detector noise on with the simulation’s native noise policy; science PSF at 2.2 µm. The two effective configurations differ only in the detected flux.</p>
+      <p><strong>Definitions.</strong> Time is t = k / 500 Hz for frame k. The residual is the piston-removed pupil OPD RMS before the frame’s control update. Window values are arithmetic means of the per-frame RMS values over half-open frame windows: [100,500) has 400 frames, [500,1000) 500 and [100,1000) 900. They are not the root mean square of the frame values. Frames 0–99 are startup and excluded from all summaries.</p>
+      <p id="flux42-changes"></p>
+      <p><strong>Matched input, not matched detector.</strong> The atmosphere is identical in all 1,000 frames (the open-loop RMS histories are bit-identical). The detected flux also enters the sensor-noise derivation, the WFS response, the interaction matrix and the reconstructor, whose identities differ between the runs. Matching the atmosphere does not match every random draw of the detector.</p>
+      <p><strong>One trajectory per flux, with a shared first second.</strong> Frames 0–499 of each run repeat its original 500-frame run exactly, and frames 500–999 continue the same loop. Frame 500 is an analysis boundary, not a restart. The shared first half is counted once, and the extension is not an additional realization. The earlier nine-run photon-budget study (three fluxes × three realizations, 500 frames) is unchanged, and this extension does not replace its r2 member. The bright run’s first 500 frames are the same saved record as the delay-2, r2 record in the controller-delay comparison below.</p>
+      <p><strong>Attempt history.</strong> The faint 1,000-frame trajectory came from the third attempt. The first attempt stopped before its closed loop because of a tooling defect. The second was interrupted by a computing restart; no prefix check was saved and the number of completed frames is unknown. Both remain recorded as failed or incomplete. The completed third attempt and the later bright control run are the trajectories shown.</p>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Exact window means"><table class="studies42-table"><caption>Exact window means of the pre-update residual RMS, nm</caption><thead><tr><th scope="col">Window</th><th scope="col">Bright</th><th scope="col">Faint</th><th scope="col">Faint − bright</th></tr></thead><tbody id="flux42-exact-body"></tbody></table></div>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Recorded image metrics"><table class="studies42-table"><caption>Recorded mean-image metrics at 2.2 µm (EE50 in λ/D)</caption><thead><tr><th scope="col">Run and frames</th><th scope="col">Peak Strehl</th><th scope="col">Fourier-reference EE50</th><th scope="col">Production EE50 (secondary)</th></tr></thead><tbody id="flux42-image-body"></tbody></table></div>
+      <p>Image metrics come from the accepted analysis of each run’s mean intensity image; they exist for frames 100–499 and 100–999. No image was averaged over frames 500–999 alone, and none is derived by subtracting whole-window values. The Fourier-reference EE50 is the primary width; the production EE50 is secondary and sensitive to sampling. The full-grid mean images are not part of this website bundle and were not recomputed for it.</p>
+      <p>Both runs used every reconstruction (none rejected) and no command reached its limit. The 1,000-frame records were accepted after an independent review of the saved histories and identities on 2026-10-29.</p>
+      <p id="flux42-identity" class="c1-ids"></p>
+      <div id="flux42-downloads" class="downloads"></div>
+    </div></details>
+  </section>
+  <section id="delay42" class="panel studies42-panel" aria-labelledby="delay42-title">
+    <p class="evidence-kind">New and reused closed-loop records · 1 s each · three atmospheric realizations (r0, r1, r2)</p>
+    <h2 id="delay42-title">How much does one frame of controller delay matter?</h2>
+    <div class="prose">
+      <p>Here only the controller delay changes. A correction computed from frame k is applied at frame k + L and first appears in the measured residual at frame k + L + 1. The replay uses L = 2; I also ran L = 1 and L = 3. Each delay went through the same three simulated atmospheres for 500 frames at 500 Hz, at 100,000 e⁻ per fully illuminated subaperture per frame. The delay-2 records are the earlier photon-budget runs, reused rather than rerun.</p>
+      <p id="delay42-lead"></p>
+    </div>
+    <div id="delay42-status" class="status" role="status">The controller-delay comparison loads when this panel is in view.</div><div id="delay42-error" class="error" role="alert" hidden></div>
+    <div class="studies42-controls">
+      <fieldset class="segmented"><legend>Atmospheric realization</legend><label><input type="radio" name="delay42-realization" value="0" checked disabled> r0</label><label><input type="radio" name="delay42-realization" value="1" disabled> r1</label><label><input type="radio" name="delay42-realization" value="2" disabled> r2</label></fieldset>
+      <fieldset class="segmented"><legend>Time range</legend><label><input type="radio" name="delay42-range" value="post" checked disabled> After startup · 0.2–1.0 s</label><label><input type="radio" name="delay42-range" value="full" disabled> Full run · 0–1.0 s</label></fieldset>
+    </div>
+    <div class="charts">
+      <figure class="chart studies42-chart"><canvas id="delay42-chart-rms" width="900" height="240" role="img" aria-label="Pre-update residual RMS for delays 1, 2 and 3 in the selected realization"></canvas><figcaption>Pre-update residual RMS per frame, nm OPD, for the three delays in the selected realization. All realizations share these axes.</figcaption></figure>
+      <figure class="chart studies42-chart"><canvas id="delay42-chart-valid" width="900" height="170" role="img" aria-label="Valid-measurement fraction for delays 1, 2 and 3 in the selected realization"></canvas><figcaption>Fraction of slope measurements accepted in each frame. The dotted line marks 0.995.</figcaption></figure>
+    </div>
+    <div class="studies42-inspect"><label for="delay42-frame">Inspect a frame</label><input type="range" id="delay42-frame" min="100" max="499" value="344" step="1" disabled><output id="delay42-readout" class="studies42-readout" for="delay42-frame"></output></div>
+    <p class="hint">Hover over a chart, or focus the slider and use the arrow keys. Times are frame index ÷ 500 Hz. <span id="delay42-realization-summary"></span></p>
+    <p id="delay42-live" class="visually-hidden" aria-live="polite"></p>
+    <aside id="delay42-r2-note" class="studies42-note" aria-labelledby="delay42-r2-title">
+      <p id="delay42-r2-title"><strong>Post-hoc note on realization r2</strong> (described after the results were seen; not part of the planned analysis). <button type="button" id="delay42-show-r2" disabled>Show r2 in the charts</button></p>
+      <p id="delay42-r2-text"></p>
+      <p>The three delays share the same atmospheric input, but these records do not isolate the mechanism, which may involve the loop’s state, the sensor’s validity selection and the simulated noise. At delays 1 and 2 the residual shows only a brief peak around the same time. Nothing is known about this trajectory after frame 499.</p>
+      <p>At delay 3, r2 has the largest average residual of the three realizations, yet its whole-window mean-image Strehl is similar to theirs. These are different atmospheres averaged over the same 0.8 s, not a before-and-after comparison within r2; the saved outputs do not isolate how much the late rise affects the image.</p>
+    </aside>
+    <h3 id="delay42-paired-title">Paired change against delay 2</h3>
+    <p id="delay42-paired-text"></p>
+    <figure class="studies42-dots-figure"><div id="delay42-dots" class="studies42-dots"></div><figcaption class="hint">Each marker is one realization (circle r0, square r1, triangle r2), placed slightly apart vertically. The vertical bar is the mean, the pale band its exploratory 95% interval over three realizations (two degrees of freedom). The dashed line is zero.</figcaption></figure>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Paired changes against delay 2"><table class="studies42-table"><caption>Paired changes against delay 2: mean [exploratory 95% interval] and r0 / r1 / r2</caption><thead><tr><th scope="col">Metric, frames 100–499</th><th scope="col">1 − 2</th><th scope="col">r0 / r1 / r2</th><th scope="col">3 − 2</th><th scope="col">r0 / r1 / r2</th></tr></thead><tbody id="delay42-paired-body"></tbody></table></div>
+    <h3>Image quality</h3>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Image quality by delay"><table class="studies42-table"><caption>Mean over r0–r2, frames 100–499, 2.2 µm (individual realizations r0 / r1 / r2)</caption><thead><tr><th scope="col">Delay</th><th scope="col">Mean residual RMS</th><th scope="col">r0 / r1 / r2 (nm)</th><th scope="col">Peak Strehl of the mean image</th><th scope="col">r0 / r1 / r2</th><th scope="col">Fourier EE50 (λ/D)</th><th scope="col">r0 / r1 / r2</th></tr></thead><tbody id="delay42-image-body"></tbody></table></div>
+    <p id="delay42-asymmetry"></p>
+    <p class="takeaway"><strong>What this shows:</strong> in each of the three realizations, the mean residual, the mean-image Strehl and the Fourier EE50 all get worse from delay 1 to 2 to 3 at these settings. <strong>What it does not show:</strong> three atmospheres under one random seed and the native noise policy are a small, conditional sample, and the 400 frames of a record are correlated rather than independent. The intervals are exploratory. These runs establish no stability limit, optimal gain, hardware latency requirement or behaviour after frame 499.</p>
+    <details id="delay42-psf-details"><summary>Mean PSFs of all nine records (static figure from the analysis)</summary>
+      <p class="hint">Copied unchanged from the accepted analysis, not regenerated: mean PSFs at 2.2 µm over frames 100–499; rows are r0, r1, r2 and columns delay 1, 2 and 3 (labelled by run name; the middle column is the reused delay-2 baseline). One shared logarithmic scale normalized to the ideal peak; display crop ±20 λ/D. The differences are small at this scale; the table above gives the measured values.</p>
+      <p id="delay42-psf-status" class="status">The figure is checked when this section is opened.</p>
+      <img id="delay42-psf" class="studies42-psf" width="1440" height="1380" alt="Three by three grid of mean point-spread functions on a shared logarithmic scale; all nine look similar, with a bright core and rings." hidden>
+    </details>
+    <details id="delay42-methods"><summary>Controller-delay comparison · timing, definitions, corrections and source records</summary><div class="prose">
+      <p><strong>Timing.</strong> L is the length of the controller’s release queue in the simulation. An increment reconstructed at frame k is released at k + L and first sensed in the pre-update residual at k + L + 1. This is not a measured end-to-end instrument latency: detector readout, pixel processing and mirror settling are not modelled separately.</p>
+      <p><strong>Settings.</strong> Profile <code>det_ccd_42m_r3band_derived@1</code> (synthetic, from the historical 42 m design ledger; not a prediction for the 39 m ELT); 100,000 e⁻ per fully illuminated subaperture per frame; gain 0.3; leak 0; damping α 0.001; 500 Hz; 500 frames; root seed 1; detector noise on. Each new record differs from the delay-2 record of its realization only in the configured delay, and the three delays of a realization share an identical atmosphere.</p>
+      <p><strong>Records.</strong> Six new successful trajectories (delays 1 and 3) and three reused delay-2 baselines make nine analyzed records, with three realization pairs per comparison. Seven new runs were started: the first delay-3, r2 attempt was lost to a computing restart, has no completed history and is excluded. The accepted second attempt has the identical configuration on a different host. The delay-2, r2 record is the same saved trajectory as the first 500 frames of the bright run in the flux comparison above; it is not an additional run.</p>
+      <p><strong>Statistics.</strong> Record values are arithmetic means of the per-frame RMS over frames [100,500), 400 frames. Paired differences are taken within each realization; the interval is an exploratory 95% t interval with two degrees of freedom over three realizations, conditional on one seed and the native noise policy. It is not an equivalence test, a stability boundary or a population statement. Removing r2 to narrow the delay-3 interval would not be justified. The trend is observed at these settings, not a general law of delay.</p>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Exact per-delay values"><table class="studies42-table"><caption>Exact means over r0–r2 (frames 100–499)</caption><thead><tr><th scope="col">Delay</th><th scope="col">Residual RMS (nm)</th><th scope="col">Peak Strehl</th><th scope="col">Fourier EE50 (λ/D)</th><th scope="col">Production EE50 (secondary)</th></tr></thead><tbody id="delay42-exact-body"></tbody></table></div>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="All nine records"><table class="studies42-table"><caption>All nine records (frames 100–499)</caption><thead><tr><th scope="col">Run</th><th scope="col">Delay</th><th scope="col">Atmosphere</th><th scope="col">Origin</th><th scope="col">Mean RMS (nm)</th><th scope="col">Root mean square of the frame RMS (nm, reference only)</th><th scope="col">Frames with valid fraction &lt; 0.995</th></tr></thead><tbody id="delay42-records-body"></tbody></table></div>
+      <p>Image metrics come from each record’s mean intensity image over frames 100–499 (peak Strehl = peak of the mean image ÷ ideal peak). The Fourier-reference EE50 is the primary width; the production EE50 is secondary and sampling-sensitive. The full mean-PSF arrays are not in this bundle; their values were checked against the saved science records in review, not recomputed from the images.</p>
+      <p><strong>Wording corrections.</strong> The study’s frozen reports are kept unchanged. This page applies four corrections from the review of 2026-10-29. LAT-R01: the r2 excursion is described as an observation; no atmospheric event is shown to cause the validity dip or the residual rises. LAT-R02: the similar whole-window Strehl of r2 does not measure the excursion’s effect on the image. LAT-R03: 202.761403 nm belongs to frame 338 (frame 339: 208.842077 nm; frame 344: 255.093974 nm); the second rise, 248.795052 → 273.001961 nm at frames 446 → 447, has no simultaneous validity drop (0.993153365 → 0.993740219); validity recovers only partly (0.991961987 over frames 345–499 against 0.999310446 over 100–299), with 137 main-window frames below 0.995. LAT-R04: the ratio of about 2.3 is the sample-mean Strehl loss from delay 2 to 3 divided by the gain from 2 to 1 at gain 0.3 in these three realizations, not a general multiplier.</p>
+      <p>The records were accepted after an independent review of the saved histories, pairing and statistics on 2026-10-29. Different CPUs can change floating-point results at about the 0.02 nm level, far below the differences reported here.</p>
+      <p id="delay42-identity" class="c1-ids"></p>
+      <div id="delay42-downloads" class="downloads"></div>
+    </div></details>
+  </section>
+  <section id="gain42" class="panel studies42-panel" aria-labelledby="gain42-title">
+    <p class="evidence-kind">Recorded simulation study · six new and six reused trajectories · three paired realizations</p>
+    <h2 id="gain42-title">Integrator gain and controller delay</h2>
+    <p class="takeaway">Among the two tested gains, gain 0.3 produced better whole-window image quality at both configured delays. Lowering gain reduced the observed delay penalty and the r2 late excursion, but incurred a larger overall image-quality cost.</p>
+    <p>Two gains (0.2 and 0.3), configured controller queue delays of 2 and 3 frames, and realizations r0–r2. Each record has 500 frames at 500 Hz; the primary window is <strong>[100,500), 400 frames over 0.8 s</strong>. The photon budget is 100,000 e⁻ per full subaperture per frame, with noise on.</p>
+    <p id="gain42-status" class="status" role="status" aria-live="polite">Gain–delay records load when this panel is opened.</p>
+    <div id="gain42-error" class="error" role="alert" hidden></div>
+    <div id="gain42-content" hidden>
+      <h3>Whole-window performance</h3>
+      <label for="gain42-metric">Recorded metric</label>
+      <select id="gain42-metric" disabled>
+        <option value="peak_strehl">Peak Strehl of the mean PSF</option>
+        <option value="mean_pre_update_rms_nm">Mean pre-update residual RMS (nm)</option>
+        <option value="fourier_ee50_lambda_over_d">Fourier EE50 radius (λ/D)</option>
+      </select>
+      <p id="gain42-metric-note" class="hint"></p>
+      <div id="gain42-whole-plot" class="gain42-plot"></div>
+      <p><a href="#gain42-table">All twelve numeric records ↓</a> · <a href="#gain42-late">Inspect the late-run contrast ↓</a></p>
+      <h3>Paired contrasts</h3>
+      <p><strong>G</strong> = gain 0.2 − gain 0.3 at fixed delay. <strong>D</strong> = delay 3 − delay 2 at fixed gain. <strong>I</strong> = D(0.2) − D(0.3). Bands are exploratory 95% Student t intervals from the three paired realization values, df 2. The dashed line marks zero; frames are correlated samples, not replicates.</p>
+      <div id="gain42-contrasts-plot" class="gain42-plot"></div>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Gain and delay paired contrasts"><table class="studies42-table"><caption id="gain42-contrasts-caption"></caption><thead><tr><th scope="col">Contrast</th><th scope="col">r0</th><th scope="col">r1</th><th scope="col">r2</th><th scope="col">Mean</th><th scope="col">95% interval</th><th scope="col">Zero</th></tr></thead><tbody id="gain42-contrasts-body"></tbody></table></div>
+      <p>Only the <strong>Strehl interaction interval excludes zero</strong>. The residual and Fourier EE50 interaction intervals include zero. The smaller observed delay penalty is not conclusively established for every metric; an interval containing zero does not show equivalence.</p>
+      <details id="gain42-table" open><summary>All twelve records · whole-window numeric values</summary>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="All twelve gain study records"><table class="studies42-table"><caption>Window [100,500) · 2.2 µm · residual means from histories; image metrics from accepted analysis</caption><thead><tr><th scope="col">Gain</th><th scope="col">Queue delay (frames)</th><th scope="col">Realization</th><th scope="col">Origin</th><th scope="col">Mean residual (nm)</th><th scope="col">Peak Strehl</th><th scope="col">Fourier EE50 (λ/D)</th></tr></thead><tbody id="gain42-whole-body"></tbody></table></div>
+      </details>
+      <h3 id="gain42-late">Late-run detail</h3>
+      <p>At delay 3/r2, late-minus-early residual is <strong>40.7402 nm at gain 0.3</strong> and <strong>3.6643 nm at gain 0.2</strong>; validity falls below 0.995 in <strong>137 versus 8</strong> primary-window frames. This is one observed realization, with no demonstrated causal mechanism. The smaller excursion did not make gain 0.2 better in whole-window image quality.</p>
+      <div class="gain42-controls">
+        <label for="gain42-delay">Recorded queue delay <select id="gain42-delay" disabled><option value="2">2 frames</option><option value="3" selected>3 frames</option></select></label>
+        <label for="gain42-realization">Atmospheric realization <select id="gain42-realization" disabled><option value="0">r0</option><option value="1">r1</option><option value="2" selected>r2</option></select></label>
+        <label for="gain42-range">Trace window <select id="gain42-range" disabled><option value="post">After startup [100,500)</option><option value="full">All recorded frames [0,500)</option></select></label>
+        <button id="gain42-show-r2" type="button" disabled>Show delay 3 / r2</button>
+      </div>
+      <p class="hint">Teal: gain 0.3 (reused) · orange: gain 0.2 (new). Startup [0,100) is excluded from summaries. Early [100,300), late [300,500); boundary at 0.6 s. Shared axes across all configurations; lines connect the recorded samples.</p>
+      <figure class="studies42-chart"><canvas id="gain42-rms" height="250" role="img" aria-label="Residual RMS for the two gains at the selected delay and realization"></canvas><figcaption>Pre-update residual RMS, nm.</figcaption></figure>
+      <figure class="studies42-chart"><canvas id="gain42-valid" height="180" role="img" aria-label="Recorded valid-measurement fractions for the two gains"></canvas><figcaption>Valid fraction; reference line at 0.995. A partly invalid measurement set is not necessarily a rejected reconstruction.</figcaption></figure>
+      <label for="gain42-frame">Inspect a gain-study frame</label><input id="gain42-frame" type="range" min="100" max="499" value="344" step="1" disabled>
+      <p id="gain42-readout" class="studies42-readout"></p><div id="gain42-live" class="sr-only" aria-live="polite"></div>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Early and late gain comparison"><table class="studies42-table"><caption id="gain42-late-caption"></caption><thead><tr><th scope="col">Gain</th><th scope="col">Early [100,300)</th><th scope="col">Late [300,500)</th><th scope="col">Final block [400,500)</th><th scope="col">Final 50 [450,500)</th><th scope="col">Late − early</th><th scope="col">Valid &lt; 0.995</th><th scope="col">Minimum validity</th></tr></thead><tbody id="gain42-late-body"></tbody></table></div>
+      <details><summary>Windowed Strehl summaries · new runs only</summary>
+        <label for="gain42-image-gain">Recorded gain for image summaries <select id="gain42-image-gain" disabled><option value="0.3">0.3 · reused baseline</option><option value="0.2">0.2 · new run</option></select></label>
+        <p id="gain42-window-status" role="status"></p>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Windowed image summary availability"><table class="studies42-table"><caption>Selected delay and realization · peak Strehl of each window's mean PSF</caption><thead><tr><th scope="col">Frame window</th><th scope="col">Peak Strehl</th><th scope="col">Samples</th></tr></thead><tbody id="gain42-window-body"></tbody></table></div>
+        <p>No matching baseline windowed PSFs were recorded. A new-run windowed image is never compared with a baseline whole-window image. No image or residual snapshot is reconstructed here.</p>
+      </details>
+      <details id="gain42-methods"><summary>Methods, evidence and limits</summary><div class="prose">
+        <p>Root seed 1, native scoped noise policy, leak 0, damping 0.001, wavelength 2.2 µm and PSF padding 2. Within each realization, all four cells share the atmospheric input. These are three conditional atmospheric realizations under one noise policy, not independently resampled joint atmosphere/noise experiments. Interaction uncertainty is computed from the three interaction values.</p>
+        <p>Residual means, early/late diagnostics, validity counts and paired statistics are recomputed from saved values before display. Whole-window and new-run windowed image metrics come from the accepted hash-bound analysis; large PSF and residual-snapshot arrays are omitted and were not independently recomputed in this task.</p>
+        <p>The gain-0.3 delay-3/r2 record is completed attempt 2. Its interrupted first attempt remains in the prior failure history. No baseline was rerun. Neither gain is called optimal; this study establishes no stability boundary, hardware latency budget, temporal-error decomposition or on-sky validation. The recorded astronomical replay is separate and contains no frames from this study.</p>
+        <p><a href="#studies42-history">Earlier scientific qualifications remain in force</a>, including T1c/T4 failures, outcome I, N13/N14, C1's static scope with C3 untriggered, the detector-component meaning of about 0.0042 nm, production-EE50 sampling sensitivity, and photon-budget/latency failure records and corrections.</p>
+        <p>The methods download links the dated GL-R01 timing correction and GL-R02 preservation exception. The accepted cloud reports and their hashes are unchanged. The private evidence archive is identified by commits and hashes; it is not offered as a public download.</p>
+        <p id="gain42-identity" class="c1-ids"></p><div id="gain42-downloads" class="downloads"></div>
+      </div></details>
+    </div>
+  </section>
+  <details id="studies42-history" class="panel"><summary>How these experiments relate to the earlier 42 m results</summary><div class="prose">
+    <ul>
+      <li>The replay above is one recorded 1 s run. Its images and frames are not frames of the later experiments, which have their own durations and windows.</li>
+      <li>C1 keeps its restricted conclusion: at 10⁵ e⁻, a static prediction found the detector-noise benefit of the tested alternative damping below the threshold for a new experiment, so the production damping stays α 0.001. None of these later experiments compares dampings or shows that the damping must change, and the broader question of whether the 42 m reconstruction is adequately regularized remains open.</li>
+      <li>Earlier static solver checks keep their recorded outcomes. A full-command accuracy check of the production solver against a reference solution (T1c) and the one-shot cost of a much larger damping (T4) failed, so that static stage remained inconclusive (outcome I). A later dense-fill check (N13) remained unqualified; its prospectively amended version (N14) passed its pupil-space criteria while the original command-space criterion still fails.</li>
+      <li>The production EE50 remains a secondary, sampling-sensitive diagnostic; the Fourier-reference EE50 is the primary image width.</li>
+      <li>The 42 m profile is synthetic, derived from the historical 42 m design ledger. It is not a prediction for current 39 m ELT hardware.</li>
+      <li>The earlier failed or incomplete faint 1,000-frame attempts remain part of the record; the completed third attempt and the bright control are later, separate evidence.</li>
+    </ul>
+  </div></details>
 </section>
 
 <section id="aperture-comparison" class="wrap section" aria-labelledby="aperture-comparison-title">

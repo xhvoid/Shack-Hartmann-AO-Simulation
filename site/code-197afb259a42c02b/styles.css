@@ -356,3 +356,50 @@ tr.excluded th, tr.excluded td { color: var(--muted); font-style: italic; }
 .science-context canvas{display:block;width:100%;height:auto;max-width:1060px;border:1px solid var(--line);margin:12px auto}
 
 .science-grid canvas{image-rendering:pixelated}
+
+/* Later 42 m experiments: guide-star flux (flux42) and controller delay (delay42). */
+.studies42-kinds { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:8px 18px; margin:12px 0 0; font-size:13px; }
+.studies42-kinds div { border-left:3px solid var(--rule); padding:2px 0 2px 8px; min-width:0; }
+.studies42-kinds dt { font-weight:600; }
+.studies42-kinds dd { margin:2px 0 0; color:var(--muted); }
+.studies42-controls { display:flex; flex-wrap:wrap; gap:4px 28px; margin:10px 0 6px; }
+.studies42-controls .segmented { flex-wrap:wrap; gap:4px 14px; }
+.studies42-controls label { white-space:nowrap; }
+.studies42-chart { position:relative; }
+.studies42-tip { position:absolute; z-index:2; pointer-events:none; background:#fff; border:1px solid var(--rule); border-radius:4px; padding:4px 7px; font-size:12px; line-height:1.4; box-shadow:0 1px 4px rgba(0,0,0,.14); max-width:250px; }
+.studies42-inspect { display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; margin:10px 0 0; font-size:13px; }
+.studies42-inspect input[type=range] { width:min(380px,100%); }
+.studies42-readout { font:12px var(--mono); overflow-wrap:anywhere; flex-basis:100%; }
+.studies42-table { border-collapse:collapse; font-size:13px; margin:8px 0 12px; }
+.studies42-table caption { text-align:left; font-weight:600; margin-bottom:4px; }
+.studies42-table th, .studies42-table td { border-bottom:1px solid var(--rule); padding:4px 12px 4px 0; text-align:left; vertical-align:top; }
+.studies42-table td { font-family:var(--mono); font-size:12px; white-space:nowrap; }
+.studies42-table td.studies42-na { font-family:var(--sans); white-space:normal; color:var(--muted); max-width:52ch; }
+.studies42-note { border-left:3px solid #a3324e; background:#fbf6f3; padding:6px 14px; margin:14px 0; max-width:90ch; font-size:14px; }
+.studies42-note button { margin-left:6px; font-size:12px; }
+.studies42-dots-figure { margin:6px 0 4px; }
+.studies42-dots { max-width:760px; }
+.studies42-dots svg { display:block; max-width:100%; height:auto; background:#fff; border:1px solid var(--rule); border-radius:4px; }
+.studies42-dots .d42-tick { font:11px var(--mono); fill:var(--muted); }
+.studies42-dots .d42-label { font:600 12px var(--sans); fill:var(--ink); paint-order:stroke; stroke:#fff; stroke-width:4px; stroke-linejoin:round; }
+.studies42-dots .d42-point { font:11px var(--sans); fill:var(--ink); paint-order:stroke; stroke:#fff; stroke-width:3px; stroke-linejoin:round; }
+.studies42-psf { display:block; width:100%; max-width:900px; height:auto; border:1px solid var(--rule); }
+#studies42-history ul { padding-left:20px; }
+#delay42-records-body th { white-space:nowrap; }
+@media (max-width: 600px) { .studies42-controls label { white-space:normal; } .studies42-panel, .studies42-intro { scroll-margin-top:16px; } }
+
+/* Recorded gain and queue-delay comparison. */
+.gain42-plot { width:100%; margin:1rem 0; }
+.gain42-plot svg { display:block; max-width:100%; height:auto; }
+.gain42-controls { display:flex; flex-wrap:wrap; align-items:end; gap:1rem; margin:1rem 0; }
+.gain42-controls label { display:flex; flex-direction:column; gap:.35rem; }
+#gain42 select { max-width:100%; padding:.45rem; color:var(--ink); background:var(--panel); border:1px solid var(--rule); border-radius:4px; }
+#gain42 input[type=range] { display:block; width:100%; margin:.6rem 0; }
+#gain42 :is(a,button,input,select,summary):focus-visible { outline:3px solid #b3541e; outline-offset:4px; }
+#gain42-identity { overflow-wrap:anywhere; }
+@media(max-width:600px) { .gain42-controls { align-items:stretch; } .gain42-controls label { flex-basis:100%; } #gain42-metric { width:100%; } }
+
+#gain42 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+#gain42 .studies42-chart { position:relative; margin:1rem 0; }
+#gain42 .studies42-chart canvas { display:block; width:100%; }

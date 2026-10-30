@@ -1,0 +1,31 @@
+{
+  "schema": "ao-explorer.flux42-manifest.v1",
+  "id": "flux42-r2-6291ec4df9518975",
+  "files": {
+    "README.md": {
+      "bytes": 2017,
+      "sha256": "24318c0c501cbf30f3b55625344b48c813c820e707f6d50adee56764862e5637",
+      "media_type": "text/markdown"
+    },
+    "data.json": {
+      "bytes": 96216,
+      "sha256": "f25416136aa178c40b99220a7d39e101ae81a7e651d004c919430cea2814f55a",
+      "media_type": "application/json"
+    },
+    "exporter.py": {
+      "bytes": 60450,
+      "sha256": "1a5e77ccbb146c0a0060998611848a959fc4d2da5bff9a20480ef070a0900127",
+      "media_type": "text/plain"
+    },
+    "frames.csv": {
+      "bytes": 120795,
+      "sha256": "05f4ce7c3844c6d6284e86d8e41c16d149e0c4afea764ac9607180229569804f",
+      "media_type": "text/csv"
+    },
+    "provenance.json": {
+      "bytes": 8245,
+      "sha256": "73984668b5ff633fbc4de4fb2387ba68927af3198d54552e2290bf8b439772f3",
+      "media_type": "application/json"
+    }
+  }
+}

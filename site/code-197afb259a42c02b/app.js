@@ -25,6 +25,9 @@ import { renderResults, renderProjectEvidence, initNgs22 } from "./results.js";
 import { initNgsReplay, initNgsControl } from "./ngs-replay.js";
 import { initReplay42 } from "./replay42.js";
 import { initC1Noise } from "./c1-noise.js";
+import { initFlux42 } from "./flux42.js";
+import { initDelay42 } from "./delay42.js";
+import { initGain42 } from "./gain42.js";
 import { initDmStroke } from "./dm-stroke.js";
 import { initApertureComparison } from "./aperture.js";
 import { initGalaxy, showGalaxyCase } from "./galaxy.js";
@@ -878,6 +881,9 @@ async function start() {
     initApertureComparison(entry, galaxyEntryUrl);
     initDmStroke(entry, galaxyEntryUrl);
     initC1Noise(entry, galaxyEntryUrl);
+    initFlux42(entry, galaxyEntryUrl);
+    initDelay42(entry, galaxyEntryUrl);
+    initGain42(entry, galaxyEntryUrl);
     initNgs22(entry, galaxyEntryUrl);
     initNgsReplay(entry, galaxyEntryUrl);
     initNgsControl(entry, galaxyEntryUrl);
@@ -919,7 +925,7 @@ async function start() {
     }
     if (wantsResults()) await loadResults();
     // Restore a direct section link after the asynchronous 2 m tables settle.
-    if (location.hash === initialHash && ["#project", "#replay42", "#c1-noise", "#aperture-comparison", "#dm-stroke", "#elt-m4-stroke", "#ngs22", "#ngs22-replay", "#ngs22-control", "#evidence-2m", "#evidence-42m", "#evidence-ngs22", "#references", "#appendix", "#results"].includes(initialHash)) {
+    if (location.hash === initialHash && ["#project", "#replay42", "#c1-noise", "#studies42", "#flux42", "#delay42", "#flux42-methods", "#delay42-methods", "#gain42", "#gain42-table", "#gain42-late", "#gain42-methods", "#studies42-history","#aperture-comparison", "#dm-stroke", "#elt-m4-stroke", "#ngs22", "#ngs22-replay", "#ngs22-control", "#evidence-2m", "#evidence-42m", "#evidence-ngs22", "#references", "#appendix", "#results"].includes(initialHash)) {
       document.getElementById(initialHash.slice(1))?.scrollIntoView({ behavior: "instant", block: "start" });
     }
   } catch (error) {
