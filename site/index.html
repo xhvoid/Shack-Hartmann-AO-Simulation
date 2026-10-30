@@ -8,7 +8,7 @@
 <meta content="A personal adaptive-optics simulation: explore a 2 m loop, diagnose loss of lock, and compare gain and delay in a 42 m model." name="description"/>
 <link href="data:," rel="icon"/>
 
-<link href="code-bb965d79bb67eaa3/styles.css" rel="stylesheet"/>
+<link href="code-00399b6761b9b6dc/styles.css" rel="stylesheet"/>
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -18,7 +18,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script onerror="aoCodeUnavailable()" src="code-bb965d79bb67eaa3/app.js" type="module"></script>
+<script onerror="aoCodeUnavailable()" src="code-00399b6761b9b6dc/app.js" type="module"></script>
 </head>
 <body>
 <noscript><p class="wrap">The overview images are static. Enable JavaScript to open the recorded experiments and study views.</p></noscript><a class="skip" href="#main">Skip to content</a>
@@ -68,7 +68,7 @@ function aoCodeUnavailable() {
 <div class="error" hidden="" id="error" role="alert"></div>
 <section aria-labelledby="scenario-title" class="scenario-bar">
 <h2 id="scenario-title">Choose a saved run</h2>
-<p class="hint">Each button opens a saved run with one setting changed from the same baseline. The options cannot be combined.</p>
+<p class="hint">Each option opens a saved run with one setting changed from the same baseline. The options cannot be combined.</p>
 <div id="groups"><label for="case-picker">Recorded setting</label> <select disabled="" id="case-picker"><option>Loading…</option></select></div>
 <div aria-live="polite" class="case-summary" id="case-summary"></div>
 </section>
@@ -484,6 +484,7 @@ function aoCodeUnavailable() {
 <button disabled="" id="ngsc-loss">First rejection · 736</button>
 <button disabled="" id="ngsc-held">Queue drained · 738</button>
 </div>
+<button disabled="" id="ngsc-follow" type="button">Match displayed image frame</button>
 <p aria-live="off" class="readout" id="ngsc-readout"></p>
 <div class="ngsc-plots">
 <figure class="chart"><canvas aria-label="Valid measurement rows, original and revised" height="190" id="ngsc-valid" role="img" width="900"></canvas><figcaption>1 · Valid rows / 374 calibrated rows. Dashed horizontal line: unchanged 75% reconstruction gate.</figcaption></figure>
