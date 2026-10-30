@@ -1,0 +1,36 @@
+{
+  "scope": "Archived 2 m configuration; copied existing numeric records, not rerun tests",
+  "date": "2026-10-30",
+  "records": [
+    {
+      "file": "static-tilt.json",
+      "source_record": "b1_1_results.json",
+      "sha256": "b35233f8316d8d31dfc0ec3c679c5edf4a0609d9ef82ed9461dc5ddbc085732f",
+      "bytes": 22442
+    },
+    {
+      "file": "sensor-checks.json",
+      "source_record": "b1_2_results.json",
+      "sha256": "c7911512ae60565b1e5261c09c7b10bcf64a9427392bdd243a4b6b4a4a1af88a",
+      "bytes": 20005
+    },
+    {
+      "file": "spot-refinement.json",
+      "source_record": "b1_2r_results.json",
+      "sha256": "e6da4c39f6cba797cce69d0c303d1bc6207b6472079597ffeab31d2c8695891b",
+      "bytes": 32079
+    },
+    {
+      "file": "dm-fitting.json",
+      "source_record": "b1_4_results.json",
+      "sha256": "3c3768fb5e57cd3530f19624360d9d31e36ef15e4753913b0f4bcba84b4714ce",
+      "bytes": 69492
+    },
+    {
+      "file": "archive-replay.json",
+      "source_record": "b1_1_step5_results.json",
+      "sha256": "ab50949744e222144dfc5095f4bad6fb0188bcea03095e4d2ffdeafbb451a652",
+      "bytes": 10319
+    }
+  ]
+}

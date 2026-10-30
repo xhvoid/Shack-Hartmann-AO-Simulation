@@ -1,108 +1,76 @@
-# AO Explorer website
+# AO Explorer
 
-This branch contains the static [AO Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/).
-The Python simulation package is on `main`.
+The static [AO Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/)
+contains four main views: Overview, Explore the loop, Selected studies, and
+Methods & evidence. The core examples are the 2 m demonstration, the 2.2 m
+loss-of-lock investigation and the 42 m gain–delay comparison.
 
-## Preview
+The browser selects and replays saved values. It runs no optical simulation.
+The Python package and small runnable examples are on `main`.
+
+## Preview and publish
 
 ```bash
 python3 -m http.server 8000 --bind 127.0.0.1 --directory site
 ```
 
-Open `http://127.0.0.1:8000/`. No JavaScript dependencies or Python simulation
-are needed to serve the site.
-
-## Update and publish
-
-After editing the page or scripts, update the code identifier:
+Open `http://127.0.0.1:8000/`. There is no JavaScript dependency installation.
+After editing the HTML, scripts or styles:
 
 ```bash
 python3 tools/site_build.py --web-dir site --write
+python3 tools/check_bindings.py --web-dir site
 ```
 
-Commit changes to `website` with `[skip ci]`. On GitHub, open **Actions →
-Explorer Pages → Run workflow**, select `main`, and run it. That workflow
-checks out `website`, verifies the saved data bindings and publishes `site/`.
-It does not run simulations or the Python test suite.
+The build tool renames the code directory from its content hash and updates
+the HTML and data entry together. Do not rename a hashed bundle by hand.
+Commit to `website` with `[skip ci]`. Then open **Actions → Explorer Pages →
+Run workflow**, select `main`, and run it once. The manual workflow checks
+out `website`, verifies bundle bindings and publishes `site/`; it runs no
+simulation or general test suite.
 
-The recorded datasets include size and SHA-256 references. Preserve each
-complete dataset and its references when updating the site. Source links
-in the research panels point to the commits that produced those records.
+## Files and scientific records
 
-## Westerlund 2 F162M presentation
+- `site/index.html`: view structure and public text; earlier section anchors
+  still open the corresponding view.
+- `site/code-<hash>/`: browser modules and styles, including hash navigation.
+- `site/data/`, `site/derived/`, `site/recordings/`: compact saved datasets.
+- `site/evidence/`: a scoped numerical-check summary and unchanged numeric records.
+- `tools/`: publication checks and exporters needed for the retained studies.
+- `tests/`: focused saved-data exporter checks.
 
-The active image replay reuses the approved 4.109 arcsec source context and
-archived 2.2 m OPDs. It does not run an AO trajectory. The four science panels
-share the wavefront replay's clock, 159 saved image times, all 1500 Strehl
-measurements and the frame-736 first-rejection marker.
+Every active bundle retains its original scientific identity, member sizes,
+SHA-256 values and source references. Images, metrics and failed frames are
+not regenerated during presentation edits. The 2 m, 2.2 m and 42 m experiments
+have separate clocks. The 2.2 m replay updates its native telemetry cursor at
+exact saved image times; telemetry can also be inspected between snapshots.
 
-Use `tools/westerlund_scene.py --help` with the archived simulation checkout
-and the approved static-preview directory, then `tools/westerlund_mp4.py
---ffmpeg /path/to/ffmpeg`. Use two native numerical threads. The renderer
-verifies original input hashes and agreement with the accepted static images.
-The bundle includes methods, single-band and saturation limitations, source
-quality provenance, sensitivity results and the original static figures.
+Superseded Orion/NGC 602 illustrations and the old 180-frame demo are no longer
+in the current tree. Their complete bytes were preserved locally before
+removal and remain in Git history. The selected Westerlund 2 example retains
+the JWST source PSF and noise: it shows additional simulated blur, not a
+prediction of an actual observation.
 
-After changing the page, restamp and publish as described above. Previous
-Orion F164N and NGC 602 bundles remain available at their immutable URLs.
+## Recompute saved-data summaries
 
-## 42 m guide-flux and controller-delay records
-
-Two later 42 m experiments are shown after the C1 panel, each from its own
-bundle: `derived/flux42-r2-<id>/` (two 1000-frame r2 runs at 100000 and 1000
-detected e⁻ per fully illuminated subaperture per frame) and
-`derived/delay42-<id>/` (nine 500-frame records, delays 1, 2 and 3 frames in
-realizations r0–r2; delay 2 reuses the photon-budget baselines and delay 3 in
-r2 is the accepted second attempt). The exporter reads only the extracted
-compact evidence packages and needs NumPy; it builds no AO model:
+The 42 m exporters read compact evidence packages; they do not create an AO
+model. See [gain-study methods](tools/gain42_notes/README.md) and the
+[dated corrections](tools/gain42_notes/CORRECTIONS.md).
 
 ```bash
-python tools/export_42m_studies.py --flux-root /path/to/bright-control/compact --delay-root /path/to/latency/compact --web-dir site --write
-python tools/site_build.py --web-dir site --write
-python tools/check_bindings.py --web-dir site
+python tools/export_gain42.py --validate-bundle site/derived/gain42-2a47efeb7c51bd13
 ```
 
-Every consumed file must match its package listing, the analysis records must
-carry their accepted SHA-256 and every exported summary must match the
-accepted values; otherwise nothing is written. A bundle identifier names the
-generated display files; the scientific source identities are in its
-`provenance.json`. Refusal tests: `python -m pytest tests/test_export_42m_studies.py`
-(set `STUDIES42_FLUX_ROOT` and `STUDIES42_DELAY_ROOT` to include the
-real-evidence check).
+To export again from the original evidence archives, use
+`tools/export_gain42.py --help` or `tools/export_42m_studies.py --help`.
+NumPy is required. Every input must match its recorded identity; image metrics
+come from the pinned analysis, while scalar summaries and paired intervals
+are recomputed. Full-precision PSFs and original run archives are not bundled.
 
-Copy decision for the delay study: the frozen study reports keep their text
-and hashes. The page and bundle apply the review corrections LAT-R01 (the r2
-excursion is described observationally, with no proven atmospheric cause),
-LAT-R02 (r2's similar whole-window Strehl does not measure the excursion's
-image effect), LAT-R03 (frame 338 → 344 span, second rise without a
-simultaneous validity drop, partial validity recovery, 137 frames below 0.995)
-and LAT-R04 (the ≈2.3 ratio is tied to mean-image Strehl, the three
-realizations and gain 0.3).
+The Westerlund 2 renderer (`tools/westerlund_scene.py`) similarly requires the
+original OPD archive and retained calibrated cutout. `tools/westerlund_mp4.py`
+encodes its saved frames. Serving or rebuilding the page requires neither.
 
-
-## Integrator gain and controller delay
-
-The gain view extends the earlier 42 m displays with six new gain-0.2 records
-and six accepted gain-0.3 baselines. It preserves the existing recordings and
-Westerlund 2 replay. It selects saved configurations; it does not simulate or
-interpolate gains. Read [methods and limits](tools/gain42_notes/README.md) and
-the dated [GL-R01 / GL-R02 corrections](tools/gain42_notes/CORRECTIONS.md).
-The accepted cloud reports, archives and hashes are unchanged.
-
-The dedicated saved-data exporter needs NumPy. With native thread limits set
-to 2 and AO_RESOURCE_GUARD=0:
-
-```bash
-python tools/export_gain42.py --compact-root /path/to/accepted/compact --web-dir site --write
-python tools/site_build.py --web-dir site --write
-python tools/check_bindings.py --web-dir site
-```
-
-Run only the focused tests when changing this exporter or its bindings:
-`GAIN42_REAL_BUNDLE=/path/to/gain42-bundle python -m pytest tests/test_gain42.py`.
-Use `tools/export_gain42.py --validate-bundle /path/to/gain42-bundle` to validate
-an existing bundle offline. These commands read saved records; they construct
-no optical model. Image metrics are hash-bound accepted-analysis values;
-residual summaries, validity statistics and paired intervals are recomputed.
-Only new runs have windowed image summaries. The reused delay-3/r2 baseline is
-completed attempt 2, with its interrupted first attempt retained in history.
+Run only checks affected by an exporter change, for example
+`python -m pytest tests/test_gain42.py`. No routine edit calls for full
+scientific simulations or general CI.

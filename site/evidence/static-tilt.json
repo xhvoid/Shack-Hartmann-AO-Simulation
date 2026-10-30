@@ -1,0 +1,620 @@
+{
+ "B1-1": {
+  "kappa": 2.83068275997066,
+  "step1/kappa_tilt": {
+   "x": {
+    "100": 0.3415167638722173,
+    "200": 0.34294646904277915,
+    "25": 0.3410592550321455,
+    "400": 0.34816496737883523,
+    "50": 0.3411511696808003
+   },
+   "y": {
+    "100": 0.3419191987334028,
+    "200": 0.3433263697824948,
+    "25": 0.34146887165357714,
+    "400": 0.3484613402958052,
+    "50": 0.34155934458417636
+   }
+  },
+  "step1/x+100": {
+   "max_abs_command_m": 7.492458166117456e-08,
+   "ratio": 0.34157235976595485,
+   "residual_detilted_rms_over_input": 0.18017062902860334,
+   "residual_rms_over_input": 0.6826335055438841,
+   "residual_slope_norm_over_m": 0.8436392597272653
+  },
+  "step1/x+200": {
+   "max_abs_command_m": 1.5033861260790456e-07,
+   "ratio": 0.34305498634120335,
+   "residual_detilted_rms_over_input": 0.18071849853620559,
+   "residual_rms_over_input": 0.681348690334956,
+   "residual_slope_norm_over_m": 0.8433630322694899
+  },
+  "step1/x+25": {
+   "max_abs_command_m": 1.871093025592715e-08,
+   "ratio": 0.34107325960305523,
+   "residual_detilted_rms_over_input": 0.17998953169317988,
+   "residual_rms_over_input": 0.6830671727684817,
+   "residual_slope_norm_over_m": 0.8437312130285486
+  },
+  "step1/x+400": {
+   "max_abs_command_m": 3.042184502981985e-07,
+   "ratio": 0.348361483039959,
+   "residual_detilted_rms_over_input": 0.18269540482149274,
+   "residual_rms_over_input": 0.6767647612566114,
+   "residual_slope_norm_over_m": 0.8423760986793951
+  },
+  "step1/x+50": {
+   "max_abs_command_m": 3.7430348573757874e-08,
+   "ratio": 0.3411791364979134,
+   "residual_detilted_rms_over_input": 0.18002724134964365,
+   "residual_rms_over_input": 0.682974978671232,
+   "residual_slope_norm_over_m": 0.84371195919015
+  },
+  "step1/x-100": {
+   "max_abs_command_m": 7.491004229566399e-08,
+   "ratio": 0.34146116797847975,
+   "residual_detilted_rms_over_input": 0.18014418371874966,
+   "residual_rms_over_input": 0.6827337731723491,
+   "residual_slope_norm_over_m": 0.8436547238799045
+  },
+  "step1/x-200": {
+   "max_abs_command_m": 1.50277310116453e-07,
+   "ratio": 0.342837951744355,
+   "residual_detilted_rms_over_input": 0.18066658292206536,
+   "residual_rms_over_input": 0.6815441827520636,
+   "residual_slope_norm_over_m": 0.8433936526184996
+  },
+  "step1/x-25": {
+   "max_abs_command_m": 1.8710016396081806e-08,
+   "ratio": 0.3410452504612358,
+   "residual_detilted_rms_over_input": 0.17998288232672802,
+   "residual_rms_over_input": 0.6830924391183232,
+   "residual_slope_norm_over_m": 0.84373509090432
+  },
+  "step1/x-400": {
+   "max_abs_command_m": 3.039422219615424e-07,
+   "ratio": 0.34796845171771146,
+   "residual_detilted_rms_over_input": 0.18259936269061103,
+   "residual_rms_over_input": 0.677117291193378,
+   "residual_slope_norm_over_m": 0.8424347596433154
+  },
+  "step1/x-50": {
+   "max_abs_command_m": 3.742669726138228e-08,
+   "ratio": 0.34112320286368714,
+   "residual_detilted_rms_over_input": 0.18001395782755403,
+   "residual_rms_over_input": 0.6830254314060267,
+   "residual_slope_norm_over_m": 0.8437197102221239
+  },
+  "step1/x/amplitude_scaling_spread": 0.0072882234369037735,
+  "step1/x/ratios_minus": [
+   0.3410452504612358,
+   0.34112320286368714,
+   0.34146116797847975,
+   0.342837951744355,
+   0.34796845171771146
+  ],
+  "step1/x/ratios_plus": [
+   0.34107325960305523,
+   0.3411791364979134,
+   0.34157235976595485,
+   0.34305498634120335,
+   0.348361483039959
+  ],
+  "step1/x/sign_reversal_max_difference": 0.0003930313222475501,
+  "step1/xy_symmetry_difference": {
+   "100": 0.00040243486118551886,
+   "200": 0.0003799007397156662,
+   "25": 0.0004096166214316299,
+   "400": 0.00029637291696998913,
+   "50": 0.00040817490337607953
+  },
+  "step1/y+100": {
+   "max_abs_command_m": 7.501531605744855e-08,
+   "ratio": 0.3419114440483555,
+   "residual_detilted_rms_over_input": 0.18027603697405345,
+   "residual_rms_over_input": 0.6823344751166772,
+   "residual_slope_norm_over_m": 0.8435753683174192
+  },
+  "step1/y+200": {
+   "max_abs_command_m": 1.505033634413797e-07,
+   "ratio": 0.3433101162628121,
+   "residual_detilted_rms_over_input": 0.18081500832775238,
+   "residual_rms_over_input": 0.6811284730599616,
+   "residual_slope_norm_over_m": 0.8432957667496943
+  },
+  "step1/y+25": {
+   "max_abs_command_m": 1.8734791592686087e-08,
+   "ratio": 0.34146696293440415,
+   "residual_detilted_rms_over_input": 0.18009878792578518,
+   "residual_rms_over_input": 0.6827164016447546,
+   "residual_slope_norm_over_m": 0.8436694325121561
+  },
+  "step1/y+400": {
+   "max_abs_command_m": 3.044434742314159e-07,
+   "ratio": 0.3484235323151814,
+   "residual_detilted_rms_over_input": 0.18276085459635105,
+   "residual_rms_over_input": 0.6767227930655043,
+   "residual_slope_norm_over_m": 0.8423020252941502
+  },
+  "step1/y+50": {
+   "max_abs_command_m": 3.7477286057798336e-08,
+   "ratio": 0.3415555150967762,
+   "residual_detilted_rms_over_input": 0.18013547385560444,
+   "residual_rms_over_input": 0.6826406633739461,
+   "residual_slope_norm_over_m": 0.8436495326914211
+  },
+  "step1/y-100": {
+   "max_abs_command_m": 7.501332604347699e-08,
+   "ratio": 0.34192695341845014,
+   "residual_detilted_rms_over_input": 0.1802549622787557,
+   "residual_rms_over_input": 0.6823139738912871,
+   "residual_slope_norm_over_m": 0.8435949525137895
+  },
+  "step1/y-200": {
+   "max_abs_command_m": 1.5049635559868804e-07,
+   "ratio": 0.3433426233021775,
+   "residual_detilted_rms_over_input": 0.18077478250902876,
+   "residual_rms_over_input": 0.6810865021311572,
+   "residual_slope_norm_over_m": 0.8433335327447881
+  },
+  "step1/y-25": {
+   "max_abs_command_m": 1.8734662468457428e-08,
+   "ratio": 0.34147078037275014,
+   "residual_detilted_rms_over_input": 0.18009344285728446,
+   "residual_rms_over_input": 0.682711315729704,
+   "residual_slope_norm_over_m": 0.8436743844262581
+  },
+  "step1/y-400": {
+   "max_abs_command_m": 3.0442949898669075e-07,
+   "ratio": 0.3484991482764291,
+   "residual_detilted_rms_over_input": 0.1826948494726024,
+   "residual_rms_over_input": 0.6766322399073629,
+   "residual_slope_norm_over_m": 0.8423671391540836
+  },
+  "step1/y-50": {
+   "max_abs_command_m": 3.7476773374797503e-08,
+   "ratio": 0.3415631740715766,
+   "residual_detilted_rms_over_input": 0.18012481437298597,
+   "residual_rms_over_input": 0.6826304756665249,
+   "residual_slope_norm_over_m": 0.8436594140899691
+  },
+  "step1/y/amplitude_scaling_spread": 0.006956569380777267,
+  "step1/y/ratios_minus": [
+   0.34147078037275014,
+   0.3415631740715766,
+   0.34192695341845014,
+   0.3433426233021775,
+   0.3484991482764291
+  ],
+  "step1/y/ratios_plus": [
+   0.34146696293440415,
+   0.3415555150967762,
+   0.3419114440483555,
+   0.3433101162628121,
+   0.3484235323151814
+  ],
+  "step1/y/sign_reversal_max_difference": 7.56159612476659e-05,
+  "step2/D_relative_error": 2.220446049250313e-16,
+  "step2/amplitude_refinement/q_error_vs_scale": {
+   "1e-08": 1.560998754523717e-05,
+   "2.5e-09": 2.468540140760087e-05,
+   "2e-08": 3.978492058754436e-05,
+   "5e-08": 0.0002879538317221887,
+   "5e-09": 2.2643951001002126e-05
+  },
+  "step2/mutant_m1_separation_in_tolerances": 35883501.12692401,
+  "step2/round_trip/1e-08/pupil_fit/x": {
+   "m_error": 0.00012921967143337979,
+   "q_error": 1.560998754523717e-05
+  },
+  "step2/round_trip/1e-08/pupil_fit/y": {
+   "m_error": 0.00012257723162935544,
+   "q_error": 2.2924265354023012e-05
+  },
+  "step2/round_trip/1e-08/random/0": {
+   "m_error": 0.0001265358983560253,
+   "q_error": 4.244629222399896e-05
+  },
+  "step2/round_trip/1e-08/random/1": {
+   "m_error": 7.871853590872467e-05,
+   "q_error": 3.7832072362619714e-05
+  },
+  "step2/round_trip/1e-08/random/2": {
+   "m_error": 9.517259714385341e-05,
+   "q_error": 3.609386728733242e-05
+  },
+  "step2/round_trip/1e-08/unit/actuator-r0000-c0002": {
+   "m_error": 2.840399000558139e-05,
+   "q_error": 2.4139120724299288e-05
+  },
+  "step2/round_trip/1e-08/unit/actuator-r0001-c0001": {
+   "m_error": 5.6689596745622696e-05,
+   "q_error": 1.2276681933082606e-05
+  },
+  "step2/round_trip/1e-08/unit/actuator-r0001-c0002": {
+   "m_error": 4.260415388683586e-05,
+   "q_error": 2.0304728424548704e-05
+  },
+  "step2/round_trip/1e-08/unit/actuator-r0001-c0003": {
+   "m_error": 0.00035416777427660476,
+   "q_error": 9.763887478516025e-05
+  },
+  "step2/round_trip/1e-08/unit/actuator-r0002-c0000": {
+   "m_error": 1.8808409198675534e-05,
+   "q_error": 8.376756221509238e-06
+  },
+  "step2/round_trip/1e-08/unit/actuator-r0002-c0001": {
+   "m_error": 2.7690031161369892e-05,
+   "q_error": 8.755649356363463e-06
+  },
+  "step2/round_trip/1e-08/unit/actuator-r0002-c0002": {
+   "m_error": 0.00010853062662932668,
+   "q_error": 1.838252447357282e-05
+  },
+  "step2/round_trip/1e-08/unit/actuator-r0002-c0003": {
+   "m_error": 0.00010223614459004946,
+   "q_error": 4.117882349255235e-05
+  },
+  "step2/round_trip/1e-08/unit/actuator-r0002-c0004": {
+   "m_error": 5.369510492030739e-05,
+   "q_error": 4.0689488455694115e-05
+  },
+  "step2/round_trip/1e-08/unit/actuator-r0003-c0001": {
+   "m_error": 7.767901561601956e-05,
+   "q_error": 3.17918312220775e-05
+  },
+  "step2/round_trip/1e-08/unit/actuator-r0003-c0002": {
+   "m_error": 8.138846206972793e-05,
+   "q_error": 4.1004201665493274e-05
+  },
+  "step2/round_trip/1e-08/unit/actuator-r0003-c0003": {
+   "m_error": 5.677532444989934e-05,
+   "q_error": 1.574779829689529e-05
+  },
+  "step2/round_trip/1e-08/unit/actuator-r0004-c0002": {
+   "m_error": 9.150206825700448e-05,
+   "q_error": 5.801160172702406e-05
+  },
+  "step2/round_trip/1e-08/worst": {
+   "bound": 0.002,
+   "m": 0.00035416777427660476,
+   "q": 9.763887478516025e-05
+  },
+  "step2/round_trip/5e-08/pupil_fit/x": {
+   "m_error": 0.0006866466201974625,
+   "q_error": 0.0002879538317221887
+  },
+  "step2/round_trip/5e-08/pupil_fit/y": {
+   "m_error": 0.0007023275571698284,
+   "q_error": 0.00029409738787398597
+  },
+  "step2/round_trip/5e-08/random/0": {
+   "m_error": 0.0014062820149440972,
+   "q_error": 0.0006287515452054308
+  },
+  "step2/round_trip/5e-08/random/1": {
+   "m_error": 0.0009491232777711178,
+   "q_error": 0.0003783198556679958
+  },
+  "step2/round_trip/5e-08/random/2": {
+   "m_error": 0.0005401989553673433,
+   "q_error": 0.000658510830818727
+  },
+  "step2/round_trip/5e-08/unit/actuator-r0000-c0002": {
+   "m_error": 0.0011181392575235899,
+   "q_error": 0.000644173898486845
+  },
+  "step2/round_trip/5e-08/unit/actuator-r0001-c0001": {
+   "m_error": 0.0002864263414824013,
+   "q_error": 0.00012875888038961722
+  },
+  "step2/round_trip/5e-08/unit/actuator-r0001-c0002": {
+   "m_error": 0.001156789795972041,
+   "q_error": 0.0005447294558823492
+  },
+  "step2/round_trip/5e-08/unit/actuator-r0001-c0003": {
+   "m_error": 0.0020621159144323217,
+   "q_error": 0.0005641026709491809
+  },
+  "step2/round_trip/5e-08/unit/actuator-r0002-c0000": {
+   "m_error": 0.001258984280423065,
+   "q_error": 0.0007745939070124468
+  },
+  "step2/round_trip/5e-08/unit/actuator-r0002-c0001": {
+   "m_error": 0.0009878908532597959,
+   "q_error": 0.0004997969412479313
+  },
+  "step2/round_trip/5e-08/unit/actuator-r0002-c0002": {
+   "m_error": 0.0006096242647381844,
+   "q_error": 0.0003816186648444193
+  },
+  "step2/round_trip/5e-08/unit/actuator-r0002-c0003": {
+   "m_error": 0.0008602277442127656,
+   "q_error": 0.0005367745238817525
+  },
+  "step2/round_trip/5e-08/unit/actuator-r0002-c0004": {
+   "m_error": 0.0014369213009971205,
+   "q_error": 0.0009465241180073421
+  },
+  "step2/round_trip/5e-08/unit/actuator-r0003-c0001": {
+   "m_error": 0.00033985372512438766,
+   "q_error": 0.00010023241303381762
+  },
+  "step2/round_trip/5e-08/unit/actuator-r0003-c0002": {
+   "m_error": 0.0006515599590795373,
+   "q_error": 0.00039281385824782784
+  },
+  "step2/round_trip/5e-08/unit/actuator-r0003-c0003": {
+   "m_error": 0.0004626954812809381,
+   "q_error": 0.0002084242328987238
+  },
+  "step2/round_trip/5e-08/unit/actuator-r0004-c0002": {
+   "m_error": 0.0016011137948753979,
+   "q_error": 0.0010199529164775555
+  },
+  "step2/round_trip/5e-08/worst": {
+   "bound": 0.01,
+   "m": 0.0020621159144323217,
+   "q": 0.0010199529164775555
+  },
+  "step3/x": {
+   "fraction_of_m2_outside_range_A": 0.7112612041987886,
+   "mutant_m2_separation_in_tolerances": 744858887.3446617,
+   "orthogonality": 6.740499651285796e-16,
+   "pupil": {
+    "max_abs_command_m": 2.617219279393201e-07,
+    "plane_coefficient_ratio": 0.860735271468622,
+    "residual_detilted_rms_over_input": 0.34622256413824265,
+    "residual_rms_over_input": 0.3731818973789833,
+    "residual_slope_norm_over_m": 1.1842227279583246
+   },
+   "q_prod_vs_q_wfs": 0.0,
+   "wfs": {
+    "max_abs_command_m": 1.5033861260790456e-07,
+    "plane_coefficient_ratio": 0.34305498634120335,
+    "residual_detilted_rms_over_input": 0.18071849853620559,
+    "residual_rms_over_input": 0.681348690334956,
+    "residual_slope_norm_over_m": 0.8433630322694899
+   }
+  },
+  "step3/y": {
+   "fraction_of_m2_outside_range_A": 0.7111477502179548,
+   "mutant_m2_separation_in_tolerances": 253641613.7667049,
+   "orthogonality": 1.40610842557372e-15,
+   "pupil": {
+    "max_abs_command_m": 2.617219279393199e-07,
+    "plane_coefficient_ratio": 0.8607352714686223,
+    "residual_detilted_rms_over_input": 0.34622256413824265,
+    "residual_rms_over_input": 0.37318189737898333,
+    "residual_slope_norm_over_m": 1.1838012636141053
+   },
+   "q_prod_vs_q_wfs": 0.0,
+   "wfs": {
+    "max_abs_command_m": 1.505033634413797e-07,
+    "plane_coefficient_ratio": 0.3433101162628121,
+    "residual_detilted_rms_over_input": 0.18081500832775238,
+    "residual_rms_over_input": 0.6811284730599616,
+    "residual_slope_norm_over_m": 0.8432957667496943
+   }
+  },
+  "step4/mutants": {
+   "m3_separation_in_tolerances": 101268555.55584551,
+   "m4_separation_in_tolerances": 97828908.62259988
+  },
+  "step4/representable/g0.1_l0.02_L2": {
+   "4a_assembly_error": 2.042263871926024e-15,
+   "4b_affine_expected_leak_fraction": 0.16666666666666666,
+   "4b_affine_oracle_vs_closed_form": 8.438881529653992e-16,
+   "4b_full_minus_linear": {
+    "residual_detilted_rms_over_input": 0.0012240481921921148,
+    "residual_plane_coefficient_over_input": 0.0033205369694475073,
+    "residual_rms_over_input": 0.0033147123899201214
+   },
+   "equilibrium": {
+    "affine": {
+     "frames_to_5pct_of_equilibrium": 29,
+     "reconstructed_residual_vs_leak_relation": 7.836104277535851e-16,
+     "residual_detilted_rms_over_input": 0.060966603289061755,
+     "residual_plane_coefficient_over_input": 0.16332916092330593,
+     "residual_rms_over_input": 0.1633349860230477
+    },
+    "full": {
+     "frames_to_5pct_of_equilibrium": 29,
+     "reconstructed_residual_vs_leak_relation": 3.2613619085871334e-15,
+     "residual_detilted_rms_over_input": 0.06219065148125387,
+     "residual_plane_coefficient_over_input": 0.16664969789275344,
+     "residual_rms_over_input": 0.1666496984129678
+    }
+   }
+  },
+  "step4/representable/g0.2_l0.02_L2": {
+   "4a_assembly_error": 3.2178999844067384e-15,
+   "4b_affine_expected_leak_fraction": 0.09090909090909091,
+   "4b_affine_oracle_vs_closed_form": 7.179858014609701e-16,
+   "4b_full_minus_linear": {
+    "residual_detilted_rms_over_input": 0.0013240404289826604,
+    "residual_plane_coefficient_over_input": 0.0036381666067969304,
+    "residual_rms_over_input": 0.003625192986017642
+   },
+   "equilibrium": {
+    "affine": {
+     "frames_to_5pct_of_equilibrium": 8,
+     "reconstructed_residual_vs_leak_relation": 2.762729072208151e-16,
+     "residual_detilted_rms_over_input": 0.03260056095811171,
+     "residual_plane_coefficient_over_input": 0.08726817555269695,
+     "residual_rms_over_input": 0.08728114925074033
+    },
+    "full": {
+     "frames_to_5pct_of_equilibrium": 8,
+     "reconstructed_residual_vs_leak_relation": 2.0616037553683483e-15,
+     "residual_detilted_rms_over_input": 0.03392460138709437,
+     "residual_plane_coefficient_over_input": 0.09090634215949388,
+     "residual_rms_over_input": 0.09090634223675798
+    }
+   }
+  },
+  "step4/representable/g0.2_l0.02_L4": {
+   "4a_assembly_error": 3.691852375986834e-15,
+   "4b_affine_expected_leak_fraction": 0.09090909090909091,
+   "4b_affine_oracle_vs_closed_form": 8.840733031066086e-16,
+   "4b_full_minus_linear": {
+    "residual_detilted_rms_over_input": 0.0013240404289827298,
+    "residual_plane_coefficient_over_input": 0.003638166606797069,
+    "residual_rms_over_input": 0.0036251929860178084
+   },
+   "equilibrium": {
+    "affine": {
+     "frames_to_5pct_of_equilibrium": 30,
+     "reconstructed_residual_vs_leak_relation": 5.249185237195484e-16,
+     "residual_detilted_rms_over_input": 0.032600560958116295,
+     "residual_plane_coefficient_over_input": 0.08726817555270928,
+     "residual_rms_over_input": 0.08728114925075263
+    },
+    "full": {
+     "frames_to_5pct_of_equilibrium": 40,
+     "reconstructed_residual_vs_leak_relation": 2.656376033079559e-15,
+     "residual_detilted_rms_over_input": 0.033924601387099025,
+     "residual_plane_coefficient_over_input": 0.09090634215950635,
+     "residual_rms_over_input": 0.09090634223677044
+    }
+   }
+  },
+  "step4/representable/g0.3_l0.02_L2": {
+   "4a_assembly_error": 4.211130853651711e-15,
+   "4b_affine_expected_leak_fraction": 0.0625,
+   "4b_affine_oracle_vs_closed_form": 7.791890147497668e-16,
+   "4b_full_minus_linear": {
+    "residual_detilted_rms_over_input": 0.0013477850791071833,
+    "residual_plane_coefficient_over_input": 0.003753990985584356,
+    "residual_rms_over_input": 0.0037334968104456648
+   },
+   "equilibrium": {
+    "affine": {
+     "frames_to_5pct_of_equilibrium": 25,
+     "reconstructed_residual_vs_leak_relation": 3.281787261532106e-16,
+     "residual_detilted_rms_over_input": 0.021975821211225204,
+     "residual_plane_coefficient_over_input": 0.0587453060387187,
+     "residual_rms_over_input": 0.05876580023858119
+    },
+    "full": {
+     "frames_to_5pct_of_equilibrium": 25,
+     "reconstructed_residual_vs_leak_relation": 4.0901690995727665e-15,
+     "residual_detilted_rms_over_input": 0.023323606290332387,
+     "residual_plane_coefficient_over_input": 0.062499297024303055,
+     "residual_rms_over_input": 0.062499297049026854
+    }
+   }
+  },
+  "step4/tilt/g0.1_l0.02_L2": {
+   "4a_assembly_error": 4.028505994661066e-15,
+   "4b_affine_expected_tilt_residual": 0.714120844715664,
+   "4b_affine_oracle_vs_closed_form": 1.4789690073444463e-15,
+   "4b_full_minus_linear": {
+    "residual_detilted_rms_over_input": -0.0005247412786223982,
+    "residual_plane_coefficient_over_input": 0.0011579244326412885,
+    "residual_rms_over_input": 0.001025112956315577
+   },
+   "equilibrium": {
+    "affine": {
+     "frames_to_5pct_of_equilibrium": 15,
+     "reconstructed_residual_vs_leak_relation": 1.4789690073444475e-15,
+     "residual_detilted_rms_over_input": 0.15059874878017115,
+     "residual_plane_coefficient_over_input": 0.7141208447156638,
+     "residual_rms_over_input": 0.7298278161113867
+    },
+    "full": {
+     "frames_to_5pct_of_equilibrium": 15,
+     "reconstructed_residual_vs_leak_relation": 5.565699071571211e-15,
+     "residual_detilted_rms_over_input": 0.15007400750154876,
+     "residual_plane_coefficient_over_input": 0.7152787691483051,
+     "residual_rms_over_input": 0.7308529290677023
+    }
+   }
+  },
+  "step4/tilt/g0.2_l0.02_L2": {
+   "4a_assembly_error": 5.544094173933945e-15,
+   "4b_affine_expected_tilt_residual": 0.688131830598906,
+   "4b_affine_oracle_vs_closed_form": 9.68372564332673e-16,
+   "4b_full_minus_linear": {
+    "residual_detilted_rms_over_input": -0.0005982897179297453,
+    "residual_plane_coefficient_over_input": 0.0013377672411479802,
+    "residual_rms_over_input": 0.001162823700771587
+   },
+   "equilibrium": {
+    "affine": {
+     "frames_to_5pct_of_equilibrium": 7,
+     "reconstructed_residual_vs_leak_relation": 6.052328527079207e-16,
+     "residual_detilted_rms_over_input": 0.16428954412382318,
+     "residual_plane_coefficient_over_input": 0.6881318305989064,
+     "residual_rms_over_input": 0.707471951698743
+    },
+    "full": {
+     "frames_to_5pct_of_equilibrium": 7,
+     "reconstructed_residual_vs_leak_relation": 2.7721601220666204e-15,
+     "residual_detilted_rms_over_input": 0.16369125440589344,
+     "residual_plane_coefficient_over_input": 0.6894695978400543,
+     "residual_rms_over_input": 0.7086347753995146
+    }
+   }
+  },
+  "step4/tilt/g0.2_l0.02_L4": {
+   "4a_assembly_error": 4.552515360184199e-15,
+   "4b_affine_expected_tilt_residual": 0.688131830598906,
+   "4b_affine_oracle_vs_closed_form": 5.810235385996037e-16,
+   "4b_full_minus_linear": {
+    "residual_detilted_rms_over_input": -0.0005982897179292734,
+    "residual_plane_coefficient_over_input": 0.0013377672411462038,
+    "residual_rms_over_input": 0.0011628237007694775
+   },
+   "equilibrium": {
+    "affine": {
+     "frames_to_5pct_of_equilibrium": 9,
+     "reconstructed_residual_vs_leak_relation": 2.299884840290099e-16,
+     "residual_detilted_rms_over_input": 0.16428954412382096,
+     "residual_plane_coefficient_over_input": 0.6881318305989104,
+     "residual_rms_over_input": 0.7074719516987469
+    },
+    "full": {
+     "frames_to_5pct_of_equilibrium": 9,
+     "reconstructed_residual_vs_leak_relation": 9.638317769196195e-15,
+     "residual_detilted_rms_over_input": 0.1636912544058917,
+     "residual_plane_coefficient_over_input": 0.6894695978400566,
+     "residual_rms_over_input": 0.7086347753995164
+    }
+   }
+  },
+  "step4/tilt/g0.3_l0.02_L2": {
+   "4a_assembly_error": 7.125389115852129e-15,
+   "4b_affine_expected_tilt_residual": 0.6783859503051218,
+   "4b_affine_oracle_vs_closed_form": 5.410873405156191e-16,
+   "4b_full_minus_linear": {
+    "residual_detilted_rms_over_input": -0.0006270438351984597,
+    "residual_plane_coefficient_over_input": 0.0014080645931093816,
+    "residual_rms_over_input": 0.001214813537637971
+   },
+   "equilibrium": {
+    "affine": {
+     "frames_to_5pct_of_equilibrium": 5,
+     "reconstructed_residual_vs_leak_relation": 1.2911634191102305e-16,
+     "residual_detilted_rms_over_input": 0.16942359237769267,
+     "residual_plane_coefficient_over_input": 0.678385950305122,
+     "residual_rms_over_input": 0.6992223887322215
+    },
+    "full": {
+     "frames_to_5pct_of_equilibrium": 5,
+     "reconstructed_residual_vs_leak_relation": 6.73714446827977e-15,
+     "residual_detilted_rms_over_input": 0.1687965485424942,
+     "residual_plane_coefficient_over_input": 0.6797940148982314,
+     "residual_rms_over_input": 0.7004372022698595
+    }
+   }
+  }
+ },
+ "session": {
+  "exit_status": 0,
+  "peak_rss_bytes": 188579840,
+  "wall_s": 36.5312972497195
+ }
+}
