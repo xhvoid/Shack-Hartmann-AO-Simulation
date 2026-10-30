@@ -11,7 +11,7 @@ export function initNgsReplay(entry, entryUrl) {
   let data,manifest,base,science,scienceManifest,scienceBase,scienceReference,referenceMode=0,loading,index=0,requested=-1,ticket=0,playing=false,timer=null,busy=false,failed=false;
   let duration=matchMedia('(prefers-reduced-motion: reduce)').matches?60:40;
   const cache=new Map(),scienceCache=new Map();
-  const scienceFile=name=>{require(scienceManifest.files[name],`F164N science member missing: ${name}`);return {href:name,...scienceManifest.files[name]};};
+  const scienceFile=name=>{require(scienceManifest.files[name],`F162M science member missing: ${name}`);return {href:name,...scienceManifest.files[name]};};
   const file=name=>{require(manifest.files[name],`Replay member missing: ${name}`);return {href:name,...manifest.files[name]};};
   function pause(){playing=false;clearTimeout(timer);$('play').textContent='Play';$('play').setAttribute('aria-pressed','false');$('science-play').textContent='Play';$('science-play').setAttribute('aria-pressed','false');}
   function fail(error){
@@ -39,41 +39,47 @@ export function initNgsReplay(entry, entryUrl) {
     if(!scienceCache.has(k)){
       const item={};
       item.promise=fetchVerifiedImage(scienceFile(`frames/${String(k).padStart(4,'0')}.webp`),scienceBase,{expectType:'image/webp'}).then(({bitmap})=>{
-        require(bitmap.width===science.atlas[0]&&bitmap.height===science.atlas[1],'Unexpected F164N science atlas dimensions');item.bitmap=bitmap;return bitmap;
+        require(bitmap.width===science.atlas[0]&&bitmap.height===science.atlas[1],'Unexpected F162M science atlas dimensions');item.bitmap=bitmap;return bitmap;
       });scienceCache.set(k,item);
     }
     return scienceCache.get(k).promise;
   }
+  function paintScience(canvas,bitmap,sx=0){
+    const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(bitmap,sx,0,science.detail,science.detail,0,0,canvas.width,canvas.height);
+    const x=canvas.width*.06,y=canvas.height*.92,len=.5/science.detail_field_arcsec*canvas.width;
+    ctx.strokeStyle='white';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+len,y);ctx.stroke();
+    ctx.fillStyle='white';ctx.font='14px sans-serif';ctx.fillText('0.5″',x,y-8);
+  }
   function reference(){
     if(!scienceReference)return;
-    const c=$('science-reference');c.getContext('2d').drawImage(scienceReference,referenceMode*science.detail,0,science.detail,science.detail,0,0,c.width,c.height);
+    const c=$('science-reference');paintScience(c,scienceReference,referenceMode*science.detail);
     $('science-reference-caption').textContent=referenceMode?'Observed JWST + ideal 2.2 m pupil PSF':'Observed JWST · resampled, original JWST PSF retained';
     $('science-observed').setAttribute('aria-pressed',String(referenceMode===0));$('science-ideal').setAttribute('aria-pressed',String(referenceMode===1));
   }
   async function loadScience(){
-    const e=entry.scienceReplay;require(e?.schema==='ao-explorer.science-replay-entry.v1','Missing F164N science scene');
+    const e=entry.scienceReplay;require(e?.schema==='ao-explorer.science-replay-entry.v1','Missing F162M science scene');
     const r=await fetchVerifiedJson({href:e.manifest,bytes:e.manifest_bytes,sha256:e.manifest_sha256,media_type:'application/json'},entryUrl);
-    scienceManifest=r.value;scienceBase=r.url;require(scienceManifest.schema==='ao-explorer.science-replay-manifest.v1'&&scienceManifest.id===e.id,'F164N science identity mismatch');
+    scienceManifest=r.value;scienceBase=r.url;require(scienceManifest.schema==='ao-explorer.science-replay-manifest.v1'&&scienceManifest.id===e.id,'F162M science identity mismatch');
     science=(await fetchVerifiedJson(scienceFile('data.json'),scienceBase)).value;
-    require(science.schema==='ao-explorer.science-replay-data.v1'&&science.detail===384&&science.parent_replay_id===entry.ngsReplay.id,'F164N science parent mismatch');
-    require(science.parent_replay_data_sha256===manifest.files['data.json'].sha256&&JSON.stringify(science.indices)===JSON.stringify(data.indices),'F164N science timestamps or source differ');
-    require(science.wavelength_m===data.wavelength_m&&science.loss_frame===data.loss_frame&&science.loss_time_s===data.loss_time_s,'F164N science physics/timing mismatch');
+    require(science.schema==='ao-explorer.science-replay-data.v1'&&science.layout==='compact-same-field-v1'&&science.detail===80&&science.parent_replay_id===entry.ngsReplay.id,'F162M science parent mismatch');
+    require(science.parent_replay_data_sha256===manifest.files['data.json'].sha256&&JSON.stringify(science.indices)===JSON.stringify(data.indices),'F162M science timestamps or source differ');
+    require(science.wavelength_m===data.wavelength_m&&science.loss_frame===data.loss_frame&&science.loss_time_s===data.loss_time_s,'F162M science physics/timing mismatch');
     const rimg=await fetchVerifiedImage(scienceFile('reference.png'),scienceBase);
-    require(rimg.bitmap.width===2*science.detail&&rimg.bitmap.height===science.detail,'Invalid F164N science reference');scienceReference=rimg.bitmap;reference();
-    require(JSON.stringify(science.overview)==='[576,465]'&&JSON.stringify(science.atlas)==='[1152,849]','Unexpected F164N science layout');
-    const field=science.source.field_arcsec;
-    $('science-field').textContent=`Science field: ${field[0].toFixed(2)}″ × ${field[1].toFixed(2)}″. Gold boxes locate the identical ${science.detail_field_arcsec.toFixed(2)}″ detail below. All panels share one surface-brightness scale, angular sampling and timestamp.`;
-    $('science-quality').textContent=`All ${science.checks.sampled_strehl_values} replay Strehl values and ${science.checks.saved_psf_checks} archived PSFs agree with the original records. The full mosaic is available for context. Lossless frames use one fixed asinh scale after linear convolution; no per-panel brightness fitting.`;
-    require(science.source.bunit==='MJy/sr'&&science.source.pivot_wavelength_um===1.645&&science.display.fixed_for_all_frames_and_panels===true,'Scientific image units or display mismatch');
-    for(const [name,id] of [['source-context.png','science-context'],['intensity-scale.png','science-scale']]){
+    require(rimg.bitmap.width===2*science.detail&&rimg.bitmap.height===science.detail,'Invalid F162M science reference');scienceReference=rimg.bitmap;reference();
+    require(JSON.stringify(science.atlas)==='[240,80]','Unexpected F162M science layout');
+    const field=science.detail_field_arcsec;
+    $('science-field').textContent=`Every panel: ${field.toFixed(3)}″ × ${field.toFixed(3)}″; ${(science.pixel_arcsec*1000).toFixed(2)} mas per model pixel. Same accepted field, angular scale and surface-brightness transfer at every time. Source orientation retained.`;
+    $('science-quality').textContent=`All ${science.checks.sampled_strehl_values} replay Strehl values and ${science.checks.saved_psf_checks} archived PSFs agree with the original records. The nine accepted static images agree within ${science.checks.approved_static_max_abs_difference_mjy_sr.toPrecision(3)} MJy/sr. No source region was reselected and no AO trajectory was rerun.`;
+    require(science.source.bunit==='MJy/sr'&&science.source.pivot_wavelength_um===1.627&&science.display.fixed_for_all_frames_and_panels===true,'Scientific image units or display mismatch');
+    require(science.display.min_mjy_sr===0&&science.display.max_mjy_sr===80&&science.display.softening_mjy_sr===2,'Accepted image transfer mismatch');
+    for(const [name,id]of [['source-context.png','science-context'],['intensity-scale.png','science-scale']]){
       const {bitmap}=await fetchVerifiedImage(scienceFile(name),scienceBase);const canvas=$(id);canvas.width=bitmap.width;canvas.height=bitmap.height;canvas.getContext('2d').drawImage(bitmap,0,0);bitmap.close();
     }
-    const q=science.source.quality,pert=science.checks.missing_context_max_perturbation_mjy_sr;
-    const maxDetail=Math.max(...Object.entries(pert).filter(([k])=>k.startsWith('detail_')).map(([,v])=>v));
-    const maxWide=Math.max(...Object.entries(pert).filter(([k])=>k.startsWith('wide_')).map(([,v])=>v));
-    const exclusion=science.checks.overview_exclusion;
-    $('science-missing').textContent=`The magnifier contains ${q.detail.display_bad_resampled_pixels} directly filled source pixels; its maximum zero/twice-fill change is ${maxDetail.toPrecision(3)} MJy/sr. In the wider field, gray hatching excludes ${(100*exclusion.masked_fraction).toFixed(2)}% of pixels using the same mask at every time: these exceeded ${exclusion.threshold_mjy_sr.toFixed(1)} MJy/sr in the fill-sensitivity test. Unmasked overview cells stay below that threshold in this test. This does not bound unknown saturated flux; the full results include the excluded regions.`;
-    for(const [label,name] of [['Download 40 s animation (WebP preview)','science-comparison.webp'],['Animation timing','movie-timing.json'],['Image methods','README.md'],['Source and checks','provenance.json'],['Calibrated detail (FITS.gz)','source-detail.fits.gz'],['Linear output samples','linear-samples.npz'],['Missing-data sensitivity','sensitivity.json'],['Overview exclusion mask','overview-exclusion-mask.png'],['Sensitivity map','missing-sensitivity-map.npz'],['Resampled science context','wide-scene.npz'],['Resampled detail context','detail-scene.npz'],['Offline image exporter','exporter.py']]){
+    const q=science.source.quality,c=science.checks,diagnostic=c.saturation_diagnostic;
+    require(q.display_direct_invalid_resampled_pixels===0&&q.display_sat_guard_resampled_pixels===0,'Source quality no longer matches accepted field');
+    $('science-missing').textContent=`Four contributor exposures have no mapped SATURATED flag inside this field after a ${q.guard_arcsec.toFixed(3)}″ guard; no source pixel here is directly filled. The wider convolution context still includes saturated stars. Across all ${science.indices.length} image times, zeroing or doubling their supplied guarded values changes a pixel by up to ${c.saturation_context_max_change_mjy_sr.toPrecision(3)} MJy/sr. The analogous missing-context change is ${c.missing_context_max_change_mjy_sr.toPrecision(3)} MJy/sr. These tests do not bound unknown true saturated flux. The downloadable full-replay diagnostic marks ${(100*diagnostic.fraction_above_threshold).toFixed(2)}% of positions above ${diagnostic.threshold_mjy_sr.toFixed(1)} MJy/sr; it is not applied to the default view. The static quality figure uses only its three epochs.`;
+    for(const [label,name]of [['Download 40 s lossless WebP','science-comparison.webp'],['Animation timing','movie-timing.json'],['Image methods','README.md'],['Source and checks','provenance.json'],['Accepted three-epoch figure','static-comparison.png'],['Three-epoch quality figure','static-quality.png'],['Calibrated cutout (FITS.gz)','source-detail.fits.gz'],['Linear output samples','linear-samples.npz'],['All-frame sensitivity results','sensitivity.json'],['All-frame sensitivity mask','saturation-sensitivity-mask.png'],['Numerical sensitivity maps','saturation-sensitivity-map.npz'],['Resampled science context','scene-context.npz'],['Exposure DQ provenance','quality-extraction.json'],['Offline image exporter','exporter.py']]){
       const a=document.createElement('a');a.href=new URL(name,scienceBase);a.textContent=label;
       a.addEventListener('click',async e=>{e.preventDefault();try{const {buffer}=await fetchVerified(scienceFile(name),scienceBase);const u=URL.createObjectURL(new Blob([buffer],{type:scienceFile(name).media_type}));const link=document.createElement('a');link.href=u;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(u),30000);}catch(error){a.textContent=`${label} unavailable: ${error.message}`;}});$('science-downloads').append(a);
     }
@@ -86,18 +92,19 @@ export function initNgsReplay(entry, entryUrl) {
     const v=(await fetchVerifiedJson(member('data.json'),r.url)).value;
     require(v.schema==='ao-explorer.science-video-data.v1'&&v.parent_replay_entry.id===entry.scienceReplay.id&&v.parent_replay_entry.manifest_sha256===entry.scienceReplay.manifest_sha256,'MP4 parent mismatch');
     require(v.parent_movie_sha256===scienceManifest.files['science-comparison.webp'].sha256&&v.parent_scene_data_sha256===scienceManifest.files['data.json'].sha256,'MP4 source mismatch');
-    require(JSON.stringify(v.source_indices)===JSON.stringify(science.indices)&&v.loss_frame===data.loss_frame&&v.loss_time_s===data.loss_time_s&&v.duration_s===40&&v.fps===60&&v.video_frames===2400&&v.simulation_rerun===false&&v.temporal_interpolation===false,'MP4 timing mismatch');
+    require(JSON.stringify(v.source_indices)===JSON.stringify(science.indices)&&v.loss_frame===data.loss_frame&&v.loss_time_s===data.loss_time_s&&v.duration_s===40&&v.fps===60&&v.video_frames===2400&&JSON.stringify(v.dimensions)==='[1280,720]'&&v.simulation_rerun===false&&v.temporal_interpolation===false,'MP4 timing mismatch');
     const p=$('science-video');p.textContent='Share this comparison: ';
-    for(const [label,name] of [[`Download MP4 · 40 s · ${(m.files['orion-f164n-2p2m-ao-comparison.mp4'].bytes/1e6).toFixed(1)} MB`,'orion-f164n-2p2m-ao-comparison.mp4'],['Video timing & checks','data.json']]){
+    for(const [label,name] of [[`Download MP4 · 40 s · ${(m.files['westerlund2-f162m-2p2m-ao-comparison.mp4'].bytes/1e6).toFixed(1)} MB`,'westerlund2-f162m-2p2m-ao-comparison.mp4'],['Video timing & checks','data.json']]){
       const a=document.createElement('a');a.href=new URL(name,r.url);a.textContent=label;
       a.addEventListener('click',async event=>{event.preventDefault();try{const {buffer}=await fetchVerified(member(name),r.url);const u=URL.createObjectURL(new Blob([buffer],{type:member(name).media_type}));const link=document.createElement('a');link.href=u;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(u),30000);}catch(error){a.textContent=`${label} unavailable: ${error.message}`;}});
       p.append(a,document.createTextNode(' · '));
     }
-    p.append(document.createTextNode('H.264, 960 × 896, 60 fps, no audio. Existing images are held without interpolation.'));
+    p.append(document.createTextNode('H.264, 1280 × 720, 60 fps, no audio. Existing images are held without interpolation.'));
   }
   function chart(){
     if(!data)return;
     const k=data.indices[index],m=data.metrics;
+    $('strehl').dataset.frame=String(k);
     lineChart($('strehl'),{title:'2.2 m instantaneous H-band Strehl; v1 loss of lock at 0.981333 s',height:260,
       x:{label:'Frame-start time',unit:'s',range:[0,2]},y:{label:'Peak Strehl',range:[0,1]},
       shadeX:[[0,.2,'startup exclusion'],[data.loss_time_s,2,'v1 reconstruction unusable']],
@@ -143,9 +150,7 @@ export function initNgsReplay(entry, entryUrl) {
       if(token!==ticket)return false;
       // One atlas prevents mixed-frame before/after images, even on fast seeks.
       roles.forEach((role,n)=>{const c=$(role);c.getContext('2d').drawImage(bitmap,n*data.tile,0,data.tile,data.tile,0,0,c.width,c.height);c.dataset.frame=String(k);});
-      const [ow,oh]=science.overview;
-      ['v1','v2'].forEach((role,n)=>{const c=$(`science-full-${role}`),ctx=c.getContext('2d');ctx.drawImage(scene,n*ow,0,ow,oh,0,0,c.width,c.height);const [x,y,w,h]=science.detail_box_fraction;ctx.strokeStyle='#ffe7a5';ctx.lineWidth=2;ctx.strokeRect(x*c.width,y*c.height,w*c.width,h*c.height);c.dataset.frame=String(k);});
-      ['u','v1','v2'].forEach((role,n)=>{const c=$(`science-${role}`);c.getContext('2d').drawImage(scene,n*science.detail,oh,science.detail,science.detail,0,0,c.width,c.height);c.dataset.frame=String(k);});
+      ['u','v1','v2'].forEach((role,n)=>{const c=$(`science-${role}`);paintScience(c,scene,n*science.detail);c.dataset.frame=String(k);});
       index=next;labels();chart();trim();
       for(const [key,item] of scienceCache){if(scienceCache.size<=12)break;if(item.bitmap&&key!==k){item.bitmap.close();scienceCache.delete(key);}}
       return true;
@@ -219,6 +224,7 @@ export function initNgsReplay(entry, entryUrl) {
   $('science-observed').addEventListener('click',()=>{referenceMode=0;reference();});
   $('science-ideal').addEventListener('click',()=>{referenceMode=1;reference();});
   $('science-play').addEventListener('click',()=>{toggle().catch(fail);});
+  $('science-before').addEventListener('click',()=>seek(data.indices.indexOf(735)));
   $('science-loss').addEventListener('click',()=>seek(data.indices.indexOf(736)));
   $('science-late').addEventListener('click',()=>seek(data.indices.indexOf(1499)));
   $('play').addEventListener('click',()=>{toggle().catch(fail);});

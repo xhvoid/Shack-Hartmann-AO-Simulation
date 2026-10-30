@@ -354,3 +354,5 @@ tr.excluded th, tr.excluded td { color: var(--muted); font-style: italic; }
 .science-intensity{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0;color:var(--muted);font-size:.85rem}
 .science-intensity canvas{width:256px;height:16px;max-width:100%;border-radius:2px}
 .science-context canvas{display:block;width:100%;height:auto;max-width:1060px;border:1px solid var(--line);margin:12px auto}
+
+.science-grid canvas{image-rendering:pixelated}

@@ -1,0 +1,36 @@
+{
+  "schema": "ao-explorer.science-video-manifest.v1",
+  "id": "westerlund2-mp4-5f0576e5b12237ca",
+  "files": {
+    "README.md": {
+      "bytes": 1819,
+      "sha256": "3f2df0673bcd472d831258030d44988e45ba3f05c9dd9225fc8d6416b3274573",
+      "media_type": "text/plain"
+    },
+    "data.json": {
+      "bytes": 8167,
+      "sha256": "77c3265fe19d031d6cf8a3112c48111cac78ace671acabfed063a5b1b3fa9a84",
+      "media_type": "application/json"
+    },
+    "exporter.py": {
+      "bytes": 10769,
+      "sha256": "40797bcc69ff4806a5abe5508c33b5b015f074c20c67e4676ec19430f3d8497d",
+      "media_type": "text/plain"
+    },
+    "poster.png": {
+      "bytes": 111784,
+      "sha256": "7eedd10de572499464720960c7f54d3c71690399f50b035b3580a98fda43bc83",
+      "media_type": "image/png"
+    },
+    "provenance.json": {
+      "bytes": 2004,
+      "sha256": "dbcd4d5ecb1c3b3d734bb52193e08da048e804a4c81d343eff58b3f7ef1cc7b3",
+      "media_type": "application/json"
+    },
+    "westerlund2-f162m-2p2m-ao-comparison.mp4": {
+      "bytes": 2913381,
+      "sha256": "a16b9380712980435f4e08d1aeda0ee254adfb391a47d78fcb809794933e49ed",
+      "media_type": "video/mp4"
+    }
+  }
+}

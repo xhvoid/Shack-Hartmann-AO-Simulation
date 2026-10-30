@@ -1,0 +1,191 @@
+{
+  "simulation_rerun": false,
+  "website_changed": false,
+  "frames": [
+    {
+      "frame_zero_based": 735,
+      "time_s": 0.98,
+      "uncorrected_strehl": 0.2295640483354301,
+      "v1_strehl": 0.5606509984136556,
+      "v2_strehl": 0.6078034073874728
+    },
+    {
+      "frame_zero_based": 736,
+      "time_s": 0.9813333333333333,
+      "uncorrected_strehl": 0.22853290904422988,
+      "v1_strehl": 0.5354365042976496,
+      "v2_strehl": 0.624667934818315
+    },
+    {
+      "frame_zero_based": 1499,
+      "time_s": 1.9986666666666666,
+      "uncorrected_strehl": 0.21883094183330207,
+      "v1_strehl": 0.10425871396034138,
+      "v2_strehl": 0.7149469268432944
+    }
+  ],
+  "source": {
+    "object": "Westerlund 2",
+    "filter": "F162M (F150W2 blocking filter)",
+    "pivot_um": 1.627,
+    "bandwidth_um": 0.168,
+    "simulation_wavelength_um": 1.65,
+    "url": "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:JWST/product/jw03523-o005_t001_nircam_f150w2-f162m_i2d.fits",
+    "observation_date": "2024-07-14",
+    "calibration_version": "3.0.0",
+    "crds_context": "jwst_1584.pmap",
+    "center_mosaic_xy_zero_based": [
+      9090.0,
+      3670.0
+    ],
+    "center_icrs_deg": [
+      156.02555314372074,
+      -57.74677566788749
+    ],
+    "native_pixel_arcsec": 0.03123097774036063,
+    "model_pixel_arcsec": 0.051364771086927254,
+    "field_arcsec": 4.10918168695418,
+    "quality": {
+      "display_direct_invalid_resampled_pixels": 0,
+      "display_sat_guard_resampled_pixels": 0,
+      "guard_native_pixels": 8,
+      "guard_arcsec": 0.24984782192288504,
+      "context_invalid_native_pixels": 23426,
+      "context_native_pixels": 1962801,
+      "context_bounds_xy_zero_based": [
+        8390,
+        9791,
+        2970,
+        4371
+      ],
+      "context_sat_guard_native_pixels": 79567,
+      "sensitivity": [
+        {
+          "frame": 735,
+          "state": "uncorrected",
+          "missing_zero_or_twice_fill_max_change_mjy_sr": 0.014690799717181744,
+          "outside_field_sat_guard_zero_or_twice_max_change_mjy_sr": 1.0261911645479922,
+          "outside_field_sat_guard_mean_contribution_mjy_sr": 0.0935383140213878,
+          "image_peak_mjy_sr": 9.588328996594905
+        },
+        {
+          "frame": 735,
+          "state": "v1",
+          "missing_zero_or_twice_fill_max_change_mjy_sr": 0.05545930720812296,
+          "outside_field_sat_guard_zero_or_twice_max_change_mjy_sr": 1.5819648613014823,
+          "outside_field_sat_guard_mean_contribution_mjy_sr": 0.4664276333138677,
+          "image_peak_mjy_sr": 19.508760850367857
+        },
+        {
+          "frame": 735,
+          "state": "v2",
+          "missing_zero_or_twice_fill_max_change_mjy_sr": 0.019902942090218874,
+          "outside_field_sat_guard_zero_or_twice_max_change_mjy_sr": 1.1962752226692555,
+          "outside_field_sat_guard_mean_contribution_mjy_sr": 0.12025426301269547,
+          "image_peak_mjy_sr": 20.584008284426908
+        },
+        {
+          "frame": 736,
+          "state": "uncorrected",
+          "missing_zero_or_twice_fill_max_change_mjy_sr": 0.016255971678420796,
+          "outside_field_sat_guard_zero_or_twice_max_change_mjy_sr": 0.9785900993830979,
+          "outside_field_sat_guard_mean_contribution_mjy_sr": 0.09361482498778702,
+          "image_peak_mjy_sr": 9.614941805472172
+        },
+        {
+          "frame": 736,
+          "state": "v1",
+          "missing_zero_or_twice_fill_max_change_mjy_sr": 0.060730366778817955,
+          "outside_field_sat_guard_zero_or_twice_max_change_mjy_sr": 6.254178832470127,
+          "outside_field_sat_guard_mean_contribution_mjy_sr": 0.47657499905281425,
+          "image_peak_mjy_sr": 18.746163698945775
+        },
+        {
+          "frame": 736,
+          "state": "v2",
+          "missing_zero_or_twice_fill_max_change_mjy_sr": 0.023332415968347297,
+          "outside_field_sat_guard_zero_or_twice_max_change_mjy_sr": 1.1190749280336796,
+          "outside_field_sat_guard_mean_contribution_mjy_sr": 0.11591757628710768,
+          "image_peak_mjy_sr": 21.089966464067825
+        },
+        {
+          "frame": 1499,
+          "state": "uncorrected",
+          "missing_zero_or_twice_fill_max_change_mjy_sr": 0.033228773694025125,
+          "outside_field_sat_guard_zero_or_twice_max_change_mjy_sr": 0.9893372858529328,
+          "outside_field_sat_guard_mean_contribution_mjy_sr": 0.09892574980239019,
+          "image_peak_mjy_sr": 8.775364536259188
+        },
+        {
+          "frame": 1499,
+          "state": "v1",
+          "missing_zero_or_twice_fill_max_change_mjy_sr": 0.12548997083921165,
+          "outside_field_sat_guard_zero_or_twice_max_change_mjy_sr": 7.98634248977174,
+          "outside_field_sat_guard_mean_contribution_mjy_sr": 0.6183132851839659,
+          "image_peak_mjy_sr": 9.955693628057501
+        },
+        {
+          "frame": 1499,
+          "state": "v2",
+          "missing_zero_or_twice_fill_max_change_mjy_sr": 0.024649444345891287,
+          "outside_field_sat_guard_zero_or_twice_max_change_mjy_sr": 3.2010650242332037,
+          "outside_field_sat_guard_mean_contribution_mjy_sr": 0.12632457277993717,
+          "image_peak_mjy_sr": 22.91336849446356
+        }
+      ],
+      "caveat": "Zero/twice supplied flux tests are sensitivity probes, not bounds on unknown flux in saturated source pixels. Outside-field stars and diffraction structure remain in the actual mosaic.",
+      "common_display_exclusion": {
+        "threshold_mjy_sr": 0.8,
+        "criterion": "Maximum change when zeroing or doubling supplied SCI values in the outside-field saturation guard, across all nine model panels, above 1% of fixed display span. The companion quality figure applies one identical mask to every model panel and the reference. The main image is unmasked and labels the outside-field caveat. Does not alter saved linear data; not a bound on unknown true saturated flux.",
+        "pixels": 1170,
+        "fraction": 0.1828125,
+        "reference_pixels_above_20_mjy_sr_masked": 0,
+        "maximum_unmasked_tested_change_mjy_sr": 0.7999323757630757
+      }
+    }
+  },
+  "display": {
+    "min_mjy_sr": 0.0,
+    "max_mjy_sr": 80.0,
+    "asinh_softening_mjy_sr": 2.0,
+    "colormap": "magma",
+    "fixed_across_all_panels": true,
+    "pixel_interpolation": "nearest"
+  },
+  "checks": {
+    "source_stripe_hashes_verified": true,
+    "archive_input_hashes_verified": true,
+    "point_source_strehl_samples_checked": 9,
+    "strehl_max_absolute_error": 4.440892098500626e-16,
+    "saved_psf_comparisons": 3,
+    "saved_psf_max_absolute_error": 2.7755575615628914e-17,
+    "full_convolution_flux_max_relative_error": 4.387042963120208e-16,
+    "delta_kernel_max_error_mjy_sr": 3.714806240395774e-13,
+    "preexisting_dirty_inputs_unchanged": true
+  },
+  "archive_inputs": {
+    "outputs/robo_ao2_ngs/20261024-first-trajectory/attempt-04/pre_update_residual_opd_m.npy": {
+      "bytes": 786432128,
+      "sha256": "7d8964e71a03ce6d2ebc7a4e1dec22a08cb92f482fe05c27cf9325a6e30e1fa1"
+    },
+    "outputs/robo_ao2_ngs/20261024-first-trajectory/attempt-04/atmosphere_opd_m.npy": {
+      "bytes": 786432128,
+      "sha256": "f0e52b51e94c376b8a35fd96d240042a409b0001713bb11f4e86d050b8328779"
+    },
+    "outputs/robo_ao2_ngs/20261024-first-trajectory/attempt-04/science-psfs.npz": {
+      "bytes": 47267022,
+      "sha256": "a9ca02ef2cf7816b5c337792ea7a19776cfeb61eb686c3358e8565157c715e6a"
+    },
+    "outputs/robo_ao2_ngs/20261024-loss-of-lock-repair/trajectory-v2/pre_update_residual_opd_m.npy": {
+      "bytes": 786432128,
+      "sha256": "8546e884998ea9eaf2f177a22eb8cc4ebf406a0e7319f12e0c672b82c4ec30cc"
+    },
+    "outputs/robo_ao2_ngs/20261024-loss-of-lock-repair/trajectory-v2/science-psfs.npz": {
+      "bytes": 42535380,
+      "sha256": "d156a30f0b9ca2572e3f9e6cf364c91c13e3cf1591c4b74d525c50ab7d70ac9d"
+    }
+  },
+  "replay_data_sha256": "8e3cefda9d2b7d03bc01e50db6ae10afd5814fcc972d06e305edbcb0b85b97e9",
+  "selection": "The first NRCB3 field was rejected after a convolution-context quality check revealed bright-star leakage at the edges. The final NRCB1 region was chosen by source appearance, number of peaks, saturation clearance, and lack of strong diffraction spikes. Its crop was expanded and shifted using only the native image and DQ flags so the three brightest displayed stars have at least 0.59 arcsec edge clearance. No selection by the size of the v1-v2 difference.",
+  "processing": "Pixel-area average the calibrated linear SCI surface brightness; full unit-flux 768x768 PSF convolution, tilt retained, no recentering or angular magnification. Nearest-valid context fill is tested for sensitivity. One on-axis monochromatic PSF over the field; source JWST PSF and noise retained."
+}
