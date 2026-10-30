@@ -375,15 +375,12 @@ function commitCase(data) {
 }
 
 function updateButtons() {
-  $("case-picker").value = state.case?.id || state.manifest.default_case;
   for (const button of document.querySelectorAll("#groups .node")) {
     button.setAttribute("aria-pressed", String(button.dataset.case === state.case?.id));
   }
 }
 
 function setBusy(id, busy) {
-  $("case-picker").disabled = busy;
-  if (!busy && state.case) $("case-picker").value = state.case.id;
   for (const button of document.querySelectorAll("#groups .node")) button.setAttribute("aria-busy", String(busy && button.dataset.case === id));
 }
 
@@ -787,7 +784,7 @@ ${state.rms ? `<li>RMS diagnostics <code>${state.rms.manifest.derived_id}</code>
 <li>Raw numerical evidence (pupil maps and PSFs of every frame, full-precision mean PSFs, histories, the galaxy observations of every frame) stays in the producer's output directories and is not part of this site.</li>`;
   $("footer-identity").textContent = `Dataset ${m.dataset_id}.`;
   const lede = $("explore-lede");
-  if (lede) lede.textContent = `Choose one recorded setting, then follow the atmosphere, held mirror correction and residual. Each run covers ${t.physical_interval_s[1].toFixed(0)} second at 1 kHz. The images and chart cursor share the same timestamp.`;
+  if (lede) lede.textContent = `Choose one of eight recorded settings and press Play. Wavefronts, point-source images and the NGC 1705 comparison share one timeline. Each run covers ${t.physical_interval_s[1].toFixed(0)} second at 1 kHz. The images and chart cursor share the same timestamp.`;
   const hint = $("curves-hint");
   if (hint) hint.textContent = `All ${t.frames} frames, including the startup exclusion (shaded, frames 0–${START() - 1}). Summaries use ${windowText()} only (${COUNT()} equal-weight samples). The cursor marks the displayed frame.`;
 }
@@ -795,13 +792,30 @@ ${state.rms ? `<li>RMS diagnostics <code>${state.rms.manifest.derived_id}</code>
 // Start
 
 function buildGroups() {
-  const picker = $("case-picker");
-  picker.replaceChildren(...Object.entries(state.manifest.cases).map(([id, item]) => {
-    const option = document.createElement("option");
-    option.value = id; option.textContent = item.label; return option;
-  }));
-  picker.disabled = false;
-  picker.addEventListener("change", () => selectCase(picker.value));
+  const m = state.manifest;
+  const host = $("groups");
+  host.innerHTML = "";
+  const groups = [
+    { label: "Reference", nodes: [m.default_case] },
+    ...m.groups.map(group => ({ ...group, nodes: group.nodes.filter(id => id !== m.default_case) })),
+  ];
+  for (const group of groups) {
+    const box = document.createElement("div");
+    box.className = "group";
+    box.innerHTML = `<h3>${group.label}</h3>`;
+    const nodes = document.createElement("div");
+    nodes.className = "nodes";
+    for (const id of group.nodes) {
+      const button = document.createElement("button");
+      button.type = "button"; button.className = "node"; button.dataset.case = id;
+      button.setAttribute("aria-pressed", "false");
+      button.innerHTML = `${m.cases[id].label}`;
+      button.addEventListener("click", () => selectCase(id));
+      nodes.append(button);
+    }
+    box.append(nodes);
+    host.append(box);
+  }
 }
 
 function bindControls() {
