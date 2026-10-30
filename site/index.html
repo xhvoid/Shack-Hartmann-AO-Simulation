@@ -5,9 +5,9 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>AO Simulation Explorer</title>
-<meta content="A personal adaptive-optics simulation: explore a 2 m loop, diagnose loss of lock, and compare gain and delay in a 42 m model." name="description"/>
+<meta content="Shack–Hartmann adaptive-optics simulation results: wavefront correction, image quality, reconstruction failure, and controller gain and delay." name="description"/>
 <link href="data:," rel="icon"/>
-<link href="code-76e224d566d6d23b/styles.css" rel="stylesheet"/>
+<link href="code-696be9df59c8f317/styles.css" rel="stylesheet"/>
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script onerror="aoCodeUnavailable()" src="code-76e224d566d6d23b/app.js" type="module"></script>
+<script onerror="aoCodeUnavailable()" src="code-696be9df59c8f317/app.js" type="module"></script>
 </head>
 <body>
 <noscript><p class="wrap">The overview images are static. Enable JavaScript to open the recorded experiments and study views.</p></noscript><a class="skip" href="#main">Skip to content</a>
@@ -25,7 +25,7 @@ function aoCodeUnavailable() {
 <div class="wrap header-row">
 <div>
 <p class="site-title"><a href="#overview">AO Simulation Explorer</a></p>
-<p class="scope">Xu Han · Astrophysics / Photonics</p>
+<p class="scope">Shack–Hartmann sensing · Single-conjugate adaptive optics</p>
 </div>
 <nav aria-label="Sections">
 <ul class="nav"><li><a data-nav-link="overview" href="#overview">Overview</a></li><li><a data-nav-link="explore" href="#explore">Explore the loop</a></li><li><a data-nav-link="studies" href="#studies">Selected studies</a></li><li><a data-nav-link="methods-home" href="#methods-home">Methods &amp; evidence</a></li><li><a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation">Code ↗</a></li></ul>
@@ -33,9 +33,9 @@ function aoCodeUnavailable() {
 </div>
 </header>
 <main id="main"><section aria-labelledby="overview-title" class="wrap section page-view" data-nav="overview" data-view="" id="overview">
-<div class="intro-grid"><div><p class="eyebrow">A personal study in adaptive optics</p><h1 id="overview-title">From wavefront to image</h1>
-<p class="lede">I started this simulation to learn adaptive optics by building a loop and examining what it does. It grew into a way to explore sensing, reconstruction and feedback.</p>
-<p>I completed an MSc in Astrophysics and now study Photonics. These examples show what I have learned from the model, including where correction breaks down.</p>
+<div class="intro-grid"><div><p class="eyebrow">Adaptive-optics simulation results</p><h1 id="overview-title">From wavefront to image</h1>
+<p class="lede">Recorded single-conjugate adaptive-optics simulations showing wavefront correction, image quality and controller behaviour.</p>
+
 <p><a class="primary-link" href="#explore">Explore the 2 m loop →</a></p></div>
 <figure class="opening-result"><div class="opening-pair"><div><div class="opening-atlas opening-atlas--uncorrected"><img alt="Mean 42 m point-source image without correction" height="256" src="recordings/42m-500-31024b173527b7a6/frames/mean.png" width="1792"/></div><span>Without correction</span></div><div><div class="opening-atlas opening-atlas--corrected"><img alt="Mean 42 m point-source image with AO correction" height="256" src="recordings/42m-500-31024b173527b7a6/frames/mean.png" width="1792"/></div><span>With AO correction</span></div></div>
 <figcaption><strong>42 m model · mean point-source images.</strong> 2.2 µm · 0.2–1.0 s. Peak Strehl of the mean PSF: 0.0023 → 0.754. Both views use the same 1.20″ field and log intensity scale, 10⁻⁶–1 of the ideal peak. No recentering. <a href="#replay42">Replay this 42 m recording →</a></figcaption></figure></div>
@@ -43,7 +43,7 @@ function aoCodeUnavailable() {
 <a href="#explore"><span>01 · 2 m demonstration</span><strong>How does correction change the wavefront and image?</strong><p>Follow the atmosphere, held DM shape and residual on one recorded clock.</p></a>
 <a href="#ngs22"><span>02 · 2.2 m investigation</span><strong>Why did the loop stop correcting?</strong><p>Trace lost measurements and large commands, then compare stronger regularization on the same atmosphere.</p></a>
 <a href="#gain42"><span>03 · 42 m comparison</span><strong>Does lower gain help when correction is delayed?</strong><p>Compare whole-window image quality with a smaller late-run excursion.</p></a></section>
-<p class="scope-note">These are simplified on-axis models, informed by published sources and synthetic assumptions. They have not been calibrated against an operating instrument. <a href="#methods-home">Read the methods and evidence →</a></p></section><section aria-labelledby="studies-title" class="wrap section page-view" data-nav="studies" data-view="" hidden="" id="studies"><p class="eyebrow">Selected studies</p><span id="studies42-title"></span><h1 id="studies-title">What the loop taught me</h1><p class="lede">A demonstration, a failure diagnosis and a controller comparison. Each has its own configuration and recorded time interval.</p><div class="reading-list">
+<p class="scope-note">These are simplified on-axis models, informed by published sources and synthetic assumptions. They have not been calibrated against an operating instrument. <a href="#methods-home">Read the methods and evidence →</a></p></section><section aria-labelledby="studies-title" class="wrap section page-view" data-nav="studies" data-view="" hidden="" id="studies"><p class="eyebrow">Selected studies</p><span id="studies42-title"></span><h1 id="studies-title">Selected simulation results</h1><p class="lede">A demonstration, a failure diagnosis and a controller comparison. Each has its own configuration and recorded time interval.</p><div class="reading-list">
 <a href="#explore"><span>2 m · 1 s · synthetic detector model</span><strong>How does correction change an image?</strong><p>One baseline connects wavefront error, mirror commands and point-source images.</p></a>
 <a href="#ngs22"><span>2.2 m · 2 s · same-atmosphere comparison</span><strong>Why did the loop stop correcting?</strong><p>The original reconstruction becomes unusable at 0.981 s. Stronger regularization keeps the revised run usable for the recorded two seconds.</p></a>
 <a href="#gain42"><span>42 m · 1 s · three paired atmospheres</span><strong>Does lower gain help when correction is delayed?</strong><p>Gain 0.3 gives better whole-window image quality among the tested settings. Gain 0.2 reduces the observed late excursion, at an image-quality cost.</p></a></div><p class="scope-note">The 42 m geometry follows a historical E-ELT reference, not the current 39 m telescope. <a href="#methods-home">Assumptions and supporting records →</a></p></section><section aria-labelledby="methods-home-title" class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="methods-home"><p class="eyebrow">Methods &amp; evidence</p><h1 id="methods-home-title">What is in the model?</h1><p class="lede">The recordings follow one on-axis wavefront through a Shack–Hartmann sensor, a reconstructed DM command and a feedback loop. Science images come from propagated residual wavefronts.</p>
@@ -221,13 +221,13 @@ function aoCodeUnavailable() {
 <div><dt>Run length and analysis window</dt><dd id="e2-record">—</dd></div>
 </dl>
 <p><strong>What to look for:</strong> how the selected setting changes the loop response in this run.</p>
-<p><strong>Scope:</strong> one atmosphere realization per case, using assumed instrument parameters. These runs do not provide a full instrument error budget or test robustness across seeds and long exposures. I excluded the first 0.2 s before running the analysis; that choice is not a measured settling time.</p>
+<p><strong>Scope:</strong> one atmosphere realization per case, using assumed instrument parameters. These runs do not provide a full instrument error budget or test robustness across seeds and long exposures. The first 0.2 s was excluded before analysis; this interval is not a measured settling time.</p>
 <details><summary>Full selected-case parameters</summary><ul class="params" id="case-parameters"></ul></details>
 <p class="hint">The model is not calibrated to a real 2 m AO system. OPD (optical path difference) limits here refer to DM command bounds. <a href="#details-title">Definitions and source files →</a></p>
 </details><p class="case-ending">The loop reduces wavefront error in this recording, but its low-order model leaves substantial residual tilt. <a href="#verification-summary">Read the numerical interpretation →</a></p></section>
 <section aria-labelledby="project-title" class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="project"><p class="breadcrumb"><a href="#methods-home">← Methods &amp; evidence</a></p>
 <h1 id="project-title">Building the simulation</h1>
-<p class="lede">Here I explain the atmosphere model, the implementation choices that make larger runs possible, and the checks I use to interpret the results.</p>
+<p class="lede">Atmosphere model, computational methods and numerical checks used to interpret the recorded results.</p>
 <div aria-label="Project topics" class="topic-nav" role="group">
 <button aria-controls="topic-atmosphere" aria-pressed="true" class="node" data-topic="atmosphere" type="button">Ten-layer atmosphere</button>
 <button aria-controls="topic-architecture" aria-pressed="false" class="node" data-topic="architecture" type="button">42 m architecture</button>
@@ -242,7 +242,7 @@ function aoCodeUnavailable() {
 <div class="topic-split"><div><h2 id="architecture-title">Keeping larger runs manageable</h2><p>The large-aperture path combines local lenslet propagation, sparse DM operators and iterative reconstruction. Science images are accumulated from instantaneous intensities.</p><p>The replay follows one run from the atmospheric wavefront to the corrected images.</p><p class="hint">The pupil follows the historical 42 m E-ELT design reference. The current ESO ELT is 39 m; this simulation uses a simplified instrument model.</p><a href="#replay42">Open the recorded 42 m experiment →</a></div><ol class="architecture-steps"><li><strong>Local lenslet calculations</strong><span>Propagate detector spots in bounded batches.</span></li><li><strong>Sparse response and DM operators</strong><span>Retain the local couplings used by calibration and reconstruction.</span></li><li><strong>Iterative reconstruction</strong><span>Solve for commands without dense global inversion.</span></li><li><strong>Streaming image accumulation</strong><span>Average intensities while retaining selected full-grid PSFs for replay.</span></li></ol></div>
 </section>
 <section aria-labelledby="checks-title" class="panel topic-panel" hidden="" id="topic-checks">
-<h2 id="checks-title">What I have checked so far</h2>
+<h2 id="checks-title">Numerical checks and limitations</h2>
 <div class="evidence-grid"><div><h3>Sensor response</h3><p>Calibrated tilt response and centroid precision in tutorial configurations.</p><a href="#result-R1">Sensor checks →</a></div><div><h3>Independent implementations</h3><p>Comparison of the native and HCIPy implementations on one small test configuration.</p><a href="#result-R7">Backend comparison →</a></div><div><h3>Numerical sampling</h3><p>Sampling studies for selected configurations and observables. Other configurations still need their own checks.</p><a href="#result-R8">Sampling records →</a></div></div>
 <p class="takeaway">The 42 m replay includes source records and numerical consistency checks. It is still one realization: robustness, long-run stationarity and agreement with real instrument data remain open.</p>
 </section>
@@ -326,7 +326,7 @@ function aoCodeUnavailable() {
 <span>Time separation</span><button aria-pressed="false" data-comparison-lag="8" disabled="" type="button">8 ms</button><button aria-pressed="true" data-comparison-lag="100" disabled="" type="button">100 ms</button><button aria-pressed="false" data-comparison-lag="500" disabled="" type="button">500 ms</button>
 </div>
 <figure class="comparison-figure"><a id="comparison-map-full" rel="noopener" target="_blank"><img alt="Two rows of wavefront maps: independent 2 m baseline above, fixed 2 m crop from 42 m below; earlier and later maps and their difference." height="1292" hidden="" id="comparison-map" width="1904"/></a><figcaption id="comparison-map-caption">Each row shows t = 0.200 s, the later frame, and later minus earlier. All panels share one color scale; open the image for full resolution.</figcaption></figure>
-<details id="comparison-location"><summary>Where is the patch in the 42 m pupil?</summary><figure class="comparison-figure comparison-location"><img alt="A 2 m diameter circle at x=10 m, y=0 m, away from the central obstruction and the outer pupil edge." height="880" hidden="" id="comparison-location-image" width="960"/><figcaption>I chose this location from the pupil geometry before looking at the patch values, and kept it fixed throughout the recording.</figcaption></figure></details>
+<details id="comparison-location"><summary>Where is the patch in the 42 m pupil?</summary><figure class="comparison-figure comparison-location"><img alt="A 2 m diameter circle at x=10 m, y=0 m, away from the central obstruction and the outer pupil edge." height="880" hidden="" id="comparison-location-image" width="960"/><figcaption>This location was selected from the pupil geometry before inspecting the patch values and held fixed throughout the recording.</figcaption></figure></details>
 <details id="comparison-animation"><summary>Watch the synchronized wavefronts and 8 ms differences</summary><p class="hint">Top: independent 2 m baseline. Bottom: the 42 m patch. Left: the current wavefront. Right: its change over the next 8 ms. The same ±2500 nm scale covers every panel.</p><div class="comparison-controls"><button aria-pressed="false" disabled="" id="comparison-animation-toggle" type="button">Play comparison</button><span class="hint">20× slower · 99 saved samples · repeats the same record</span></div><figure class="comparison-figure comparison-movie"><img alt="Synchronized 2 m wavefront comparison and next-frame differences at 8 ms spacing." height="745" hidden="" id="comparison-animation-image" width="820"/><figcaption id="comparison-animation-caption">Stopped. Playback uses t = 0.200–0.984 s; the final difference uses the recorded 0.992 s frame. Stopping returns to the first-frame preview.</figcaption></figure></details>
 </section>
 <section aria-labelledby="comparison-results-title" class="panel">
@@ -366,7 +366,7 @@ function aoCodeUnavailable() {
 <section aria-labelledby="dm-stroke-title" class="panel" id="dm-stroke">
 <h2 id="dm-stroke-title">How much does the DM stroke limit matter?</h2>
 <p class="takeaway">The 2 m recording reaches its command limit; the 42 m recording does not. <strong>Stroke affects the comparison, but these data cannot show that it is the main reason the 42 m Strehl is steadier.</strong> During 0.200–0.518 s, the 2 m mirror continuously holds commands that were not clipped, yet Strehl still ranges from <strong>0.380 to 0.722</strong>.</p>
-<div class="comparison-columns"><div><h3>Why are the limits 100× apart?</h3><p>The 2 m profile inherits <strong>±1 µm OPD</strong> from a synthetic engineering preset. The 42 m profile deliberately uses <strong>±100 µm OPD</strong> as a finite stand-in for unlimited stroke. That approximation requires the requested commands to stay within the bound. I chose these limits for different modelling purposes; they are not a hardware scaling rule.</p></div><div><h3>How I checked clipping</h3><p>The saved requested and applied actuator commands were compared directly, alongside the existing residual RMS and propagated-PSF Strehl records. Saturation means a requested command exceeds the configured positive or negative limit. No atmosphere, calibration, control loop or PSF was rerun.</p></div></div>
+<div class="comparison-columns"><div><h3>Why are the limits 100× apart?</h3><p>The 2 m profile inherits <strong>±1 µm OPD</strong> from a synthetic engineering preset. The 42 m profile deliberately uses <strong>±100 µm OPD</strong> as a finite stand-in for unlimited stroke. That approximation requires the requested commands to stay within the bound. These limits serve different modelling purposes; they are not a hardware scaling rule.</p></div><div><h3>Clipping checks</h3><p>The saved requested and applied actuator commands were compared directly, alongside the existing residual RMS and propagated-PSF Strehl records. Saturation means a requested command exceeds the configured positive or negative limit. No atmosphere, calibration, control loop or PSF was rerun.</p></div></div>
 <div class="status" id="stroke-status" role="status">The saved stroke statistics and figure load when this panel is in view.</div><div class="error" hidden="" id="stroke-error" role="alert"></div>
 <div class="comparison-table-scroll"><table class="comparison-table"><caption>Existing recordings · native sampling · analysis window [0.200, 1.000) s, with startup excluded</caption><thead><tr><th scope="col">Quantity</th><th scope="col">2 m</th><th scope="col">42 m</th></tr></thead><tbody id="stroke-table-body"><tr><td colspan="3">Loading the saved saturation statistics…</td></tr></tbody></table></div>
 <p class="hint">“Frames with clipping” counts updates with any clipped actuator. “Mean clipped actuator fraction” averages across all recorded actuator channels and updates; the two percentages have different denominators. Across the entire 1 s, including startup, 2 m clips in 306/1000 updates; 42 m clips in 0/500. The maximum requested magnitudes over that whole second are 1.128 and 6.918 µm OPD respectively.</p>
@@ -391,9 +391,9 @@ function aoCodeUnavailable() {
 </section>
 <section aria-labelledby="ngs22-title" class="wrap section page-view" data-nav="studies" data-view="" hidden="" id="ngs22"><p class="breadcrumb"><a href="#studies">← Selected studies</a></p>
 <h1 id="ngs22-title">Why did the loop stop correcting?</h1><nav aria-label="In this study" class="local-nav"><a href="#ngs22-replay">Compare the images</a><a href="#ngs22-cause-title">Trace the failure</a><a href="#ngs22-control">Inspect telemetry</a><a href="#ngs22-repair-title">Interpret the change</a></nav>
-<p class="lede">I built this configuration using published Robo-AO-2 information as a starting point. The original version loses usable reconstruction at 0.9813 s. After increasing regularization, the loop stays usable through the same two-second atmosphere sequence. Both runs are shown below.</p>
+<p class="lede">This configuration uses published Robo-AO-2 information and stated modelling assumptions. The original version loses usable reconstruction at 0.9813 s. After increasing regularization, the loop stays usable through the same two-second atmosphere sequence. Both runs are shown below.</p>
 <p class="takeaway"><strong>What changed:</strong> stronger rejection of weakly sensed reconstruction modes. The DM stroke, atmosphere, photons, loop gain and timing are unchanged between the two 2.2 m runs. The added recovery safeguard was not needed in the revised run.</p>
-<p class="hint">The setup combines published hardware information, atmosphere parameters from the literature and my own modelling assumptions. It has not been calibrated against Robo-AO-2 telemetry or measured PSFs.</p>
+<p class="hint">The setup combines published hardware information, atmosphere parameters from the literature and explicit modelling assumptions. It has not been calibrated against Robo-AO-2 telemetry or measured PSFs.</p>
 <p class="status" id="ngs22-status" role="status">The results load when this section comes into view.</p>
 <div class="error" hidden="" id="ngs22-error" role="alert"></div>
 <details aria-labelledby="evidence-ngs22-title" class="setup-notes" id="evidence-ngs22">
@@ -538,7 +538,7 @@ function aoCodeUnavailable() {
 </details>
 </section>
 <section aria-labelledby="ngs22-repair-title" class="panel">
-<h2 id="ngs22-repair-title">What I changed, and what this run tells us</h2>
+<h2 id="ngs22-repair-title">Regularization change and observed outcome</h2>
 <div class="table-scroll"><table class="comparison-table"><thead><tr><th scope="col">Setting</th><th scope="col">Original draft · v1</th><th scope="col">Revision · v2</th><th scope="col">Basis for the setting</th></tr></thead><tbody>
 <tr><th scope="row">TSVD relative cutoff</th><td>0.001</td><td>0.05</td><td>Chosen for this simulation, not taken from an instrument specification. Limits retained relative inverse sensitivity to 20 instead of 1000. All 197 full-support calibration modes remain.</td></tr>
 <tr><th scope="row">Consecutive-rejection recovery</th><td>None</td><td>After 3 rejected frames, decay requested commands by 5% on each further rejected frame</td><td>A recovery rule for this model. The two-frame queue drains first. Fallback reconstruction and gain scheduling remain disabled.</td></tr>
@@ -623,8 +623,8 @@ function aoCodeUnavailable() {
 <section aria-labelledby="c1-title" class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="c1-noise"><p class="breadcrumb"><a href="#methods-home">← Methods &amp; evidence</a></p>
 <h1 id="c1-title">Would stronger damping reduce detector noise?</h1>
 <div class="prose">
-<p>In this separate calculation (C1), I compared the damping used in the replay with one alternative at the same assumed flux (10⁵ detected e⁻ per full subaperture per frame). It predicts the detector-noise contribution to reconstructed pupil wavefront RMS.</p>
-<p>The alternative changed that prediction from <strong id="c1-rms-b">—</strong> to <strong id="c1-rms-c">—</strong>. The difference is below the threshold I set for a new closed-loop experiment, so I kept α = 0.001. This calculation produced no images; the pictures above all come from the original replay.</p>
+<p>This separate calculation (C1) compares the replay damping with one alternative at the same assumed flux (10⁵ detected e⁻ per full subaperture per frame). It predicts the detector-noise contribution to reconstructed pupil wavefront RMS.</p>
+<p>The alternative changed that prediction from <strong id="c1-rms-b">—</strong> to <strong id="c1-rms-c">—</strong>. The difference is below the predeclared threshold for a new closed-loop experiment; α = 0.001 was retained. This calculation produced no images; the pictures above all come from the original replay.</p>
 </div>
 <div class="status" id="c1-status" role="status">The C1 summary loads when this panel is in view.</div><div class="error" hidden="" id="c1-error" role="alert"></div>
 <figure class="c1-figure">
@@ -644,7 +644,7 @@ function aoCodeUnavailable() {
 <p class="evidence-kind">New closed-loop runs · 2 s each · one atmospheric realization (r2)</p>
 <h1 id="flux42-title">Does a fainter guide star change the loop over two seconds?</h1>
 <div class="prose">
-<p>I ran the 42 m loop twice for 1,000 frames at 500 Hz (2 s), both times through the same simulated atmosphere. Only the guide-star flux differs: <strong>100,000</strong> or <strong>1,000</strong> detected electrons (e⁻) per fully illuminated subaperture per frame. Gain, delay, damping and detector model are the replay’s; the atmosphere is realization r2, followed for twice as long. The curves show the residual wavefront error measured before each control update.</p>
+<p>Two 42 m recordings cover 1,000 frames at 500 Hz (2 s), using the same simulated atmosphere. Only the guide-star flux differs: <strong>100,000</strong> or <strong>1,000</strong> detected electrons (e⁻) per fully illuminated subaperture per frame. Gain, delay, damping and detector model are the replay’s; the atmosphere is realization r2, followed for twice as long. The curves show the residual wavefront error measured before each control update.</p>
 <p id="flux42-lead"></p>
 </div>
 <div class="status" id="flux42-status" role="status">The flux comparison loads when this panel is in view.</div><div class="error" hidden="" id="flux42-error" role="alert"></div>
@@ -681,7 +681,7 @@ function aoCodeUnavailable() {
 <p class="evidence-kind">New and reused closed-loop records · 1 s each · three atmospheric realizations (r0, r1, r2)</p>
 <h1 id="delay42-title">How much does one frame of controller delay matter?</h1>
 <div class="prose">
-<p>Here only the controller delay changes. A correction computed from frame k is applied at frame k + L and first appears in the measured residual at frame k + L + 1. The replay uses L = 2; I also ran L = 1 and L = 3. Each delay went through the same three simulated atmospheres for 500 frames at 500 Hz, at 100,000 e⁻ per fully illuminated subaperture per frame. The delay-2 records are the earlier photon-budget runs, reused rather than rerun.</p>
+<p>Here only the controller delay changes. A correction computed from frame k is applied at frame k + L and first appears in the measured residual at frame k + L + 1. The replay uses L = 2; the comparison includes L = 1 and L = 3. Each delay went through the same three simulated atmospheres for 500 frames at 500 Hz, at 100,000 e⁻ per fully illuminated subaperture per frame. The delay-2 records are the earlier photon-budget runs, reused rather than rerun.</p>
 <p id="delay42-lead"></p>
 </div>
 <div class="status" id="delay42-status" role="status">The controller-delay comparison loads when this panel is in view.</div><div class="error" hidden="" id="delay42-error" role="alert"></div>
@@ -784,6 +784,6 @@ function aoCodeUnavailable() {
 </div></details>
 </div>
 </section></main>
-<footer class="site-footer"><div class="wrap footer-row"><p>Xu Han · Adaptive-optics simulations for learning and investigation.</p><p><a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation">Source code</a> · <a href="#methods-home">Methods &amp; evidence</a> · <a href="#references">References &amp; licences</a></p><p hidden="" id="footer-identity"></p></div></footer>
+<footer class="site-footer"><div class="wrap footer-row"><p>Xu Han · Shack–Hartmann adaptive-optics simulations.</p><p><a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation">Source code</a> · <a href="#methods-home">Methods &amp; evidence</a> · <a href="#references">References &amp; licences</a></p><p hidden="" id="footer-identity"></p></div></footer>
 </body>
 </html>
