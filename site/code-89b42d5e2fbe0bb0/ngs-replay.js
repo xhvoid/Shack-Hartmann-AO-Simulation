@@ -144,7 +144,11 @@ export function initNgsReplay(entry, entryUrl) {
     if(failed||!data)return false;
     next=Math.max(0,Math.min(data.indices.length-1,next));
     const token=++ticket,k=data.indices[next];requested=k;busy=true;
-    $('seek').value=index;$('status').textContent=`Loading and checking frame ${k}… displayed frame remains ${data.indices[index]}.`;
+    $('seek').value=index;
+    // Keep short frame fetches quiet; the status row always reserves its space.
+    const loadingNotice=setTimeout(()=>{
+      if(token===ticket)$('status').textContent='Loading frame…';
+    },250);
     try{
       const [bitmap,scene]=await Promise.all([atlas(k),scienceAtlas(k)]);
       if(token!==ticket)return false;
@@ -156,7 +160,7 @@ export function initNgsReplay(entry, entryUrl) {
       for(const [key,item] of scienceCache){if(scienceCache.size<=12)break;if(item.bitmap&&key!==k){item.bitmap.close();scienceCache.delete(key);}}
       return true;
     }catch(error){if(token===ticket)fail(error);return false;}
-    finally{if(token===ticket)busy=false;}
+    finally{clearTimeout(loadingNotice);if(token===ticket)busy=false;}
   }
   function schedule(){
     clearTimeout(timer);if(!playing||busy||failed)return;
