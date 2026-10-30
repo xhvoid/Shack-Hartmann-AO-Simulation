@@ -5,7 +5,7 @@ needs beyond the optics backend: the camera, the detector-pixel layout, the
 source and sky budget, the WFS bandpass, the detector-plane sampling, the RTC
 pixel processing, the exposure and its optional time sub-sampling.  Its
 presence selects ``shwfs_ao.detector.physical_camera.v1``; without it a
-sensor stays on the AO-REF-004 compatibility chain.
+sensor stays on the compatibility chain.
 """
 
 from __future__ import annotations

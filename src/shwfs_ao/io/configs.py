@@ -974,7 +974,7 @@ class DetectorPhysicsConfig:
     (``benchmarks/detector_camera_presets.v1.json``).  The nested blocks are
     the detector layer's own typed configurations; their identities are this
     block's identity.  Its presence selects the physical response; its
-    absence keeps the AO-REF-004 compatibility chain.
+    absence keeps the compatibility chain.
     """
 
     camera_preset_name: str

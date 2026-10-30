@@ -4,11 +4,11 @@
   "resources": [
     {
       "logical_name": "README.md",
-      "sha256": "480ce9795c02014d8b883d8bc8543b663d246c965ed26e8d3ab2308a35258ca9"
+      "sha256": "94d0e0b2e5d179b7481fdf2a3bd46e459b125d0990b368e3bd2bfa390ad1a39c"
     },
     {
       "logical_name": "__init__.py",
-      "sha256": "8711c48d3ff1073c7441d9e25070865c1e8b4f52f3659401be44c5cb2ce3be70"
+      "sha256": "c79a28501fba01ceea06b854ff4a71d2b1b19b3e79bfa06112b717bdc99303e0"
     },
     {
       "logical_name": "benchmarks/detector_camera_presets.v1.json",
@@ -137,10 +137,6 @@
     {
       "logical_name": "reference_metrics/physical_validation_regression_baseline.csv",
       "sha256": "d905a3fac451ae43c2008ca7905c9a33cc9424c6e86b768ac51d31b769ec87cb"
-    },
-    {
-      "logical_name": "reference_metrics/refactor_contract_manifest.json",
-      "sha256": "daa87394145356403086d6d8dff4d12c3dc35778afc21e41714f9c49de2314f1"
     },
     {
       "logical_name": "samples/eso_asm_snapshot_sample.json",

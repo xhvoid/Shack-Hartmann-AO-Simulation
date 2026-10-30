@@ -59,7 +59,7 @@ class DMModelError(ValueError):
 
 
 # Modern domain-specific spelling; the installed legacy name retains the
-# AO-REF-000 class identity and ``__name__`` (as detector extraction does).
+# class identity and ``__name__`` (as detector extraction does).
 DMConfigError = DMModelError
 
 
@@ -74,7 +74,7 @@ class DMConfig:
 
     __hash_schema_id__ = "shwfs_ao.dm.DMConfig.v1"
 
-    # AO-REF-000 freezes these twelve fields, their order, and defaults.
+    # freezes these twelve fields, their order, and defaults.
     telescope_diameter_m: float = 2.0
     n_actuators_across: int = 11
     influence_model: str = "gaussian"

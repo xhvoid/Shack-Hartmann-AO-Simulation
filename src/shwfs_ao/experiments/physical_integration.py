@@ -1,6 +1,6 @@
 """Atmosphere-driven counterpart to the frozen fast integration.
 
-:mod:`shwfs_ao.experiments.integration` re-exports the frozen AO-REF-011 fast
+:mod:`shwfs_ao.experiments.integration` re-exports the frozen fast
 engine, whose numerics back the accepted ``fast_*`` regression baselines and
 must stay byte-stable.  That engine's disturbance is the control-space proxy:
 a pattern synthesized by driving the deformable mirror and reading back its own

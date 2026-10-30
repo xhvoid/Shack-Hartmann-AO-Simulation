@@ -76,7 +76,7 @@ REQUIRED_COMPARISON_KINDS = (
 # the acceptance workflow — the only writer of a baseline — could drop it and
 # still satisfy every custom check.
 COMPARISONS_REQUIRING_STATISTICAL_DEFINITION = frozenset({"atmosphere_statistics"})
-# What AO-REF-018 requires an estimated comparison to state, as fields rather
+# What requires an estimated comparison to state, as fields rather
 # than as prose.  A paragraph cannot be validated — any non-empty string passes,
 # including a single character, and two documents that estimated their numbers
 # differently can each carry a sentence that says so without anything noticing —
@@ -154,7 +154,7 @@ _REQUIRED_HASH_KEYS: Mapping[str, tuple[str, ...]] = {
     "fixture_hashes": REQUIRED_FIXTURE_HASH_KEYS,
 }
 
-# The complete AO-REF-018 metric inventory, per comparison kind.  Validation
+# The complete metric inventory, per comparison kind.  Validation
 # requires exactly this set, so a required row-identity, shared-input, or
 # scientific gate cannot disappear — and an unreviewed extra metric cannot
 # appear — without a deliberate change here and in the packaged JSON Schema.
@@ -525,7 +525,7 @@ def _validate_report_structure(
                 )
         # A required row-identity, actuator-identity, or shared-input hash
         # cannot silently disappear, and an unreviewed extra one cannot
-        # appear: the recorded keys must be exactly the AO-REF-018 inventory.
+        # appear: the recorded keys must be exactly the inventory.
         required_keys = _REQUIRED_HASH_KEYS[group]
         if set(hashes) != set(required_keys):
             missing = sorted(set(required_keys) - set(hashes))
@@ -587,7 +587,7 @@ def validate_cross_backend_report(document: Mapping[str, Any]) -> Mapping[str, A
     :func:`_validate_report_structure`, a full report must cover every kind in
     :data:`REQUIRED_COMPARISON_KINDS` exactly once, in canonical order, and each
     comparison must record exactly its complete metric inventory: one run of the
-    suite always produces the full AO-REF-018 inventory, and an accepted
+    suite always produces the full inventory, and an accepted
     baseline that silently dropped a comparison would stop gating it.
     """
 
@@ -1430,7 +1430,7 @@ def _validate_comparison(comparison: object) -> None:
 
 
 def _validate_statistical_definition(kind: str, definition: object) -> None:
-    """Require the four AO-REF-018 elements as fields, each one checkable.
+    """Require the four elements as fields, each one checkable.
 
     A comparison estimated from repeated realizations reports averages, and an
     average means nothing on its own: the same three ratios can be produced from

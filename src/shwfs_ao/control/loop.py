@@ -103,7 +103,7 @@ class ControlLoopWarning(RuntimeWarning):
 
 @runtime_checkable
 class _LoopControllerTelemetry(Protocol):
-    """AO-REF-009 extension needed for fixed released-delta telemetry."""
+    """Interface for fixed released-delta telemetry."""
 
     @property
     def gain(self) -> float:
@@ -124,7 +124,7 @@ class _LoopControllerTelemetry(Protocol):
 
 @runtime_checkable
 class _ConfigIdentifiedReconstructor(Protocol):
-    """AO-REF-009 extension needed to hash reconstruction policy."""
+    """Interface to hash reconstruction policy."""
 
     @property
     def config_hash(self) -> str:
@@ -133,7 +133,7 @@ class _ConfigIdentifiedReconstructor(Protocol):
 
 @runtime_checkable
 class _TargetDmBoundProjector(Protocol):
-    """AO-REF-009 extension binding a modal command map to its target DM."""
+    """Interface binding a modal command map to its target DM."""
 
     @property
     def target_dm_hash(self) -> str:

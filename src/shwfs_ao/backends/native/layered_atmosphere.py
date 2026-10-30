@@ -38,7 +38,7 @@ The periodic band repeats after a layer has travelled one screen period
 (``screen_period_m``); the low-frequency modes do not.  Repetition makes
 long-exposure statistics less independent but introduces no discontinuity.
 
-``fixed-physics pairing`` (ticket T2, G1, 2026-10-21)
+``fixed-physics pairing``
     Three optional configuration fields pair the realizations of two pupil
     samplings.  ``band_draw_reference_screen_size`` draws the band normals on
     a reference grid and lets a smaller screen take the entries at its own

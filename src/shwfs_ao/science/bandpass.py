@@ -101,7 +101,7 @@ class ScienceBandpass:
 
     __hash_schema_id__ = "shwfs_ao.science.ScienceBandpass.v1"
 
-    # AO-REF-000 freezes these fields, their order, and their defaults.
+    # freezes these fields, their order, and their defaults.
     name: str
     wavelength_m: np.ndarray
     transmission: np.ndarray

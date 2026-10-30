@@ -11,3 +11,6 @@ dist/
 outputs/
 results/
 detector_level_demo_output/
+.pytest_cache/
+local_archive/
+*.log

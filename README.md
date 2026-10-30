@@ -1,14 +1,16 @@
 # Shack-Hartmann AO Simulation
 
-A Python project for studying Shack-Hartmann wavefront sensing and
-single-conjugate adaptive optics. I use it to explore how atmosphere,
-detector noise, reconstruction and feedback affect the residual wavefront
-and the resulting images.
+I started this Python project to learn adaptive optics by building a simulation
+and examining its behaviour. It grew to cover wavefront sensing,
+reconstruction, feedback control and image formation. I completed an MSc in
+Astrophysics and am now studying Photonics.
 
-[AO Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/) shows
-recorded simulations and case studies. The models use published information
-and synthetic assumptions; they have not been calibrated against a real
-instrument.
+**[Open AO Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/)**
+
+The selected examples follow a compact 2 m loop, investigate loss of lock in
+a 2.2 m model, and compare gain and delay in a simplified 42 m model. They are
+recorded simulations with explicit assumptions, not predictions for operating
+instruments.
 
 ## Install
 
@@ -20,17 +22,11 @@ source .venv/bin/activate
 python -m pip install .
 ```
 
-On Windows, activate with `.venv\Scripts\activate` instead. To edit the
-package locally, use `python -m pip install -e .`.
+On Windows, activate with `.venv\Scripts\activate`. For local editing, use
+`python -m pip install -e .`. The native backend uses NumPy and SciPy;
+`python -m pip install '.[hcipy]'` adds the optional HCIPy backend.
 
-The native backend uses NumPy and SciPy. Optional installs:
-
-```bash
-python -m pip install '.[hcipy]'       # HCIPy optical backend
-python -m pip install '.[validation]'  # JSON Schema checks for saved baselines
-```
-
-## Run the examples
+## Run an example
 
 ```bash
 python examples/run_detector_level_demo.py
@@ -38,15 +34,11 @@ python examples/run_shwfs_centroid_demo.py
 python examples/run_psf_strehl_demo.py
 ```
 
-The detector example runs a synthetic 2 m SCAO configuration and writes
-`detector_level_demo_output/detector_level_demo.json`. The other examples
-write plots and tables under `outputs/examples/detector_level_SCAO/`.
-Set `AO_DEMO_OUTPUT_DIR` to choose another output directory.
-
-The PSF example compares a prescribed phase map with a scaled copy of it;
-it illustrates wavefront error and image quality without running a control loop.
-
-## Use from Python
+The first runs a synthetic 2 m loop and writes
+`detector_level_demo_output/detector_level_demo.json`. The others write plots
+under `outputs/examples/detector_level_SCAO/`. Set `AO_DEMO_OUTPUT_DIR` to
+choose a destination. The PSF example compares a prescribed wavefront with a
+scaled copy; it does not run a controller.
 
 ```python
 from shwfs_ao.io.configs import load_system_profile
@@ -54,28 +46,30 @@ from shwfs_ao.experiments.scao import run_closed_loop
 
 config = load_system_profile("det_emccd_2m_synthetic", 1)
 history = run_closed_loop(config)
-
-print("Frames:", history.n_steps)
-print("Residual RMS (nm):", history.post_update_residual_opd_rms_m * 1e9)
+print("Residual after each update (nm):", history.post_update_residual_opd_rms_m * 1e9)
 ```
 
-Profiles, detector presets and their source information are included in
-`src/shwfs_ao/resources/`. Profile names and versions are explicit so a
-saved configuration can be loaded again. OPD is in metres internally;
-wavelengths are also in metres. The example above prints the residual after
-each command update. Explorer image metrics may refer to the wavefront
-before that update, as labelled on the site.
+OPD and wavelengths use metres internally. Explorer image metrics use the
+residual **before** an update, as labelled. The short example above does not
+reproduce the site's longer recordings without their saved settings.
 
-## Files
+## Scope and evidence
 
-- `src/shwfs_ao/`: simulation components and packaged resources.
-- `examples/`: the three runnable examples above.
-- `build_support/`: packaging helpers for the resource compatibility alias.
-- `pyproject.toml` and `MANIFEST.in`: installation and source-package contents.
+The models are on-axis and use simplified pupils, influence functions,
+atmosphere and detector assumptions. The 42 m geometry comes from a historical
+E-ELT reference; the current ELT has a 39 m primary. There is no segmented-mirror
+phasing model or calibration against on-sky telemetry. A successful numerical
+comparison applies to the component and conditions tested.
 
-Explorer files are maintained on the
-[`website` branch](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/tree/website),
-which includes preview and publication instructions.
+- [Model conventions and sources](docs/methods.md)
+- [Reproducing examples and checking saved results](docs/reproducing.md)
+- [Selected studies and their evidence](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/#studies)
 
-Code is released under the [MIT licence](LICENSE). Third-party data retain
-the terms listed in [DATA_LICENSES.md](DATA_LICENSES.md).
+`src/shwfs_ao/` holds the implementation and versioned resources. `examples/`
+contains the three entry points; `tests/` contains small mathematical checks.
+`build_support/` preserves compatibility resource imports. Website source,
+compact records and publication tools live on the
+[`website` branch](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/tree/website).
+
+Code is under the [MIT licence](LICENSE). See [data licences](DATA_LICENSES.md)
+for third-party attribution and terms.
