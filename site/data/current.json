@@ -1,85 +1,106 @@
 {
-  "schema": "ao-explorer.entry.v1",
-  "dataset_id": "series-2m1000-s624-c7241e4190d5-ef74a541b0e60",
-  "manifest": "series-2m1000-s624-c7241e4190d5-ef74a541b0e60/manifest.json",
-  "manifest_bytes": 42464,
-  "manifest_sha256": "a151da4b84b21029c03a9f373c586a8203781807e52cb0f9bedddef4ae1719ee",
-  "code_build": "703cee05d3ea4190",
-  "galaxy": {
-    "schema": "ao-explorer.galaxy-entry.v3",
-    "derived_id": "ngc1705-f814w-2m1000-s624-c7241e4190d5-gda93ed5af026-m4adb5a4af111",
-    "manifest": "../derived/ngc1705-f814w-2m1000-s624-c7241e4190d5-gda93ed5af026-m4adb5a4af111/manifest.json",
-    "manifest_bytes": 38212,
-    "manifest_sha256": "223a562f222f6f6a79800b939d19f6a26eb9fd81f59808b5df637e65f234dc91"
-  },
-  "diagnostics": {
-    "schema": "ao-explorer.rms-diagnostics-entry.v1",
-    "derived_id": "rms-2m1000-s624-c7241e4190d5-d7fafecb6f7ec",
-    "manifest": "../derived/rms-2m1000-s624-c7241e4190d5-d7fafecb6f7ec/manifest.json",
-    "manifest_bytes": 13189,
-    "manifest_sha256": "3ce30fa20c68ad02ac80ebe98a4df7414b1b16ada9e54a2142004c2b249784e2"
-  },
-  "replay42": {
-    "schema": "ao-explorer.recording42-entry.v1",
-    "recording_id": "42m-500-31024b173527b7a6",
-    "manifest": "../recordings/42m-500-31024b173527b7a6/manifest.json",
-    "manifest_bytes": 20171,
-    "manifest_sha256": "cc706d634a243c8b85312006c9e62f8f99b47adabe688f3aef9acef65d620122"
-  },
-  "apertureComparison": {
-    "schema": "ao-explorer.aperture-entry.v1",
-    "id": "aperture-comparison-9e23a2d666039918",
-    "manifest": "../derived/aperture-comparison-9e23a2d666039918/manifest.json",
-    "manifest_bytes": 2773,
-    "manifest_sha256": "e592b56a705e60a74d1bd0da783178bc61fc586ff8185a94532136d3844f20f3"
-  },
-  "dmStroke": {
-    "schema": "ao-explorer.dm-stroke-entry.v1",
-    "id": "dm-stroke-5d085761bf15f53d",
-    "manifest": "../derived/dm-stroke-5d085761bf15f53d/manifest.json",
-    "manifest_bytes": 1343,
-    "manifest_sha256": "6fed7eb3f13d4447a6910d7003ab677b6b8e8b6e5e29aa89f985e5c527c57556"
-  },
-  "ngs22": {
-    "schema": "ao-explorer.ngs-entry.v1",
-    "id": "ngs-22m-53663e0742d1d106",
-    "manifest": "../derived/ngs-22m-53663e0742d1d106/manifest.json",
-    "manifest_bytes": 3302,
-    "manifest_sha256": "0030fbd65ee38ea98e364a3f94fd158794b49bfa215fe97f78ab0e5c0b860154"
-  },
-  "ngsReplay": {
-    "schema": "ao-explorer.ngs-replay-entry.v1",
-    "id": "ngs-replay-b3e470f2d04acd5b",
-    "manifest": "../recordings/ngs-replay-b3e470f2d04acd5b/manifest.json",
-    "manifest_bytes": 27969,
-    "manifest_sha256": "cd70424f702bd0c72eb9e5a78f4775303e0bfa2f1f72bd6396b68784e8f351eb"
-  },
-  "ngsControl": {
-    "schema": "ao-explorer.ngs-control-entry.v1",
-    "id": "ngs-control-f47d3472be91885b",
-    "manifest": "../derived/ngs-control-f47d3472be91885b/manifest.json",
-    "manifest_bytes": 955,
-    "manifest_sha256": "415a08555edcd5d3309a5c7ed15d75f2a3c3f24a42e01b31e40f0f796fdb074f"
-  },
-  "c1Noise": {
-    "schema": "ao-explorer.c1-noise-entry.v1",
-    "id": "c1-noise-3f28e993fbdc24c6",
-    "manifest": "../derived/c1-noise-3f28e993fbdc24c6/manifest.json",
-    "manifest_bytes": 445,
-    "manifest_sha256": "177a875f8ee0cc14f345bb63ed03313c75cee56aa79bb728e7eb26389b121176"
-  },
-  "scienceReplay": {
-    "schema": "ao-explorer.science-replay-entry.v1",
-    "id": "westerlund2-f162m-4e247be6ca25d722",
-    "manifest": "../derived/westerlund2-f162m-4e247be6ca25d722/manifest.json",
-    "manifest_bytes": 31915,
-    "manifest_sha256": "334e0239d63a6dd5c2f3383be0861dd02d2a5a43069c60e02fc742c53c559365"
-  },
-  "scienceVideo": {
-    "schema": "ao-explorer.science-video-entry.v1",
-    "id": "westerlund2-mp4-5f0576e5b12237ca",
-    "manifest": "../derived/westerlund2-mp4-5f0576e5b12237ca/manifest.json",
-    "manifest_bytes": 1157,
-    "manifest_sha256": "67a7c03be3a8f4694d0450b08111991cad0630c8a2d59791c92976044d2a47d4"
-  }
+ "schema": "ao-explorer.entry.v1",
+ "dataset_id": "series-2m1000-s624-c7241e4190d5-ef74a541b0e60",
+ "manifest": "series-2m1000-s624-c7241e4190d5-ef74a541b0e60/manifest.json",
+ "manifest_bytes": 42464,
+ "manifest_sha256": "a151da4b84b21029c03a9f373c586a8203781807e52cb0f9bedddef4ae1719ee",
+ "code_build": "197afb259a42c02b",
+ "galaxy": {
+  "schema": "ao-explorer.galaxy-entry.v3",
+  "derived_id": "ngc1705-f814w-2m1000-s624-c7241e4190d5-gda93ed5af026-m4adb5a4af111",
+  "manifest": "../derived/ngc1705-f814w-2m1000-s624-c7241e4190d5-gda93ed5af026-m4adb5a4af111/manifest.json",
+  "manifest_bytes": 38212,
+  "manifest_sha256": "223a562f222f6f6a79800b939d19f6a26eb9fd81f59808b5df637e65f234dc91"
+ },
+ "diagnostics": {
+  "schema": "ao-explorer.rms-diagnostics-entry.v1",
+  "derived_id": "rms-2m1000-s624-c7241e4190d5-d7fafecb6f7ec",
+  "manifest": "../derived/rms-2m1000-s624-c7241e4190d5-d7fafecb6f7ec/manifest.json",
+  "manifest_bytes": 13189,
+  "manifest_sha256": "3ce30fa20c68ad02ac80ebe98a4df7414b1b16ada9e54a2142004c2b249784e2"
+ },
+ "replay42": {
+  "schema": "ao-explorer.recording42-entry.v1",
+  "recording_id": "42m-500-31024b173527b7a6",
+  "manifest": "../recordings/42m-500-31024b173527b7a6/manifest.json",
+  "manifest_bytes": 20171,
+  "manifest_sha256": "cc706d634a243c8b85312006c9e62f8f99b47adabe688f3aef9acef65d620122"
+ },
+ "apertureComparison": {
+  "schema": "ao-explorer.aperture-entry.v1",
+  "id": "aperture-comparison-9e23a2d666039918",
+  "manifest": "../derived/aperture-comparison-9e23a2d666039918/manifest.json",
+  "manifest_bytes": 2773,
+  "manifest_sha256": "e592b56a705e60a74d1bd0da783178bc61fc586ff8185a94532136d3844f20f3"
+ },
+ "dmStroke": {
+  "schema": "ao-explorer.dm-stroke-entry.v1",
+  "id": "dm-stroke-5d085761bf15f53d",
+  "manifest": "../derived/dm-stroke-5d085761bf15f53d/manifest.json",
+  "manifest_bytes": 1343,
+  "manifest_sha256": "6fed7eb3f13d4447a6910d7003ab677b6b8e8b6e5e29aa89f985e5c527c57556"
+ },
+ "ngs22": {
+  "schema": "ao-explorer.ngs-entry.v1",
+  "id": "ngs-22m-53663e0742d1d106",
+  "manifest": "../derived/ngs-22m-53663e0742d1d106/manifest.json",
+  "manifest_bytes": 3302,
+  "manifest_sha256": "0030fbd65ee38ea98e364a3f94fd158794b49bfa215fe97f78ab0e5c0b860154"
+ },
+ "ngsReplay": {
+  "schema": "ao-explorer.ngs-replay-entry.v1",
+  "id": "ngs-replay-b3e470f2d04acd5b",
+  "manifest": "../recordings/ngs-replay-b3e470f2d04acd5b/manifest.json",
+  "manifest_bytes": 27969,
+  "manifest_sha256": "cd70424f702bd0c72eb9e5a78f4775303e0bfa2f1f72bd6396b68784e8f351eb"
+ },
+ "ngsControl": {
+  "schema": "ao-explorer.ngs-control-entry.v1",
+  "id": "ngs-control-f47d3472be91885b",
+  "manifest": "../derived/ngs-control-f47d3472be91885b/manifest.json",
+  "manifest_bytes": 955,
+  "manifest_sha256": "415a08555edcd5d3309a5c7ed15d75f2a3c3f24a42e01b31e40f0f796fdb074f"
+ },
+ "c1Noise": {
+  "schema": "ao-explorer.c1-noise-entry.v1",
+  "id": "c1-noise-3f28e993fbdc24c6",
+  "manifest": "../derived/c1-noise-3f28e993fbdc24c6/manifest.json",
+  "manifest_bytes": 445,
+  "manifest_sha256": "177a875f8ee0cc14f345bb63ed03313c75cee56aa79bb728e7eb26389b121176"
+ },
+ "scienceReplay": {
+  "schema": "ao-explorer.science-replay-entry.v1",
+  "id": "westerlund2-f162m-4e247be6ca25d722",
+  "manifest": "../derived/westerlund2-f162m-4e247be6ca25d722/manifest.json",
+  "manifest_bytes": 31915,
+  "manifest_sha256": "334e0239d63a6dd5c2f3383be0861dd02d2a5a43069c60e02fc742c53c559365"
+ },
+ "scienceVideo": {
+  "schema": "ao-explorer.science-video-entry.v1",
+  "id": "westerlund2-mp4-5f0576e5b12237ca",
+  "manifest": "../derived/westerlund2-mp4-5f0576e5b12237ca/manifest.json",
+  "manifest_bytes": 1157,
+  "manifest_sha256": "67a7c03be3a8f4694d0450b08111991cad0630c8a2d59791c92976044d2a47d4"
+ },
+ "flux42": {
+  "schema": "ao-explorer.flux42-entry.v1",
+  "id": "flux42-r2-6291ec4df9518975",
+  "manifest": "../derived/flux42-r2-6291ec4df9518975/manifest.json",
+  "manifest_bytes": 950,
+  "manifest_sha256": "cc093761e630b74eaf8f1eeef728cad157545817cba77cfa714089175d8d6f34"
+ },
+ "delay42": {
+  "schema": "ao-explorer.delay42-entry.v1",
+  "id": "delay42-005f5db7c0c0ffd5",
+  "manifest": "../derived/delay42-005f5db7c0c0ffd5/manifest.json",
+  "manifest_bytes": 1121,
+  "manifest_sha256": "5d15404173d5661cde7b70d56fc0010099e481fba1deacae3b461934d87a1c68"
+ },
+ "gain42": {
+  "schema": "ao-explorer.gain42-entry.v1",
+  "id": "gain42-2a47efeb7c51bd13",
+  "manifest": "../derived/gain42-2a47efeb7c51bd13/manifest.json",
+  "manifest_bytes": 895,
+  "manifest_sha256": "07c4e10270956d3457c779cfffe9b6c02c9b6efa3530b43b5dbe74f82d9a0850"
+ }
 }

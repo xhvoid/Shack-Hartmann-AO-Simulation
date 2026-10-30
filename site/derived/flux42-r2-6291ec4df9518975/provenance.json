@@ -1,0 +1,177 @@
+{
+  "schema": "ao-explorer.flux42-provenance.v1",
+  "source": {
+    "archive": "private project evidence archive",
+    "branch": "study/42m-bright-r2-1000frames-20261029-2b97cb",
+    "closing_commit": "35e3f7c6fbbb72cc39326bd8fd6231fd96d00778",
+    "compact_archive_sha256": "50021242ac1f8eed0d5a0f01cc09e16ac6f8532e46a8ae83c37c3f24242cf4ec",
+    "faint_extension": {
+      "branch": "study/42m-photon-budget-r2-a3-20261029-298377",
+      "closing_commit": "876c5d062957cd56f67a8e6cdc44e6b219d5d4a2"
+    },
+    "accepted": "2026-10-29 bright-control review (faint attempt 3 accepted in its own review the same day)"
+  },
+  "producer_source": {
+    "commit": "642a5b76de97e1fbe46fc49dd5fad232fb725219",
+    "tree": "2538aee871f8a8959a08ed0f4bab6c0a6c9d70c9"
+  },
+  "compact_listing": {
+    "schema": "pb42mbr2_compact_package.v1",
+    "sha256": "60ce8925f3be63a556f321676d1dec07dea2915de78a7ba3f767e8dfa0acb3b7"
+  },
+  "inputs": {
+    "analysis/bright1/ext_results.json": {
+      "bytes": 19878,
+      "sha256": "2db64499f2a666540a84e69716d1671610e3077ccd89f13c82efd04459845b1b"
+    },
+    "analysis/pair_bright_faint/pair_results.json": {
+      "bytes": 15344,
+      "sha256": "fca0be941e14c7e744f57824409d6b1848331424436b58112fbc7efe6be7975c"
+    },
+    "faint_flux1000-r2-attempt3/analysis/ext_results.json": {
+      "bytes": 19820,
+      "sha256": "771f2935e13c717f9180d42bb21cb39f5a2fc6635faa069b98d99783d1d5b7b6"
+    },
+    "faint_flux1000-r2-attempt3/atmosphere_digest.json": {
+      "bytes": 71737,
+      "sha256": "1e02bd80d8042a4e2d6714a35c8d98e83b8f202e770cfac6fef2c2e970534b26"
+    },
+    "faint_flux1000-r2-attempt3/build_identities.json": {
+      "bytes": 17161,
+      "sha256": "40116eb18cb81235441a1ebaba6e310086db19055a355e628fc67919d615b680"
+    },
+    "faint_flux1000-r2-attempt3/config.json": {
+      "bytes": 8270,
+      "sha256": "2fd4121060305b18b2a65704f30c4df8b38d205ea4ba7d3f7af3c16892b95c3b"
+    },
+    "faint_flux1000-r2-attempt3/history.npz": {
+      "bytes": 191042,
+      "sha256": "04986af2e054f432f1cf9c41703439089cda4a7e5ed56fb06a883fa68e3fdac9"
+    },
+    "faint_flux1000-r2-attempt3/history_metadata.json": {
+      "bytes": 677157,
+      "sha256": "6bef8be0ec6895d21ec737a368b72222d91a900c099b059d7000da2640718a93"
+    },
+    "faint_flux1000-r2-attempt3/identity.json": {
+      "bytes": 2949,
+      "sha256": "1e12ade3103b23dd9bdde34e1b7009375ec55ec9134c717879d9ce719ec4faec"
+    },
+    "faint_flux1000-r2-attempt3/launch.json": {
+      "bytes": 4343,
+      "sha256": "1040c3cc2f9d64979b954b174896003622c537e878d2934fab9f8327f585a18a"
+    },
+    "faint_flux1000-r2-attempt3/prefix_checkpoint.json": {
+      "bytes": 2018,
+      "sha256": "36aa712c158e7a26c81133cc0a42027d290fe61e1c8dfde7f2eaf884e4a7b768"
+    },
+    "faint_flux1000-r2-attempt3/run_summary.json": {
+      "bytes": 5074,
+      "sha256": "d50b2ddbc75c2938b8b4058863b3159aee5e7db070e497510bcb5174c7ff1496"
+    },
+    "faint_flux1000-r2-attempt3/science_record.json": {
+      "bytes": 5603,
+      "sha256": "e6b8deb784158ff91decb1968c2adf58fd7af4c1743d11a7d9bd25f871862533"
+    },
+    "original_flux100000-r2/config.json": {
+      "bytes": 7886,
+      "sha256": "cc466e52f3aa244cd89b1a5dd22cbcb18c9b29bacca17ba2a7eb30395de68650"
+    },
+    "original_flux100000-r2/history.npz": {
+      "bytes": 88584,
+      "sha256": "2f5af021a307bf0de6a62e4abcd17087a251c08e17d2dc6b4f5f2a3aeb6727a6"
+    },
+    "runs/ext-flux100000-r2-n1000.bright1/launch.json": {
+      "bytes": 4492,
+      "sha256": "75296eb017af2b3a67b2349587c64ff9b4e3fe06d520dceb9886b6c4857563ce"
+    },
+    "runs/ext-flux100000-r2-n1000.bright1/output/atmosphere_digest.json": {
+      "bytes": 71737,
+      "sha256": "d99e79174ddaedb666a43217bc397729659ca33e038168d1f6b6a607db162589"
+    },
+    "runs/ext-flux100000-r2-n1000.bright1/output/build_identities.json": {
+      "bytes": 17163,
+      "sha256": "a8ac21b832c90d88d3ad7de2b9a79910b50215f9cfdf488845de69e59ca49034"
+    },
+    "runs/ext-flux100000-r2-n1000.bright1/output/config.json": {
+      "bytes": 8160,
+      "sha256": "bcdd860690e068c9ad37ac91fe253853a75c91dbd3d932599a796279a21ff2cd"
+    },
+    "runs/ext-flux100000-r2-n1000.bright1/output/history.npz": {
+      "bytes": 173352,
+      "sha256": "5f43dc711585ec607915347bdf8060ab271f41107ceebdb941d325e2baf3932d"
+    },
+    "runs/ext-flux100000-r2-n1000.bright1/output/history_metadata.json": {
+      "bytes": 677157,
+      "sha256": "1629b5073a991a923fb7e0616f11f3464ff5879fe786485e868aa688f802d402"
+    },
+    "runs/ext-flux100000-r2-n1000.bright1/output/identity.json": {
+      "bytes": 2970,
+      "sha256": "4fcdaff55b8abf15c5653def05f2b4a8fe8988ac99f444b21ae240236b6007e7"
+    },
+    "runs/ext-flux100000-r2-n1000.bright1/output/prefix_checkpoint.json": {
+      "bytes": 2026,
+      "sha256": "c5cc0fde95efa34b86a504a50b5bb86038997840d8a552905ae73b3f4e070b1c"
+    },
+    "runs/ext-flux100000-r2-n1000.bright1/output/run_summary.json": {
+      "bytes": 5081,
+      "sha256": "9588c0e139bda2e347b79d70fb7b244ff0b13b13ab71bd64c7f4249306796fba"
+    },
+    "runs/ext-flux100000-r2-n1000.bright1/output/science_record.json": {
+      "bytes": 5612,
+      "sha256": "f274b0ea11ed834b5f8968c1f86d7d168a4d3b691e852b24b647e626cf6d1fce"
+    }
+  },
+  "runs": {
+    "bright": {
+      "run_key": "ext-flux100000-r2-n1000",
+      "directory": "runs/ext-flux100000-r2-n1000.bright1/output",
+      "detected_e_per_full_subaperture_frame": 100000.0,
+      "frames": 1000,
+      "history_sha256": "5f43dc711585ec607915347bdf8060ab271f41107ceebdb941d325e2baf3932d",
+      "config_hash": "b6b15050df190e9cd81c063b3fe362be44b2d7fdcb6ee8d5b6821b68660f6719"
+    },
+    "faint": {
+      "run_key": "ext-flux1000-r2-n1000",
+      "directory": "faint_flux1000-r2-attempt3",
+      "detected_e_per_full_subaperture_frame": 1000.0,
+      "frames": 1000,
+      "history_sha256": "04986af2e054f432f1cf9c41703439089cda4a7e5ed56fb06a883fa68e3fdac9",
+      "config_hash": "a70ef4f9f6d9b5130474f0fa63d2a4ba892839dfb46e968d1ee3fbefd26f63ed"
+    }
+  },
+  "faint_attempts": "Attempt 1 failed before its closed loop (tooling defect); attempt 2 was interrupted by a restart, with no persisted prefix verdict and an unknown completed-frame count; attempt 3 completed and is the trajectory shown. Earlier attempts remain recorded history.",
+  "prefix": {
+    "bright_original": "original_flux100000-r2",
+    "bright_original_history_sha256": "2f5af021a307bf0de6a62e4abcd17087a251c08e17d2dc6b4f5f2a3aeb6727a6",
+    "relation": "frames 0-499 of both extensions repeat their original 500-frame runs exactly; frames 500-999 continue the same loop. The shared prefix is counted once and the extension is not an additional realization."
+  },
+  "image_sources": {
+    "definition": "max(mean intensity) / max(ideal intensity) and encircled-energy radii of the mean pre-update intensity image at 2.2 um",
+    "mean_image_retrieval": "full-grid mean images are omitted from the compact package; their SHA-256 and retrieval stages are listed in its COMPACT_PACKAGE.json (mean_image_retrieval)"
+  },
+  "exporter": {
+    "name": "export_42m_studies.py",
+    "version": 1,
+    "sha256": "1a5e77ccbb146c0a0060998611848a959fc4d2da5bff9a20480ef070a0900127"
+  },
+  "definitions": {
+    "pre_update_residual_rms_nm": "piston-removed residual OPD RMS over the pupil before the control update of the frame, in nm",
+    "window_mean": "arithmetic mean of the instantaneous per-frame RMS values over a half-open frame window (not the root mean square of frame RMS values)",
+    "faint_minus_bright_nm": "faint minus bright pre-update residual of the same frame; positive means the faint run has the larger residual",
+    "valid_measurement_fraction": "fraction of calibrated slope rows accepted in the frame",
+    "detected_flux": "detected electrons per fully illuminated subaperture per frame"
+  },
+  "checks": {
+    "simulation_run": false,
+    "analysis_hashes_accepted": true,
+    "histories_match_analysis_hashes": true,
+    "frames_per_run": 1000,
+    "time_from_frame_index": true,
+    "atmosphere_open_loop_identical": true,
+    "configs_differ_only_in_detected_flux": true,
+    "bright_prefix_equals_original": true,
+    "window_means_match_analysis_and_anchors": true,
+    "unusable_frames": 0,
+    "saturated_frames": 0
+  }
+}

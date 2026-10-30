@@ -106,7 +106,7 @@ export function lineChart(canvas, spec) {
   const ty = (v) => height - m.b - (yScale === "log" ? (Math.log10(v) - Math.log10(y0)) / (Math.log10(y1) - Math.log10(y0)) : (v - y0) / (y1 - y0)) * (height - m.t - m.b);
   ctx.strokeStyle = "#ddd6ca"; ctx.fillStyle = "#5c6168"; ctx.lineWidth = 1;
   for (const shade of spec.shadeX || []) {
-    ctx.fillStyle = "rgba(92, 97, 104, 0.10)";
+    ctx.fillStyle = shade[3] || "rgba(92, 97, 104, 0.10)";
     const a = tx(Math.max(shade[0], x0)); const b = tx(Math.min(shade[1], x1));
     ctx.fillRect(a, m.t, b - a, height - m.t - m.b);
     if (shade[2]) { ctx.fillStyle = "#5c6168"; ctx.fillText(shade[2], Math.min(a + 4, width - m.r - ctx.measureText(shade[2]).width), m.t - 4); }
@@ -166,7 +166,7 @@ export function lineChart(canvas, spec) {
     ctx.beginPath(); ctx.moveTo(x, m.t); ctx.lineTo(x, height - m.b); ctx.stroke(); ctx.setLineDash([]);
     const label = event.label || "";
     ctx.fillStyle = event.color || "#a3324e"; ctx.textAlign = "left";
-    ctx.fillText(label, Math.max(m.l + 2, Math.min(x + 5, width - m.r - ctx.measureText(label).width)), m.t + 13);
+    ctx.fillText(label, Math.max(m.l + 2, Math.min(x + 5, width - m.r - ctx.measureText(label).width)), m.t + 13 + 12 * (event.row || 0));
   }
   if (spec.cursorX != null) {
     ctx.strokeStyle = "#23262a"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(tx(spec.cursorX), m.t); ctx.lineTo(tx(spec.cursorX), height - m.b); ctx.stroke();
@@ -195,6 +195,8 @@ export function lineChart(canvas, spec) {
     ctx.fillStyle = "#23262a"; ctx.fillText(s.label, x + 16, y - 2);
   });
   canvas.setAttribute("aria-label", `${spec.title || "Chart"}: ${spec.series.map((s) => s.label).join("; ")}`);
+  // The drawn x mapping (linear axes), so a caller can turn a pointer position back into a data value.
+  return { toValue: (px) => x0 + ((px - m.l) / (width - m.l - m.r)) * (x1 - x0), left: m.l, right: width - m.r };
 }
 
 // Horizontal bars: one row per category with its full label, so labels never
