@@ -7,8 +7,7 @@
 <title>AO Simulation Explorer</title>
 <meta content="A personal adaptive-optics simulation: explore a 2 m loop, diagnose loss of lock, and compare gain and delay in a 42 m model." name="description"/>
 <link href="data:," rel="icon"/>
-
-<link href="code-00399b6761b9b6dc/styles.css" rel="stylesheet"/>
+<link href="code-328e6ce1a87b8271/styles.css" rel="stylesheet"/>
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -18,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script onerror="aoCodeUnavailable()" src="code-00399b6761b9b6dc/app.js" type="module"></script>
+<script onerror="aoCodeUnavailable()" src="code-328e6ce1a87b8271/app.js" type="module"></script>
 </head>
 <body>
 <noscript><p class="wrap">The overview images are static. Enable JavaScript to open the recorded experiments and study views.</p></noscript><a class="skip" href="#main">Skip to content</a>
@@ -53,7 +52,7 @@ function aoCodeUnavailable() {
 <ul><li><strong>2 m sensing and control:</strong> a reconstruction of the recorded chain reproduces its trajectory. Independent spot and DM calculations support the observed weak tilt correction. The strict small-amplitude linearity bound failed; the sensor response changes slightly with amplitude.</li><li><strong>2 m fitting:</strong> on a static tilt, the WFS least-squares command leaves more wavefront error than a pupil-optimal fit with the same 13-actuator basis. This is a spatial comparison, not a decomposition of the noisy closed-loop error.</li><li><strong>42 m reconstruction:</strong> pupil-space checks and saved-data consistency checks have restricted scope. Earlier command-space solver criteria failed. Production EE50 is sampling-sensitive; the gain study uses the Fourier-reference EE50.</li><li><strong>Still being examined:</strong> PSF/Strehl/EE calculations, photometry and calibration processing. The image metrics remain model outputs, not independently established physical or hardware predictions.</li></ul>
 <p><a href="evidence/numerical-checks.md">Numerical-check summary and evidence →</a> · <a href="#studies42-history">42 m qualifications →</a></p></section>
 <section class="reading-list"><h2>Supporting material</h2>
-<a href="#image-examples"><strong>Additional image examples</strong><p>Observed source templates with simulated blur and their preparation records.</p></a>
+<a href="#galaxy-panel">NGC 1705 image replay →</a>
 <a href="#replay42"><strong>Replay the 42 m model</strong><p>A separate recording that illustrates the larger implementation. Its clock is independent of the gain study.</p></a>
 <a href="#flux42"><strong>What changes with a fainter guide star?</strong><p>One two-second matched atmosphere shows a larger late residual at lower flux. Noise and calibration effects are not isolated.</p></a>
 <a href="#delay42"><strong>Compare delays at fixed gain</strong><p>The earlier three-delay comparison supplies six baselines reused in the gain study.</p></a>
@@ -63,22 +62,32 @@ function aoCodeUnavailable() {
 <p class="scope-note">Raw wavefront and PSF archives remain local. The public site carries compact records, configuration identities, source hashes and the evidence needed for the selected claims. <a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/main/docs/reproducing.md">What can be reproduced from the public files →</a></p></section>
 <section aria-labelledby="explore-title" class="wrap section page-view" data-nav="explore" data-view="" hidden="" id="explore">
 <h1 id="explore-title">Explore the loop</h1>
-<p class="lede" id="explore-lede">I use this 2 m Shack-Hartmann model to explore how turbulence, guide-star brightness and controller settings affect a single-conjugate adaptive-optics (SCAO) loop. Each case contains 1000 frames at 1 kHz: one second of simulated time, using a synthetic on-axis guide star. Choose a case and play back the saved frames.</p>
+<p class="lede" id="explore-lede">Compare eight recorded settings. Press Play to follow the wavefronts, point-source images and NGC 1705 on the same timeline.</p>
 <div aria-live="polite" class="status" id="status" role="status">Loading the dataset manifest…</div>
 <div class="error" hidden="" id="error" role="alert"></div>
-<section aria-labelledby="scenario-title" class="scenario-bar">
+<section aria-labelledby="scenario-title" class="panel">
 <h2 id="scenario-title">Choose a saved run</h2>
-<p class="hint">Each option opens a saved run with one setting changed from the same baseline. The options cannot be combined.</p>
-<div id="groups"><label for="case-picker">Recorded setting</label> <select disabled="" id="case-picker"><option>Loading…</option></select></div>
+<p class="hint">Each button opens a saved run with one setting changed from the same baseline. The options cannot be combined.</p>
+<div class="groups" id="groups"></div>
 <div aria-live="polite" class="case-summary" id="case-summary"></div>
 </section>
-
 <section aria-labelledby="viewer-title" class="panel">
 <div class="viewer-head">
-<h2 id="viewer-title">Atmosphere, correction and residual</h2>
-
-<div aria-label="2 m image view" class="view-switch" role="group"><button aria-pressed="true" data-pane="wavefronts" type="button">Wavefront</button><button aria-pressed="false" data-pane="psfs" type="button">Point-source image</button></div></div>
-<div class="maps" data-pane-content="wavefronts">
+<h2 id="viewer-title">Wavefronts and images</h2>
+<fieldset class="segmented" id="psf-mode">
+<legend>PSF view</legend>
+<label><input checked="" name="psf-mode" type="radio" value="instantaneous"/> Instantaneous</label>
+<label><input name="psf-mode" type="radio" value="average"/> Analysis-window average</label>
+</fieldset>
+</div><div aria-label="Playback" class="transport" role="group">
+<button id="btn-restart" title="Restart at frame 0" type="button">Restart</button>
+<button id="btn-prev" title="Previous recorded frame" type="button">◀ Step</button>
+<button aria-pressed="false" id="btn-play" type="button">Play</button>
+<button id="btn-next" title="Next recorded frame" type="button">Step ▶</button>
+<label class="seek">Seek <input id="seek" max="125" min="0" step="1" type="range" value="25"/></label>
+<label class="speed">One pass in <select id="duration"><option value="20">20 s</option></select></label>
+</div>
+<div class="maps">
 <figure class="map">
 <canvas aria-label="Atmospheric OPD map" height="208" id="map-atmosphere" role="img" width="208"></canvas>
 <figcaption><strong>Atmospheric OPD</strong><span>the frame's recorded atmosphere, nm</span><span class="map-frame" id="note-atmosphere"></span></figcaption>
@@ -97,11 +106,7 @@ function aoCodeUnavailable() {
 <p class="cbar-note" id="cbar-opd-note"></p>
 </div>
 </div>
-<div data-pane-content="psfs" hidden=""><fieldset class="segmented" id="psf-mode">
-<legend>PSF view</legend>
-<label><input checked="" name="psf-mode" type="radio" value="instantaneous"/> Instantaneous</label>
-<label><input name="psf-mode" type="radio" value="average"/> Analysis-window average</label>
-</fieldset><div class="psfs">
+<div class="psfs">
 <figure class="map psf">
 <canvas aria-label="Uncorrected PSF" height="256" id="psf-uncorrected" role="img" width="256"></canvas>
 <figcaption><strong id="psf-unc-title">Matched uncorrected image</strong><span id="psf-unc-sub">same atmosphere, zero DM</span></figcaption>
@@ -115,30 +120,69 @@ function aoCodeUnavailable() {
 <div class="cbar-labels" id="cbar-psf-labels"></div>
 <p class="cbar-note" id="cbar-psf-note"></p>
 </div>
-</div><p class="mode-note" hidden="" id="mode-note"></p></div>
-
-<div aria-label="Playback" class="transport" role="group">
-<button id="btn-restart" title="Restart at frame 0" type="button">Restart</button>
-<button id="btn-prev" title="Previous recorded frame" type="button">◀ Step</button>
-<button aria-pressed="false" id="btn-play" type="button">Play</button>
-<button id="btn-next" title="Next recorded frame" type="button">Step ▶</button>
-<label class="seek">Seek <input id="seek" max="125" min="0" step="1" type="range" value="25"/></label>
-<label class="speed">One pass in <select id="duration"><option value="20">20 s</option></select></label>
 </div>
+<p class="mode-note" hidden="" id="mode-note"></p>
 <p aria-live="polite" class="frame-readout" id="frame-readout"></p>
 <p class="hint" id="speed-note">Playback slows down one second of simulated time. It uses saved frames at their original timestamps, with no interpolation.</p>
 <div class="rms-panel">
 <div aria-label="RMS values of the displayed frame or of the analysis window" class="rms-readout" id="rms-readout" role="group"></div>
 <p class="hint" id="rms-mode-note"></p>
 <p class="hint" id="rms-explanation">The dashed curve shows the residual after fitting and removing a plane over the illuminated pupil. This separates tip/tilt from higher-order wavefront error; it does not change the PSFs or galaxy images. Fitted wavefront tilt and measured image-centroid motion are different quantities. The atmosphere curve retains tilt, so comparing it with the dashed curve does not give a like-for-like correction ratio. A smaller value after tilt removal also says nothing about convergence.</p>
-</div></section>
-
+</div></section><section aria-labelledby="galaxy-title" class="panel" id="galaxy-panel"><span id="image-examples"></span>
+<div class="viewer-head">
+<h2 id="galaxy-title">NGC 1705 through the simulated PSFs</h2>
+<fieldset class="segmented" id="galaxy-mode">
+<legend>Galaxy view</legend>
+<label><input checked="" name="galaxy-mode" type="radio" value="sampled"/> Sampled instantaneous</label>
+<label><input name="galaxy-mode" type="radio" value="mean"/> Analysis-window mean</label>
+</fieldset>
+</div>
+<p class="hint" id="galaxy-label">The observed HST/F814W central region of NGC 1705 seen through the selected case's recorded PSFs.</p>
+<div aria-live="polite" class="status" id="galaxy-status" role="status">The galaxy observation loads when this panel is in view.</div>
+<div class="error" hidden="" id="galaxy-error" role="alert"></div>
+<div class="galaxy-maps">
+<figure class="map"><canvas aria-label="Input: NGC 1705 central region, observed HST F814W template" height="256" id="galaxy-source" role="img" width="256"></canvas><figcaption><strong>NGC 1705 · original HST/F814W image</strong><span id="galaxy-source-caption"></span></figcaption></figure>
+<figure class="map"><canvas aria-label="Observed template with the uncorrected simulated PSF" height="256" id="galaxy-uncorrected" role="img" width="256"></canvas><figcaption><strong id="galaxy-unc-title">HST image + uncorrected PSF</strong><span id="galaxy-unc-sub"></span></figcaption></figure>
+<figure class="map"><canvas aria-label="Observed template with the AO-corrected simulated PSF" height="256" id="galaxy-corrected" role="img" width="256"></canvas><figcaption><strong id="galaxy-ao-title">HST image + AO-corrected PSF</strong><span id="galaxy-ao-sub"></span></figcaption></figure>
+<div class="colorbar-block">
+<canvas aria-hidden="true" height="200" id="cbar-galaxy" width="24"></canvas>
+<div class="cbar-labels" id="cbar-galaxy-labels"></div>
+<p class="cbar-note" id="cbar-galaxy-note"></p>
+</div>
+</div>
+<p class="mode-note" hidden="" id="galaxy-mode-note"></p>
+<div aria-label="Galaxy playback" class="transport" role="group">
+<button id="galaxy-restart" title="Restart at frame 0" type="button">Restart</button>
+<button id="galaxy-prev" title="Previous displayed sample" type="button">◀ Step</button>
+<button aria-pressed="false" id="galaxy-play" type="button">Play</button>
+<button id="galaxy-next" title="Next displayed sample" type="button">Step ▶</button>
+<label class="seek">Sample <input id="galaxy-seek" max="125" min="0" step="1" type="range" value="25"/></label>
+<label class="speed">One pass in <select id="galaxy-duration"><option value="20">20 s</option></select></label>
+<label class="loop"><input id="galaxy-loop" type="checkbox"/> Loop the same recording (both panels)</label>
+</div>
+<p aria-live="polite" class="frame-readout" id="galaxy-readout"></p>
+<p class="hint" id="galaxy-playback-note">The galaxy and wavefront controls share one timeline. Playback follows the saved timestamps without adding or interpolating frames.</p>
+<details>
+<summary>Image source, processing and limitations</summary>
+<div class="prose" id="galaxy-notes"></div>
+<pre class="pre" id="galaxy-meta"></pre>
+</details>
+</section><section class="panel"><details>
+<summary id="binary-title">Simple point-source comparison</summary>
+<p class="hint" id="binary-label">Synthetic binary observation — analysis-window average; relative flux per numerical cell; no additional science-camera noise.</p>
+<div class="binary">
+<figure class="map obs"><div class="zoomwrap"><img alt="Input binary scene reference" height="312" id="scene-img" width="312"/></div><figcaption><strong>Input scene (shared)</strong><span id="scene-caption"></span></figcaption></figure>
+<figure class="map obs"><div class="zoomwrap"><img alt="Binary through the uncorrected average PSF" height="312" id="obs-unc" width="312"/></div><figcaption><strong>Through the uncorrected average</strong><span id="obs-unc-caption"></span></figcaption></figure>
+<figure class="map obs"><div class="zoomwrap"><img alt="Binary through the AO-corrected average PSF" height="312" id="obs-ao" width="312"/></div><figcaption><strong>Through the AO-corrected average</strong><span id="obs-ao-caption"></span></figcaption></figure>
+</div>
+<label class="zoom-toggle"><input id="zoom" type="checkbox"/> Show the full native window (±4.3″, 156 cells); the default view is the central ±1.8″ (64 cells), the same window as the PSF panels. Display scaling only; the images are not resampled or renormalized.</label>
+<p class="hint" id="binary-note"></p>
+</details></section>
 <section aria-labelledby="curves-title" class="panel">
 <h2 id="curves-title">How the loop changes over time</h2>
 <p class="hint" id="curves-hint">All recorded frames, including the startup exclusion (shaded). Summaries use the analysis window only. The cursor marks the displayed frame.</p>
 <div class="charts">
 <figure class="chart"><canvas aria-label="RMS against frame-start time" height="240" id="chart-rms" role="img" width="640"></canvas><figcaption>Pupil RMS on one common nm OPD scale: atmosphere and total pre-update residual (piston removed, tilt retained; solid), and the same residual after tip/tilt removal (piston and fitted tilt removed; dashed). The cursor marks the displayed frame.</figcaption></figure>
-
 <figure class="chart"><canvas aria-label="Strehl against frame" height="220" id="chart-strehl" role="img" width="640"></canvas><figcaption>Instantaneous peak Strehl at 1.65 µm: uncorrected and AO-corrected</figcaption></figure>
 <details><summary>Measurement validity and command clipping</summary><figure class="chart"><canvas aria-label="Measurement validity against frame" height="160" id="chart-valid" role="img" width="640"></canvas><figcaption>Valid measurements in frame k, and the fraction of DM commands clipped after that frame. Those commands apply from frame k + 1. Ticks mark unusable reconstructions.</figcaption></figure></details>
 </div>
@@ -155,12 +199,10 @@ function aoCodeUnavailable() {
 <p class="table-title" id="summary-table-title"></p>
 <div aria-labelledby="summary-table-title" class="table-scroll" id="summary-table" role="region" tabindex="0"></div>
 <p class="hint" id="pairing-note"></p>
-
 </details><details><summary>100 ms block summaries</summary>
 <p class="table-title" id="blocks-title"></p>
 <div aria-labelledby="blocks-title" class="table-scroll" id="blocks-table" role="region" tabindex="0"></div>
 <p class="hint" id="blocks-note"></p></details>
-
 <section aria-labelledby="details-title" class="panel">
 <h2 id="details-title">Model, metric definitions and source records</h2>
 <details><summary>How the frames and images are defined</summary><div class="prose" id="model-notes"></div></details>
@@ -241,7 +283,6 @@ function aoCodeUnavailable() {
 <p aria-live="polite" class="visually-hidden" id="r42-live"></p>
 </section>
 <section aria-labelledby="r42-metrics-title" class="panel"><h2 id="r42-metrics-title">How the loop changes over time</h2><p class="hint">All 500 frames are shown. The shaded first 0.2 s is excluded from the averages, as planned before the run; it is not a measured settling time.</p><div class="charts"><figure class="chart"><canvas aria-label="42 m atmosphere and residual RMS over time" height="220" id="r42-chart-rms" role="img" width="900"></canvas><figcaption>Atmosphere and total pre-update residual, nm OPD; piston removed and tilt retained.</figcaption></figure><figure class="chart"><canvas aria-label="42 m instantaneous Strehl over time" height="220" id="r42-chart-strehl" role="img" width="900"></canvas><figcaption>Instantaneous peak Strehl at 2.2 µm, pre-update. The cursor marks the selected recorded frame.</figcaption></figure></div><div class="rms-readout"><p class="rms-head">Analysis window · 0.8 s · frames 100–499 · 400 equal weights</p><dl class="rms-values"><div><dt>Mean instantaneous atmosphere RMS</dt><dd id="r42-mean-rms-u">—</dd></div><div><dt>Mean instantaneous pre-update residual RMS</dt><dd id="r42-mean-rms-c">—</dd></div><div><dt>Peak Strehl of mean AO intensity PSF</dt><dd id="r42-mean-strehl">—</dd></div></dl></div><p class="takeaway">At 2.2 µm, with 10⁵ detected e⁻ per full subaperture per 2 ms. These averages describe one seed and one 0.8 s window; robustness across conditions and long-run stability have not been established.</p></section>
-
 <details aria-labelledby="r42-assumptions-title" class="setup-notes" id="evidence-42m">
 <summary id="r42-assumptions-title">Setup and limitations · 42 m</summary>
 <p class="evidence-kind">Historical pupil geometry, published atmosphere inputs and assumed hardware parameters</p>
@@ -257,13 +298,17 @@ function aoCodeUnavailable() {
 <p><strong>Scope:</strong> this is not a prediction for the current 39 m ELT. The 2 m and 42 m runs differ in more than aperture, and one second cannot establish long-run stability. The 0.2 s startup exclusion is an analysis choice.</p>
 <p class="hint">The pupil omits segment gaps and spiders. Detector and DM parameters are assumed, including a ±100 µm OPD command bound; the model does not include a complete instrument error budget. The 2 m and 42 m runs also use different science wavelengths. <a href="#dm-stroke">DM stroke, saturation and ELT M4 context →</a> · <a href="#replay42-methods">Full configuration and checks →</a></p>
 </details>
-
-
-
-
-
-
-</section>
+<section aria-labelledby="r42-binary-title" class="panel r42-keys">
+<h2 id="r42-binary-title">Observed binary with additional simulated blur</h2><p class="takeaway">An HST F775W image convolved separately with the uncorrected and corrected simulation PSFs. The original HST resolution and noise remain. This illustrates additional blur; it does not predict a 42 m K-band observation or measure its resolving power.</p><p class="hint">2MASS J0746425+200032 AB · HST/ACS HRC F775W · 2002-10-21. All three panels share one angular scale and one fixed brightness mapping.</p>
+<div class="r42-binary-grid">
+<figure class="map"><div class="r42-picture"><canvas aria-label="Observed HST binary template" height="256" id="r42-source" role="img" width="256"></canvas><span class="r42-scale"><i></i>0.2″</span></div><figcaption><strong>Observed HST template</strong><span>original HST resolution and noise retained</span></figcaption></figure>
+<figure class="map"><div class="r42-picture"><canvas aria-label="HST template with additional blur from the uncorrected simulation PSF" height="256" id="r42-binary-u" role="img" width="256"></canvas><span class="r42-scale"><i></i>0.2″</span></div><figcaption><strong>Template + uncorrected PSF</strong><span>observed template ∗ zero-DM PSF</span></figcaption></figure>
+<figure class="map"><div class="r42-picture"><canvas aria-label="HST template with additional blur from the corrected simulation PSF" height="256" id="r42-binary-c" role="img" width="256"></canvas><span class="r42-scale"><i></i>0.2″</span></div><figcaption><strong>Template + corrected PSF</strong><span>observed template ∗ corrected PSF</span></figcaption></figure>
+</div>
+<p class="frame-readout" id="r42-photo-readout"></p>
+<div aria-label="42 m binary playback" class="transport r42-transport" role="group"><button aria-label="First recorded frame" disabled="" id="r42-photo-restart">⏮ First</button><button disabled="" id="r42-photo-prev">◀ Step</button><button aria-pressed="false" disabled="" id="r42-photo-play">Play</button><button disabled="" id="r42-photo-next">Step ▶</button><button aria-label="Final recorded frame" disabled="" id="r42-photo-end">Final ⏭</button><label class="seek">Seek <input aria-valuetext="frame 100, 0.200 s" disabled="" id="r42-photo-seek" max="125" min="0" step="1" type="range" value="25"/></label></div>
+<p class="hint">Both simulated images are generated from the observed template; the right-hand panel is not a restoration of the middle panel. Credit: NASA/ESA Hubble Space Telescope, ACS/HRC program 9451; MAST/STScI. <a href="#replay42-source">Scientific source and image preparation →</a></p>
+</section></section>
 <section aria-labelledby="aperture-comparison-title" class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="aperture-comparison"><p class="breadcrumb"><a href="#methods-home">← Methods &amp; evidence</a></p>
 <h1 id="aperture-comparison-title">Why does the 42 m atmosphere look steadier?</h1>
 <p class="lede">The full-pupil RMS changes little while the wavefront keeps moving. A fixed 2 m patch from the 42 m recording reveals local changes comparable to the independent 2 m simulation.</p>
@@ -379,12 +424,6 @@ function aoCodeUnavailable() {
 <figure><canvas aria-label="Original v1 H-band PSF" height="256" id="ngsr-psf-v1" role="img" width="256"></canvas><figcaption id="ngsr-psf-v1-caption">Original PSF</figcaption></figure>
 <figure><canvas aria-label="Revised v2 H-band PSF" height="256" id="ngsr-psf-v2" role="img" width="256"></canvas><figcaption id="ngsr-psf-v2-caption">Revised PSF</figcaption></figure>
 </div><div class="ngsr-scale"><canvas aria-label="Common logarithmic PSF brightness scale" height="12" id="ngsr-psf-scale" width="256"></canvas><span>10⁻⁶ · 10⁻³ · 1 of ideal peak (log scale)</span></div><p class="hint" id="ngsr-field"></p></div>
-
-
-
-
-
-
 <div class="science-section" data-pane-content="ngs-scene" hidden="" id="ngs22-science">
 <span aria-hidden="true" id="ngs22-orion"></span><span aria-hidden="true" id="ngs22-ngc602"></span>
 <h3>Westerlund 2 through the recorded PSFs</h3>
@@ -407,7 +446,6 @@ function aoCodeUnavailable() {
 </div>
 <div class="science-intensity"><canvas aria-label="Fixed asinh surface brightness scale from zero to eighty MJy per steradian" height="16" id="ngsr-science-scale" role="img" width="256"></canvas><span>0 → 80 MJy/sr · asinh, softening 2 · single-band false colour · same scale at all times</span></div>
 <p class="hint"><strong>First rejection is a time marker, not an instantaneous image collapse.</strong> The 0.980000 s and 0.981333 s images are only 1.333 ms apart. Strehl is the saved point-source metric; failed v1 frames remain visible.</p>
-
 <p class="hint"><strong>Saturation and band approximation:</strong> the crop avoids mapped saturated stellar cores, but bright stars outside it can still affect image edges. F162M is approximated by the existing 1.65 µm monochromatic PSFs. JWST’s own PSF, diffraction structure and noise remain. No new simulation, band integration or exposure integration is performed.</p>
 <p class="science-credit">Source: NASA/ESA/CSA JWST NIRCam, <a href="https://www.stsci.edu/jwst/science-execution/program-information?id=3523">program 3523 · EWOCS</a>, calibrated public MAST product. <a href="https://archive.stsci.edu/publishing/data-use">Data policy</a>. Modified by resampling, PSF convolution and a shared display stretch.</p>
 <details class="science-context"><summary>Locate the selected field and inspect the source</summary>
@@ -422,7 +460,6 @@ function aoCodeUnavailable() {
 <p id="ngsr-science-quality"></p>
 <p>The original draft, all parameter assumptions and diagnostic records remain below.</p>
 <p><a href="https://jwst-docs.stsci.edu/jwst-near-infrared-camera/nircam-instrumentation/nircam-filters">Filter definitions</a> · <a href="https://jwst-docs.stsci.edu/jwst-near-infrared-camera/nircam-performance/nircam-point-spread-functions">JWST PSFs and resampling</a> · <a href="https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html">JWST data-quality flags</a>.</p>
-
 <div class="downloads" id="ngsr-science-downloads"></div>
 </details>
 </div>
@@ -746,68 +783,7 @@ function aoCodeUnavailable() {
 <p class="c1-ids" id="gain42-identity"></p><div class="downloads" id="gain42-downloads"></div>
 </div></details>
 </div>
-</section><section class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="image-examples"><h1>Additional image examples</h1><p class="lede">Observed images with additional simulated blur. The source telescope’s own resolution and noise remain.</p><p><a href="#explore">← Return to the 2 m loop</a></p><section aria-labelledby="galaxy-title" class="panel" id="galaxy-panel">
-<div class="viewer-head">
-<h2 id="galaxy-title">NGC 1705 through the simulated PSFs</h2>
-<fieldset class="segmented" id="galaxy-mode">
-<legend>Galaxy view</legend>
-<label><input checked="" name="galaxy-mode" type="radio" value="sampled"/> Sampled instantaneous</label>
-<label><input name="galaxy-mode" type="radio" value="mean"/> Analysis-window mean</label>
-</fieldset>
-</div>
-<p class="hint" id="galaxy-label">The observed HST/F814W central region of NGC 1705 seen through the selected case's recorded PSFs.</p>
-<div aria-live="polite" class="status" id="galaxy-status" role="status">The galaxy observation loads when this panel is in view.</div>
-<div class="error" hidden="" id="galaxy-error" role="alert"></div>
-<div class="galaxy-maps">
-<figure class="map"><canvas aria-label="Input: NGC 1705 central region, observed HST F814W template" height="256" id="galaxy-source" role="img" width="256"></canvas><figcaption><strong>NGC 1705 · original HST/F814W image</strong><span id="galaxy-source-caption"></span></figcaption></figure>
-<figure class="map"><canvas aria-label="Observed template with the uncorrected simulated PSF" height="256" id="galaxy-uncorrected" role="img" width="256"></canvas><figcaption><strong id="galaxy-unc-title">HST image + uncorrected PSF</strong><span id="galaxy-unc-sub"></span></figcaption></figure>
-<figure class="map"><canvas aria-label="Observed template with the AO-corrected simulated PSF" height="256" id="galaxy-corrected" role="img" width="256"></canvas><figcaption><strong id="galaxy-ao-title">HST image + AO-corrected PSF</strong><span id="galaxy-ao-sub"></span></figcaption></figure>
-<div class="colorbar-block">
-<canvas aria-hidden="true" height="200" id="cbar-galaxy" width="24"></canvas>
-<div class="cbar-labels" id="cbar-galaxy-labels"></div>
-<p class="cbar-note" id="cbar-galaxy-note"></p>
-</div>
-</div>
-<p class="mode-note" hidden="" id="galaxy-mode-note"></p>
-<div aria-label="Galaxy playback" class="transport" role="group">
-<button id="galaxy-restart" title="Restart at frame 0" type="button">Restart</button>
-<button id="galaxy-prev" title="Previous displayed sample" type="button">◀ Step</button>
-<button aria-pressed="false" id="galaxy-play" type="button">Play</button>
-<button id="galaxy-next" title="Next displayed sample" type="button">Step ▶</button>
-<label class="seek">Sample <input id="galaxy-seek" max="125" min="0" step="1" type="range" value="25"/></label>
-<label class="speed">One pass in <select id="galaxy-duration"><option value="20">20 s</option></select></label>
-<label class="loop"><input id="galaxy-loop" type="checkbox"/> Loop the same recording (both panels)</label>
-</div>
-<p aria-live="polite" class="frame-readout" id="galaxy-readout"></p>
-<p class="hint" id="galaxy-playback-note">The galaxy and wavefront controls share one timeline. Playback follows the saved timestamps without adding or interpolating frames.</p>
-<details>
-<summary>Image source, processing and limitations</summary>
-<div class="prose" id="galaxy-notes"></div>
-<pre class="pre" id="galaxy-meta"></pre>
-</details>
-</section><section aria-labelledby="binary-title" class="panel">
-<details>
-<summary id="binary-title">Simple point-source comparison</summary>
-<p class="hint" id="binary-label">Synthetic binary observation — analysis-window average; relative flux per numerical cell; no additional science-camera noise.</p>
-<div class="binary">
-<figure class="map obs"><div class="zoomwrap"><img alt="Input binary scene reference" height="312" id="scene-img" width="312"/></div><figcaption><strong>Input scene (shared)</strong><span id="scene-caption"></span></figcaption></figure>
-<figure class="map obs"><div class="zoomwrap"><img alt="Binary through the uncorrected average PSF" height="312" id="obs-unc" width="312"/></div><figcaption><strong>Through the uncorrected average</strong><span id="obs-unc-caption"></span></figcaption></figure>
-<figure class="map obs"><div class="zoomwrap"><img alt="Binary through the AO-corrected average PSF" height="312" id="obs-ao" width="312"/></div><figcaption><strong>Through the AO-corrected average</strong><span id="obs-ao-caption"></span></figcaption></figure>
-</div>
-<label class="zoom-toggle"><input id="zoom" type="checkbox"/> Show the full native window (±4.3″, 156 cells); the default view is the central ±1.8″ (64 cells), the same window as the PSF panels. Display scaling only; the images are not resampled or renormalized.</label>
-<p class="hint" id="binary-note"></p>
-</details>
-</section><section aria-labelledby="r42-binary-title" class="panel r42-keys">
-<h2 id="r42-binary-title">Observed binary with additional simulated blur</h2><p class="takeaway">An HST F775W image convolved separately with the uncorrected and corrected simulation PSFs. The original HST resolution and noise remain. This illustrates additional blur; it does not predict a 42 m K-band observation or measure its resolving power.</p><p class="hint">2MASS J0746425+200032 AB · HST/ACS HRC F775W · 2002-10-21. All three panels share one angular scale and one fixed brightness mapping.</p>
-<div class="r42-binary-grid">
-<figure class="map"><div class="r42-picture"><canvas aria-label="Observed HST binary template" height="256" id="r42-source" role="img" width="256"></canvas><span class="r42-scale"><i></i>0.2″</span></div><figcaption><strong>Observed HST template</strong><span>original HST resolution and noise retained</span></figcaption></figure>
-<figure class="map"><div class="r42-picture"><canvas aria-label="HST template with additional blur from the uncorrected simulation PSF" height="256" id="r42-binary-u" role="img" width="256"></canvas><span class="r42-scale"><i></i>0.2″</span></div><figcaption><strong>Template + uncorrected PSF</strong><span>observed template ∗ zero-DM PSF</span></figcaption></figure>
-<figure class="map"><div class="r42-picture"><canvas aria-label="HST template with additional blur from the corrected simulation PSF" height="256" id="r42-binary-c" role="img" width="256"></canvas><span class="r42-scale"><i></i>0.2″</span></div><figcaption><strong>Template + corrected PSF</strong><span>observed template ∗ corrected PSF</span></figcaption></figure>
-</div>
-<p class="frame-readout" id="r42-photo-readout"></p>
-<div aria-label="42 m binary playback" class="transport r42-transport" role="group"><button aria-label="First recorded frame" disabled="" id="r42-photo-restart">⏮ First</button><button disabled="" id="r42-photo-prev">◀ Step</button><button aria-pressed="false" disabled="" id="r42-photo-play">Play</button><button disabled="" id="r42-photo-next">Step ▶</button><button aria-label="Final recorded frame" disabled="" id="r42-photo-end">Final ⏭</button><label class="seek">Seek <input aria-valuetext="frame 100, 0.200 s" disabled="" id="r42-photo-seek" max="125" min="0" step="1" type="range" value="25"/></label></div>
-<p class="hint">Both simulated images are generated from the observed template; the right-hand panel is not a restoration of the middle panel. Credit: NASA/ESA Hubble Space Telescope, ACS/HRC program 9451; MAST/STScI. <a href="#replay42-source">Scientific source and image preparation →</a></p>
-</section></section></main>
+</section></main>
 <footer class="site-footer"><div class="wrap footer-row"><p>Xu Han · Adaptive-optics simulations for learning and investigation.</p><p><a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation">Source code</a> · <a href="#methods-home">Methods &amp; evidence</a> · <a href="#references">References &amp; licences</a></p><p hidden="" id="footer-identity"></p></div></footer>
 </body>
 </html>
