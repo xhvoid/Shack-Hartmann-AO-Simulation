@@ -7,7 +7,7 @@
 <meta name="description" content="A personal adaptive-optics project with interactive simulation replays, a 2.2 m loss-of-lock case study, and notes on methods and assumptions.">
 <link rel="icon" href="data:,">
 <!-- Code and style come from the content-addressed build directory; see scripts/ao_explorer/site_build.py. -->
-<link rel="stylesheet" href="code-8e13a9de437364c3/styles.css">
+<link rel="stylesheet" href="code-703cee05d3ea4190/styles.css">
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script type="module" src="code-8e13a9de437364c3/app.js" onerror="aoCodeUnavailable()"></script>
+<script type="module" src="code-703cee05d3ea4190/app.js" onerror="aoCodeUnavailable()"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -435,11 +435,11 @@ function aoCodeUnavailable() {
     </dl>
     <p><strong>Result:</strong> stronger regularization prevents the observed reconstruction failure on the same input sequence.</p>
     <p><strong>Still to test:</strong> robustness over longer runs and different conditions, and agreement with real instrument data. The recovery safeguard did not activate in v2. The model also omits a separate tip-tilt mirror.</p>
-    <p class="hint"><a href="#ngs22-assumptions">All 131 parameter notes →</a> · <a href="#ngs22-control">Inspect the control diagnosis →</a> · <a href="#ngs22-science">F164N science image experiment →</a></p>
+    <p class="hint"><a href="#ngs22-assumptions">All 131 parameter notes →</a> · <a href="#ngs22-control">Inspect the control diagnosis →</a> · <a href="#ngs22-science">Westerlund 2 F162M image experiment →</a></p>
   </details>
   <section id="ngs22-replay" class="panel ngsr-panel" aria-labelledby="ngsr-title">
     <h2 id="ngsr-title">Replay the original and revised runs</h2>
-    <p>Shared input on the left; original v1 in the middle; revised v2 on the right. Wavefronts, PSFs, the <a href="#ngs22-science">F164N science image experiment</a>, readouts and the black chart cursor advance together. The red dashed line marks <strong>frame 736 · 0.981333 s</strong>, the first rejected v1 reconstruction.</p>
+    <p>Shared input on the left; original v1 in the middle; revised v2 on the right. Wavefronts, PSFs, the <a href="#ngs22-science">Westerlund 2 F162M image experiment</a>, readouts and the black chart cursor advance together. The red dashed line marks <strong>frame 736 · 0.981333 s</strong>, the first rejected v1 reconstruction.</p>
     <p id="ngsr-status" class="status" role="status">Saved replay loads when this panel is visible.</p>
     <p id="ngsr-error" class="error" role="alert" hidden></p>
     <div class="ngsr-grid">
@@ -458,45 +458,42 @@ function aoCodeUnavailable() {
     <p id="ngsr-field" class="hint"></p>
     <div id="ngs22-science" class="science-section">
       <span id="ngs22-orion" aria-hidden="true"></span><span id="ngs22-ngc602" aria-hidden="true"></span>
-      <h3>Orion F164N: a calibrated science image.</h3>
-      <p>A single-band JWST observation near <strong>1.645 µm</strong>, convolved with the existing <strong>1.65 µm</strong> model PSFs. Calibrated surface brightness is blurred before applying one shared display scale. The two panels use the same recorded atmosphere. <strong>Gold boxes link to the magnifiers.</strong> Play starts the full record; the opening frame shows the late comparison.</p>
-      <div class="transport" role="group" aria-label="Orion F164N synchronized playback">
-        <button id="ngsr-science-play" disabled aria-pressed="false">Play</button><button id="ngsr-science-loss" disabled>Loss marker · 0.981 s</button><button id="ngsr-science-late" disabled>Late comparison · 1.999 s</button><a href="#ngsr-strehl">Strehl curves ↓</a>
+      <h3>Westerlund 2 F162M: watch the stars lose correction.</h3>
+      <p>The accepted <strong>4.109″ field</strong>, at the same angular scale and brightness transfer in every panel. The single-band JWST observation near <strong>1.627 µm</strong> is convolved with the existing <strong>1.65 µm</strong> PSFs. Images, the wavefront replay and Strehl cursor share one recorded clock. Play begins the full record; the opening view shows the final comparison.</p>
+      <div class="transport" role="group" aria-label="Westerlund 2 F162M synchronized playback">
+        <button id="ngsr-science-play" disabled aria-pressed="false">Play</button><button id="ngsr-science-before" disabled>Before loss · 0.980 s</button><button id="ngsr-science-loss" disabled>Loss marker · 0.981 s</button><button id="ngsr-science-late" disabled>Late comparison · 1.999 s</button>
         <span id="ngsr-science-time" class="readout"></span>
       </div>
       <p id="ngsr-science-video" class="hint" role="status">MP4 download loads with this replay.</p>
-      <div class="science-overviews">
-        <figure><h4 class="ngsr-v1">Science field · original v1</h4><canvas id="ngsr-science-full-v1" width="576" height="465" role="img" aria-label="Selected Orion F164N science field through original v1 PSF"></canvas></figure>
-        <figure><h4 class="ngsr-v2">Science field · revised v2</h4><canvas id="ngsr-science-full-v2" width="576" height="465" role="img" aria-label="Selected Orion F164N science field through revised v2 PSF"></canvas></figure>
-      </div>
       <p id="ngsr-science-field" class="hint"></p>
-      <h4>Linked magnifiers · the same structure at the same scale</h4>
-      <div class="comparison-controls" role="group" aria-label="Orion F164N magnifier reference">
+      <div class="comparison-controls" role="group" aria-label="Westerlund 2 reference image">
         <button id="ngsr-science-observed" aria-pressed="true" disabled>Reference: observed JWST</button>
         <button id="ngsr-science-ideal" aria-pressed="false" disabled>Reference: add ideal 2.2 m PSF</button>
       </div>
       <div class="science-grid">
-        <figure><h4>Fixed reference</h4><canvas id="ngsr-science-reference" width="384" height="384" role="img" aria-label="Observed Orion F164N nebular detail"></canvas><figcaption id="ngsr-science-reference-caption"></figcaption></figure>
-        <figure><h4>No correction</h4><canvas id="ngsr-science-u" width="384" height="384" role="img" aria-label="Orion F164N detail through the saved zero-DM PSF"></canvas><figcaption id="ngsr-science-u-caption"></figcaption></figure>
-        <figure><h4 class="ngsr-v1">Original · v1</h4><canvas id="ngsr-science-v1" width="384" height="384" role="img" aria-label="Orion F164N detail through original v1 PSF"></canvas><figcaption id="ngsr-science-v1-caption"></figcaption></figure>
-        <figure><h4 class="ngsr-v2">Revised · v2</h4><canvas id="ngsr-science-v2" width="384" height="384" role="img" aria-label="Orion F164N detail through revised v2 PSF"></canvas><figcaption id="ngsr-science-v2-caption"></figcaption></figure>
+        <figure><h4>Fixed reference</h4><canvas id="ngsr-science-reference" width="320" height="320" role="img" aria-label="Observed Westerlund 2 F162M field"></canvas><figcaption id="ngsr-science-reference-caption"></figcaption></figure>
+        <figure><h4>No correction</h4><canvas id="ngsr-science-u" width="320" height="320" role="img" aria-label="Westerlund 2 field through saved uncorrected PSF"></canvas><figcaption id="ngsr-science-u-caption"></figcaption></figure>
+        <figure><h4 class="ngsr-v1">Original · v1</h4><canvas id="ngsr-science-v1" width="320" height="320" role="img" aria-label="Westerlund 2 field through original v1 PSF"></canvas><figcaption id="ngsr-science-v1-caption"></figcaption></figure>
+        <figure><h4 class="ngsr-v2">Repaired · v2</h4><canvas id="ngsr-science-v2" width="320" height="320" role="img" aria-label="Westerlund 2 field through repaired v2 PSF"></canvas><figcaption id="ngsr-science-v2-caption"></figcaption></figure>
       </div>
-      <div class="science-intensity"><canvas id="ngsr-science-scale" width="256" height="16" role="img" aria-label="Fixed asinh surface brightness scale"></canvas><span>30 → 400 MJy/sr · asinh · single-band false colour · gray hatch: excluded fill-sensitive regions</span></div>
-      <p class="hint"><strong>Calibrated input; idealized image experiment.</strong> JWST’s own PSF, diffraction spikes, resampling and noise remain. A single on-axis model PSF is assumed across this field. Strehl is the saved point-source metric; these images do not predict real wide-field Robo-AO-2 performance.</p>
-      <p class="science-credit">Source: NASA/ESA/CSA JWST NIRCam, <a href="https://www.stsci.edu/jwst/science-execution/program-information?id=1288">ERS 1288 · PDRs4All · PI Olivier Berné</a>, calibrated public MAST product. <a href="https://archive.stsci.edu/publishing/data-use">Data policy</a>. Modified by resampling, PSF convolution and a fixed display stretch.</p>
-      <details class="science-context"><summary>Locate the science field in the complete JWST mosaic</summary>
-        <p>Complete F164N mosaic. Blue rectangle: the 59.17″ × 47.77″ science field above. Gold rectangle: the linked 19.72″ detail. This context image is static; it retains both observed modules and their gap.</p>
-        <canvas id="ngsr-science-context" width="1060" height="509" role="img" aria-label="Complete Orion F164N mosaic with science field and detail locations"></canvas>
+      <div class="science-intensity"><canvas id="ngsr-science-scale" width="256" height="16" role="img" aria-label="Fixed asinh surface brightness scale from zero to eighty MJy per steradian"></canvas><span>0 → 80 MJy/sr · asinh, softening 2 · single-band false colour · same scale at all times</span></div>
+      <p class="hint"><strong>First rejection is a time marker, not an instantaneous image collapse.</strong> The 0.980000 s and 0.981333 s images are only 1.333 ms apart. Strehl is the saved point-source metric; failed v1 frames remain visible.</p>
+    <figure class="chart"><canvas id="ngsr-strehl" width="900" height="260" role="img" aria-label="Synchronized H-band Strehl curves"></canvas><figcaption>All 1500 instantaneous pre-update peak Strehl values, including rejected frames. Black: displayed timestamp. Red dashed: v1’s first rejected reconstruction; optical degradation starts earlier.</figcaption></figure>
+      <p class="hint"><strong>Saturation and band approximation:</strong> the crop avoids mapped saturated stellar cores, but bright stars outside it can still affect image edges. F162M is approximated by the existing 1.65 µm monochromatic PSFs. JWST’s own PSF, diffraction structure and noise remain. No new simulation, band integration or exposure integration is performed.</p>
+      <p class="science-credit">Source: NASA/ESA/CSA JWST NIRCam, <a href="https://www.stsci.edu/jwst/science-execution/program-information?id=3523">program 3523 · EWOCS</a>, calibrated public MAST product. <a href="https://archive.stsci.edu/publishing/data-use">Data policy</a>. Modified by resampling, PSF convolution and a shared display stretch.</p>
+      <details class="science-context"><summary>Locate the accepted field and inspect the source</summary>
+        <p>The 30″ context shows the selected 4.109″ field in white and mapped saturation flags in cyan. The native cutout is shown alongside it. This is an outer field in the Westerlund 2 observation, not a panorama of the dense cluster core.</p>
+        <canvas id="ngsr-science-context" width="2160" height="990" role="img" aria-label="Westerlund 2 F162M context, saturation flags and accepted source field"></canvas>
       </details>
-      <details><summary>Download animation · source · processing and assumptions</summary>
-        <p><strong>Source:</strong> <a href="https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:JWST/product/jw01288-o001_t011_nircam_f150w2-f164n_i2d.fits">jw01288-o001_t011_nircam_f150w2-f164n_i2d.fits</a> · SCI in MJy/sr · pipeline 3.0.0 · CRDS jwst_1584.pmap. F150W2 is the blocking filter; the transmitted band is F164N. The 1.645 µm pivot differs from the model by 0.30%; the 0.020 µm band is approximated by the existing monochromatic PSF. No continuum subtraction is performed.</p>
-        <p>Linear pixel-area averaging and full 768 × 768 unit-flux PSF convolution retain tilt and physical angular scale. Both fields have real surrounding data for the entire kernel. Only afterward, a fixed asinh stretch (30–400 MJy/sr, softening 15 MJy/sr) maps intensity to colour. Values outside that range clip in the display; numerical samples remain available.</p>
+      <details><summary>Download animation · source · saturation checks and assumptions</summary>
+        <p><strong>Source:</strong> <a href="https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:JWST/product/jw03523-o005_t001_nircam_f150w2-f162m_i2d.fits">jw03523-o005_t001_nircam_f150w2-f162m_i2d.fits</a> · SCI in MJy/sr · pipeline 3.0.0 · CRDS jwst_1584.pmap. F150W2 is the blocking filter; the transmitted band is F162M. Its 1.627 µm pivot differs from the model by about 1.4%; its 0.168 µm bandwidth is approximated by one existing monochromatic PSF.</p>
+        <p>The exact approved source context is reused. Linear pixel-area averaging and full 768 × 768 unit-flux PSF convolution retain tilt and physical angular scale. The kernel uses real surrounding data. A fixed asinh stretch (0–80 MJy/sr, softening 2 MJy/sr) is applied afterward. Display tails clip; linear numerical samples remain available.</p>
         <p id="ngsr-science-missing"></p>
-        <p>Invalid SCI/ERR or nonpositive WHT pixels use the nearest valid value for convolution. The source noise and calibration residuals remain; contributing exposures have not been independently audited for saturation. No deconvolution, anisoplanatism, science-camera noise or exposure integration is added. The optional ideal reference adds the model’s zero-aberration pupil PSF to the same observed image.</p>
+        <p>Invalid samples in the wider context use nearest-valid fills. Source noise, calibration residuals and diffraction structure remain. A single on-axis PSF is assumed over the field; no deconvolution, anisoplanatism or additional science-camera noise is added. The ideal reference adds the model’s zero-aberration pupil PSF to the already observed image. These views do not validate real Robo-AO-2 performance or provide new stellar photometry.</p>
         <p id="ngsr-science-quality"></p>
-        <p>This science image experiment uses the existing simulation results. The original configuration, assumptions and diagnostic records are available below.</p>
-        <p><a href="https://jwst-docs.stsci.edu/jwst-near-infrared-camera/nircam-instrumentation/nircam-filters">Filter definitions</a> · <a href="https://jwst-docs.stsci.edu/jwst-near-infrared-camera/nircam-performance/nircam-point-spread-functions">JWST PSFs and resampling</a> · <a href="https://doi.org/10.1051/0004-6361/202346747">Habart et al. (2024)</a> · <a href="https://doi.org/10.1051/0004-6361/202452940">Chown et al. (2025)</a>.</p>
-        <p>Previous outreach version: <a href="derived/ngc602-mp4-567054ba834a6b91/ngc602-2p2m-ao-comparison.mp4">NGC 602 colour MP4</a> · <a href="derived/ngc602-ngs-f67179e2c8e466c1/README.md">original methods and credits</a>.</p>
+        <p>The original draft, all parameter assumptions and diagnostic records remain below.</p>
+        <p><a href="https://jwst-docs.stsci.edu/jwst-near-infrared-camera/nircam-instrumentation/nircam-filters">Filter definitions</a> · <a href="https://jwst-docs.stsci.edu/jwst-near-infrared-camera/nircam-performance/nircam-point-spread-functions">JWST PSFs and resampling</a> · <a href="https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html">JWST data-quality flags</a>.</p>
+        <p>Previous illustrations: <a href="derived/science-mp4-baf562c252ccd13c/orion-f164n-2p2m-ao-comparison.mp4">Orion F164N MP4</a> · <a href="derived/orion-f164n-044719d11f789a25/README.md">Orion methods</a> · <a href="derived/ngc602-mp4-567054ba834a6b91/ngc602-2p2m-ao-comparison.mp4">NGC 602 colour MP4</a>.</p>
         <div id="ngsr-science-downloads" class="downloads"></div>
       </details>
     </div>
@@ -510,7 +507,7 @@ function aoCodeUnavailable() {
     </div>
     <p id="ngsr-readout" class="readout" aria-live="off"></p><p id="ngsr-event" class="ngsr-event"></p>
     <div class="ngsr-validity"><p id="ngsr-valid-v1" class="ngsr-v1"></p><p id="ngsr-valid-v2" class="ngsr-v2"></p></div>
-    <figure class="chart"><canvas id="ngsr-strehl" width="900" height="260" role="img" aria-label="Synchronized H-band Strehl curves"></canvas><figcaption>All 1500 instantaneous pre-update peak Strehl values, including rejected frames. Black: displayed timestamp. Red dashed: v1’s first rejected reconstruction; optical degradation starts earlier.</figcaption></figure>
+
     <p id="ngsr-timing" class="hint"></p>
     <details><summary>Replay sampling, PSF derivation and downloads</summary>
       <p id="ngsr-sampling"></p>

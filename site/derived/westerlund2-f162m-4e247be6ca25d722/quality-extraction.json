@@ -1,0 +1,206 @@
+[
+  {
+    "product": "jw03523005001_14101_00001_nrcb1_cal.fits",
+    "url": "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:JWST/product/jw03523005001_14101_00001_nrcb1_cal.fits",
+    "ranges": [
+      {
+        "name": "header-0",
+        "range": [
+          0,
+          57599
+        ],
+        "bytes": 57600,
+        "sha256": "8a63d3d32c7df26fb2c171de7a9a888f20e8aa3326cbf84f3619c87d7a211ea3"
+      },
+      {
+        "name": "header-23040",
+        "range": [
+          23040,
+          80639
+        ],
+        "bytes": 57600,
+        "sha256": "7e48bd8777189a2cbfc46d2819e25f6f04dc7ca00e8eeeff0bfc7526c8719802"
+      },
+      {
+        "name": "header-16816320",
+        "range": [
+          16816320,
+          16873919
+        ],
+        "bytes": 57600,
+        "sha256": "7050eb548ecfef2dd448d10b9dc86400502c1c47c2952a20f870a03fca655fee"
+      },
+      {
+        "name": "header-33598080",
+        "range": [
+          33598080,
+          33655679
+        ],
+        "bytes": 57600,
+        "sha256": "e55549c653d50a62eaaa664ab50276d6190175619763f01559069eea36229398"
+      },
+      {
+        "name": "DQ",
+        "range": [
+          33600960,
+          50378175
+        ],
+        "bytes": 16777216,
+        "sha256": "82601eed0cf84af48bb2183db1d0d49aca96ddb2102e27da2bc90b522db8b353"
+      }
+    ]
+  },
+  {
+    "product": "jw03523005001_14101_00002_nrcb1_cal.fits",
+    "url": "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:JWST/product/jw03523005001_14101_00002_nrcb1_cal.fits",
+    "ranges": [
+      {
+        "name": "header-0",
+        "range": [
+          0,
+          57599
+        ],
+        "bytes": 57600,
+        "sha256": "40ae33b2fd3deaabaf1a13de442650112c9d4cc09bc21abe0032687a269c7414"
+      },
+      {
+        "name": "header-23040",
+        "range": [
+          23040,
+          80639
+        ],
+        "bytes": 57600,
+        "sha256": "4ebbb2a56c17032161c1323c3bbcbcd556b28dd3d752fda4c40f4ad1a7b2d49c"
+      },
+      {
+        "name": "header-16816320",
+        "range": [
+          16816320,
+          16873919
+        ],
+        "bytes": 57600,
+        "sha256": "61a70dcb3291688df961b9664cf50f7c3246823a186d29c61c0867a8f3a25fac"
+      },
+      {
+        "name": "header-33598080",
+        "range": [
+          33598080,
+          33655679
+        ],
+        "bytes": 57600,
+        "sha256": "4f08ef2e61281640cb3ba1aef8bed7a31be9d19b182d613602c8ce28de8d80bd"
+      },
+      {
+        "name": "DQ",
+        "range": [
+          33600960,
+          50378175
+        ],
+        "bytes": 16777216,
+        "sha256": "52901b88cdf872d9ed65d3206abf7d473d4e98f1ded514f99e09993dc17e0c20"
+      }
+    ]
+  },
+  {
+    "product": "jw03523005001_14101_00003_nrcb1_cal.fits",
+    "url": "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:JWST/product/jw03523005001_14101_00003_nrcb1_cal.fits",
+    "ranges": [
+      {
+        "name": "header-0",
+        "range": [
+          0,
+          57599
+        ],
+        "bytes": 57600,
+        "sha256": "3fddd69851e697c468fde4748f86b9f979a36318b58766b4e33cb701fbf63f56"
+      },
+      {
+        "name": "header-23040",
+        "range": [
+          23040,
+          80639
+        ],
+        "bytes": 57600,
+        "sha256": "971363381a4d5c89c8029b6819ea1cc94f2d61f6ba7b40d400f174e920a3e870"
+      },
+      {
+        "name": "header-16816320",
+        "range": [
+          16816320,
+          16873919
+        ],
+        "bytes": 57600,
+        "sha256": "1fb27d790209867e3a0210ee2e8826fd27e4d6747aac711cb175e8d078e89e13"
+      },
+      {
+        "name": "header-33598080",
+        "range": [
+          33598080,
+          33655679
+        ],
+        "bytes": 57600,
+        "sha256": "8abff6553a9bdbccff910b074bdf0bb71fe43e0a09bc0ce4e94dd72fdaf526de"
+      },
+      {
+        "name": "DQ",
+        "range": [
+          33600960,
+          50378175
+        ],
+        "bytes": 16777216,
+        "sha256": "4f2af139448f8f14d56eb80f42b673c6a49b5c3de6767f187e815a253f36f563"
+      }
+    ]
+  },
+  {
+    "product": "jw03523005001_14101_00004_nrcb1_cal.fits",
+    "url": "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:JWST/product/jw03523005001_14101_00004_nrcb1_cal.fits",
+    "ranges": [
+      {
+        "name": "header-0",
+        "range": [
+          0,
+          57599
+        ],
+        "bytes": 57600,
+        "sha256": "6dec3b3377ddae323c156de60becd00be039f39df17732493d0c73a0c7c768f2"
+      },
+      {
+        "name": "header-23040",
+        "range": [
+          23040,
+          80639
+        ],
+        "bytes": 57600,
+        "sha256": "40c0040b26bf59a2afa406c606c73e44f80a1790b06d4fda3bce1b2238ed357e"
+      },
+      {
+        "name": "header-16816320",
+        "range": [
+          16816320,
+          16873919
+        ],
+        "bytes": 57600,
+        "sha256": "b8fef14de50e788fd942ec32aa7350a1e4b872a76bc08026fcee12c1ec2e02d6"
+      },
+      {
+        "name": "header-33598080",
+        "range": [
+          33598080,
+          33655679
+        ],
+        "bytes": 57600,
+        "sha256": "d0915d66924af94ab778941655d391fdbf342df7abac6afd68fc33d0ecb4d64f"
+      },
+      {
+        "name": "DQ",
+        "range": [
+          33600960,
+          50378175
+        ],
+        "bytes": 16777216,
+        "sha256": "161745ac093071bee3e0f0b6ed8f171f79050d7b241519d57ee8acb3b7bfe85b"
+      }
+    ]
+  }
+]

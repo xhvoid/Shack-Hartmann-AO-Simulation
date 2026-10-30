@@ -1,0 +1,130 @@
+{
+  "url": "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:JWST/product/jw03523-o005_t001_nircam_f150w2-f162m_i2d.fits",
+  "native_y_bounds": [
+    2300,
+    4371
+  ],
+  "native_x_bounds": [
+    0,
+    9879
+  ],
+  "extensions": [
+    {
+      "name": "PRIMARY",
+      "data_offset": 23040,
+      "shape_fits": [],
+      "bitpix": 8
+    },
+    {
+      "name": "SCI",
+      "data_offset": 34560,
+      "shape_fits": [
+        9879,
+        4371
+      ],
+      "bitpix": -32
+    },
+    {
+      "name": "ERR",
+      "data_offset": 172762560,
+      "shape_fits": [
+        9879,
+        4371
+      ],
+      "bitpix": -32
+    },
+    {
+      "name": "CON",
+      "data_offset": 345490560,
+      "shape_fits": [
+        9879,
+        4371,
+        1
+      ],
+      "bitpix": 32
+    },
+    {
+      "name": "WHT",
+      "data_offset": 518218560,
+      "shape_fits": [
+        9879,
+        4371
+      ],
+      "bitpix": -32
+    }
+  ],
+  "ranges": [
+    {
+      "name": "header-0",
+      "range": [
+        0,
+        57599
+      ],
+      "bytes": 57600,
+      "sha256": "f4099bdfecd645158d57a3371fdba7a585d93847ce34b3b7e9ee9e7e53ad8dda"
+    },
+    {
+      "name": "header-23040",
+      "range": [
+        23040,
+        80639
+      ],
+      "bytes": 57600,
+      "sha256": "525c9c422ebd257e59f8f289b652a1f92bf8c15ce485dfc742554af26c64d772"
+    },
+    {
+      "name": "SCI-strip",
+      "range": [
+        90921360,
+        172758995
+      ],
+      "bytes": 81837636,
+      "sha256": "5ff190c9984c66a6a8fec186b585396c96496667d2bba9d35e4af340ccf88cd4"
+    },
+    {
+      "name": "header-172759680",
+      "range": [
+        172759680,
+        172817279
+      ],
+      "bytes": 57600,
+      "sha256": "644a13c45d15cb6be4186a00d25fbe9231a07a9872fddc3dac1157239875487b"
+    },
+    {
+      "name": "ERR-strip",
+      "range": [
+        263649360,
+        345486995
+      ],
+      "bytes": 81837636,
+      "sha256": "344475879c169443ed9dccc7d3a840886cb5a543ccb6a609e170c36ebef31de3"
+    },
+    {
+      "name": "header-345487680",
+      "range": [
+        345487680,
+        345545279
+      ],
+      "bytes": 57600,
+      "sha256": "4207306f50197b20421421dd4d2da4930a949f54dd5cca74047130dd1832a399"
+    },
+    {
+      "name": "header-518215680",
+      "range": [
+        518215680,
+        518273279
+      ],
+      "bytes": 57600,
+      "sha256": "7c792599ebadd1b61850b616ad744183da4dababc5c191c19eaa058700994fc3"
+    },
+    {
+      "name": "WHT-strip",
+      "range": [
+        609105360,
+        690942995
+      ],
+      "bytes": 81837636,
+      "sha256": "36bedd0be99d02312f0aa89456a54ed0714ee2529a117d8a0d22440795fac087"
+    }
+  ]
+}

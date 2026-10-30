@@ -4,7 +4,7 @@
   "manifest": "series-2m1000-s624-c7241e4190d5-ef74a541b0e60/manifest.json",
   "manifest_bytes": 42464,
   "manifest_sha256": "a151da4b84b21029c03a9f373c586a8203781807e52cb0f9bedddef4ae1719ee",
-  "code_build": "8e13a9de437364c3",
+  "code_build": "703cee05d3ea4190",
   "galaxy": {
     "schema": "ao-explorer.galaxy-entry.v3",
     "derived_id": "ngc1705-f814w-2m1000-s624-c7241e4190d5-gda93ed5af026-m4adb5a4af111",
@@ -70,16 +70,16 @@
   },
   "scienceReplay": {
     "schema": "ao-explorer.science-replay-entry.v1",
-    "id": "orion-f164n-044719d11f789a25",
-    "manifest": "../derived/orion-f164n-044719d11f789a25/manifest.json",
-    "manifest_bytes": 31009,
-    "manifest_sha256": "1902f1e67497ed7782e678494ac1fa6ce9afb5c368efe7913c39495971c74b94"
+    "id": "westerlund2-f162m-4e247be6ca25d722",
+    "manifest": "../derived/westerlund2-f162m-4e247be6ca25d722/manifest.json",
+    "manifest_bytes": 31915,
+    "manifest_sha256": "334e0239d63a6dd5c2f3383be0861dd02d2a5a43069c60e02fc742c53c559365"
   },
   "scienceVideo": {
     "schema": "ao-explorer.science-video-entry.v1",
-    "id": "science-mp4-baf562c252ccd13c",
-    "manifest": "../derived/science-mp4-baf562c252ccd13c/manifest.json",
-    "manifest_bytes": 1147,
-    "manifest_sha256": "7435cda53b5e25c0dd041678bbb5d219e0558304412c4f248b5742fbafab532a"
+    "id": "westerlund2-mp4-5f0576e5b12237ca",
+    "manifest": "../derived/westerlund2-mp4-5f0576e5b12237ca/manifest.json",
+    "manifest_bytes": 1157,
+    "manifest_sha256": "67a7c03be3a8f4694d0450b08111991cad0630c8a2d59791c92976044d2a47d4"
   }
 }
