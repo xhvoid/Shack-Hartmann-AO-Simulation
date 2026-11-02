@@ -10,9 +10,11 @@ grid plus the summed cell area.
 The partition rule is exactly :func:`~.geometry.partition_pupil_geometry`'s:
 lenslet edges are ``linspace(min, max, n + 1)`` of the sample coordinates,
 cells are half-open except that the final row and column also own the
-``+x``/``+y`` edge samples, a cell is retained when its illuminated sample
-fraction reaches ``min_fill_fraction``, IDs are ``lenslet-r####-c####``, and
-the order is column outer, row inner.  The pupil grid must be separable (as
+``+x``/``+y`` edge samples, ownership is decided on integer sample indices
+(so a sample on an interior edge belongs to the cell above it), a cell is
+retained when its illuminated sample fraction reaches ``min_fill_fraction``,
+IDs are ``lenslet-r####-c####``, and the order is column outer, row inner.
+The pupil grid must be separable (as
 :func:`~shwfs_ao.core.geometry.build_pupil_geometry` makes it), so every cell
 is a rectangle of samples.  A pupil size that the lenslet count does not
 divide is kept exactly as requested: cells then differ in size by one sample,
@@ -31,7 +33,12 @@ import numpy as np
 from ...core.geometry import GeometryError, PupilGeometry, build_pupil_geometry
 from ...core.hashing import geometry_hash as _geometry_hash
 from ...core.hashing import stable_hash
-from .geometry import ShackHartmannGeometry, ShackHartmannGeometryError, subaperture_id
+from .geometry import (
+    ShackHartmannGeometry,
+    ShackHartmannGeometryError,
+    _lenslet_sample_ranges,
+    subaperture_id,
+)
 
 
 __all__ = (
@@ -52,21 +59,6 @@ def _readonly(values: Any, dtype: Any) -> np.ndarray:
     return np.frombuffer(contiguous.tobytes(order="C"), dtype=contiguous.dtype).reshape(
         contiguous.shape
     )
-
-
-def _cell_ranges(axis: np.ndarray, edges: np.ndarray) -> list[tuple[int, int]]:
-    """Index ranges of half-open cells, with the final cell closed above."""
-
-    ranges = []
-    count = edges.size - 1
-    for index in range(count):
-        start = int(np.searchsorted(axis, edges[index], side="left"))
-        if index == count - 1:
-            stop = int(np.searchsorted(axis, edges[index + 1], side="right"))
-        else:
-            stop = int(np.searchsorted(axis, edges[index + 1], side="left"))
-        ranges.append((start, stop))
-    return ranges
 
 
 @dataclass(frozen=True)
@@ -294,8 +286,8 @@ def compact_from_pupil_geometry(
         )
     x_edges = np.linspace(float(np.min(x)), float(np.max(x)), count + 1)
     y_edges = np.linspace(float(np.min(y)), float(np.max(y)), count + 1)
-    column_ranges = _cell_ranges(x_axis, x_edges)
-    row_ranges = _cell_ranges(y_axis, y_edges)
+    column_ranges = _lenslet_sample_ranges(x_axis.size, count)
+    row_ranges = _lenslet_sample_ranges(y_axis.size, count)
     if sum(stop - start for start, stop in column_ranges) != x_axis.size or sum(
         stop - start for start, stop in row_ranges
     ) != y_axis.size:

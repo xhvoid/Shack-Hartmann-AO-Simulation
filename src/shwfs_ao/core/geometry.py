@@ -10,6 +10,7 @@ later mutation.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from fractions import Fraction
 import math
 from numbers import Integral, Real
 from typing import ClassVar
@@ -106,7 +107,13 @@ def build_pupil_geometry(
 
     ``central_obstruction_ratio`` is the obscured diameter divided by the
     telescope diameter.  ``spider_width_m`` is the full width of both the
-    horizontal and vertical vane.
+    horizontal and vertical vane.  The outer rim test ``x² + y² ≤ (D/2)²`` and
+    the obstruction test ``x² + y² ≥ (ε D/2)²`` are evaluated exactly on integer
+    sample offsets, so samples on either circle are kept.  The ratio ``ε`` is
+    read as the decimal it is written as (0.3 means 3/10, not its binary value).
+    The vane test ``|x| ≤ w/2`` (and ``|y| ≤ w/2``) is evaluated the same way,
+    with ``D`` and ``w`` read as decimals, so samples on a vane edge are blocked
+    on both sides of the vane.
     """
 
     diameter = _positive_float(telescope_diameter_m, label="telescope_diameter_m")
@@ -122,19 +129,43 @@ def build_pupil_geometry(
         raise GeometryError("spider_width_m must be non-negative.")
 
     rows, columns = shape
+    # Sample (i, j) lies at ``x = (D/2) a_j / (C - 1)``, ``y = (D/2) b_i / (R - 1)``
+    # with the integer offsets ``a_j = 2 j - (C - 1)`` and ``b_i = 2 i - (R - 1)``,
+    # so the rim test is ``a² (R - 1)² + b² (C - 1)² ≤ (C - 1)² (R - 1)²``, exact in
+    # integers.  Testing the rounded coordinates instead dropped rim samples on
+    # some odd grids (four at 123 across for D = 2 m).  int64 holds the sums
+    # while ``(C - 1)(R - 1) < 2³¹``.
+    span_x, span_y = columns - 1, rows - 1
+    if span_x * span_y >= 2**31:
+        raise GeometryError("pupil_shape is too large for the exact rim test.")
     x_axis_m = np.linspace(-0.5 * diameter, 0.5 * diameter, columns)
     y_axis_m = np.linspace(-0.5 * diameter, 0.5 * diameter, rows)
     x_m, y_m = np.meshgrid(x_axis_m, y_axis_m, indexing="xy")
-    radius_m = np.hypot(x_m, y_m)
-    mask = radius_m <= 0.5 * diameter
+    offset_x = 2 * np.arange(columns, dtype=np.int64) - span_x
+    offset_y = 2 * np.arange(rows, dtype=np.int64) - span_y
+    scaled_radius_sq = (offset_x[None, :] * span_y) ** 2 + (offset_y[:, None] * span_x) ** 2
+    rim_sq = (span_x * span_y) ** 2
+    mask = scaled_radius_sq <= rim_sq
     if obstruction > 0.0:
-        mask &= radius_m >= 0.5 * diameter * obstruction
+        # Keep ``scaled_radius_sq ≥ ε² rim_sq`` with ``ε = p/q`` the decimal
+        # ratio; the integer left side makes this ``≥ ceil(p² rim_sq / q²)``,
+        # computed in Python integers.
+        ratio = Fraction(repr(obstruction))
+        inner_sq = -(-(ratio.numerator**2 * rim_sq) // ratio.denominator**2)
+        mask &= scaled_radius_sq >= inner_sq
     if spider > 0.0:
-        half_width_m = 0.5 * spider
-        mask &= ~(
-            (np.abs(x_m) <= half_width_m)
-            | (np.abs(y_m) <= half_width_m)
+        # ``|x| ≤ w/2`` is ``|a_j| D ≤ w (C - 1)`` with ``D`` and ``w`` the decimal
+        # values, compared exactly as fractions.  Testing the rounded coordinates
+        # blocked a vane-edge sample on one side of the vane only.
+        diameter_ratio = Fraction(repr(diameter))
+        width_ratio = Fraction(repr(spider))
+        in_vane_x = np.array(
+            [abs(int(a)) * diameter_ratio <= width_ratio * span_x for a in offset_x]
         )
+        in_vane_y = np.array(
+            [abs(int(b)) * diameter_ratio <= width_ratio * span_y for b in offset_y]
+        )
+        mask &= ~(in_vane_x[None, :] | in_vane_y[:, None])
     if not np.any(mask):
         raise GeometryError(
             "central obstruction and spider settings remove the entire pupil."

@@ -96,7 +96,16 @@ class ReconstructorCacheInfo:
 
 @dataclass(frozen=True)
 class _CacheEntry:
-    operator: np.ndarray
+    """Retained SVD factors of one masked matrix, applied in sequence.
+
+    Coordinates are ``right @ (filters * (left.T @ signal))``.  Forming the
+    dense filtered pseudo-inverse first cancels catastrophically on
+    ill-conditioned matrices, so only the factors are stored.
+    """
+
+    left: np.ndarray
+    filters: np.ndarray
+    right: np.ndarray
     singular_values: np.ndarray
     numerical_rank: int
     kept_modes: int | None
@@ -208,7 +217,7 @@ class _MaskedSvdReconstructor:
         )
 
     def clear_cache(self) -> None:
-        """Drop cached operators and reset cache counters."""
+        """Drop cached factors and reset cache counters."""
 
         self._cache.clear()
         self._hits = 0
@@ -244,7 +253,9 @@ class _MaskedSvdReconstructor:
             return None
 
         usable_signal = signal[usable]
-        coordinates = entry.operator @ usable_signal
+        coordinates = entry.right @ (
+            entry.filters * (entry.left.T @ usable_signal)
+        )
         if not np.all(np.isfinite(coordinates)):
             raise ReconstructionError(
                 "Reconstruction produced non-finite coordinate values."
@@ -310,7 +321,6 @@ class _MaskedSvdReconstructor:
                 )
                 filters = np.zeros_like(singular_values)
                 filters[retained] = 1.0 / singular_values[retained]
-                operator = (right_t.T * filters) @ left.T
                 kept_modes: int | None = int(np.count_nonzero(retained))
             elif self._solver == "tikhonov" and self._solver_parameter == 0.0:
                 left, singular_values, right_t = np.linalg.svd(
@@ -324,7 +334,6 @@ class _MaskedSvdReconstructor:
                 )
                 filters = np.zeros_like(singular_values)
                 filters[retained] = 1.0 / singular_values[retained]
-                operator = (right_t.T * filters) @ left.T
                 kept_modes = None
             else:
                 left, singular_values, right_t = np.linalg.svd(
@@ -367,23 +376,30 @@ class _MaskedSvdReconstructor:
                     raise ReconstructionError(
                         f"Unsupported reconstruction solver {self._solver!r}."
                     )
-                operator = (right_t.T * filters) @ left.T
         except np.linalg.LinAlgError as exc:
             raise ReconstructionError(
                 "The masked interaction-matrix decomposition failed."
             ) from exc
 
+        kept = np.flatnonzero(retained)
+        kept_left = left[:, kept]
+        kept_filters = filters[kept]
+        kept_right = right_t[kept, :].T
         singular_values = np.maximum(np.asarray(singular_values, dtype=float), 0.0)
         if (
             not np.all(np.isfinite(singular_values))
-            or not np.all(np.isfinite(operator))
+            or not np.all(np.isfinite(kept_left))
+            or not np.all(np.isfinite(kept_filters))
+            or not np.all(np.isfinite(kept_right))
         ):
             raise ReconstructionError(
                 "The masked interaction-matrix decomposition was non-finite."
             )
         numerical_rank = _numerical_rank(singular_values, matrix.shape)
         return _CacheEntry(
-            operator=_immutable_float_array(operator),
+            left=_immutable_float_array(kept_left),
+            filters=_immutable_float_array(kept_filters),
+            right=_immutable_float_array(kept_right),
             singular_values=_immutable_float_array(singular_values),
             numerical_rank=numerical_rank,
             kept_modes=kept_modes,
@@ -815,7 +831,7 @@ def _least_squares_retained(
     matrix_shape: tuple[int, int],
     rcond: object,
 ) -> np.ndarray:
-    """Match NumPy's least-squares cutoff while retaining a cached operator."""
+    """Match NumPy's least-squares cutoff while retaining cached factors."""
 
     if singular_values.size == 0 or singular_values[0] <= 0.0:
         return np.zeros(singular_values.shape, dtype=bool)

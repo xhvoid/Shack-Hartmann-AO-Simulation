@@ -16,7 +16,11 @@ the raw readout unit (ADU, or ``output_e_equivalent`` with the ADC off):
 * flat: mean of ``n_flat`` uniformly illuminated frames at the operating
   exposure (no sky), minus ``B`` and ``D``, converted to input electrons by the
   same conversion as measurements, then normalized to unit mean over the
-  valid pixels of all retained blocks.
+  valid pixels of all retained blocks.  A pixel whose flat response is not
+  strictly positive is bad whatever the thresholds, so every retained flat
+  denominator is positive.  The thresholds act on the preliminary
+  normalization only; a retained pixel may end slightly outside them after
+  the final renormalization.
 
 Processing subtracts ``B + D + S`` once.  That sum telescopes to the mean of
 the sky frames (or of the dark frames without sky frames), so no component is
@@ -33,9 +37,9 @@ with ``c`` the declared raw-to-input-electron conversion (known gain:
 per-pixel conversion gain; ``g / G`` when the flat absorbs the gain map; with
 the ADC off the scalar ``g`` is already folded into the analog readout), ``F``
 the normalized flat, and ``P`` the bad-pixel policy (zero weight, or the mean
-of the valid 4-neighbours).  Negative clipping, when declared, follows the
-background subtraction.  The relative gain map is corrected once: either by
-``c`` or by the flat, never both.
+of the valid 4-neighbours).  Negative clipping, when declared, is applied
+last, after the bad-pixel policy.  The relative gain map is corrected once:
+either by ``c`` or by the flat, never both.
 
 ``oracle`` mode replaces the estimates by the deterministic reference
 background (a source-off frame of the reference path) and the normalized
@@ -241,9 +245,13 @@ def build_calibration_products(
     """Generate and reduce calibration frames, or form oracle products.
 
     ``include_noise=False`` generates every calibration frame on the
-    deterministic reference path; the masters then equal the oracle
-    background up to the CIC handling, which is the noiseless fixture of the
-    DET-06 acceptance.
+    deterministic reference path (CIC at its mean rate, as in ``oracle``
+    mode), which is the noiseless fixture of the DET-06 acceptance.  With
+    matched conventions the products then equal the ``oracle`` products to
+    floating-point accuracy: with ``n_sky_frames > 0`` the background
+    ``B + D + S`` equals the oracle background; with ``n_sky_frames = 0`` it
+    is ``B + D`` and omits the declared sky that ``oracle`` products always
+    subtract.
     """
 
     if config.mode == "raw_readout":
@@ -331,8 +339,11 @@ def build_calibration_products(
     if not np.any(preliminary_valid):
         raise PixelProcessingError("no valid flat-field pixel remains.")
     flat = flat_e / float(np.mean(flat_e[preliminary_valid]))
+    # A nonpositive response is bad whatever the thresholds, so every retained
+    # flat denominator is positive (a zero low threshold would otherwise keep it).
     bad = (
         saturated_mask
+        | ~(flat_e > 0.0)
         | (flat < config.flat_low_threshold)
         | (flat > config.flat_high_threshold)
         | (dark_e > config.hot_pixel_threshold_e)

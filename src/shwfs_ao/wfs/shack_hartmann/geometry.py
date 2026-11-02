@@ -172,17 +172,23 @@ class ShackHartmannGeometry:
             )
 
         x_edges_m, y_edges_m = _lenslet_edges(pupil, count_across)
+        rows, columns = pupil.pupil_shape
+        row_ranges = _lenslet_sample_ranges(rows, count_across)
+        column_ranges = _lenslet_sample_ranges(columns, count_across)
+        legacy_row_ranges = _lenslet_sample_ranges(
+            rows, count_across, close_final_edge=False
+        )
+        legacy_column_ranges = _lenslet_sample_ranges(
+            columns, count_across, close_final_edge=False
+        )
         occupied = np.zeros(pupil.pupil_shape, dtype=bool)
         for index, ((row, column), mask, center) in enumerate(
             zip(indices, masks, centers)
         ):
             cell = _lenslet_cell(
-                pupil.x_m,
-                pupil.y_m,
-                x_edges_m,
-                y_edges_m,
-                row=row,
-                column=column,
+                pupil.pupil_shape,
+                row_ranges[row],
+                column_ranges[column],
             )
             expected_mask = cell & pupil.pupil_mask
             if not np.any(mask):
@@ -194,13 +200,9 @@ class ShackHartmannGeometry:
             if not np.array_equal(mask, expected_mask) and not np.array_equal(
                 mask,
                 _lenslet_cell(
-                    pupil.x_m,
-                    pupil.y_m,
-                    x_edges_m,
-                    y_edges_m,
-                    row=row,
-                    column=column,
-                    close_final_edges=False,
+                    pupil.pupil_shape,
+                    legacy_row_ranges[row],
+                    legacy_column_ranges[column],
                 )
                 & pupil.pupil_mask,
             ):
@@ -337,7 +339,9 @@ def partition_pupil_geometry(
     The cells tile every pupil sample exactly once: cell intervals are
     half-open ``[lower, upper)`` except that the final row and column also
     include the ``+x``/``+y`` pupil edge, so odd grids keep their edge samples
-    and every final cell's fill fraction uses its full sampled block.
+    and every final cell's fill fraction uses its full sampled block.  A
+    sample on an interior edge belongs to the cell above it; ownership is
+    decided exactly on integer sample indices.
     """
 
     return _partition_lenslet_cells(
@@ -416,6 +420,13 @@ def _partition_lenslet_cells(
             "min_fill_fraction must be in [0, 1]."
         )
     x_edges_m, y_edges_m = _lenslet_edges(pupil_geometry, count_across)
+    rows, columns = pupil_geometry.pupil_shape
+    row_ranges = _lenslet_sample_ranges(
+        rows, count_across, close_final_edge=close_final_edges
+    )
+    column_ranges = _lenslet_sample_ranges(
+        columns, count_across, close_final_edge=close_final_edges
+    )
 
     masks: list[np.ndarray] = []
     centers: list[tuple[float, float]] = []
@@ -426,13 +437,9 @@ def _partition_lenslet_cells(
     for column in range(count_across):
         for row in range(count_across):
             cell = _lenslet_cell(
-                pupil_geometry.x_m,
-                pupil_geometry.y_m,
-                x_edges_m,
-                y_edges_m,
-                row=row,
-                column=column,
-                close_final_edges=close_final_edges,
+                pupil_geometry.pupil_shape,
+                row_ranges[row],
+                column_ranges[column],
             )
             cell_samples = int(np.count_nonzero(cell))
             assigned_samples += cell_samples
@@ -527,42 +534,39 @@ def _lenslet_edges(
     )
 
 
+def _lenslet_sample_ranges(
+    samples: int,
+    count_across: int,
+    *,
+    close_final_edge: bool = True,
+) -> list[tuple[int, int]]:
+    """Return each lenslet cell's sample-index range ``[start, stop)`` on one axis.
+
+    Sample ``j`` of ``N`` lies at fraction ``j / (N - 1)`` of the pupil span
+    and lenslet edge ``k`` of ``n`` at ``k / n``, so the half-open cells give
+    sample ``j`` to cell ``floor(n j / (N - 1))`` and cell ``k`` starts at
+    ``ceil(k (N - 1) / n)``.  Both are exact in integers; comparing the
+    rounded ``linspace`` coordinates instead misassigned samples lying on an
+    interior edge, which happens when ``gcd(n, N - 1) > 1``.  The final cell
+    also owns the upper pupil edge sample unless ``close_final_edge`` is false
+    (the frozen legacy partition).
+    """
+
+    span = samples - 1
+    starts = [-(-k * span // count_across) for k in range(count_across + 1)]
+    if close_final_edge:
+        starts[-1] = samples
+    return list(zip(starts[:-1], starts[1:]))
+
+
 def _lenslet_cell(
-    x_m: np.ndarray,
-    y_m: np.ndarray,
-    x_edges_m: np.ndarray,
-    y_edges_m: np.ndarray,
-    *,
-    row: int,
-    column: int,
-    close_final_edges: bool = True,
+    shape: tuple[int, int],
+    row_range: tuple[int, int],
+    column_range: tuple[int, int],
 ) -> np.ndarray:
-    return _cell_interval(
-        x_m,
-        x_edges_m,
-        column,
-        close_final_edge=close_final_edges,
-    ) & _cell_interval(
-        y_m,
-        y_edges_m,
-        row,
-        close_final_edge=close_final_edges,
-    )
-
-
-def _cell_interval(
-    values_m: np.ndarray,
-    edges_m: np.ndarray,
-    index: int,
-    *,
-    close_final_edge: bool,
-) -> np.ndarray:
-    # Interior cells are half-open so a shared edge belongs to one cell; the
-    # final cell also owns the upper pupil edge, which equals max(values_m).
-    lower = values_m >= edges_m[index]
-    if close_final_edge and index == edges_m.size - 2:
-        return lower & (values_m <= edges_m[index + 1])
-    return lower & (values_m < edges_m[index + 1])
+    cell = np.zeros(shape, dtype=bool)
+    cell[row_range[0] : row_range[1], column_range[0] : column_range[1]] = True
+    return cell
 
 
 def _positive_integer(value: object, *, label: str) -> int:

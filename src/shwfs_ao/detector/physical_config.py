@@ -302,6 +302,9 @@ def physical_budget(
     """Evaluate the declared source and sky budget for a full subaperture."""
 
     area = _finite(full_subaperture_area_m2, "full_subaperture_area_m2")
+    # Checked here because direct budgets never pass the area on.
+    if area < 0.0:
+        raise PhysicalConfigError("full_subaperture_area_m2 must be non-negative.")
     quadrature = config.bandpass.quadrature(wfs_wavelength_m)
     source = config.source
     qe = config.camera.quantum_efficiency

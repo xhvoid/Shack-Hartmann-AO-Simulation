@@ -13,6 +13,7 @@ array boundary.
 from __future__ import annotations
 
 import math
+from fractions import Fraction
 from numbers import Integral, Real
 
 import numpy as np
@@ -123,6 +124,10 @@ def square_grid_actuator_layout(
     loop and y/row is the inner loop.  ``grid_indices_rc`` stores the original
     ``(row, column)`` indices in the unfiltered nominal square grid, so pupil or
     guard-actuator filtering cannot renumber physical actuator identities.
+
+    A centre is retained when ``x² + y² ≤ (R (1 + margin))²``.  The test is
+    evaluated exactly on integer grid offsets rather than on the rounded
+    coordinates, so lattice points on the boundary circle are retained.
     """
 
     diameter_m = _positive_float(
@@ -154,13 +159,22 @@ def square_grid_actuator_layout(
             count,
         )
     pitch_m = float(abs(coordinates[1] - coordinates[0]))
-    retain_radius_m = radius_m * (1.0 + margin_fraction)
+    # Centre ``i`` lies at ``x = R a_i / k`` with the integer offset
+    # ``a_i = 2 i - (count - 1)``, and ``k = count - 1`` (edge actuators) or
+    # ``k = count`` (half-cell inset).  The retention test is therefore
+    # ``a² + b² ≤ (k (1 + margin))²``, evaluated in exact rational arithmetic
+    # (``Fraction`` holds the margin's binary value exactly).  Testing the
+    # rounded coordinates instead dropped boundary points such as (±0.6, ±0.8)
+    # at 11 across.
+    span = count - 1 if include_edge else count
+    retain_bound = (span * (1 + Fraction(margin_fraction))) ** 2
+    offsets = [2 * index - (count - 1) for index in range(count)]
 
     centers: list[tuple[float, float]] = []
     grid_indices_rc: list[tuple[int, int]] = []
     for column_index, x_center_m in enumerate(coordinates):
         for row_index, y_center_m in enumerate(coordinates):
-            if x_center_m**2 + y_center_m**2 <= retain_radius_m**2:
+            if offsets[column_index] ** 2 + offsets[row_index] ** 2 <= retain_bound:
                 centers.append((float(x_center_m), float(y_center_m)))
                 grid_indices_rc.append((row_index, column_index))
 

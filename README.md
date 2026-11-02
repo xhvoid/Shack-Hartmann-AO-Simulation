@@ -62,6 +62,7 @@ phasing model or calibration against on-sky telemetry. A successful numerical
 comparison applies to the component and conditions tested.
 
 - [Model conventions and sources](docs/methods.md)
+- [Component checks, numerical repairs and remaining limits](docs/verification-summary.md)
 - [Reproducing examples and checking saved results](docs/reproducing.md)
 - [Selected studies and their evidence](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/#studies)
 
