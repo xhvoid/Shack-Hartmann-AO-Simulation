@@ -1,7 +1,13 @@
-# AO Explorer website
+# AO Explorer: experimental generation interface
 
-This branch contains the static [AO Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/).
-The Python simulation package is on `main`.
+This branch is an experimental interface for the optional 2 m computation
+service. It is not the version deployed to the public site. The published
+[AO Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/) is built
+from `website`; the current Python package and component repairs are on `main`.
+
+The companion `feature/dynamic-phase` service still uses earlier component
+implementations. Its October checks describe the recorded producers, not
+the latest package. See its [version and validation scope](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/feature/dynamic-phase/docs/research/ao_dynamic_v1/STATUS.md).
 
 ## Preview
 
@@ -12,7 +18,7 @@ python3 -m http.server 8000 --bind 127.0.0.1 --directory site
 Open `http://127.0.0.1:8000/`. No JavaScript dependencies or Python simulation
 are needed to serve the site.
 
-## Update and publish
+## Update this experimental interface
 
 After editing the page or scripts, update the code identifier:
 
@@ -20,10 +26,9 @@ After editing the page or scripts, update the code identifier:
 python3 tools/site_build.py --web-dir site --write
 ```
 
-Add the `skip-checks: true` trailer when committing to `website`. On GitHub, open **Actions →
-Explorer Pages → Run workflow**, select `main`, and run it. That workflow
-checks out `website`, verifies the saved data bindings and publishes `site/`.
-It does not run simulations or the Python test suite.
+Keep changes on this experimental branch and add the `skip-checks: true` trailer to routine
+commits. The manual Pages workflow publishes `website`, not this branch.
+Integration and deployment are separate decisions.
 
 The recorded datasets include size and SHA-256 references. Preserve each
 complete dataset and its references when updating the site. Source links
@@ -31,8 +36,9 @@ in the research panels point to the commits that produced those records.
 
 ## Generate a run
 
-The generation panel connects to the optional computation service proposed
-in [PR #8](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/pull/8).
+The generation panel connects to the optional computation service discussed
+in [PR #8](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/pull/8), which
+was closed without merging.
 It contacts the address you enter only after you press **Connect**. No public
 service is configured.
 

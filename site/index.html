@@ -7,7 +7,7 @@
 <meta name="description" content="A personal adaptive-optics project with interactive simulation replays, a 2.2 m loss-of-lock case study, and notes on methods and assumptions.">
 <link rel="icon" href="data:,">
 <!-- Code and style come from the content-addressed build directory; see tools/site_build.py. -->
-<link rel="stylesheet" href="code-afc0a8269a3f5363/styles.css">
+<link rel="stylesheet" href="code-cbb812243043e979/styles.css">
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script type="module" src="code-afc0a8269a3f5363/app.js" onerror="aoCodeUnavailable()"></script>
+<script type="module" src="code-cbb812243043e979/app.js" onerror="aoCodeUnavailable()"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -41,6 +41,7 @@ function aoCodeUnavailable() {
 </header>
 
 <main id="main">
+<aside class="wrap panel" aria-label="Experimental version"><p><strong>Experimental generation interface.</strong> This is not the published website. The companion service has not incorporated the latest component repairs on <code>main</code>; its October checks apply only to their recorded versions. No public service is hosted. <a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/feature/dynamic-phase/docs/research/ao_dynamic_v1/STATUS.md">Version and validation scope →</a></p></aside>
 <section id="explore" class="wrap section" aria-labelledby="explore-title">
   <h1 id="explore-title">Start with a 2 m AO loop</h1>
   <p class="lede" id="explore-lede">I use this 2 m Shack-Hartmann model to explore how turbulence, guide-star brightness and controller settings affect a single-conjugate adaptive-optics (SCAO) loop. Each case contains 1000 frames at 1 kHz: one second of simulated time, using a synthetic on-axis guide star. Choose a case and play back the saved frames.</p>
@@ -386,7 +387,7 @@ function aoCodeUnavailable() {
   </section>
   <section class="panel topic-panel" id="topic-checks" aria-labelledby="checks-title" hidden>
     <h2 id="checks-title">What I have checked so far</h2>
-    <div class="evidence-grid"><div><h3>Sensor response</h3><p>Calibrated tilt response and centroid precision in tutorial configurations.</p><a href="#result-R1">Sensor checks →</a></div><div><h3>Independent implementations</h3><p>Comparison of the native and HCIPy implementations on one small test configuration.</p><a href="#result-R7">Backend comparison →</a></div><div><h3>Numerical sampling</h3><p>Sampling studies for selected configurations and observables. Other configurations still need their own checks.</p><a href="#result-R8">Sampling records →</a></div></div>
+    <div class="evidence-grid"><div><h3>Sensor response</h3><p>Calibrated tilt response and centroid precision in tutorial configurations.</p><a href="#result-R1">Sensor checks →</a></div><div><h3>Native and HCIPy components</h3><p>Comparison on one small test configuration. The loops share the dense reconstructor, so agreement does not independently verify that solver.</p><a href="#result-R7">Backend comparison →</a></div><div><h3>Numerical sampling</h3><p>Sampling studies for selected configurations and observables. Other configurations still need their own checks.</p><a href="#result-R8">Sampling records →</a></div></div>
     <p class="takeaway">The 42 m replay includes source records and numerical consistency checks. It is still one realization: robustness, long-run stationarity and agreement with real instrument data remain open.</p>
   </section>
 </section>
@@ -748,7 +749,7 @@ function aoCodeUnavailable() {
     <h2>Model families on this site</h2>
     <ul>
       <li><strong>Native time-domain SCAO</strong> (the 2 m experiment, R1–R5 and the large-aperture convergence studies of R8): a frame-by-frame closed loop with a Shack-Hartmann sensor, a deformable mirror, a TSVD or sparse reconstructor and a leaky-integrator controller with queued delay. Detector-level profiles add a detector model (photon, read and sky noise, calibration products).</li>
-      <li><strong>HCIPy time-domain components</strong> (R7): an independent backend compared with the native one on a small test configuration.</li>
+      <li><strong>HCIPy time-domain components</strong> (R7): an optical backend compared with the native one on a small test configuration; both loops use the same dense reconstructor.</li>
       <li><strong>Analytical MCAO adapter</strong> (R6 and the analytical-study checks of R8): P3 sampled correction-band PSD plus a continuous fitting-tail completion propagated by MASTSEL. It is a separate study, not an extension of the native loop.</li>
     </ul>
     <p>Wavelengths, residual conventions, noise settings, profiles, sampling windows and budgets differ between these families and between studies; the site never merges them into one performance comparison.</p>

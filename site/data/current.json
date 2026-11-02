@@ -4,7 +4,7 @@
   "manifest": "series-2m1000-s624-c7241e4190d5-ef74a541b0e60/manifest.json",
   "manifest_bytes": 42464,
   "manifest_sha256": "a151da4b84b21029c03a9f373c586a8203781807e52cb0f9bedddef4ae1719ee",
-  "code_build": "afc0a8269a3f5363",
+  "code_build": "cbb812243043e979",
   "galaxy": {
     "schema": "ao-explorer.galaxy-entry.v3",
     "derived_id": "ngc1705-f814w-2m1000-s624-c7241e4190d5-gda93ed5af026-m4adb5a4af111",
@@ -81,5 +81,12 @@
     "manifest": "../derived/c1-noise-3f28e993fbdc24c6/manifest.json",
     "manifest_bytes": 445,
     "manifest_sha256": "177a875f8ee0cc14f345bb63ed03313c75cee56aa79bb728e7eb26389b121176"
+  },
+  "publicEvidenceCopies": {
+    "schema": "ao-explorer.public-evidence-entry.v1",
+    "id": "public-records-46a80a01d47afca4",
+    "manifest": "../evidence/public-records-46a80a01d47afca4/manifest.json",
+    "manifest_bytes": 840,
+    "manifest_sha256": "7dac0d3b011f0b7b0fd99d295e65b71abcbca7f7d7d9f2d855174658f655b1cc"
   }
 }
