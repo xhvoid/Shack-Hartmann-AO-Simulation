@@ -10,12 +10,36 @@ import { barChart, lineChart, redrawWhenResized } from "./charts.js";
 
 const STATUS_LABELS = {
   executed: "Completed run",
-  accepted_domain: "Passed within the tested range",
+  accepted_domain: "Passed the recorded checks",
   failed_hypothesis: "Hypothesis not supported",
   summary_only: "Summary records only",
-  pending: "Not yet completed",
+  pending: "Pending in the original record",
   derived_analysis: "Saved-data reanalysis",
   analytic_model: "Analytical model output",
+};
+
+// Editorial notes are separate from the frozen numerical records.
+const RECORD_UPDATES = {
+  "R2": "The later dense precision repair also applies to TSVD and Tikhonov. The low retained condition number of the tutorial TSVD example suggests low numerical risk, but this historical trajectory was not rerun with the repaired kernel.",
+  "R5": "“Current code” in the original record meant commit 2312502 in October 2026. These results were not rerun on today’s main branch.",
+  "R7": "The native and HCIPy loops share the dense reconstructor. Their agreement checks the differing components and their combination, but does not independently verify that shared solver. The later dense-kernel repair has not been tested by rerunning this historical comparison.",
+  "R8": "The pending detector-level studies listed below describe the original record. Later 42 m detector and spectral sampling and exposure-quadrature studies converged under their stated criteria. In the extended padding study, production EE50 remained unconverged; residual RMS, Strehl and Fourier-reference EE50 converged. These results do not establish convergence of the separate 12 m detector-level configuration."
+};
+const PUBLIC_DOWNLOADS = {
+  "fde92e225e7ff4eae2905495b9a728c343639716640d3776c2eec0e5078f7077": {
+    "href": "../evidence/public-records-46a80a01d47afca4/42m-noise-on-record.public.json",
+    "bytes": 3774,
+    "sha256": "4493b28810feb0713ed317f80c4903fd08942ca0cc139dc552df0b62cef8399c",
+    "media_type": "application/json",
+    "file_name": "42m-noise-on-record.public.json"
+  },
+  "b62fd20493a6d3611302ab9262a5372afdc098c66fafc98ceb8d58390e3d6942": {
+    "href": "../evidence/public-records-46a80a01d47afca4/detector-noise-law.public.json",
+    "bytes": 180136,
+    "sha256": "a5277405bf24b6d834065a097711e09d8caa1c182b36c4e05a28dc8a48f5928c",
+    "media_type": "application/json",
+    "file_name": "detector-noise-law.public.json"
+  }
 };
 
 let repository = null;
@@ -133,15 +157,16 @@ function renderGroup(group, resultsUrl) {
   const badges = group.status.map((s) => `<span class="badge ${esc(s)}">${esc(STATUS_LABELS[s] || s)}</span>`).join("");
   const keyvals = group.key_values.map((k) => `<div class="keyval"><div class="v">${esc(k.display)}${k.unit ? ` ${esc(k.unit)}` : ""}</div><div class="l">${esc(k.label)}</div></div>`).join("");
   card.innerHTML = `
-<header><h2>${esc(group.id)}. ${esc(group.title)}</h2><p class="question">${esc(group.question)}</p><div class="badges">${badges}</div></header>
+<header><p class="hint">Historical record ${esc(group.id)}</p><h2>${esc(group.id === "R7" ? "Native and HCIPy component comparisons" : group.title)}</h2><p class="question">${esc(group.id === "R5" ? "What did the October 2026 replay show, and how much did the result vary between realizations?" : group.question)}</p><div class="badges">${badges}</div></header>
+${RECORD_UPDATES[group.id] ? `<aside class="panel"><p><strong>Interpretation updated 2 November 2026.</strong> ${esc(RECORD_UPDATES[group.id])}</p><a href="evidence/verification-update-2026-11-02.md">Scope and current qualifications →</a></aside>` : ""}
 <dl class="context">${context}</dl>
 <div class="keyvals">${keyvals}</div>
-<p class="takeaway"><strong>What I found.</strong> ${esc(group.takeaway)}</p>
+<p class="takeaway"><strong>Result as originally recorded.</strong> ${esc(group.takeaway)}</p>
 <div class="selector-host"></div>
 <div class="charts-host"></div>
 <div class="tables-host"></div>
 <div class="figures"></div>
-<h3>Limitations</h3><ul class="limits">${group.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>
+<h3>Limits listed in the original record</h3><ul class="limits">${group.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>
 ${group.evidence_notes.length ? `<h3>Notes on the source records</h3><ul class="limits">${group.evidence_notes.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}
 <details><summary>Sources, generation details and licence</summary>
 <p class="hint">Producer: ${esc(Object.entries(group.producer).map(([k, v]) => `${k}: ${v}`).join("; "))}.</p>
@@ -193,10 +218,12 @@ ${group.evidence_notes.length ? `<h3>Notes on the source records</h3><ul class="
     host.innerHTML = `<p class="downloads"><strong>Data and analysis downloads</strong> (file hashes checked on download): </p>`;
     for (const item of group.downloads) {
       const extract = item.kind === "source_bound_extract";
+      const publicCopy = PUBLIC_DOWNLOADS[item.asset.sha256];
+      const label = item.label.replace(/^Accepted /, "Recorded ");
       const link = document.createElement("a");
-      link.href = "#"; link.textContent = `${item.label} (${extract ? "source-bound extract of saved notebook outputs" : "byte-identical copy"})`;
-      link.title = extract ? `extract of ${item.sources.map((s) => s.path).join(", ")}` : `${item.source.path} — SHA-256 ${item.source.sha256}`;
-      link.addEventListener("click", (event) => { event.preventDefault(); saveVerified(link, item.label, item.asset, resultsUrl, item.file_name); });
+      link.href = "#"; link.textContent = `${label} (${publicCopy ? "public copy; administrative field omitted" : extract ? "source-bound extract of saved notebook outputs" : "byte-identical copy"})`;
+      link.title = publicCopy ? `Edited public copy. Original SHA-256 ${item.asset.sha256}; source and edit are recorded inside the copy.` : extract ? `extract of ${item.sources.map((s) => s.path).join(", ")}` : `${item.source.path} — SHA-256 ${item.source.sha256}`;
+      link.addEventListener("click", (event) => { event.preventDefault(); saveVerified(link, label, publicCopy || item.asset, publicCopy ? import.meta.url : resultsUrl, publicCopy ? publicCopy.file_name : item.file_name); });
       host.querySelector(".downloads").append(link, document.createTextNode(" "));
     }
   }
@@ -248,11 +275,15 @@ export async function renderResults(results, resultsUrl, host, indexHost, result
   const note = document.createElement("p");
   note.className = "hint"; note.textContent = results.separation_note;
   host.append(note);
+  const update = document.createElement("p");
+  update.className = "hint";
+  update.innerHTML = 'These are historical records. <a href="evidence/verification-update-2026-11-02.md">Read the 2 November interpretation notes</a> for the shared-solver limits, later 42 m sampling studies and edited public downloads. The saved numerical files retain their original bytes.';
+  host.append(update);
   if (resultsBuffer) {
     const all = document.createElement("p");
     all.className = "downloads";
     const link = document.createElement("a");
-    link.textContent = "results.json (complete records and source hashes)";
+    link.textContent = "results.json (original records and source hashes; see dated interpretation notes)";
     link.href = URL.createObjectURL(new Blob([resultsBuffer], { type: "application/json" }));
     link.download = "research-results.json";
     all.append(document.createTextNode("Download all experiment records: "), link);
@@ -265,7 +296,7 @@ export async function renderResults(results, resultsUrl, host, indexHost, result
     R1: ['Sensing and centroid precision', 'Tutorial response calibration, photon budget and measurement availability.'],
     R2: ['Reconstruction and feedback experiments', 'Small-system correction, delay and controllable-order studies.'],
     R3: ['Ten-layer atmosphere: full records', 'Layer profile, structure function and the separate 2 m comparison.'],
-    R7: ['Independent backend comparisons', 'Results from a small test configuration and a separate reduced-scale study.'],
+    R7: ['Native and HCIPy component comparisons', 'Small-fixture checks with a shared reconstructor, plus a separate reduced-scale study.'],
     R8: ['Numerical sampling, provenance and open questions', 'Profile-specific convergence records and unresolved work.'],
   };
   indexHost.innerHTML = '';

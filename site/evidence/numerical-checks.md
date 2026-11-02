@@ -19,9 +19,11 @@ The fitted tilt result depends on this low-order basis and measurement
 objective. It should not be generalized to Shack–Hartmann sensors as a class.
 
 A DM-layout review also found a boundary-membership defect on some actuator
-counts. The 2 m configuration with 13 actuators was unaffected. The ongoing
-local correction is separate from this presentation update; no simulation
-algorithm or archived recording was changed here.
+counts. The 2 m configuration with 13 actuators was unaffected. The correction is now included in `main`, as described in the
+[2 November component summary](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/c42fe87a88f8f2dc97cedfacec791f5624950a3a/docs/verification-summary.md).
+This status sentence was updated on 2 November. The numerical records below
+are unchanged; the archived trajectory has not been rerun with the later
+dense-kernel repair. Its recurrence check concerns its original producer.
 
 ## What remains open
 
