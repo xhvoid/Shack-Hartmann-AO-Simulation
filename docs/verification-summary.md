@@ -8,6 +8,14 @@ boundary errors and a precision problem in dense reconstruction. This update
 includes their fixes and the conclusions below. It does not replace the source
 revisions or data used for the existing recordings.
 
+## Which version this covers
+
+The repaired modules are on `main`. The optional service on
+`feature/dynamic-phase` still uses earlier implementations; its companion
+`feature/dynamic-explorer` is an experimental interface. Neither branch
+inherits the verification results below. The published recordings keep their
+own producer revisions, even when their presentation is updated.
+
 ## Repairs and their checks
 
 | Component | Finding and repair | Result within the checked scope |

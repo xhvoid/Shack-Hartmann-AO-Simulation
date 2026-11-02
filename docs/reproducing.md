@@ -16,6 +16,25 @@ revision. Each bundle identifies its sources and configuration hashes. Source
 revisions can differ from public `main`; use those identities when comparing
 results. A missing raw archive is not silently replaced with a fresh trajectory.
 
+## Branches and evidence dates
+
+`main` contains the package and the latest component repairs. `website`
+contains the files used for the published static Explorer. A commit to either
+branch does not deploy the site; publication uses the manual workflow below.
+
+`feature/dynamic-phase` and `feature/dynamic-explorer` are an experimental
+service and its companion interface. The service has not incorporated the
+latest component repairs, and its October checks describe the producers
+named in those records. They are not a validation of the current package or
+a public computation service.
+
+The Explorer keeps older results as dated records. Current interpretation
+notes are separate from the frozen values. Two download copies omit a local
+machine path or a temporary branch label; each is labelled as an edited
+public copy and gives the original SHA-256 and source link. The originals
+and their hashes remain available. These copies are for reading, not exact
+byte-for-byte reproduction of the original files.
+
 ## Small component checks
 
 ```bash
