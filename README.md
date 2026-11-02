@@ -10,6 +10,14 @@ recorded simulations and case studies. The models use published information
 and synthetic assumptions; they have not been calibrated against a real
 instrument.
 
+## Branch status
+
+This is an experimental computation-service branch, not the current package
+release. It has not incorporated the component repairs now on `main`.
+Its October checks apply to the recorded source versions only. See
+[version and validation scope](docs/research/ao_dynamic_v1/STATUS.md) before
+using it for new results. No public computation service is hosted.
+
 ## Install
 
 Requires Python 3.10 or later. From the repository directory:

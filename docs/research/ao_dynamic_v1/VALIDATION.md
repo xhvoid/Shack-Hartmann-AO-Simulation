@@ -1,8 +1,11 @@
 # Generated-experiment mode: validation evidence
 
-This is the original 23 October record, retained with its original commit and
-content hashes. It does not report checks of the later branch split. See
-[setup](DEPLOYMENT.md) for the current checkout layout.
+This describes the checks recorded on 23 October. The interpretation of
+the different-seed correlation was corrected on 2 November; the values and
+saved evidence files are unchanged. The [original text](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/52b2a24626d6a89a1ed291881c7f393306c679f6/docs/research/ao_dynamic_v1/VALIDATION.md)
+remains available at its historical revision. This edited document has a new
+file hash. See [version scope](STATUS.md) and [setup](DEPLOYMENT.md); these
+checks were not rerun after the branch split or the later repairs on `main`.
 
 Bounded feature validation in the cloud development environment on
 23 October 2026: Linux x86-64 (glibc 2.39), CPython 3.14.6, NumPy 2.5.1,
@@ -52,7 +55,7 @@ fixture/browser test session, review processing and planned run, failures
 included, with measured wall times (early probes that were not timed are
 marked as rounded-up estimates). Browser sessions are counted with their
 whole wall time. The totals are reported in the
-[acceptance record](ACCEPTANCE.md) against the ceilings of 1200 s
+[technical review record](ACCEPTANCE.md) against the ceilings of 1200 s
 numerical/processing wall time and 512 MiB raw evidence.
 
 ## Results (`evidence/evaluation.json`)
@@ -60,7 +63,7 @@ numerical/processing wall time and 512 MiB raw evidence.
 | Required evidence | Result |
 | --- | --- |
 | Same-seed/configuration replay | `replay` equals `baseline`: loop-history digest, every per-frame value and digest, the summary, `final.bin` and the full-precision mean PSFs and final observations; all 61 frames kept by stride 3 are byte-identical to the baseline's, running averages included; same calibration identity. Attempts 1–3 (three producer revisions) are byte-identical too. |
-| Different seed | all 180 atmosphere samples differ; small-scale structure (pixel-to-pixel OPD differences) correlates at mean \|r\| 0.053, max 0.118, i.e. unrelated; the raw single-frame correlation (0.62, or 0.50 with tip/tilt removed) is dominated by the few large-scale modes of a 2 m pupil with a 25 m outer scale; calibration identity differs; classed as a different realization, not paired. |
+| Different seed | all 180 atmosphere samples differ; small-scale structure (pixel-to-pixel OPD differences) correlates at mean \|r\| 0.053, max 0.118; this is low measured small-scale correlation, not a test establishing statistical independence; the raw single-frame correlation (0.62, or 0.50 with tip/tilt removed) is dominated by the few large-scale modes of a 2 m pupil with a 25 m outer scale; calibration identity differs; classed as a different realization, not paired. |
 | Continuous frozen flow | one realization translated 0.255 px per frame: consecutive frames correlate ≥ 0.9986 (≥ 0.998 with tip/tilt removed, ≥ 0.960 in small-scale structure); after 45.6 px of travel the first and last frames correlate at −0.28 (tip/tilt removed) and −0.05 (small-scale structure); all frame digests distinct; runtime travel equals the admitted value. Fixture test: four 0.25 px frames reproduce the frame-0 screen shifted one sample towards +x to 1e-9 of its RMS. |
 | Full-horizon admission and over-horizon refusal | fixture tests: 204 frames admitted and 205 refused at 10 m/s (refused request 204, no slack); at 10.03 m/s frame starts fit but left-point n = 2, 4 and midpoint n = 1, 3 requests are refused with their exact request counts; the screen model itself refuses at the same request with memory enforcement off; the service answers 422 `not_admitted` with the record. |
 | Real parameter effects / same atmosphere | `same-atmosphere` (AB 7 → 8.5) is **paired**: equal time grids, equal analysis windows and all 180 atmosphere digests, same atmosphere component hash; the WFS and interaction-matrix identities changed (calibration rebuilt); 177 residual samples differ; mean valid measurement fraction 1.0 → 0.666, mean residual 262.6 → 362.6 nm, averaged-intensity AO Strehl 0.448 → 0.288. Identity effects of gain, delay, r0 and wind are covered by the calibration probe and fixture tests; a burn-in difference is classed as a different analysis window, never paired. |
