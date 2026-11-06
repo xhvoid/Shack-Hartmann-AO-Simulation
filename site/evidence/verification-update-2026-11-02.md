@@ -1,6 +1,6 @@
 # Reading the older results alongside the component checks
 
-Updated 2 November 2026. This is an interpretation note, not a new experiment.
+Updated 2 November 2026. This is an interpretation note, based on existing records.
 The original values, source revisions and failed checks remain unchanged.
 The appendix labels R1–R8 identify groups of historical records, not eight
 stages of a current validation programme.
@@ -8,10 +8,8 @@ stages of a current validation programme.
 ## Shared reconstruction in backend comparisons
 
 The native and HCIPy comparison used different optical components but shared
-the dense reconstructor. Agreement of the two loops therefore does not
-independently verify that shared solver. The recorded 52 criteria-bearing
-metrics describe the small fixture at its original revision; they are not
-52 independent physical validations.
+the dense reconstructor. Agreement checks the differing optical components.
+The 52 criteria-bearing metrics describe one small fixture at its original revision.
 
 The later precision repair applies to least squares, TSVD and Tikhonov in
 the common dense kernel. The tutorial TSVD example has a low retained

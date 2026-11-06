@@ -1,4 +1,4 @@
-"""Export and validate the accepted 42 m gain–latency records; saved data only.
+"""Export the saved 42 m records shared by the charts, tables and CSV.
 
 Requires NumPy. No simulation package, analyzer, calibration or propagation is
 imported. --compact-root names the extracted, accepted compact evidence.

@@ -21,7 +21,7 @@ leak 0, damping 0.001, wavelength 2.2 µm, PSF padding 2.
 The primary metrics are the mean pre-update frame residual RMS (nm), peak
 Strehl of the mean PSF (dimensionless), and Fourier-interpolant EE50 radius
 (λ/D). The production EE50 estimator remains sampling-sensitive and secondary.
-Residual means and validity summaries are recomputed from saved histories.
+Charts, tables and CSV reuse the saved histories and their summaries.
 Image metrics are carried from the saved analysis bound by file hashes. Large PSF and
 residual-snapshot arrays are omitted; no image metrics or wavefronts were
 independently recalculated for this display.
@@ -44,8 +44,6 @@ with no demonstrated causal mechanism. It does not reverse the whole-window
 image-quality result. Windowed Strehl summaries exist only for the six new
 runs; baseline windowed images are unavailable, never zero.
 
-The findings identify neither an optimal gain nor a stability boundary,
-hardware latency budget, temporal-error decomposition or on-sky validation.
 The earlier command-space failures (T1c/T4) and unresolved outcome I still
 stand. The first 42 m static attempt (N13) remained unqualified. The later
 attempt (N14) met its prospective pupil-space bounds while retaining the
@@ -57,8 +55,7 @@ latency failures and corrections also remain in the record.
 `provenance.json` in the frozen study bundle gives recorded source identities and consumed-file hashes.
 The source code is public at
 https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/tree/642a5b76de97e1fbe46fc49dd5fad232fb725219.
-The evidence archive is private; its commit identities are references, not
-public download links. `frames.csv` contains all saved residual/validity
+The evidence archive is retained separately under its recorded commits. `frames.csv` contains all saved residual/validity
 samples. `data.json` contains values, paired contrasts and availability.
 `manifest.json` binds every member, including the offline exporter.
 

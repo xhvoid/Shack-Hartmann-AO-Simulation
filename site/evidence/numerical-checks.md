@@ -2,8 +2,7 @@
 
 Summary of existing checks, 30 October 2026. These concern the archived
 `det_emccd_2m_synthetic@1` configuration, its 13-actuator Gaussian DM and
-associated sensor/calibration. They are not a verification of every current
-package profile, the 2.2 m case, or the 42 m model.
+associated sensor/calibration; the 2.2 m and 42 m cases have separate evidence.
 
 ## What was compared
 
@@ -11,7 +10,7 @@ package profile, the 2.2 m case, or the 42 m model.
 | --- | --- | --- |
 | Is the weak tilt correction a sign or unit error? | Signed tilts through the assembled sensor, calibration and Gaussian DM | At 200 nm/m, the command keeps about 0.34 of the input plane coefficient. Representable modes round-trip consistently. This does not establish an ideal sensor response. |
 | Is the sensor response exactly linear? | Tilt amplitudes from 25 to 400 nm/m | The one-pass coefficient changes by about 2.1%. The frozen 0.1% linearity bound failed. |
-| Does an independent sensor calculation agree? | Independent lenslet propagation and detector-product calculations | It reproduces the discrete sensor chain. Refined optical quadrature gives a tilt coefficient about 0.347 with recalibration, versus 0.341 for the discrete model; weak correction remains. The detector window and products are held fixed. |
+| Does an independent sensor calculation agree? | Separate lenslet propagation on the same wavefront and detector products | It reproduces the discrete sensor chain. Refined optical quadrature gives a tilt coefficient about 0.347 with recalibration, versus 0.341 for the discrete model; weak correction remains. The detector window and products are held fixed. |
 | Is the DM basis alone responsible? | WFS least-squares commands versus a pupil-optimal fit using the same basis | A static tilt has residual RMS about 0.681 of input under the WFS objective, versus 0.373 for the pupil-optimal fit. This compares spatial objectives with unconstrained commands; it is not a closed-loop error budget. |
 | Is the archived trajectory reproducible? | Actuator-space recurrence with the archived gain, leak, delay, sensor and matched noise streams | The assembled spatial-and-temporal model reproduces the saved baseline. Timing remains part of that model; this comparison does not isolate its contribution. |
 

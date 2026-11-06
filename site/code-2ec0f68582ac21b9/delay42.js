@@ -200,7 +200,7 @@ export function initDelay42(entry, entryUrl) {
       r.source === 'new' ? (r.attempt === 2 ? 'new · accepted second attempt' : 'new') : 'reused photon-budget baseline',
       r.summary.mean_pre_update_rms_nm.toFixed(6), r.summary.rms_of_frame_pre_update_rms_nm.toFixed(6), `${r.summary.frames_valid_below_0_995}`]));
     const s = data.strehl_asymmetry;
-    node('asymmetry').textContent = `For the peak Strehl of the mean image, the average loss from delay 2 to delay 3 (${s.loss_2_to_3.toFixed(4)}) is ${s.ratio.toFixed(2)} times the average gain from delay 2 to delay 1 (${s.gain_2_to_1.toFixed(4)}), at gain 0.3 in these three realizations. This ratio describes this metric and this sample; it is not a general cost multiplier for latency.`;
+    node('asymmetry').textContent = `For the peak Strehl of the mean image, the average loss from delay 2 to delay 3 (${s.loss_2_to_3.toFixed(4)}) is ${s.ratio.toFixed(2)} times the average gain from delay 2 to delay 1 (${s.gain_2_to_1.toFixed(4)}), at gain 0.3 in these three realizations. This ratio uses the three realization means for this Strehl metric at gain 0.3.`;
   }
 
   function details() {

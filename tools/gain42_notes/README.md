@@ -18,10 +18,9 @@ leak 0, damping 0.001, wavelength 2.2 µm, PSF padding 2.
 The primary metrics are the mean pre-update frame residual RMS (nm), peak
 Strehl of the mean PSF (dimensionless), and Fourier-interpolant EE50 radius
 (λ/D). The production EE50 estimator remains sampling-sensitive and secondary.
-Residual means and validity summaries are recomputed from saved histories.
-Image metrics are carried from the accepted hash-bound analysis. Large PSF and
-residual-snapshot arrays are omitted; no image metrics or wavefronts were
-independently recalculated for this display.
+Charts, tables and CSV reuse the saved histories and their summaries.
+Image metrics come from the saved analysis; full PSFs and residual maps remain
+in the source archive.
 
 G(L,r) = M(0.2,L,r) − M(0.3,L,r).
 D(g,r) = M(g,3,r) − M(g,2,r).
@@ -41,8 +40,6 @@ with no demonstrated causal mechanism. It does not reverse the whole-window
 image-quality result. Windowed Strehl summaries exist only for the six new
 runs; baseline windowed images are unavailable, never zero.
 
-The findings identify neither an optimal gain nor a stability boundary,
-hardware latency budget, temporal-error decomposition or on-sky validation.
 Historical T1c/T4 failures, outcome I, N13 UNQUALIFIED, N14's prospective
 pupil-space qualification with the original command-space failure, C1's static
 scope with C3 untriggered, and the detector-component meaning of approximately
@@ -51,8 +48,7 @@ scope with C3 untriggered, and the detector-component meaning of approximately
 `provenance.json` gives accepted source identities and consumed-file hashes.
 The source code is public at
 https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/tree/642a5b76de97e1fbe46fc49dd5fad232fb725219.
-The evidence archive is private; its commit identities are references, not
-public download links. `frames.csv` contains all saved residual/validity
+The evidence archive is retained separately under its recorded commits. `frames.csv` contains all saved residual/validity
 samples. `data.json` contains values, paired contrasts and availability.
 `manifest.json` binds every member, including the offline exporter.
 

@@ -22,7 +22,7 @@ const STATUS_LABELS = {
 const RECORD_UPDATES = {
   "R2": "The later dense precision repair also applies to TSVD and Tikhonov. The low retained condition number of the tutorial TSVD example suggests low numerical risk, but this historical trajectory was not rerun with the repaired kernel.",
   "R5": "“Current code” in the original record meant commit 2312502 in October 2026. These results were not rerun on today’s main branch.",
-  "R7": "The native and HCIPy loops share the dense reconstructor. Their agreement checks the differing components and their combination, but does not independently verify that shared solver. The later dense-kernel repair has not been tested by rerunning this historical comparison.",
+  "R7": "The native and HCIPy loops share the dense reconstructor. Their agreement checks the differing optical components and their combination. Separate matrix-reference tests assess the common solver; this historical comparison retains its original kernel revision.",
   "R8": "The pending detector-level studies listed below describe the original record. Later 42 m detector and spectral sampling and exposure-quadrature studies converged under their stated criteria. In the extended padding study, production EE50 remained unconverged; residual RMS, Strehl and Fourier-reference EE50 converged. These results do not establish convergence of the separate 12 m detector-level configuration."
 };
 const PUBLIC_DOWNLOADS = {
@@ -43,6 +43,17 @@ const PUBLIC_DOWNLOADS = {
 };
 
 let repository = null;
+
+const RECORD_SCOPE = {
+  R1: ["Tutorial geometry: 1 m pupil and small lenslet grids; the Explorer's 2 m profile is separate.", "Saved display precision is 8 or 6 decimals; uncertainty was unrecorded.", "Precision uses accepted components; availability reports their fraction."],
+  R2: ["The noiseless runs last 12–16 frames, with one realization each.", "The correction-order residual combines spatial sensing, reconstruction, DM fitting and temporal tracking.", "Tutorial 04's trajectories and Tutorial 03's singular spectrum survive in the figures only."],
+  R3: ["Noise-free 2 m loops with 7 × 7 lenslets; the interactive detector-level case has its own profile.", "The profiles use r0 = 0.1263 and 0.13 m at 500 nm.", "The calculation is on axis. Layer heights are metadata; science images were not recorded."],
+  R4: ["Revisions @1–@3 change control policy; each retains its experiment identity.", "lost_lock compares the final post-update and open-loop residuals; zero valid measurements can still produce a false value.", "The predeclared noise-law test uses unscaled fit errors; S4 and LIM-18 remain open.", "Camera presets are synthetic engineering inputs."],
+  R5: ["The noiseless capability record uses a different profile, a pre-update residual and an open-loop average including startup. Its values answer a different question from the physical-camera records.", "Producer: commit 2312502, October 2026.", "The four-second reference repeats the fastest layers' periodic bands.", "This historical group retains summaries. The separate 500-frame replay has its own evidence.", "Peak RSS is the process-lifetime ru_maxrss high-water mark; the recorded host architecture is arm64."],
+  R6: ["Analytical MCAO adapter: P3 correction-band PSD, local fitting-tail completion and MASTSEL propagation.", "It has its own wavelength, residual convention, configuration and budget.", "Original producer and date fields are absent; notebook hashes identify files rather than execution dates.", "Aperture energy uses a 50 mas radius and full-field denominator.", "Contour-width bias against the annular reference is −0.50% at 5 mas pixels and −0.12% at 2.5 mas. Seeing-scan changes are differential at fixed sampling."],
+  R7: ["The accepted comparison covers one small fixture.", "The reduced-scale 5 m Z4 result is summary-only; its raw comparison JSON was not retained.", "high_order_10m_hcipy@4 remains an unpublished draft."],
+  R8: ["ESO tiers, detector-level profiles and the analytical adapter have separate convergence domains; the 2 November note records the later 42 m work.", "The numerical machinery and the experiments using it have separate execution records.", "Science images sample frame start; finite-shutter integration is outside this image definition."]
+};
 
 function sourceHref(s) {
   if (!repository || !s.path) return null;
@@ -104,7 +115,7 @@ function sourceList(items) {
 async function attachFigure(figure, resultsUrl, host) {
   const box = document.createElement("figure");
   const provenance = figure.provenance?.notebook_output?.locator || figure.source?.locator || "";
-  box.innerHTML = `<div class="status">Loading figure…</div><figcaption>${esc(figure.caption)}<br><span class="hint">${esc(figure.kind === "extracted_notebook_output" ? figure.transformation : "byte-identical copy of the repository figure")}; source <code>${esc(figure.source.path)}</code>${provenance ? ` (${esc(provenance)})` : ""}${figure.provenance && figure.provenance.byte_identical_to_notebook_output === false ? "; not byte-identical to the notebook's inline output" : ""}.</span></figcaption>`;
+  box.innerHTML = `<div class="status">Loading figure…</div><figcaption>${esc(figure.caption.replace("closed-loop RMS and H-band Marechal estimate", "closed-loop RMS and its H-band Maréchal conversion"))}<br><span class="hint">${esc(figure.kind === "extracted_notebook_output" ? figure.transformation : "byte-identical copy of the repository figure")}; source <code>${esc(figure.source.path)}</code>${provenance ? ` (${esc(provenance)})` : ""}${figure.provenance && figure.provenance.byte_identical_to_notebook_output === false ? "; exported at a different rendering resolution from the inline notebook image" : ""}.</span></figcaption>`;
   host.append(box);
   try {
     const { buffer } = await fetchVerified(figure.asset, resultsUrl, { expectType: "image/png" });
@@ -161,12 +172,12 @@ function renderGroup(group, resultsUrl) {
 ${RECORD_UPDATES[group.id] ? `<aside class="panel"><p><strong>Interpretation updated 2 November 2026.</strong> ${esc(RECORD_UPDATES[group.id])}</p><a href="evidence/verification-update-2026-11-02.md">Scope and current qualifications →</a></aside>` : ""}
 <dl class="context">${context}</dl>
 <div class="keyvals">${keyvals}</div>
-<p class="takeaway"><strong>Result as originally recorded.</strong> ${esc(group.takeaway)}</p>
+<p class="takeaway"><strong>Recorded result.</strong> ${esc(group.id === "R7" ? group.takeaway.replace("the two independent backends", "the native and HCIPy optical paths") : group.takeaway)}</p>
 <div class="selector-host"></div>
 <div class="charts-host"></div>
 <div class="tables-host"></div>
 <div class="figures"></div>
-<h3>Limits listed in the original record</h3><ul class="limits">${group.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>
+<h3>Scope of the record</h3><ul class="limits">${RECORD_SCOPE[group.id].map((l) => `<li>${esc(l)}</li>`).join("")}</ul>
 ${group.evidence_notes.length ? `<h3>Notes on the source records</h3><ul class="limits">${group.evidence_notes.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}
 <details><summary>Sources, generation details and licence</summary>
 <p class="hint">Producer: ${esc(Object.entries(group.producer).map(([k, v]) => `${k}: ${v}`).join("; "))}.</p>
@@ -312,7 +323,7 @@ export async function renderResults(results, resultsUrl, host, indexHost, result
     });host.append(detail);
   }
   const coverage = document.createElement("details");
-  coverage.innerHTML = `<summary>Index of archived results</summary><div class="table-scroll" role="region" tabindex="0" aria-label="Index of archived results"><table><thead><tr><th>Group</th><th>Figures</th><th>Tables</th><th>Charts</th><th>Key values</th><th>Downloads</th><th>Status</th></tr></thead><tbody>${results.coverage.map((c) => `<tr><td>${esc(c.group)} ${esc(c.title)}</td><td class="num">${c.figures}</td><td class="num">${c.tables}</td><td class="num">${c.charts}</td><td class="num">${c.key_values}</td><td class="num">${c.downloads}</td><td>${esc(c.status.map((s) => STATUS_LABELS[s] || s).join(", "))}</td></tr>`).join("")}</tbody></table></div>`;
+  coverage.innerHTML = `<summary>Index of archived results</summary><div class="table-scroll" role="region" tabindex="0" aria-label="Index of archived results"><table><thead><tr><th>Group</th><th>Figures</th><th>Tables</th><th>Charts</th><th>Key values</th><th>Downloads</th><th>Status</th></tr></thead><tbody>${results.coverage.map((c) => `<tr><td>${esc(c.group)} ${esc(c.group === "R7" ? "Native and HCIPy component comparisons" : c.title)}</td><td class="num">${c.figures}</td><td class="num">${c.tables}</td><td class="num">${c.charts}</td><td class="num">${c.key_values}</td><td class="num">${c.downloads}</td><td>${esc(c.status.map((s) => STATUS_LABELS[s] || s).join(", "))}</td></tr>`).join("")}</tbody></table></div>`;
   host.append(coverage);
 }
 
@@ -332,7 +343,7 @@ export function renderProjectEvidence(results) {
     referenceLines:[{y:1,label:'reference'}],series:[{label:'256-screen measured ratio',points:rows.map(r=>[r.separation_m,r.ratio]),markers:true}]});
   redrawWhenResized(canvas,draw);draw();
   const ratios=rows.slice(1).map(r=>r.ratio);
-  document.getElementById('structure-caption').textContent=`Recorded ratios: ${Math.min(...ratios).toFixed(3)}–${Math.max(...ratios).toFixed(3)} beyond one pixel; ${rows[0].ratio.toFixed(3)} at the first separation. This is the archived structure-function experiment, not a new validation of the 42 m detector configuration.`;
+  document.getElementById('structure-caption').textContent=`Recorded ratios: ${Math.min(...ratios).toFixed(3)}–${Math.max(...ratios).toFixed(3)} beyond one pixel; ${rows[0].ratio.toFixed(3)} at the first separation. The chart and R3 table read the same 256-screen CSV; the denominator is the separately evaluated von Kármán reference.`;
 }
 
 // This additive section selects archived statistics; no simulation or metric

@@ -505,7 +505,7 @@ atmosphere, sensor, reconstructor, controller or PSF was run to make it.
 
 Files: data.json (per-frame pre-update residual RMS in nm, valid-measurement
 fraction, the shared open-loop RMS, window summaries and recorded image
-metrics), frames.csv (the same per-frame values), provenance.json (source
+metrics), frames.csv (the same values shown in the charts and tables), provenance.json (source
 identities, input hashes, definitions and checks) and exporter.py.
 
 Time is t = k / 500 Hz for frame k.  Window means are arithmetic means of the
@@ -515,13 +515,10 @@ boundary, not a restart.  Frames 0-499 of each run repeat its original
 500-frame run exactly, so the extension is one longer trajectory, not an
 additional realization.
 
-What it shows: in this one matched realization, the faint run's residual
-grows much more after frame 500 than the bright run's.  The bright window
-means are nearly unchanged (186.98 versus 187.12 nm), although its last-50
-mean rises by about 5 nm.  What it does not show: the change of flux also
-changes the native WFS noise derivation and the calibration/reconstructor
-identities, so measurement noise is not isolated; one realization gives no
-ensemble or long-term stability statement, and no damping conclusion.
+In this matched realization the faint residual grows more after frame 500.
+Bright window means are 186.98 and 187.12 nm; its last-50 mean rises about
+5 nm. Flux changes the noise, calibration and reconstructor together;
+these records describe their combined response at fixed damping.
 
 Image metrics exist for frames 100-499 and 100-999 only.  No image was
 accumulated over frames 500-999 alone; none is derived by subtraction.
@@ -788,7 +785,7 @@ in the simulation, not a measured end-to-end instrument latency.
 
 Files: data.json (per-frame pre-update residual RMS in nm and valid fraction
 for all nine records, the open-loop RMS of each realization, per-delay
-summaries, paired differences against delay 2 with exploratory intervals,
+summaries shared by the charts and tables, paired differences against delay 2 with exploratory intervals,
 the Strehl asymmetry and the post-hoc r2 description), frames.csv,
 psf_panels.png (the accepted analysis figure, copied unchanged),
 provenance.json and exporter.py.
@@ -799,9 +796,7 @@ the 400 correlated frames are not replicates.  The 3-2 residual interval,
 [-4.48, +44.20] nm, includes zero; all three differences are positive and r2
 is the largest.  The about 2.3 ratio is the sample-mean peak-Strehl loss from
 delay 2 to 3 divided by the gain from 2 to 1, at gain 0.3, in these three
-realizations; it is not a general cost multiplier.  The results establish no
-stability boundary, optimal gain, hardware requirement or behaviour after
-frame 499.
+realizations. The comparison covers these nine one-second records.
 
 Wording corrections (latency review of 2026-10-29), applied here and on the
 page while the frozen study reports and their hashes stay unchanged:

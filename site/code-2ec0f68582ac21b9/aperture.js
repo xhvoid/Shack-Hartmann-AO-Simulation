@@ -41,8 +41,8 @@ export function initApertureComparison(entry, entryUrl) {
     if (id !== request) return;
     node('map').hidden = false;
     node('map-full').href = url;
-    node('map').alt = `Independent 2 m baseline above and fixed 2 m patch from 42 m below: maps at 0.200 and ${(0.2+ms/1000).toFixed(3)} seconds and their difference, with one shared color scale.`;
-    node('map-caption').textContent = `Top: independent 2 m baseline. Bottom: fixed 2 m patch from 42 m. Columns: 0.200 s, ${(0.2+ms/1000).toFixed(3)} s, and later minus earlier (${ms} ms). Every panel uses ±2500 nm OPD. Open the image for full resolution.`;
+    node('map').alt = `Separate 2 m recording above and fixed 2 m patch from 42 m below: maps at 0.200 and ${(0.2+ms/1000).toFixed(3)} seconds and their difference, with one shared color scale.`;
+    node('map-caption').textContent = `Top: separate 2 m recording. Bottom: fixed 2 m patch from 42 m. Columns: 0.200 s, ${(0.2+ms/1000).toFixed(3)} s, and later minus earlier (${ms} ms). Every panel uses ±2500 nm OPD. Open the image for full resolution.`;
     buttons.forEach(button => button.setAttribute('aria-pressed',String(Number(button.dataset.comparisonLag)===ms)));
   }
   function addDownload(label, name) {
