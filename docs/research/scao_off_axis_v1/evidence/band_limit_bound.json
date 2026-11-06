@@ -1,0 +1,77 @@
+{
+  "check": "C4 band-limit effect on the predicted Strehl over the full lag support (bound)",
+  "method": "Bound the band-limit effect on the predicted Strehl over the whole lag support.\n\nThe out-of-band structure function obeys ``0 <= D_hf(rho) <= 4 sigma_hf^2``\nwith ``sigma_hf^2 = int_{outside band} Phi_eps d^2f`` (``1 - cos <= 2``),\nand tends to ``2 sigma_hf^2`` once ``2 pi f_N rho >> 1``.  Hence the\nband-limited prediction ``S_bl = sum T exp(-(D - D_hf) k^2 / 2) / sum T``\nsatisfies ``S <= S_bl <= S exp(2 k^2 sigma_hf^2)`` over every lag, and the\nlags beyond eight samples (where the exact ``D_hf`` was not evaluated)\ncontribute at most ``S (exp(2 k^2 sigma_hf^2) - 1)``.  The exact\ncontribution of the lags within eight samples is recomputed here too.\n",
+  "wavelength_m": 1.65e-06,
+  "rows": [
+    {
+      "separation_arcsec": 5,
+      "strehl_continuous": 0.8810062785487178,
+      "sigma_hf2_rad2_at_science_wavelength": 0.00012088928278005796,
+      "inner_lags_le_8_exact_delta": 6.51721294051669e-07,
+      "outer_lag_weight_fraction": 0.9945214338007685,
+      "outer_lags_delta_upper_bound": 0.00021186706489426197,
+      "outer_lags_delta_typical_2sigma": 0.00010592712933265504,
+      "strehl_band_limited_interval": [
+        0.8810069302700119,
+        0.8812187973349062
+      ],
+      "strehl_band_limited_typical": 0.8811128573993445
+    },
+    {
+      "separation_arcsec": 10,
+      "strehl_continuous": 0.7403983012764586,
+      "sigma_hf2_rad2_at_science_wavelength": 0.00013449265390537478,
+      "inner_lags_le_8_exact_delta": 7.222563050859179e-07,
+      "outer_lag_weight_fraction": 0.9945214338007685,
+      "outer_lags_delta_upper_bound": 0.00019809181488922133,
+      "outer_lags_delta_typical_2sigma": 9.903924697112801e-05,
+      "strehl_band_limited_interval": [
+        0.7403990235327637,
+        0.7405971153476528
+      ],
+      "strehl_band_limited_typical": 0.7404980627797347
+    },
+    {
+      "separation_arcsec": 20,
+      "strehl_continuous": 0.5553685981396501,
+      "sigma_hf2_rad2_at_science_wavelength": 0.00016401333738885556,
+      "inner_lags_le_8_exact_delta": 8.773234486205549e-07,
+      "outer_lag_weight_fraction": 0.9945214338007685,
+      "outer_lags_delta_upper_bound": 0.0001812073716127052,
+      "outer_lags_delta_typical_2sigma": 9.059625569992397e-05,
+      "strehl_band_limited_interval": [
+        0.5553694754630988,
+        0.5555506828347115
+      ],
+      "strehl_band_limited_typical": 0.5554600717187987
+    },
+    {
+      "separation_arcsec": 30,
+      "strehl_continuous": 0.46120494110920424,
+      "sigma_hf2_rad2_at_science_wavelength": 0.00019024139145519618,
+      "inner_lags_le_8_exact_delta": 1.0156545462073405e-06,
+      "outer_lag_weight_fraction": 0.9945214338007685,
+      "outer_lags_delta_upper_bound": 0.0001745523627115565,
+      "outer_lags_delta_typical_2sigma": 8.72678795847666e-05,
+      "strehl_band_limited_interval": [
+        0.4612059567637504,
+        0.461380509126462
+      ],
+      "strehl_band_limited_typical": 0.46129322464333516
+    },
+    {
+      "separation_arcsec": 40,
+      "strehl_continuous": 0.40801431040077085,
+      "sigma_hf2_rad2_at_science_wavelength": 0.00021460604104817807,
+      "inner_lags_le_8_exact_delta": 1.1444278927780887e-06,
+      "outer_lag_weight_fraction": 0.9945214338007685,
+      "outer_lags_delta_upper_bound": 0.00017420262184593532,
+      "outer_lags_delta_typical_2sigma": 8.709196468924253e-05,
+      "strehl_band_limited_interval": [
+        0.40801545482866364,
+        0.40818965745050956
+      ],
+      "strehl_band_limited_typical": 0.4081025467933529
+    }
+  ]
+}

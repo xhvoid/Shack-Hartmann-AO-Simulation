@@ -1,0 +1,83 @@
+{
+  "profile": "robo_ao2_22m_ngs_draft@2",
+  "config_hash": "a6ffdbc021b781f26c53d1e5b1ae1c47c148cc4cbc266e69a6208c7e859a41ed",
+  "history_config_hash": "3e6e8b54fa8ee48bcf33e6190cba29149ccdf528b777acfdcc66d5c214f57aaf",
+  "atmosphere_config_hash": "32815488e821b8255a01467b1dbfd6ca18c5c54a2ab9f491e9988b83f6859b4c",
+  "atmosphere_model": "native_layered",
+  "directional_sampling": "thin_layer_small_angle_zenith_v1",
+  "root_seed": 1,
+  "realization_index": 0,
+  "atmosphere_realization_stream_id": "shwfs_ao.random.sha256-json-pcg64-v1:4b86fc8b66fed351f137f5e17da9735319da578a16cbd4c7f4fd0b4e410e6c80",
+  "n_steps": 1500,
+  "frame_rate_hz": 750.0,
+  "wfs_exposure": null,
+  "offsets_arcsec": [
+    {
+      "x_arcsec": 0.0,
+      "y_arcsec": 0.0,
+      "radial_arcsec": 0.0,
+      "theta_x_rad": 0.0,
+      "theta_y_rad": 0.0
+    },
+    {
+      "x_arcsec": 5.0,
+      "y_arcsec": 0.0,
+      "radial_arcsec": 5.0,
+      "theta_x_rad": 2.42406840554768e-05,
+      "theta_y_rad": 0.0
+    },
+    {
+      "x_arcsec": 10.0,
+      "y_arcsec": 0.0,
+      "radial_arcsec": 10.0,
+      "theta_x_rad": 4.84813681109536e-05,
+      "theta_y_rad": 0.0
+    },
+    {
+      "x_arcsec": 20.0,
+      "y_arcsec": 0.0,
+      "radial_arcsec": 20.0,
+      "theta_x_rad": 9.69627362219072e-05,
+      "theta_y_rad": 0.0
+    }
+  ],
+  "wavelengths_m": [
+    1.6499999999999999e-06
+  ],
+  "frame_selection": {
+    "first_frame": 150,
+    "last_frame": 1499,
+    "stride": 1,
+    "sample_count": 1350,
+    "burn_in_frames": 150,
+    "first_time_s": 0.2,
+    "last_time_s": 1.9986666666666666,
+    "frame_period_s": 0.0013333333333333333,
+    "sample_interval_s": 0.0013333333333333333,
+    "quadrature_exposure_s": 1.8,
+    "sample_center_span_s": 1.7986666666666666,
+    "weight_sum": 1350.0,
+    "uniform_weights": true,
+    "residual": "pre_update",
+    "residual_description": "pre-update residual along each science direction: the direction's atmospheric sample at the frame time minus the DM correction the WFS saw",
+    "temporal_quadrature": "instantaneous_snapshot_rectangle_rule"
+  },
+  "science_psf_pad_factor": 3,
+  "max_on_axis_difference_m": 0.0,
+  "command": "python examples/run_off_axis_science_demo.py --profile robo_ao2_22m_ngs_draft --version 2 --offsets '0,0;5,0;10,0;20,0' --wavelength-um 1.65 --burn-in 150 --block-frames 75 --output outputs/off_axis_science/22m",
+  "elapsed_s": 331.4952042074874,
+  "usable_reconstruction_fraction": 1.0,
+  "environment": {
+    "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "versions": {
+      "numpy": "2.5.4",
+      "scipy": "1.18.1",
+      "matplotlib": "3.11.2"
+    }
+  },
+  "public_copy": {
+    "edited": "machine path of the example script in 'command' replaced by its repository-relative path; all other fields unchanged",
+    "original_sha256": "afad0aac0596552663dc6814d7cf89dd978b621827bcf3f293fc028fa247d472"
+  }
+}

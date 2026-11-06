@@ -1,0 +1,46 @@
+{
+  "declared_utc": "2026-11-06T09:28:06Z",
+  "candidate_commit": "d335e4818fdc260e0aa68452142d72e89fbd5a98",
+  "command": "python examples/run_off_axis_science_demo.py --profile robo_ao2_22m_ngs_draft --version 2 --offsets \"0,0;5,0;10,0;20,0\" --wavelength-um 1.65 --burn-in 150 --block-frames 75 --output outputs/off_axis_science/22m",
+  "compared_field": "long_exposure_interpolated_peak_strehl",
+  "reference_values": {
+    "0": 0.44441,
+    "5": 0.4333,
+    "10": 0.39569,
+    "20": 0.33722
+  },
+  "tolerance_abs": 0.0001,
+  "rationale": "The reference values are quoted to five decimals (rounding 5e-6); the estimator's refinement residual is about 1e-5; platform round-off through the 1500-frame loop is expected well below that. Declared before the run started.",
+  "outcome": {
+    "0": {
+      "reproduced": 0.44751918350360703,
+      "difference": 0.003109183503607005,
+      "within_tolerance": false
+    },
+    "5": {
+      "reproduced": 0.4362519287860992,
+      "difference": 0.0029519287860991783,
+      "within_tolerance": false
+    },
+    "10": {
+      "reproduced": 0.3979863731998174,
+      "difference": 0.002296373199817403,
+      "within_tolerance": false
+    },
+    "20": {
+      "reproduced": 0.3376187945529611,
+      "difference": 0.00039879455296110145,
+      "within_tolerance": false
+    }
+  },
+  "all_within_tolerance": false,
+  "platform": {
+    "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "versions": {
+      "numpy": "2.5.4",
+      "scipy": "1.18.1",
+      "matplotlib": "3.11.2"
+    }
+  }
+}

@@ -158,6 +158,7 @@ def run_closed_loop(
     exposure_s: float | None = None,
     exposure_sample_rule: str = "left_point",
     recovery: ClosedLoopRecoveryPolicy | None = None,
+    science_directions_rad: Sequence[tuple[float, float]] = (),
 ) -> LoopHistory:
     """Run one deterministic, fixed-length canonical AO control sequence.
 
@@ -209,6 +210,22 @@ def run_closed_loop(
     passive: the returned history, including its ``config_hash``, is the same
     with or without them.  An observer exception aborts the run as a
     :class:`ControlLoopError` naming the frame.
+
+    ``science_directions_rad`` (off-axis science) lists sky
+    directions ``(theta_x, theta_y)`` in radians from the guide star.  When
+    an observer requests ``science_residual_opd_m``, every frame also samples
+    the atmosphere along each direction at the frame time ``t`` (the same
+    realization and time as the on-axis sample) and hands the observer
+    ``opd(t, theta) - correction``, with the correction applied while the
+    frame was measured.  The guide star stays on axis: the WFS, the noise
+    draws, the reconstructor and the DM never see a science direction, the
+    samples are taken after the WFS measurement, and the returned history
+    and its ``config_hash`` are the same for any list of directions (empty,
+    reordered or extended).  With no directions the field arrives as
+    ``None`` however it was requested.  A nonzero direction needs an atmosphere that
+    provides ``directional_opd_at`` (the native layered model); the exact
+    ``(0.0, 0.0)`` direction falls back to the frame's own sample on any
+    other backend.
     """
 
     validate_closed_loop_components(
@@ -298,6 +315,17 @@ def run_closed_loop(
         frame_observers, observed_fields = validate_frame_observers(observers)
     except FrameObservationError as exc:
         raise ControlLoopError(str(exc)) from exc
+    science_directions = _science_directions(science_directions_rad)
+    # Like detector_telemetry, the field is None when the run has nothing to
+    # put in it: a run without science directions never samples one.
+    science_requested = bool(science_directions) and (
+        "science_residual_opd_m" in observed_fields
+    )
+    directional_sampler = getattr(atmosphere, "directional_opd_at", None)
+    if science_requested and not callable(directional_sampler):
+        if any(direction != (0.0, 0.0) for direction in science_directions):
+            raise ControlLoopError(_no_directional_sampling_message(atmosphere))
+        directional_sampler = None
     include_noise = bool(include_noise)
     realization_index = int(realization_index)
     component_hashes = _component_hashes(
@@ -573,6 +601,23 @@ def run_closed_loop(
         )
         reconstruction_usable[frame_index] = usable
         measurement_row_masks[frame_index] = effective_rows
+        science_residuals: tuple[np.ndarray, ...] | None = None
+        if science_requested:
+            # Same realization, same frame time, same correction as the
+            # pre-update residual; sampled after the WFS so no clock, draw
+            # or command of the guide-star loop can depend on it.
+            science_residuals = tuple(
+                (
+                    atmospheric_opd
+                    if directional_sampler is None
+                    else _atmospheric_opd(
+                        directional_sampler(float(frame_time_s), direction),
+                        expected_shape=sampled_shape,
+                    )
+                )
+                - current_correction
+                for direction in science_directions
+            )
         current_correction = next_correction
         if frame_observers:
             _notify_observers(
@@ -589,6 +634,8 @@ def run_closed_loop(
                 post_update_residual_opd_m=residual_after,
                 measurement_row_mask=effective_rows,
                 detector_telemetry=detector_telemetry,
+                science_directions_rad=science_directions or None,
+                science_residual_opd_m=science_residuals,
             )
 
     assert expected_subaperture_count is not None
@@ -920,6 +967,8 @@ def _notify_observers(
     post_update_residual_opd_m: np.ndarray,
     measurement_row_mask: np.ndarray,
     detector_telemetry: DetectorTelemetry | None,
+    science_directions_rad: tuple[tuple[float, float], ...] | None = None,
+    science_residual_opd_m: tuple[np.ndarray, ...] | None = None,
 ) -> None:
     """Hand one immutable frame record to every observer, in order.
 
@@ -955,6 +1004,12 @@ def _notify_observers(
             if "detector_telemetry" in fields and detector_telemetry is not None
             else None
         ),
+        science_directions_rad=science_directions_rad,
+        science_residual_opd_m=(
+            None
+            if science_residual_opd_m is None
+            else tuple(immutable_snapshot(values) for values in science_residual_opd_m)
+        ),
     )
     for index, observer in enumerate(observers):
         try:
@@ -964,6 +1019,45 @@ def _notify_observers(
                 f"frame observer {index} ({type(observer).__qualname__}) failed "
                 f"at frame {frame_index} (t = {time_s:.9g} s): {exc}"
             ) from exc
+
+
+def _science_directions(value: object) -> tuple[tuple[float, float], ...]:
+    if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
+        raise ControlLoopError(
+            "science_directions_rad must be a sequence of (theta_x, theta_y) pairs."
+        )
+    directions: list[tuple[float, float]] = []
+    for index, item in enumerate(value):
+        if isinstance(item, (str, bytes)) or not isinstance(item, Sequence) or len(item) != 2:
+            raise ControlLoopError(
+                f"science_directions_rad[{index}] must be a (theta_x, theta_y) pair "
+                "in radians."
+            )
+        pair: list[float] = []
+        for component in item:
+            if isinstance(component, (bool, np.bool_)) or not isinstance(component, Real):
+                raise ControlLoopError(
+                    f"science_directions_rad[{index}] must hold real radians."
+                )
+            number = float(component)
+            if not math.isfinite(number):
+                raise ControlLoopError(f"science_directions_rad[{index}] must be finite.")
+            pair.append(number)
+        directions.append((pair[0], pair[1]))
+    return tuple(directions)
+
+
+def _no_directional_sampling_message(atmosphere: AtmosphereModel) -> str:
+    name = getattr(atmosphere, "backend_name", type(atmosphere).__qualname__)
+    kind = _atmosphere_metadata(atmosphere).get("model_kind", type(atmosphere).__qualname__)
+    return (
+        f"a nonzero science direction needs layer altitudes, but the {name!r} "
+        f"atmosphere ({kind}) provides no directional_opd_at: it is a single "
+        "pupil-plane screen without heights. Use a profile whose "
+        "atmosphere_model is 'native_layered' with atmosphere.layers, such as "
+        "robo_ao2_22m_ngs_draft@2, eso_turbulence_2m_detector@1 or "
+        "eso_drm_42m_scao_derived@2, or keep every science direction at (0.0, 0.0)."
+    )
 
 
 def _atmospheric_opd(

@@ -1,0 +1,80 @@
+{
+  "check": "C2 ground-layer limit",
+  "layers": 11,
+  "rows": [
+    {
+      "time_s": 0.0,
+      "offset_arcsec": [
+        5,
+        0
+      ],
+      "bitwise_equal_to_on_axis": true,
+      "max_abs_difference_m": 0.0
+    },
+    {
+      "time_s": 0.0,
+      "offset_arcsec": [
+        0,
+        -10
+      ],
+      "bitwise_equal_to_on_axis": true,
+      "max_abs_difference_m": 0.0
+    },
+    {
+      "time_s": 0.0,
+      "offset_arcsec": [
+        20,
+        0
+      ],
+      "bitwise_equal_to_on_axis": true,
+      "max_abs_difference_m": 0.0
+    },
+    {
+      "time_s": 0.0,
+      "offset_arcsec": [
+        30,
+        30
+      ],
+      "bitwise_equal_to_on_axis": true,
+      "max_abs_difference_m": 0.0
+    },
+    {
+      "time_s": 0.4,
+      "offset_arcsec": [
+        5,
+        0
+      ],
+      "bitwise_equal_to_on_axis": true,
+      "max_abs_difference_m": 0.0
+    },
+    {
+      "time_s": 0.4,
+      "offset_arcsec": [
+        0,
+        -10
+      ],
+      "bitwise_equal_to_on_axis": true,
+      "max_abs_difference_m": 0.0
+    },
+    {
+      "time_s": 0.4,
+      "offset_arcsec": [
+        20,
+        0
+      ],
+      "bitwise_equal_to_on_axis": true,
+      "max_abs_difference_m": 0.0
+    },
+    {
+      "time_s": 0.4,
+      "offset_arcsec": [
+        30,
+        30
+      ],
+      "bitwise_equal_to_on_axis": true,
+      "max_abs_difference_m": 0.0
+    }
+  ],
+  "all_accepted": true,
+  "note": "identical residual OPD maps give identical PSFs for any propagator"
+}

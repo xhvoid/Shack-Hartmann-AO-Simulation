@@ -1,0 +1,107 @@
+{
+  "schema": "shwfs_ao.research.reference_ledger.v1",
+  "prepared": "2026-11-04",
+  "access_note": "The numerical predictions use the independent derivations in VALIDATION.md, prepared before the papers were accessible. On 2026-11-04 the source review checked the relevant sections of Britton (2006) and the publisher abstract of Fried (1982). The independent_review entries give the verified locators, findings and scope of access.",
+  "sources": [
+    {
+      "id": "R1",
+      "authors": "Britton, M. C.",
+      "year": 2006,
+      "title": "The Anisoplanatic Point Spread Function in Adaptive Optics",
+      "venue": "Publications of the Astronomical Society of the Pacific 118, 885-900",
+      "doi": "10.1086/505547",
+      "open_full_text_url": "https://arxiv.org/pdf/astro-ph/0603170v2",
+      "version": "arXiv astro-ph/0603170v2",
+      "access_date": null,
+      "access_status": "not accessible during implementation (network policy); neither abstract nor full text read",
+      "locators_used": [
+        "Section 2.2-2.3: differential (anisoplanatic) phase and its structure function, Eq. 12",
+        "Eq. 5: long-exposure OTF as the telescope OTF times exp(-D/2) of the residual structure function",
+        "Figure 1: structure function along baselines parallel and perpendicular to the offset",
+        "Figure 2: Strehl versus separation, ideal-correction calculation against the isoplanatic-angle approximation"
+      ],
+      "equation_as_used": {
+        "residual": "eps_theta(r) = sum_l [S_l(r + h_l theta) - S_l(r)] (ideal on-axis correction of every layer, thin layers, zenith)",
+        "structure_function": "D_eps(rho) = sum_l [2 D_l(rho) + 2 D_l(h_l theta) - D_l(rho + h_l theta) - D_l(rho - h_l theta)], D_l the single-layer phase structure function",
+        "otf": "OTF_LE(rho) = OTF_tel(rho) exp(-D_eps(rho)/2); on-axis long-exposure Strehl = sum_rho OTF_tel(rho) exp(-D_eps/2) / sum_rho OTF_tel(rho)"
+      },
+      "supported_claim": "C4 in VALIDATION.md: the directional sampler reproduces the anisoplanatic structure function along both baselines and the long-exposure Strehl of an ideally corrected multi-layer atmosphere.",
+      "applicability_limits": [
+        "The paper's figures use Kolmogorov turbulence; the repository atmosphere is von Karman with L0 = 25 m, so the comparison uses the von Karman structure function in the same equations and reports the Kolmogorov values beside it rather than matching the paper's curves numerically.",
+        "The paper's observational test (Palomar binary) is not reproduced; no on-sky comparison is made here.",
+        "Ideal correction removes the on-axis phase of every layer exactly; the closed-loop 2.2 m demonstration is a different, finite-bandwidth case and is not compared with this model.",
+        "R1 Figure 2 is a 5 m telescope at 2.12 um (independent review); the 2.2 m, 1.65 um case here is compared with the same equations, not with that figure's values."
+      ],
+      "independent_review": {
+        "record": "independent_source_check_516aff0.json",
+        "date": "2026-11-04",
+        "access": "relevant sections of the full text read in the independent review",
+        "confirmed": [
+          "Section 2.1, Eqs. 3-5: OTF factorization neglecting cross terms with guide-star correction errors; the guide-star OTF is the diffraction reference under ideal on-axis correction",
+          "Section 2.2, Eqs. 8 and 12: shear s = h theta in metres at zenith; Eq. 12 contains two positive doubled terms and two negative displaced-baseline terms, the four-point form 2D(rho) + 2D(s) - D(rho + s) - D(rho - s)",
+          "Section 2.3, Figs. 1-2: Figure 1 illustrates the directional dependence; Figure 2 is a 5 m telescope, 2.12 um Strehl curve under ideal guide-star correction"
+        ]
+      }
+    },
+    {
+      "id": "R2",
+      "authors": "Fried, D. L.",
+      "year": 1982,
+      "title": "Anisoplanatism in adaptive optics",
+      "venue": "Journal of the Optical Society of America 72(1), 52-61",
+      "doi": "10.1364/JOSA.72.000052",
+      "open_full_text_url": null,
+      "version": "publisher version (DOI above)",
+      "access_date": null,
+      "access_status": "not accessible during implementation (network policy); neither abstract nor full text read; a web-search snippet of the DOI page confirmed the volume, page and the definition of an isoplanatic patch angle theta_0 for high spatial frequencies and large apertures",
+      "locators_used": [
+        "Isoplanatic angle theta_0 = [2.914 k^2 sec^(8/3)(zeta) int Cn^2(h) h^(5/3) dh]^(-3/5), here at zenith and in the equivalent form theta_0 = 0.314 r0(lambda) / hbar with hbar = (sum_l f_l h_l^(5/3))^(3/5)",
+        "Long-exposure anisoplanatic factor exp[-(theta/theta_0)^(5/3)], stated by the paper for the asymptotic regime of large apertures and high spatial frequencies"
+      ],
+      "equation_as_used": {
+        "theta0": "theta_0 = 0.314 r0(lambda) / (sum_l f_l h_l^(5/3))^(3/5); 11.45 arcsec at 1.65 um for the robo_ao2_22m_ngs_draft@2 layer table",
+        "factor": "S_aniso = exp[-(theta/theta_0)^(5/3)]"
+      },
+      "supported_claim": "Angular scaling reference only: in VALIDATION.md the factor is tabulated beside the finite-aperture OTF-integral Strehl to show that it is not sufficient to validate the 2.2 m curve (it includes piston and tilt of the differential phase and assumes the asymptotic regime).",
+      "applicability_limits": [
+        "Kolmogorov spectrum, no outer scale.",
+        "Asymptotic regime (aperture large compared with the layer displacements h theta); the 2.2 m aperture at 5-30 arcsec is not in it, so the factor is a bound-like reference, not a prediction to accept against."
+      ],
+      "independent_review": {
+        "record": "independent_source_check_516aff0.json",
+        "date": "2026-11-04",
+        "access": "publisher abstract read in the independent review; full-text equations not used",
+        "confirmed": [
+          "the exponential angular factor characterizes the imaging OTF at high spatial frequencies; the separate large-aperture statement concerns transmitter antenna gain; the abstract supplies no universal finite-aperture imaging Strehl acceptance test"
+        ]
+      }
+    },
+    {
+      "id": "R3",
+      "authors": "Zhang et al.",
+      "year": 2024,
+      "title": "Simulation results for Robo-AO-2 using HAPA",
+      "venue": "arXiv 2407.14677",
+      "doi": null,
+      "open_full_text_url": "https://arxiv.org/html/2407.14677v1",
+      "version": "v1",
+      "access_date": "2026-10-24 (by the Robo-AO-2 profile preparation; not re-read for this work)",
+      "access_status": "previously_accessed; the layer table is taken from the packaged profile robo_ao2_22m_ngs_draft@2 whose provenance cites it",
+      "locators_used": [
+        "Section 3.1, Table 6 (layer fractions, altitudes, winds)"
+      ],
+      "equation_as_used": null,
+      "supported_claim": "The layer altitudes and fractions used by C4-C6 are the packaged profile's values (docs/research/robo_ao2_ngs_v1/PARAMETERS.md).",
+      "applicability_limits": [
+        "Published simulation inputs, not measured site profiles; altitudes are now used physically by the directional sampler, which the earlier draft documented as metadata only."
+      ]
+    }
+  ],
+  "repository_conventions": {
+    "offset": "ScienceOffset(x_arcsec, y_arcsec) relative to the on-axis guide star; theta_rad = arcsec * pi / 648000; positive x toward larger pupil x (array columns), positive y toward larger pupil y (array rows)",
+    "sampling": "layer l read at r + h_l theta - v_l t; shwfs_ao.backends.native.layered_atmosphere.LayeredFrozenFlowAtmosphere.directional_opd_at",
+    "opd_vs_phase": "the simulator stores OPD in metres; phase structure functions at the 500 nm reference wavelength are converted with (lambda_ref / 2 pi)^2, and to 1.65 um phase with (2 pi / lambda)^2",
+    "psd_constant": "0.023 r0^(-5/3) (f^2 + L0^(-2))^(-11/6) two-sided; the closed-form structure function (exact constant 0.022896) is scaled by 0.023 / 0.022896",
+    "strehl": "shwfs_ao.science.metrics.peak_strehl_from_discrete_flux on unit-flux intensity images; long-exposure images are intensity means"
+  }
+}

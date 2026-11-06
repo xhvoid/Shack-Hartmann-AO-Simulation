@@ -12,7 +12,7 @@
     },
     {
       "logical_name": "benchmarks/detector_camera_presets.v1.json",
-      "sha256": "6e85ad08244a866a8ea12a92ca5fa4e1b583d7c640476a4f09fc55f460fa658f"
+      "sha256": "44d5849c96e169e7680d21b56065d4757e698b220329898a4c5c28b4cdc5ceb5"
     },
     {
       "logical_name": "benchmarks/detector_level.assumptions.v1.json",
@@ -321,6 +321,14 @@
     {
       "logical_name": "synthetic_presets/research_2m_detector.v3.json",
       "sha256": "1a93d9649ab9c73f217b0ab5fcf59f5e57d88469447d0691ad109278f39a156a"
+    },
+    {
+      "logical_name": "synthetic_presets/robo_ao2_22m_ngs_draft.v1.json",
+      "sha256": "cd5bb1d77ee4a766809842a73fb065c23e294a9f5d67d1d3993055109243393a"
+    },
+    {
+      "logical_name": "synthetic_presets/robo_ao2_22m_ngs_draft.v2.json",
+      "sha256": "c197c5ac02a62ac544f41fdda92e1e9a9d03e23b70102df761ec2c135338a667"
     }
   ]
 }

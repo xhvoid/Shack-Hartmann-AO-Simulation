@@ -1,0 +1,356 @@
+{
+  "check": "C3 signed fractional shift",
+  "rows": [
+    {
+      "component": "periodic",
+      "mode_cycles_per_m": [
+        1.21875,
+        -0.7312500000000001
+      ],
+      "direction_rad": [
+        2.115384615384615e-05,
+        -1.0897435897435898e-05
+      ],
+      "direction_arcsec": [
+        4.363293978303961,
+        -2.247757503974768
+      ],
+      "footprint_shift_samples": [
+        3.3,
+        -1.7
+      ],
+      "wind_m_per_s": [
+        -7.0,
+        3.0
+      ],
+      "time_s": 0.0137,
+      "wind_travel_samples": [
+        -1.87005,
+        0.80145
+      ],
+      "map_max_m": 6.696848460018757e-08,
+      "max_abs_error_m": 2.0390002099432132e-22,
+      "relative_error": 3.0447160662457374e-15,
+      "tolerance_relative": 1e-12,
+      "mirrored_x_discrepancy_relative": 1.910707578005887,
+      "swapped_axes_discrepancy_relative": 2.0,
+      "accepted": true
+    },
+    {
+      "component": "periodic",
+      "mode_cycles_per_m": [
+        1.21875,
+        -0.7312500000000001
+      ],
+      "direction_rad": [
+        -1.4423076923076923e-05,
+        2.9487179487179484e-05
+      ],
+      "direction_arcsec": [
+        -2.974973167025428,
+        6.08216736369643
+      ],
+      "footprint_shift_samples": [
+        -2.25,
+        4.6
+      ],
+      "wind_m_per_s": [
+        -7.0,
+        3.0
+      ],
+      "time_s": 0.0137,
+      "wind_travel_samples": [
+        -1.87005,
+        0.80145
+      ],
+      "map_max_m": 6.718479225463796e-08,
+      "max_abs_error_m": 1.4475660719677984e-22,
+      "relative_error": 2.1546037777140985e-15,
+      "tolerance_relative": 1e-12,
+      "mirrored_x_discrepancy_relative": 1.519460431378763,
+      "swapped_axes_discrepancy_relative": 1.6634020592020258,
+      "accepted": true
+    },
+    {
+      "component": "periodic",
+      "mode_cycles_per_m": [
+        1.21875,
+        -0.7312500000000001
+      ],
+      "direction_rad": [
+        2.564102564102564e-06,
+        0.0
+      ],
+      "direction_arcsec": [
+        0.5288841185822983,
+        0.0
+      ],
+      "footprint_shift_samples": [
+        0.4,
+        0.0
+      ],
+      "wind_m_per_s": [
+        -7.0,
+        3.0
+      ],
+      "time_s": 0.0137,
+      "wind_travel_samples": [
+        -1.87005,
+        0.80145
+      ],
+      "map_max_m": 6.507240837854996e-08,
+      "max_abs_error_m": 1.852884572118782e-22,
+      "relative_error": 2.8474196949033698e-15,
+      "tolerance_relative": 1e-12,
+      "mirrored_x_discrepancy_relative": 0.32264229567190916,
+      "swapped_axes_discrepancy_relative": 0.2583041986858204,
+      "accepted": true
+    },
+    {
+      "component": "periodic",
+      "mode_cycles_per_m": [
+        1.21875,
+        -0.7312500000000001
+      ],
+      "direction_rad": [
+        0.0,
+        -4.807692307692308e-06
+      ],
+      "direction_arcsec": [
+        0.0,
+        -0.9916577223418095
+      ],
+      "footprint_shift_samples": [
+        0.0,
+        -0.75
+      ],
+      "wind_m_per_s": [
+        -7.0,
+        3.0
+      ],
+      "time_s": 0.0137,
+      "wind_travel_samples": [
+        -1.87005,
+        0.80145
+      ],
+      "map_max_m": 6.510309094112873e-08,
+      "max_abs_error_m": 1.3565762045869654e-22,
+      "relative_error": 2.083735480107522e-15,
+      "tolerance_relative": 1e-12,
+      "mirrored_x_discrepancy_relative": 2.083735480107522e-15,
+      "swapped_axes_discrepancy_relative": 0.4813429750797928,
+      "accepted": true
+    },
+    {
+      "component": "periodic",
+      "mode_cycles_per_m": [
+        1.21875,
+        -0.7312500000000001
+      ],
+      "direction_rad": [
+        1.282051282051282e-05,
+        1.282051282051282e-05
+      ],
+      "direction_arcsec": [
+        2.6444205929114917,
+        2.6444205929114917
+      ],
+      "footprint_shift_samples": [
+        2.0,
+        2.0
+      ],
+      "wind_m_per_s": [
+        -7.0,
+        3.0
+      ],
+      "time_s": 0.0137,
+      "wind_travel_samples": [
+        -1.87005,
+        0.80145
+      ],
+      "map_max_m": 6.556652819406471e-08,
+      "max_abs_error_m": 2.0183206946293875e-22,
+      "relative_error": 3.0782790399630953e-15,
+      "tolerance_relative": 1e-12,
+      "mirrored_x_discrepancy_relative": 1.4480026545123288,
+      "swapped_axes_discrepancy_relative": 3.0782790399630953e-15,
+      "accepted": true
+    },
+    {
+      "component": "analytic",
+      "mode_cycles_per_m": [
+        -0.030468750000000003,
+        0.030468750000000003
+      ],
+      "direction_rad": [
+        2.115384615384615e-05,
+        -1.0897435897435898e-05
+      ],
+      "direction_arcsec": [
+        4.363293978303961,
+        -2.247757503974768
+      ],
+      "footprint_shift_samples": [
+        3.3,
+        -1.7
+      ],
+      "wind_m_per_s": [
+        -7.0,
+        3.0
+      ],
+      "time_s": 0.0137,
+      "wind_travel_samples": [
+        -1.87005,
+        0.80145
+      ],
+      "map_max_m": 1.3359805140282618e-08,
+      "max_abs_error_m": 1.9852334701272664e-23,
+      "relative_error": 1.4859748696044755e-15,
+      "tolerance_relative": 1e-12,
+      "mirrored_x_discrepancy_relative": 0.058952344083267265,
+      "swapped_axes_discrepancy_relative": 0.08787502646658679,
+      "accepted": true
+    },
+    {
+      "component": "analytic",
+      "mode_cycles_per_m": [
+        -0.030468750000000003,
+        0.030468750000000003
+      ],
+      "direction_rad": [
+        -1.4423076923076923e-05,
+        2.9487179487179484e-05
+      ],
+      "direction_arcsec": [
+        -2.974973167025428,
+        6.08216736369643
+      ],
+      "footprint_shift_samples": [
+        -2.25,
+        4.6
+      ],
+      "wind_m_per_s": [
+        -7.0,
+        3.0
+      ],
+      "time_s": 0.0137,
+      "wind_travel_samples": [
+        -1.87005,
+        0.80145
+      ],
+      "map_max_m": 1.4443865581270079e-08,
+      "max_abs_error_m": 2.3161057151484775e-23,
+      "relative_error": 1.6035220641708696e-15,
+      "tolerance_relative": 1e-12,
+      "mirrored_x_discrepancy_relative": 0.03492989317629331,
+      "swapped_axes_discrepancy_relative": 0.11131398885545953,
+      "accepted": true
+    },
+    {
+      "component": "analytic",
+      "mode_cycles_per_m": [
+        -0.030468750000000003,
+        0.030468750000000003
+      ],
+      "direction_rad": [
+        2.564102564102564e-06,
+        0.0
+      ],
+      "direction_arcsec": [
+        0.5288841185822983,
+        0.0
+      ],
+      "footprint_shift_samples": [
+        0.4,
+        0.0
+      ],
+      "wind_m_per_s": [
+        -7.0,
+        3.0
+      ],
+      "time_s": 0.0137,
+      "wind_travel_samples": [
+        -1.87005,
+        0.80145
+      ],
+      "map_max_m": 1.3802930925249758e-08,
+      "max_abs_error_m": 1.819797347616661e-23,
+      "relative_error": 1.3184137176892613e-15,
+      "tolerance_relative": 1e-12,
+      "mirrored_x_discrepancy_relative": 0.006807028569148718,
+      "swapped_axes_discrepancy_relative": 0.006807028569149438,
+      "accepted": true
+    },
+    {
+      "component": "analytic",
+      "mode_cycles_per_m": [
+        -0.030468750000000003,
+        0.030468750000000003
+      ],
+      "direction_rad": [
+        0.0,
+        -4.807692307692308e-06
+      ],
+      "direction_arcsec": [
+        0.0,
+        -0.9916577223418095
+      ],
+      "footprint_shift_samples": [
+        0.0,
+        -0.75
+      ],
+      "wind_m_per_s": [
+        -7.0,
+        3.0
+      ],
+      "time_s": 0.0137,
+      "wind_travel_samples": [
+        -1.87005,
+        0.80145
+      ],
+      "map_max_m": 1.3770193075771219e-08,
+      "max_abs_error_m": 1.819797347616661e-23,
+      "relative_error": 1.3215481711862203e-15,
+      "tolerance_relative": 1e-12,
+      "mirrored_x_discrepancy_relative": 1.3215481711862203e-15,
+      "swapped_axes_discrepancy_relative": 0.012793439578224826,
+      "accepted": true
+    },
+    {
+      "component": "analytic",
+      "mode_cycles_per_m": [
+        -0.030468750000000003,
+        0.030468750000000003
+      ],
+      "direction_rad": [
+        1.282051282051282e-05,
+        1.282051282051282e-05
+      ],
+      "direction_arcsec": [
+        2.6444205929114917,
+        2.6444205929114917
+      ],
+      "footprint_shift_samples": [
+        2.0,
+        2.0
+      ],
+      "wind_m_per_s": [
+        -7.0,
+        3.0
+      ],
+      "time_s": 0.0137,
+      "wind_travel_samples": [
+        -1.87005,
+        0.80145
+      ],
+      "map_max_m": 1.3840146033229732e-08,
+      "max_abs_error_m": 1.819797347616661e-23,
+      "relative_error": 1.3148686027209452e-15,
+      "tolerance_relative": 1e-12,
+      "mirrored_x_discrepancy_relative": 0.033281242023882475,
+      "swapped_axes_discrepancy_relative": 1.3148686027209452e-15,
+      "accepted": true
+    }
+  ],
+  "all_accepted": true
+}

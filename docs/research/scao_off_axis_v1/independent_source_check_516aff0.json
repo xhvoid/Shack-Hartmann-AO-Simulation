@@ -1,0 +1,53 @@
+{
+  "review_date": "2026-11-04",
+  "scope": "Independent check of the literature sources cited by the validation note. The implementation was written without access to the paper hosts; this record describes what the reviewer read and found. No numerical run was performed for this check.",
+  "implementation_reviewed": {
+    "description": "off-axis science implementation at development revision 516aff0 (before publication)",
+    "revision": "516aff06f3e543f6d1427ebf9b72213170081720",
+    "numerical_runs_performed_by_reviewer": 0
+  },
+  "sources": [
+    {
+      "id": "R1",
+      "authors": "M. C. Britton",
+      "year": 2006,
+      "title": "The Anisoplanatic Point Spread Function in Adaptive Optics",
+      "doi": "10.1086/505547",
+      "full_text": "https://arxiv.org/pdf/astro-ph/0603170v2",
+      "version": "arXiv:astro-ph/0603170v2",
+      "access": "Relevant sections of full text read in the independent review.",
+      "locators": [
+        {
+          "where": "Section 2.1, Eqs. 3-5",
+          "finding": "The factorization neglects cross terms with guide-star correction errors. The guide-star OTF becomes the diffraction reference under ideal on-axis correction."
+        },
+        {
+          "where": "Section 2.2, Eqs. 8 and 12",
+          "finding": "Eq. 8 expresses shear in pupil-radius units. In metres at zenith the shear is s = h theta. Eq. 12 contains two positive doubled terms and the two negative displaced-baseline terms."
+        },
+        {
+          "where": "Section 2.3, Figs. 1-2 and surrounding text",
+          "finding": "Figure 1 illustrates directional dependence. Figure 2 uses a 5 m telescope and a 2.12 micrometre Strehl curve under ideal guide-star correction."
+        }
+      ],
+      "comparison": "For a stationary layer with phase structure function D, the four-point form is 2D(rho) + 2D(s) - D(rho+s) - D(rho-s). It vanishes at either zero baseline or zero shear. Substituting a finite-outer-scale von Karman structure function adapts the published Kolmogorov calculation."
+    },
+    {
+      "id": "R2",
+      "authors": "David L. Fried",
+      "year": 1982,
+      "title": "Anisoplanatism in adaptive optics",
+      "doi": "10.1364/JOSA.72.000052",
+      "publisher": "https://opg.optica.org/josa/abstract.cfm?uri=josa-72-1-52",
+      "access": "Publisher abstract read in the independent review. Full-text equations not used.",
+      "locator": "Abstract, imaging OTF asymptotic limit",
+      "finding": "The exponential angular factor characterizes the imaging OTF at high spatial frequencies. The separate large-aperture statement concerns transmitter antenna gain. The abstract does not supply a universal finite-aperture imaging Strehl acceptance test."
+    }
+  ],
+  "open_scientific_issue": {
+    "file": "scripts/off_axis_validation.py",
+    "lines": "497-512, 582-586",
+    "observation": "The band-limit perturbation to Strehl is evaluated only over lag indices -8 through +8 in each axis. All other pupil-autocorrelation lags retain the continuous prediction. The acceptance comparison uses the continuous Strehl.",
+    "action": "Use the full weighted lag support or bound the omitted contribution before asserting a global effect below 1e-6. Otherwise explicitly report the subtotal and leave the total undetermined. This is reference-side work and does not itself require a new closed-loop trajectory."
+  }
+}

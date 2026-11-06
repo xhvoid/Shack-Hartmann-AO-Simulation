@@ -22,6 +22,16 @@ from .long_exposure import (
     StreamingLongExposure,
     radial_profile_from_discrete_flux,
 )
+from .off_axis import (
+    ARCSEC_TO_RAD,
+    OffAxisImage,
+    OffAxisLongExposure,
+    OffAxisScienceError,
+    OffAxisScienceResult,
+    ScienceOffset,
+    footprint_report,
+    science_offsets,
+)
 from .metrics import (
     PsfScalarMetrics,
     ScienceMetricsError,
@@ -69,4 +79,12 @@ __all__ = (
     "LongExposureResult",
     "StreamingLongExposure",
     "radial_profile_from_discrete_flux",
+    "ARCSEC_TO_RAD",
+    "OffAxisScienceError",
+    "ScienceOffset",
+    "science_offsets",
+    "OffAxisImage",
+    "OffAxisScienceResult",
+    "OffAxisLongExposure",
+    "footprint_report",
 )

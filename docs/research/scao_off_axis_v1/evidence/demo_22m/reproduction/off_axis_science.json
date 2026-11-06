@@ -1,0 +1,946 @@
+{
+  "result": {
+    "schema": "shwfs_ao.science.off_axis_result.v1",
+    "offsets": [
+      {
+        "x_arcsec": 0.0,
+        "y_arcsec": 0.0,
+        "radial_arcsec": 0.0,
+        "theta_x_rad": 0.0,
+        "theta_y_rad": 0.0
+      },
+      {
+        "x_arcsec": 5.0,
+        "y_arcsec": 0.0,
+        "radial_arcsec": 5.0,
+        "theta_x_rad": 2.42406840554768e-05,
+        "theta_y_rad": 0.0
+      },
+      {
+        "x_arcsec": 10.0,
+        "y_arcsec": 0.0,
+        "radial_arcsec": 10.0,
+        "theta_x_rad": 4.84813681109536e-05,
+        "theta_y_rad": 0.0
+      },
+      {
+        "x_arcsec": 20.0,
+        "y_arcsec": 0.0,
+        "radial_arcsec": 20.0,
+        "theta_x_rad": 9.69627362219072e-05,
+        "theta_y_rad": 0.0
+      }
+    ],
+    "wavelengths_m": [
+      1.6499999999999999e-06
+    ],
+    "selection": {
+      "first_frame": 150,
+      "last_frame": 1499,
+      "stride": 1,
+      "sample_count": 1350,
+      "burn_in_frames": 150,
+      "first_time_s": 0.2,
+      "last_time_s": 1.9986666666666666,
+      "frame_period_s": 0.0013333333333333333,
+      "sample_interval_s": 0.0013333333333333333,
+      "quadrature_exposure_s": 1.8,
+      "sample_center_span_s": 1.7986666666666666,
+      "weight_sum": 1350.0,
+      "uniform_weights": true,
+      "residual": "pre_update",
+      "residual_description": "pre-update residual along each science direction: the direction's atmospheric sample at the frame time minus the DM correction the WFS saw",
+      "temporal_quadrature": "instantaneous_snapshot_rectangle_rule"
+    },
+    "images": [
+      {
+        "offset": {
+          "x_arcsec": 0.0,
+          "y_arcsec": 0.0,
+          "radial_arcsec": 0.0,
+          "theta_x_rad": 0.0,
+          "theta_y_rad": 0.0
+        },
+        "wavelength_m": 1.6499999999999999e-06,
+        "lambda_over_d_rad": 7.499999999999999e-07,
+        "sample_count": 1350,
+        "long_exposure_peak_strehl": 0.4406740334782587,
+        "long_exposure_interpolated_peak_strehl": 0.44751918350360703,
+        "long_exposure_on_axis_strehl": 0.4406740334782587,
+        "peak_offset_xy_rad": [
+          0.0,
+          0.0
+        ],
+        "fwhm_rad": 1.0376477451580196e-06,
+        "ee50_radius_rad": 6.815832667427435e-07,
+        "ee80_radius_rad": 1.6820414452573723e-06,
+        "mean_instantaneous_peak_strehl": 0.7502256281896398,
+        "instantaneous_peak_strehl_sd": 0.06906532993804908,
+        "block_frames": 75,
+        "block_peak_strehl": [
+          0.7400461173749839,
+          0.7888636499349823,
+          0.7176199780239821,
+          0.7591089867929413,
+          0.6211771446135366,
+          0.635389691226483,
+          0.7269547086100593,
+          0.570835552346937,
+          0.6707582040004744,
+          0.7040647828624081,
+          0.7247364999400571,
+          0.6887782178451656,
+          0.6997400197619459,
+          0.7371989716419616,
+          0.7346787249494812,
+          0.7174863304265484,
+          0.7255462989606507,
+          0.6556018909351751
+        ],
+        "block_peak_strehl_sd": 0.05325221934981735,
+        "block_count": 18
+      },
+      {
+        "offset": {
+          "x_arcsec": 5.0,
+          "y_arcsec": 0.0,
+          "radial_arcsec": 5.0,
+          "theta_x_rad": 2.42406840554768e-05,
+          "theta_y_rad": 0.0
+        },
+        "wavelength_m": 1.6499999999999999e-06,
+        "lambda_over_d_rad": 7.499999999999999e-07,
+        "sample_count": 1350,
+        "long_exposure_peak_strehl": 0.42971205929880124,
+        "long_exposure_interpolated_peak_strehl": 0.4362519287860992,
+        "long_exposure_on_axis_strehl": 0.42971205929880124,
+        "peak_offset_xy_rad": [
+          0.0,
+          0.0
+        ],
+        "fwhm_rad": 1.0260600605378814e-06,
+        "ee50_radius_rad": 7.102554709291181e-07,
+        "ee80_radius_rad": 1.8144185932325715e-06,
+        "mean_instantaneous_peak_strehl": 0.719021423931087,
+        "instantaneous_peak_strehl_sd": 0.06799473176371613,
+        "block_frames": 75,
+        "block_peak_strehl": [
+          0.6986538795385008,
+          0.7532085451191803,
+          0.6440211283531686,
+          0.7385319550222347,
+          0.6019849013500016,
+          0.6179919241304584,
+          0.7118358378791305,
+          0.562239734779574,
+          0.658168796634081,
+          0.7167281565387589,
+          0.7013725637868866,
+          0.6759214783722058,
+          0.6551687585977116,
+          0.7068682951431856,
+          0.7051237718057214,
+          0.6912902702763783,
+          0.6989180398222649,
+          0.6112747092247308
+        ],
+        "block_peak_strehl_sd": 0.051025076280896926,
+        "block_count": 18
+      },
+      {
+        "offset": {
+          "x_arcsec": 10.0,
+          "y_arcsec": 0.0,
+          "radial_arcsec": 10.0,
+          "theta_x_rad": 4.84813681109536e-05,
+          "theta_y_rad": 0.0
+        },
+        "wavelength_m": 1.6499999999999999e-06,
+        "lambda_over_d_rad": 7.499999999999999e-07,
+        "sample_count": 1350,
+        "long_exposure_peak_strehl": 0.3904891498413443,
+        "long_exposure_interpolated_peak_strehl": 0.3979863731998174,
+        "long_exposure_on_axis_strehl": 0.3904891498413443,
+        "peak_offset_xy_rad": [
+          0.0,
+          0.0
+        ],
+        "fwhm_rad": 1.0359233212294518e-06,
+        "ee50_radius_rad": 7.576189493189598e-07,
+        "ee80_radius_rad": 2.0628266660511188e-06,
+        "mean_instantaneous_peak_strehl": 0.6554346962828176,
+        "instantaneous_peak_strehl_sd": 0.07479503046876841,
+        "block_frames": 75,
+        "block_peak_strehl": [
+          0.6091547294957275,
+          0.7043839242487174,
+          0.538161576409268,
+          0.6370145436049692,
+          0.5566622871161376,
+          0.5440814944394995,
+          0.6670898466463252,
+          0.5508092398204516,
+          0.5846379695878555,
+          0.6510118192317288,
+          0.6312069219581958,
+          0.626789020423823,
+          0.5929098784144989,
+          0.6741202322225056,
+          0.6788576420035789,
+          0.619919715623679,
+          0.630444823717937,
+          0.5477353504394965
+        ],
+        "block_peak_strehl_sd": 0.05151403049884516,
+        "block_count": 18
+      },
+      {
+        "offset": {
+          "x_arcsec": 20.0,
+          "y_arcsec": 0.0,
+          "radial_arcsec": 20.0,
+          "theta_x_rad": 9.69627362219072e-05,
+          "theta_y_rad": 0.0
+        },
+        "wavelength_m": 1.6499999999999999e-06,
+        "lambda_over_d_rad": 7.499999999999999e-07,
+        "sample_count": 1350,
+        "long_exposure_peak_strehl": 0.32593657154125805,
+        "long_exposure_interpolated_peak_strehl": 0.3376187945529611,
+        "long_exposure_on_axis_strehl": 0.32593657154125805,
+        "peak_offset_xy_rad": [
+          0.0,
+          0.0
+        ],
+        "fwhm_rad": 1.0995788638538233e-06,
+        "ee50_radius_rad": 8.347846640304889e-07,
+        "ee80_radius_rad": 2.2097665484425313e-06,
+        "mean_instantaneous_peak_strehl": 0.5979151837204689,
+        "instantaneous_peak_strehl_sd": 0.08944084740814999,
+        "block_frames": 75,
+        "block_peak_strehl": [
+          0.5953927270572569,
+          0.6308193225322601,
+          0.4402134054714568,
+          0.5342686089767577,
+          0.511956018334436,
+          0.4000096991920349,
+          0.6115611287602551,
+          0.5525292807418358,
+          0.44731874075901584,
+          0.4674774556722609,
+          0.40039645026434834,
+          0.5352726580859144,
+          0.5308580630088175,
+          0.6422313795728276,
+          0.6763678855406338,
+          0.5381462008026382,
+          0.605709182921539,
+          0.514406395419618
+        ],
+        "block_peak_strehl_sd": 0.08190183059153561,
+        "block_count": 18
+      }
+    ],
+    "propagator_backend": "native",
+    "propagator_config_hash": "072343848350075d4ac8d7afbd12de8eb4e43d9b749675946a66c42df5a2e97a",
+    "config_hash": "98a62e34a54558ae1a6a570547dd5dd8dbca72b196abba42976d3aaa125b241c",
+    "max_on_axis_difference_m": 0.0,
+    "metadata": {
+      "flux_denominator": "normalized_source_grid_flux",
+      "temporal_quadrature": "instantaneous_snapshot_rectangle_rule",
+      "recentering": "none",
+      "coaddition": "intensity",
+      "image_centre": "target_nominal_sky_position",
+      "offset_convention": "x_arcsec, y_arcsec from the guide star; positive x toward larger pupil x (columns), positive y toward larger pupil y (rows); theta_rad = arcsec * pi / 648000",
+      "strehl_definitions": {
+        "long_exposure_peak_strehl": "peak angular surface brightness of the accumulated intensity image over that of the zero-OPD ideal image (same propagator, wavelength, grid, unit flux)",
+        "long_exposure_interpolated_peak_strehl": "subpixel Fourier peak of the accumulated intensity divided by the subpixel peak of the matched ideal; null for unsupported sampling",
+        "mean_instantaneous_peak_strehl": "mean over selected frames of each frame's peak Strehl"
+      }
+    }
+  },
+  "footprint": {
+    "grid_delta_m": 0.008627450980392082,
+    "pupil_diameter_m": 2.2,
+    "screen_period_m": 4.417254901960746,
+    "offsets": [
+      {
+        "offset": {
+          "x_arcsec": 0.0,
+          "y_arcsec": 0.0,
+          "radial_arcsec": 0.0,
+          "theta_x_rad": 0.0,
+          "theta_y_rad": 0.0
+        },
+        "layers": [
+          {
+            "layer": 0,
+            "altitude_m": 0.0,
+            "cn2_fraction": 0.183,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 1,
+            "altitude_m": 0.0,
+            "cn2_fraction": 0.204,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 2,
+            "altitude_m": 5.0,
+            "cn2_fraction": 0.298,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 3,
+            "altitude_m": 15.0,
+            "cn2_fraction": 0.08,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 4,
+            "altitude_m": 37.0,
+            "cn2_fraction": 0.048,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 5,
+            "altitude_m": 197.0,
+            "cn2_fraction": 0.018,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 6,
+            "altitude_m": 357.0,
+            "cn2_fraction": 0.005,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 7,
+            "altitude_m": 804.0,
+            "cn2_fraction": 0.037,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 8,
+            "altitude_m": 3171.0,
+            "cn2_fraction": 0.034,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 9,
+            "altitude_m": 7307.0,
+            "cn2_fraction": 0.054,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 10,
+            "altitude_m": 14636.0,
+            "cn2_fraction": 0.039,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          }
+        ],
+        "max_displacement_m": 0.0,
+        "max_displacement_samples": 0.0,
+        "footprint_span_m": 2.2,
+        "periodic_band_wrap_overlap": false
+      },
+      {
+        "offset": {
+          "x_arcsec": 5.0,
+          "y_arcsec": 0.0,
+          "radial_arcsec": 5.0,
+          "theta_x_rad": 2.42406840554768e-05,
+          "theta_y_rad": 0.0
+        },
+        "layers": [
+          {
+            "layer": 0,
+            "altitude_m": 0.0,
+            "cn2_fraction": 0.183,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 1,
+            "altitude_m": 0.0,
+            "cn2_fraction": 0.204,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 2,
+            "altitude_m": 5.0,
+            "cn2_fraction": 0.298,
+            "displacement_xy_m": [
+              0.00012120342027738399,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.014048578259424176,
+              0.0
+            ],
+            "displacement_m": 0.00012120342027738399
+          },
+          {
+            "layer": 3,
+            "altitude_m": 15.0,
+            "cn2_fraction": 0.08,
+            "displacement_xy_m": [
+              0.000363610260832152,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.04214573477827253,
+              0.0
+            ],
+            "displacement_m": 0.000363610260832152
+          },
+          {
+            "layer": 4,
+            "altitude_m": 37.0,
+            "cn2_fraction": 0.048,
+            "displacement_xy_m": [
+              0.0008969053100526416,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.1039594791197389,
+              0.0
+            ],
+            "displacement_m": 0.0008969053100526416
+          },
+          {
+            "layer": 5,
+            "altitude_m": 197.0,
+            "cn2_fraction": 0.018,
+            "displacement_xy_m": [
+              0.00477541475892893,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.5535139834213125,
+              0.0
+            ],
+            "displacement_m": 0.00477541475892893
+          },
+          {
+            "layer": 6,
+            "altitude_m": 357.0,
+            "cn2_fraction": 0.005,
+            "displacement_xy_m": [
+              0.008653924207805218,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              1.0030684877228861,
+              0.0
+            ],
+            "displacement_m": 0.008653924207805218
+          },
+          {
+            "layer": 7,
+            "altitude_m": 804.0,
+            "cn2_fraction": 0.037,
+            "displacement_xy_m": [
+              0.019489509980603347,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              2.2590113841154076,
+              0.0
+            ],
+            "displacement_m": 0.019489509980603347
+          },
+          {
+            "layer": 8,
+            "altitude_m": 3171.0,
+            "cn2_fraction": 0.034,
+            "displacement_xy_m": [
+              0.07686720913991693,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              8.909608332126814,
+              0.0
+            ],
+            "displacement_m": 0.07686720913991693
+          },
+          {
+            "layer": 9,
+            "altitude_m": 7307.0,
+            "cn2_fraction": 0.054,
+            "displacement_xy_m": [
+              0.17712667839336896,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              20.53059226832249,
+              0.0
+            ],
+            "displacement_m": 0.17712667839336896
+          },
+          {
+            "layer": 10,
+            "altitude_m": 14636.0,
+            "cn2_fraction": 0.039,
+            "displacement_xy_m": [
+              0.3547866518359584,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              41.12299828098645,
+              0.0
+            ],
+            "displacement_m": 0.3547866518359584
+          }
+        ],
+        "max_displacement_m": 0.3547866518359584,
+        "max_displacement_samples": 41.12299828098645,
+        "footprint_span_m": 2.5547866518359585,
+        "periodic_band_wrap_overlap": false
+      },
+      {
+        "offset": {
+          "x_arcsec": 10.0,
+          "y_arcsec": 0.0,
+          "radial_arcsec": 10.0,
+          "theta_x_rad": 4.84813681109536e-05,
+          "theta_y_rad": 0.0
+        },
+        "layers": [
+          {
+            "layer": 0,
+            "altitude_m": 0.0,
+            "cn2_fraction": 0.183,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 1,
+            "altitude_m": 0.0,
+            "cn2_fraction": 0.204,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 2,
+            "altitude_m": 5.0,
+            "cn2_fraction": 0.298,
+            "displacement_xy_m": [
+              0.00024240684055476798,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.02809715651884835,
+              0.0
+            ],
+            "displacement_m": 0.00024240684055476798
+          },
+          {
+            "layer": 3,
+            "altitude_m": 15.0,
+            "cn2_fraction": 0.08,
+            "displacement_xy_m": [
+              0.000727220521664304,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.08429146955654505,
+              0.0
+            ],
+            "displacement_m": 0.000727220521664304
+          },
+          {
+            "layer": 4,
+            "altitude_m": 37.0,
+            "cn2_fraction": 0.048,
+            "displacement_xy_m": [
+              0.0017938106201052832,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.2079189582394778,
+              0.0
+            ],
+            "displacement_m": 0.0017938106201052832
+          },
+          {
+            "layer": 5,
+            "altitude_m": 197.0,
+            "cn2_fraction": 0.018,
+            "displacement_xy_m": [
+              0.00955082951785786,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              1.107027966842625,
+              0.0
+            ],
+            "displacement_m": 0.00955082951785786
+          },
+          {
+            "layer": 6,
+            "altitude_m": 357.0,
+            "cn2_fraction": 0.005,
+            "displacement_xy_m": [
+              0.017307848415610436,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              2.0061369754457723,
+              0.0
+            ],
+            "displacement_m": 0.017307848415610436
+          },
+          {
+            "layer": 7,
+            "altitude_m": 804.0,
+            "cn2_fraction": 0.037,
+            "displacement_xy_m": [
+              0.038979019961206694,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              4.518022768230815,
+              0.0
+            ],
+            "displacement_m": 0.038979019961206694
+          },
+          {
+            "layer": 8,
+            "altitude_m": 3171.0,
+            "cn2_fraction": 0.034,
+            "displacement_xy_m": [
+              0.15373441827983386,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              17.819216664253627,
+              0.0
+            ],
+            "displacement_m": 0.15373441827983386
+          },
+          {
+            "layer": 9,
+            "altitude_m": 7307.0,
+            "cn2_fraction": 0.054,
+            "displacement_xy_m": [
+              0.3542533567867379,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              41.06118453664498,
+              0.0
+            ],
+            "displacement_m": 0.3542533567867379
+          },
+          {
+            "layer": 10,
+            "altitude_m": 14636.0,
+            "cn2_fraction": 0.039,
+            "displacement_xy_m": [
+              0.7095733036719168,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              82.2459965619729,
+              0.0
+            ],
+            "displacement_m": 0.7095733036719168
+          }
+        ],
+        "max_displacement_m": 0.7095733036719168,
+        "max_displacement_samples": 82.2459965619729,
+        "footprint_span_m": 2.909573303671917,
+        "periodic_band_wrap_overlap": false
+      },
+      {
+        "offset": {
+          "x_arcsec": 20.0,
+          "y_arcsec": 0.0,
+          "radial_arcsec": 20.0,
+          "theta_x_rad": 9.69627362219072e-05,
+          "theta_y_rad": 0.0
+        },
+        "layers": [
+          {
+            "layer": 0,
+            "altitude_m": 0.0,
+            "cn2_fraction": 0.183,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 1,
+            "altitude_m": 0.0,
+            "cn2_fraction": 0.204,
+            "displacement_xy_m": [
+              0.0,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0,
+              0.0
+            ],
+            "displacement_m": 0.0
+          },
+          {
+            "layer": 2,
+            "altitude_m": 5.0,
+            "cn2_fraction": 0.298,
+            "displacement_xy_m": [
+              0.00048481368110953597,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.0561943130376967,
+              0.0
+            ],
+            "displacement_m": 0.00048481368110953597
+          },
+          {
+            "layer": 3,
+            "altitude_m": 15.0,
+            "cn2_fraction": 0.08,
+            "displacement_xy_m": [
+              0.001454441043328608,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.1685829391130901,
+              0.0
+            ],
+            "displacement_m": 0.001454441043328608
+          },
+          {
+            "layer": 4,
+            "altitude_m": 37.0,
+            "cn2_fraction": 0.048,
+            "displacement_xy_m": [
+              0.0035876212402105663,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              0.4158379164789556,
+              0.0
+            ],
+            "displacement_m": 0.0035876212402105663
+          },
+          {
+            "layer": 5,
+            "altitude_m": 197.0,
+            "cn2_fraction": 0.018,
+            "displacement_xy_m": [
+              0.01910165903571572,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              2.21405593368525,
+              0.0
+            ],
+            "displacement_m": 0.01910165903571572
+          },
+          {
+            "layer": 6,
+            "altitude_m": 357.0,
+            "cn2_fraction": 0.005,
+            "displacement_xy_m": [
+              0.03461569683122087,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              4.012273950891545,
+              0.0
+            ],
+            "displacement_m": 0.03461569683122087
+          },
+          {
+            "layer": 7,
+            "altitude_m": 804.0,
+            "cn2_fraction": 0.037,
+            "displacement_xy_m": [
+              0.07795803992241339,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              9.03604553646163,
+              0.0
+            ],
+            "displacement_m": 0.07795803992241339
+          },
+          {
+            "layer": 8,
+            "altitude_m": 3171.0,
+            "cn2_fraction": 0.034,
+            "displacement_xy_m": [
+              0.3074688365596677,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              35.638433328507254,
+              0.0
+            ],
+            "displacement_m": 0.3074688365596677
+          },
+          {
+            "layer": 9,
+            "altitude_m": 7307.0,
+            "cn2_fraction": 0.054,
+            "displacement_xy_m": [
+              0.7085067135734758,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              82.12236907328996,
+              0.0
+            ],
+            "displacement_m": 0.7085067135734758
+          },
+          {
+            "layer": 10,
+            "altitude_m": 14636.0,
+            "cn2_fraction": 0.039,
+            "displacement_xy_m": [
+              1.4191466073438337,
+              0.0
+            ],
+            "displacement_xy_samples": [
+              164.4919931239458,
+              0.0
+            ],
+            "displacement_m": 1.4191466073438337
+          }
+        ],
+        "max_displacement_m": 1.4191466073438337,
+        "max_displacement_samples": 164.4919931239458,
+        "footprint_span_m": 3.6191466073438336,
+        "periodic_band_wrap_overlap": false
+      }
+    ]
+  }
+}

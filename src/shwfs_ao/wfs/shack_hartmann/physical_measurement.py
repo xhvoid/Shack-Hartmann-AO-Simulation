@@ -823,7 +823,11 @@ class PhysicalShackHartmannSensor:
             valid_by_uncertainty=by_uncertainty,
             valid_by_clipping=by_clipping,
             peak_snr=quality.peak_snr,
-            total_snr=quality.total_snr,
+            # A fixed background master can exceed the expected signal in a
+            # faint window. Keep its signed flux/SNR in the quality model and
+            # validity gates above; the nonnegative telemetry convention must
+            # not turn an already-invalid lenslet into a whole-frame failure.
+            total_snr=np.maximum(quality.total_snr, 0.0),
             centroid_sigma_px=quality.centroid_sigma_px,
             clipping_fraction=clipping,
             detector_frames=frames,

@@ -113,6 +113,10 @@ _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
     # Version 3 after the m_AB = 11 excursion study: Tikhonov damping 0.1 and
     # the reset-to-flat recovery policy.
     ("det_emccd_12m_medium_derived", 3): "synthetic_presets/det_emccd_12m_medium_derived.v3.json",
+    # Literature-inspired Robo-AO-2 NGS draft (2.2 m); its assumptions are
+    # recorded in docs/research/robo_ao2_ngs_v1. No existing default changes.
+    ("robo_ao2_22m_ngs_draft", 1): "synthetic_presets/robo_ao2_22m_ngs_draft.v1.json",
+    ("robo_ao2_22m_ngs_draft", 2): "synthetic_presets/robo_ao2_22m_ngs_draft.v2.json",
 }
 
 BackendName = Literal["native", "hcipy"]

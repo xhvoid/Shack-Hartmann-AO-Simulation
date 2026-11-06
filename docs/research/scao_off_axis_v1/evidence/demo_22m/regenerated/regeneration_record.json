@@ -1,0 +1,426 @@
+{
+  "schema": "shwfs_ao.off_axis_demo_regeneration.v1",
+  "command": "python scripts/regenerate_off_axis_demo_artifacts.py --images outputs/off_axis_science/22m/psfs.npz --record outputs/off_axis_science/22m/off_axis_science.json --run-record outputs/off_axis_science/22m/run_record.json --output <temporary directory>",
+  "inputs": {
+    "outputs/off_axis_science/22m/psfs.npz": {
+      "sha256": "79a444ae92bb55db6b1195ee756871d0176832e58e35420059370669668f1b5d",
+      "bytes": 23651616
+    },
+    "outputs/off_axis_science/22m/off_axis_science.json": {
+      "sha256": "0d7e4a57658f8cec9e588235c3a3b53a144d46399e726c22b538920748050fbb",
+      "bytes": 26232
+    },
+    "outputs/off_axis_science/22m/run_record.json": {
+      "sha256": "1553f4fe16897bb07d72355ef70b2bc1eada2cb4e7b98b23bff6f53bbe9245f0",
+      "bytes": 2731
+    }
+  },
+  "source_run": {
+    "profile": "robo_ao2_22m_ngs_draft@2",
+    "config_hash": "a6ffdbc021b781f26c53d1e5b1ae1c47c148cc4cbc266e69a6208c7e859a41ed",
+    "history_config_hash": "fa1a04746b5aa01c939ad5edb7cf44e610acf5b01c1637ead510a575c339c8c0",
+    "atmosphere_config_hash": "32815488e821b8255a01467b1dbfd6ca18c5c54a2ab9f491e9988b83f6859b4c",
+    "root_seed": 1,
+    "realization_index": 0,
+    "atmosphere_realization_stream_id": "shwfs_ao.random.sha256-json-pcg64-v1:4b86fc8b66fed351f137f5e17da9735319da578a16cbd4c7f4fd0b4e410e6c80",
+    "n_steps": 1500,
+    "frame_rate_hz": 750.0,
+    "science_psf_pad_factor": 3,
+    "command": "python examples/run_off_axis_science_demo.py --profile robo_ao2_22m_ngs_draft --version 2 --offsets '0,0;5,0;10,0;20,0' --wavelength-um 1.65 --burn-in 150 --block-frames 75 --output outputs/off_axis_science/22m"
+  },
+  "ideal_image_and_axes_elementwise_equal_to_saved": true,
+  "recomputed_fields_checked_for_exact_value_equality": [
+    {
+      "offset": "(+0, +0) arcsec",
+      "field": "long_exposure_peak_strehl",
+      "saved": 0.43704948682201744,
+      "recomputed": 0.43704948682201744,
+      "equal": true
+    },
+    {
+      "offset": "(+0, +0) arcsec",
+      "field": "long_exposure_on_axis_strehl",
+      "saved": 0.43704948682201744,
+      "recomputed": 0.43704948682201744,
+      "equal": true
+    },
+    {
+      "offset": "(+0, +0) arcsec",
+      "field": "peak_offset_xy_rad",
+      "saved": [
+        0.0,
+        0.0
+      ],
+      "recomputed": [
+        0.0,
+        0.0
+      ],
+      "equal": true
+    },
+    {
+      "offset": "(+0, +0) arcsec",
+      "field": "fwhm_rad",
+      "saved": 1.0419761543683158e-06,
+      "recomputed": 1.0419761543683158e-06,
+      "equal": true
+    },
+    {
+      "offset": "(+0, +0) arcsec",
+      "field": "ee50_radius_rad",
+      "saved": 6.850659631403649e-07,
+      "recomputed": 6.850659631403649e-07,
+      "equal": true
+    },
+    {
+      "offset": "(+0, +0) arcsec",
+      "field": "ee80_radius_rad",
+      "saved": 1.668802384322038e-06,
+      "recomputed": 1.668802384322038e-06,
+      "equal": true
+    },
+    {
+      "offset": "(+0, +0) arcsec",
+      "field": "lambda_over_d_rad",
+      "saved": 7.499999999999999e-07,
+      "recomputed": 7.499999999999999e-07,
+      "equal": true
+    },
+    {
+      "offset": "(+0, +0) arcsec",
+      "field": "sample_count",
+      "saved": 1350,
+      "recomputed": 1350,
+      "equal": true
+    },
+    {
+      "offset": "(+0, +0) arcsec",
+      "field": "wavelength_m",
+      "saved": 1.6499999999999999e-06,
+      "recomputed": 1.6499999999999999e-06,
+      "equal": true
+    },
+    {
+      "offset": "(+0, +0) arcsec",
+      "field": "mean_instantaneous_peak_strehl",
+      "saved": 0.7503841537968424,
+      "recomputed": 0.7503841537968424,
+      "equal": true
+    },
+    {
+      "offset": "(+0, +0) arcsec",
+      "field": "instantaneous_peak_strehl_sd",
+      "saved": 0.06889912094250703,
+      "recomputed": 0.06889912094250703,
+      "equal": true
+    },
+    {
+      "offset": "(+5, +0) arcsec",
+      "field": "long_exposure_peak_strehl",
+      "saved": 0.42641359438120086,
+      "recomputed": 0.42641359438120086,
+      "equal": true
+    },
+    {
+      "offset": "(+5, +0) arcsec",
+      "field": "long_exposure_on_axis_strehl",
+      "saved": 0.42641359438120086,
+      "recomputed": 0.42641359438120086,
+      "equal": true
+    },
+    {
+      "offset": "(+5, +0) arcsec",
+      "field": "peak_offset_xy_rad",
+      "saved": [
+        0.0,
+        0.0
+      ],
+      "recomputed": [
+        0.0,
+        0.0
+      ],
+      "equal": true
+    },
+    {
+      "offset": "(+5, +0) arcsec",
+      "field": "fwhm_rad",
+      "saved": 1.0294047952592806e-06,
+      "recomputed": 1.0294047952592806e-06,
+      "equal": true
+    },
+    {
+      "offset": "(+5, +0) arcsec",
+      "field": "ee50_radius_rad",
+      "saved": 7.127689032932577e-07,
+      "recomputed": 7.127689032932577e-07,
+      "equal": true
+    },
+    {
+      "offset": "(+5, +0) arcsec",
+      "field": "ee80_radius_rad",
+      "saved": 1.8106348872518283e-06,
+      "recomputed": 1.8106348872518283e-06,
+      "equal": true
+    },
+    {
+      "offset": "(+5, +0) arcsec",
+      "field": "lambda_over_d_rad",
+      "saved": 7.499999999999999e-07,
+      "recomputed": 7.499999999999999e-07,
+      "equal": true
+    },
+    {
+      "offset": "(+5, +0) arcsec",
+      "field": "sample_count",
+      "saved": 1350,
+      "recomputed": 1350,
+      "equal": true
+    },
+    {
+      "offset": "(+5, +0) arcsec",
+      "field": "wavelength_m",
+      "saved": 1.6499999999999999e-06,
+      "recomputed": 1.6499999999999999e-06,
+      "equal": true
+    },
+    {
+      "offset": "(+5, +0) arcsec",
+      "field": "mean_instantaneous_peak_strehl",
+      "saved": 0.7197100984872509,
+      "recomputed": 0.7197100984872509,
+      "equal": true
+    },
+    {
+      "offset": "(+5, +0) arcsec",
+      "field": "instantaneous_peak_strehl_sd",
+      "saved": 0.06787930598164435,
+      "recomputed": 0.06787930598164435,
+      "equal": true
+    },
+    {
+      "offset": "(+10, +0) arcsec",
+      "field": "long_exposure_peak_strehl",
+      "saved": 0.3882010044860281,
+      "recomputed": 0.3882010044860281,
+      "equal": true
+    },
+    {
+      "offset": "(+10, +0) arcsec",
+      "field": "long_exposure_on_axis_strehl",
+      "saved": 0.3882010044860281,
+      "recomputed": 0.3882010044860281,
+      "equal": true
+    },
+    {
+      "offset": "(+10, +0) arcsec",
+      "field": "peak_offset_xy_rad",
+      "saved": [
+        0.0,
+        0.0
+      ],
+      "recomputed": [
+        0.0,
+        0.0
+      ],
+      "equal": true
+    },
+    {
+      "offset": "(+10, +0) arcsec",
+      "field": "fwhm_rad",
+      "saved": 1.0376872602659097e-06,
+      "recomputed": 1.0376872602659097e-06,
+      "equal": true
+    },
+    {
+      "offset": "(+10, +0) arcsec",
+      "field": "ee50_radius_rad",
+      "saved": 7.593691838938817e-07,
+      "recomputed": 7.593691838938817e-07,
+      "equal": true
+    },
+    {
+      "offset": "(+10, +0) arcsec",
+      "field": "ee80_radius_rad",
+      "saved": 2.0566999847313364e-06,
+      "recomputed": 2.0566999847313364e-06,
+      "equal": true
+    },
+    {
+      "offset": "(+10, +0) arcsec",
+      "field": "lambda_over_d_rad",
+      "saved": 7.499999999999999e-07,
+      "recomputed": 7.499999999999999e-07,
+      "equal": true
+    },
+    {
+      "offset": "(+10, +0) arcsec",
+      "field": "sample_count",
+      "saved": 1350,
+      "recomputed": 1350,
+      "equal": true
+    },
+    {
+      "offset": "(+10, +0) arcsec",
+      "field": "wavelength_m",
+      "saved": 1.6499999999999999e-06,
+      "recomputed": 1.6499999999999999e-06,
+      "equal": true
+    },
+    {
+      "offset": "(+10, +0) arcsec",
+      "field": "mean_instantaneous_peak_strehl",
+      "saved": 0.6566400755842547,
+      "recomputed": 0.6566400755842547,
+      "equal": true
+    },
+    {
+      "offset": "(+10, +0) arcsec",
+      "field": "instantaneous_peak_strehl_sd",
+      "saved": 0.07550489696586707,
+      "recomputed": 0.07550489696586707,
+      "equal": true
+    },
+    {
+      "offset": "(+20, +0) arcsec",
+      "field": "long_exposure_peak_strehl",
+      "saved": 0.32604700038247075,
+      "recomputed": 0.32604700038247075,
+      "equal": true
+    },
+    {
+      "offset": "(+20, +0) arcsec",
+      "field": "long_exposure_on_axis_strehl",
+      "saved": 0.32604700038247075,
+      "recomputed": 0.32604700038247075,
+      "equal": true
+    },
+    {
+      "offset": "(+20, +0) arcsec",
+      "field": "peak_offset_xy_rad",
+      "saved": [
+        0.0,
+        0.0
+      ],
+      "recomputed": [
+        0.0,
+        0.0
+      ],
+      "equal": true
+    },
+    {
+      "offset": "(+20, +0) arcsec",
+      "field": "fwhm_rad",
+      "saved": 1.0978945099559578e-06,
+      "recomputed": 1.0978945099559578e-06,
+      "equal": true
+    },
+    {
+      "offset": "(+20, +0) arcsec",
+      "field": "ee50_radius_rad",
+      "saved": 8.359867692495119e-07,
+      "recomputed": 8.359867692495119e-07,
+      "equal": true
+    },
+    {
+      "offset": "(+20, +0) arcsec",
+      "field": "ee80_radius_rad",
+      "saved": 2.2043570110945014e-06,
+      "recomputed": 2.2043570110945014e-06,
+      "equal": true
+    },
+    {
+      "offset": "(+20, +0) arcsec",
+      "field": "lambda_over_d_rad",
+      "saved": 7.499999999999999e-07,
+      "recomputed": 7.499999999999999e-07,
+      "equal": true
+    },
+    {
+      "offset": "(+20, +0) arcsec",
+      "field": "sample_count",
+      "saved": 1350,
+      "recomputed": 1350,
+      "equal": true
+    },
+    {
+      "offset": "(+20, +0) arcsec",
+      "field": "wavelength_m",
+      "saved": 1.6499999999999999e-06,
+      "recomputed": 1.6499999999999999e-06,
+      "equal": true
+    },
+    {
+      "offset": "(+20, +0) arcsec",
+      "field": "mean_instantaneous_peak_strehl",
+      "saved": 0.5988889702115779,
+      "recomputed": 0.5988889702115779,
+      "equal": true
+    },
+    {
+      "offset": "(+20, +0) arcsec",
+      "field": "instantaneous_peak_strehl_sd",
+      "saved": 0.08792560127271956,
+      "recomputed": 0.08792560127271956,
+      "equal": true
+    }
+  ],
+  "fields_carried_forward_from_saved_record": [
+    "block_frames",
+    "block_peak_strehl (list; block_count and block_peak_strehl_sd derive from it)",
+    "selection",
+    "result metadata",
+    "footprint"
+  ],
+  "new_fields": [
+    "long_exposure_interpolated_peak_strehl"
+  ],
+  "peak_definitions": {
+    "long_exposure_peak_strehl": "brightest sampled pixel (historical definition, unchanged)",
+    "long_exposure_interpolated_peak_strehl": "production subpixel estimator shwfs_ao.science._psf_peak.interpolated_peak"
+  },
+  "values": [
+    {
+      "offset_arcsec": [
+        0.0,
+        0.0
+      ],
+      "sampled": 0.43704948682201744,
+      "interpolated": 0.4444137065775304,
+      "on_axis": 0.43704948682201744,
+      "mean_instantaneous_sampled": 0.7503841537968424
+    },
+    {
+      "offset_arcsec": [
+        5.0,
+        0.0
+      ],
+      "sampled": 0.42641359438120086,
+      "interpolated": 0.43330048890376505,
+      "on_axis": 0.42641359438120086,
+      "mean_instantaneous_sampled": 0.7197100984872509
+    },
+    {
+      "offset_arcsec": [
+        10.0,
+        0.0
+      ],
+      "sampled": 0.3882010044860281,
+      "interpolated": 0.39569351511365647,
+      "on_axis": 0.3882010044860281,
+      "mean_instantaneous_sampled": 0.6566400755842547
+    },
+    {
+      "offset_arcsec": [
+        20.0,
+        0.0
+      ],
+      "sampled": 0.32604700038247075,
+      "interpolated": 0.3372189583059243,
+      "on_axis": 0.32604700038247075,
+      "mean_instantaneous_sampled": 0.5988889702115779
+    }
+  ],
+  "public_copy": {
+    "edited": "temporary output directory in 'command' and the machine path of the example script in 'source_run.command' replaced; all other fields unchanged",
+    "original_sha256": "e2e67de64b7a0993bbaeabeb33c090ada9a82e3bf77f5bea3d79e45622adb12d"
+  }
+}
