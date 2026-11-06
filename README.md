@@ -1,12 +1,12 @@
 # Shack-Hartmann AO Simulation
 
-This Python package models a Shack–Hartmann wavefront sensor, a deformable
-mirror, and the feedback loop that connects them. It follows a disturbed
-wavefront from the lenslet spots on the detector to the corrected stellar
-image. The examples below use recorded simulations.
+A Shack–Hartmann sensor measures how far each lenslet spot moves. In this
+Python simulation, the controller uses those displacements to drive a
+deformable mirror. The residual wavefront determines the shape of a star’s
+image, its point spread function (PSF).
 
-AO Explorer also replays a compact 2 m loop, a 2.2 m loss-of-lock case,
-and a gain and delay comparison for a historical 42 m telescope design.
+AO Explorer follows a 2 m loop frame by frame. It also shows where a
+2.2 m loop lost lock and how gain and delay affected a historical 42 m design.
 
 [Install](#install) · [Run an example](#run-an-example) · [Open AO Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/)
 
@@ -19,30 +19,27 @@ and a gain and delay comparison for a historical 42 m telescope design.
 In this 1 m example, the loop ran at 500 Hz with gain 0.5 and detector noise
 disabled. Over the final six frames of the same atmospheric sequence,
 correction reduced the mean wavefront RMS from **148.6 to 84.4 nm**.
-The short run shows the transient as the mirror begins to correct the wavefront.
 [Recorded control experiment](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/14611da9a92c6c4de59ee60de8fb2d23f2bbc7c3/notebooks/tutorials/04_closed_loop_control.ipynb)
 
 ### Science targets away from a natural guide star
 
-The 2.2 m experiment in [PR #10](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/pull/10) holds the guide star fixed and samples four science
-directions through the same atmospheric layers. Each target receives the
-same mirror commands. The difference between panels shows how the
-correction changes with separation from the guide star.
+In the 2.2 m model, the guide star sets the mirror correction for all four
+targets. Farther from the guide star, light crosses the high-altitude layers
+at a different position, so the mirror corrects those targets less well.
 
 ![Long-exposure PSFs at 0, 5, 10, and 20 arcsec, on a common logarithmic scale](https://raw.githubusercontent.com/xhvoid/Shack-Hartmann-AO-Simulation/7aca875e5e34265c3f9ead97ae99da55663bcce7/docs/research/scao_off_axis_v1/evidence/demo_22m/reproduction/psf_comparison.png)
 
-At **1.65 µm**, the interpolated long-exposure peak Strehl in the plotted
-macOS repeat fell from **0.448** on axis to **0.436**, **0.398**, and
-**0.338** at 5, 10, and 20 arcsec. Each panel averages the same 1,350
-frames over 1.8 seconds and is centred on its target.
+Each panel shows the same 1.8-second exposure (1,350 frames) centred on a
+different target. In this macOS run at **1.65 µm**, the interpolated peak
+Strehl fell from **0.448** on axis to **0.436**, **0.398**, and **0.338**
+at 5, 10, and 20 arcsec.
 
 ![Long-exposure and mean instantaneous Strehl against guide-star separation](https://raw.githubusercontent.com/xhvoid/Shack-Hartmann-AO-Simulation/7aca875e5e34265c3f9ead97ae99da55663bcce7/docs/research/scao_off_axis_v1/evidence/demo_22m/reproduction/strehl_vs_separation.png)
 
-The mean instantaneous curve measures each frame at its own peak. The
-long-exposure curves measure the peak after averaging the images on a fixed
-grid, so motion of the image core during the exposure lowers that peak.
-The accompanying study reports the Linux reference values and the difference
-between platforms. [Study, definitions, and reproduction command](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/7aca875e5e34265c3f9ead97ae99da55663bcce7/docs/scao_off_axis_science.md#reading-the-figures) · [PR #10](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/pull/10)
+On axis, the brightest pixel in each frame gave a mean instantaneous Strehl
+of **0.750**. In the long exposure the frames are averaged before the peak
+is measured. When the core moves between frames, its light spreads over
+several pixels. [Linux reference values and measurement details](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/7aca875e5e34265c3f9ead97ae99da55663bcce7/docs/scao_off_axis_science.md#reading-the-figures) · [Off-axis implementation (PR #10)](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/pull/10)
 
 ### Sensor calibration and photon noise
 
@@ -85,10 +82,10 @@ a Maréchal estimate derived from residual RMS.
 
 ### H-band PSFs and the MCAO error budget
 
-The separate analytical multi-conjugate AO study models an 8 m-class
-telescope, eight laser guide stars, and three deformable mirrors. It uses
-TIPTOP/P3 with a continuous high-frequency fitting term and MASTSEL
-propagation. The following three figures are from that configuration.
+The multi-conjugate AO (MCAO) model uses eight laser guide stars and three
+deformable mirrors on an 8 m-class telescope. It combines the TIPTOP/P3
+residual spectrum with a high-frequency fitting term and uses MASTSEL to
+compute the PSF.
 [Model and numerical checks](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/14611da9a92c6c4de59ee60de8fb2d23f2bbc7c3/docs/notebook12_tiptop_portfolio_notes.md)
 
 ![H-band PSF core, halo, and encircled energy on axis and 30 arcsec off axis](figures/tiptop_baseline_psf.png)
@@ -108,22 +105,22 @@ continuous high-frequency integral raised the total RMS from 120.8 to 131.7 nm.
 As seeing increased from 0.5 to 1.2 arcsec, energy inside the 50
 milliarcsecond radius fell by 27.1% relative to the good-seeing case.
 The sampled full width at half maximum changed only from 43.19 to 43.45
-milliarcseconds. Much of the change appears in light outside the core.
+milliarcseconds.
 
 ### Layered atmospheric turbulence
 
 ![ESO ten-layer profile, phase screen, structure function, and residual wavefront RMS](figures/eso_elt_turbulence/eso_elt_turbulence_demo.png)
 
-The 2 m detector model was run with the ESO E-ELT design reference
-atmosphere and with a single frozen-flow layer. Across eight realizations
-(frames 50–149), correction reduced RMS from 444 to 325 nm for the ten
-layers and from 462 to 294 nm for the single layer.
+The same 2 m loop ran under two atmospheres. With the ten layers from the
+ESO E-ELT design reference, correction reduced wavefront RMS from 444 to
+325 nm. With one frozen-flow layer, it fell from 462 to 294 nm. Both
+comparisons use frames 50–149 from eight realizations.
 [Layer parameters and experiment](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/14611da9a92c6c4de59ee60de8fb2d23f2bbc7c3/docs/eso_elt_turbulence_model.md)
 
 <details>
 <summary>Earlier detector, calibration, and near-infrared imaging studies (14 figures)</summary>
 
-These figures come from earlier versions of the detector and imaging experiments. The photometric inputs and their sources are listed in [Data licences and acknowledgements](DATA_LICENSES.md).
+The detector experiments use public seeing and photometry measurements as inputs to a synthetic AO loop. [Data sources and acknowledgements](DATA_LICENSES.md)
 
 ![Public data overview](figures/detector_level_SCAO/public_data_overview.png)
 
@@ -151,7 +148,7 @@ The diffraction-limited, uncorrected, and AO-corrected PSFs show how the residua
 
 ![High-order AO residual RMS history](figures/high_order_ao_rms_history.png)
 
-Open-loop and corrected optical path difference are tracked over the frozen-flow sequence. The post-settling interval is used for the residual RMS.
+The orange curve drops sharply in the first few milliseconds. The blue points give the residual for an ideal mirror fit to the same wavefront.
 
 ![High-order AO phase maps](figures/high_order_ao_phase_maps.png)
 
@@ -167,7 +164,7 @@ The synthetic 2 m scenario comparison uses a disturbance constructed in the mirr
 
 ![Exploratory PWFS detector images](figures/PWFS_detector_images.png)
 
-An exploratory pyramid wavefront sensor produces four pupil images on the detector. The panels compare the detector response to different input wavefronts.
+The pyramid sensor produces four pupil images. From left to right, the panels show a flat wavefront, atmospheric aberration, and the same aberration with detector noise.
 
 ![Sampling versus correction order](figures/sampling_vs_correction_order.png)
 
@@ -185,7 +182,7 @@ The calibration varies the amplitude of positive and negative actuator pokes whe
 
 ## Install
 
-Requires Python 3.10 or later. From the repository directory:
+With Python 3.10 or later, run these commands from the repository root.
 
 ```bash
 python3 -m venv .venv
@@ -193,23 +190,34 @@ source .venv/bin/activate
 python -m pip install .
 ```
 
-On Windows, activate with `.venv\Scripts\activate`. For local editing, use
-`python -m pip install -e .`. The native backend uses NumPy and SciPy;
-`python -m pip install '.[hcipy]'` adds the optional HCIPy backend.
+In Windows PowerShell, activate the environment with
+`.\.venv\Scripts\Activate.ps1`. Use `python -m pip install -e .` if you
+plan to edit the package. The default backend uses NumPy and SciPy.
+To use the HCIPy backend, install with `python -m pip install '.[hcipy]'`.
 
 ## Run an example
 
+Run the detector example for a synthetic 2 m closed loop. It writes the
+detector and wavefront measurements to `detector_level_demo_output/detector_level_demo.json`.
+
 ```bash
 python examples/run_detector_level_demo.py
+```
+
+Two shorter examples isolate parts of the loop. The first plots how a
+prescribed wavefront shifts the lenslet spots. The second scales a phase
+map and compares the resulting PSFs and Strehl ratios.
+
+```bash
 python examples/run_shwfs_centroid_demo.py
 python examples/run_psf_strehl_demo.py
 ```
 
-The first runs a synthetic 2 m loop and writes
-`detector_level_demo_output/detector_level_demo.json`. The others write plots
-under `outputs/examples/detector_level_SCAO/`. Set `AO_DEMO_OUTPUT_DIR` to
-choose a destination. The PSF example compares a prescribed wavefront with a
-scaled copy; it does not run a controller.
+Both write their plots under `outputs/examples/detector_level_SCAO/`.
+Set `AO_DEMO_OUTPUT_DIR` to choose another output directory.
+
+To inspect the 2 m residual wavefront from Python, load the same profile
+and read the history after each mirror update.
 
 ```python
 from shwfs_ao.io.configs import load_system_profile
@@ -220,28 +228,27 @@ history = run_closed_loop(config)
 print("Residual after each update (nm):", history.post_update_residual_opd_rms_m * 1e9)
 ```
 
-OPD and wavelengths use metres internally. Explorer image metrics use the
-residual **before** an update, as labelled. The short example above does not
-reproduce the site's longer recordings without their saved settings.
+The package stores optical path difference and wavelength in metres. The
+example converts the post-update residual to nanometres for display.
+The Explorer images use the wavefront **before** the next mirror update.
+Each recording lists its own settings and exposure window.
 
 ## Scope and evidence
 
-The three runnable examples on this branch use simplified pupils, influence functions,
-atmosphere and detector assumptions. The 42 m geometry comes from a historical
-E-ELT reference; the current ELT has a 39 m primary. There is no segmented-mirror
-phasing model or calibration against on-sky telemetry. A successful numerical
-comparison applies to the component and conditions tested.
+The simulations use idealized pupils, mirror influence functions and
+detector responses. The 42 m study follows the historical E-ELT design.
+The current ELT design has a 39 m primary. Segment phasing and calibration
+against on-sky telemetry are outside the scope of these models.
 
 - [Model conventions and sources](docs/methods.md)
 - [Component checks, numerical repairs and remaining limits](docs/verification-summary.md)
 - [Reproducing examples and checking saved results](docs/reproducing.md)
 - [Selected studies and their evidence](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/#studies)
 
-`src/shwfs_ao/` holds the implementation and versioned resources. `examples/`
-contains the three entry points; `tests/` contains small mathematical checks.
-`build_support/` preserves compatibility resource imports. Website source,
-compact records and publication tools live on the
-[`website` branch](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/tree/website).
+The simulation code and versioned profiles are in [src/shwfs_ao](src/shwfs_ao/).
+The [examples](examples/) directory contains the scripts above, and
+[tests](tests/) contains the component checks. Explorer source code and
+recordings are on the [website branch](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/tree/website).
 
-Code is under the [MIT licence](LICENSE). See [data licences](DATA_LICENSES.md)
-for third-party attribution and terms.
+The code uses the [MIT licence](LICENSE). The [data licences](DATA_LICENSES.md)
+give the sources and terms for third-party data.
