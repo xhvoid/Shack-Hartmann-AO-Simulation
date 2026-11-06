@@ -117,27 +117,35 @@ def _plot(run, output: Path, wavelength_m: float, crop_arcsec: float) -> None:
     y = images[0].psf.y_angle_rad * arcsec
     keep_x = np.abs(x) <= crop_arcsec
     keep_y = np.abs(y) <= crop_arcsec
-    fig, axes = plt.subplots(1, len(images), figsize=(3.4 * len(images), 3.6), squeeze=False)
+    ncols = min(2, len(images))
+    nrows = (len(images) + ncols - 1) // ncols
+    fig, axes = plt.subplots(
+        nrows, ncols, figsize=(3.25 * ncols + 1.3, 3.25 * nrows + 0.7),
+        sharex=True, sharey=True, squeeze=False, layout="constrained", facecolor="white",
+    )
     norm = LogNorm(vmin=1e-4, vmax=1.0)
     extent = [x[keep_x][0], x[keep_x][-1], y[keep_y][0], y[keep_y][-1]]
-    for axis, image, peak in zip(axes[0], images, peaks):
+    for axis, image, peak in zip(axes.flat, images, peaks):
         brightness = discrete_flux_to_angular_surface_brightness(image.psf) / ideal_peak
         panel = brightness[np.ix_(keep_y, keep_x)]
         mesh = axis.imshow(
             np.clip(panel, 1e-4, None), origin="lower", extent=extent, norm=norm, cmap="magma"
         )
         axis.set_title(
-            f"{image.offset.label}\nS_LE ({peak_method}) = {peak:.3f}", fontsize=9
+            f"{image.offset.label}\n{peak_method.capitalize()} peak Strehl = {peak:.3f}",
+            fontsize=10,
         )
-        axis.set_xlabel("x from target (arcsec)")
-        axis.set_ylabel("y from target (arcsec)")
-    fig.colorbar(mesh, ax=axes[0].tolist(), label="surface brightness / ideal peak", shrink=0.8)
+    for axis in axes.flat[len(images):]:
+        axis.set_visible(False)
+    fig.supxlabel("x from target (arcsec)")
+    fig.supylabel("y from target (arcsec)")
+    fig.colorbar(mesh, ax=axes, label="Surface brightness / ideal peak", shrink=0.85)
     fig.suptitle(
-        f"{run.record['profile']}: long-exposure PSFs at {wavelength_m * 1e6:.2f} um, "
-        f"frames {run.science.selection.first_frame}-{run.science.selection.last_frame}",
-        fontsize=10,
+        f"Long-exposure PSFs at {wavelength_m * 1e6:.2f} µm\n"
+        f"{run.record['profile']} · frames {run.science.selection.first_frame}–{run.science.selection.last_frame}",
+        fontsize=12,
     )
-    fig.savefig(output / "psf_comparison.png", dpi=130, bbox_inches="tight")
+    fig.savefig(output / "psf_comparison.png", dpi=150, facecolor="white", transparent=False)
     plt.close(fig)
 
     separations = [image.offset.radial_arcsec for image in images]
