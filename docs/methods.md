@@ -22,9 +22,13 @@ contains optional HCIPy components and older compatibility interfaces.
 - Mean images average propagated intensities. They do not propagate a mean
   wavefront. Peak Strehl of a mean image differs from mean instantaneous peak
   Strehl. The Explorer recordings retain tilt and do not recenter images.
+- Maréchal Strehl converts residual RMS as `exp[-(2π RMS/λ)²]`; peak Strehl
+  is read from the PSF propagated from that same wavefront.
 - EE50 is the radius enclosing half the energy. The 42 m gain study uses its
   Fourier-reference estimate in units of wavelength/aperture; the production
-  estimator has a documented sampling sensitivity.
+  estimator has a documented sampling sensitivity. Both estimate the same PSF
+  by different algorithms: disc integration of its Fourier interpolant versus
+  radius-ordered sampled flux.
 
 ## Reading the selected cases
 

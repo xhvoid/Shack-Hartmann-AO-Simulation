@@ -59,8 +59,8 @@ python3 -m http.server 8000 --bind 127.0.0.1 --directory site
 
 Open `http://127.0.0.1:8000/`. The website README describes the build stamp,
 bundle checks and manual Pages deployment. No Python simulation runs in the
-browser. All displayed scientific assets and downloads have explicit source
-identities; full precision is retained in the data rather than rounded prose.
+browser. Plots, tables and CSV share their named saved results; source identities and
+full-precision values remain in the downloads.
 
 ## Maintenance
 

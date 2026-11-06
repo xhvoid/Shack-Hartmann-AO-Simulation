@@ -1,4 +1,4 @@
-"""Run a lightweight PSF and Strehl-ratio demo."""
+"""Plot PSFs and export peak Strehl and RMS-derived Maréchal for the same cases."""
 
 from __future__ import annotations
 

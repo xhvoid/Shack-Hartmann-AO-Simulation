@@ -66,17 +66,15 @@ repair, not a memory or speed improvement.
 
 The final development review considered 28 claims and claim groups: 16 were
 retained, 12 needed qualifications, and none was suspended. These are claim
-decisions, not counts of passing tests. No existing scientific claim was
-overturned by the available evidence. That does not establish that every
-recorded trajectory would reproduce its displayed digits with the repaired
-solver.
+decisions, not counts of passing tests. Historical trajectories retain their
+original solver revisions and values.
 
 - **Small dense models.** The saved 2 m baseline and tutorial TSVD example
   have low retained condition numbers, about 2.83 and 3.2. This suggests low
   numerical risk, but neither historical trajectory was rerun with the
   repaired kernel. Some other dense-path records lack saved spectra or a
-  complete producer trace. Agreement between two backends using the same
-  reconstructor is not an independent check of that reconstructor.
+  complete producer trace. Backend agreement checks the differing optical
+  components; both loops share the reconstructor.
 - **Traced 42 m studies.** The frozen paths for the static comparison, C1
   noise calculation, photon-budget, bright/faint, latency, gain–latency and
   replay studies do not use the repaired dense kernel. This conclusion is
@@ -98,10 +96,8 @@ solver.
   The earlier T1c/T4 failures and the historical I conclusion remain in
   place; adequacy across closed-loop conditions is still unresolved.
 
-The static checks of DM response, stroke and faults, interaction matrices,
-probe grouping and command mapping apply to the tested fixtures. They do
-not establish closed-loop stability, telescope-scale performance or hardware
-accuracy. Later bounded-fit tests that also use the labels T1/T4 do not
+The static DM, interaction-matrix and command-mapping checks cover their
+tested fixtures. Later bounded-fit tests that also use the labels T1/T4 do not
 supersede the earlier 42 m failures.
 
 ## Evidence and reproduction limits

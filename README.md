@@ -36,7 +36,8 @@ at 5, 10, and 20 arcsec.
 
 ![Long-exposure and mean instantaneous Strehl against guide-star separation](https://raw.githubusercontent.com/xhvoid/Shack-Hartmann-AO-Simulation/7aca875e5e34265c3f9ead97ae99da55663bcce7/docs/research/scao_off_axis_v1/evidence/demo_22m/reproduction/strehl_vs_separation.png)
 
-On axis, the brightest pixel in each frame gave a mean instantaneous Strehl
+Both figures use the same exposure. On axis, the brightest pixel in each
+frame gave a mean instantaneous Strehl
 of **0.750**. In the long exposure the frames are averaged before the peak
 is measured. When the core moves between frames, its light spreads over
 several pixels. [Linux reference values and measurement details](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/7aca875e5e34265c3f9ead97ae99da55663bcce7/docs/scao_off_axis_science.md#reading-the-figures) · [Off-axis implementation (PR #10)](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/pull/10)
@@ -77,7 +78,7 @@ the loop amplified the disturbance over the measurement window.
 
 With the same atmosphere and sensor, 13, 29, and 49 active actuators gave
 residuals of 246.7, 229.6, and 227.5 nm RMS. The plotted H-band Strehl is
-a Maréchal estimate derived from residual RMS.
+the Maréchal conversion of those same RMS values.
 [Mirror-grid comparison](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/14611da9a92c6c4de59ee60de8fb2d23f2bbc7c3/notebooks/studies/high_order_scao.ipynb)
 
 ### H-band PSFs and the MCAO error budget
@@ -91,14 +92,15 @@ compute the PSF.
 ![H-band PSF core, halo, and encircled energy on axis and 30 arcsec off axis](figures/tiptop_baseline_psf.png)
 
 In the baseline at 1.65 µm the on-axis peak Strehl was 0.781, and 63.5% of
-the energy fell within a 50 milliarcsecond radius. The energy fraction
-uses the flux of the full computational field.
+the energy fell within a 50 milliarcsecond radius. Both metrics describe
+that PSF; energy uses the full computational-field flux.
 
 ![Residual variance by source and total wavefront error before and after including the fitting tail](figures/tiptop_error_budget.png)
 
 Tomography and fitting contributed 50.9% and 29.3% of the baseline
 residual variance. Replacing the finite-grid fitting term with its
 continuous high-frequency integral raised the total RMS from 120.8 to 131.7 nm.
+Budget closure checks the same residual spectrum used for propagation.
 
 ![Peak Strehl, 50 milliarcsecond aperture energy, and core width over a seeing sweep](figures/tiptop_seeing_sensitivity.png)
 
@@ -206,7 +208,7 @@ python examples/run_detector_level_demo.py
 
 Two shorter examples isolate parts of the loop. The first plots how a
 prescribed wavefront shifts the lenslet spots. The second scales a phase
-map and compares the resulting PSFs and Strehl ratios.
+map and reports its propagated peak Strehl and RMS-derived Maréchal estimate.
 
 ```bash
 python examples/run_shwfs_centroid_demo.py
