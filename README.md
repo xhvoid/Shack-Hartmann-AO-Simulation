@@ -1,9 +1,9 @@
 # Shack-Hartmann AO Simulation
 
-A Python project for studying Shack-Hartmann wavefront sensing and
-single-conjugate adaptive optics. I use it to explore how atmosphere,
-detector noise, reconstruction and feedback affect the residual wavefront
-and the resulting images.
+This Python model follows atmospheric wavefronts through a Shack–Hartmann
+sensor and a single-conjugate adaptive optics loop. The experiments vary
+detector noise, reconstruction, and feedback to measure the resulting
+wavefront error and image quality.
 
 [AO Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/) shows
 recorded simulations and case studies. The models use published information
