@@ -207,6 +207,10 @@ tr.excluded th, tr.excluded td { color: var(--muted); font-style: italic; }
 .comparison-figure { margin: 16px 0; }
 .comparison-figure img { display: block; max-width: 100%; width: 100%; height: auto; background: white; border: 1px solid var(--rule); border-radius: 4px; }
 .comparison-figure img[hidden] { display: none; }
+.off-axis-figures { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 20px; align-items: start; }
+@media (max-width: 800px) {
+  .off-axis-figures { grid-template-columns: 1fr; gap: 0; }
+}
 .comparison-figure figcaption { margin-top: 7px; font-size: 12px; color: var(--muted); }
 .comparison-location { max-width: 620px; }
 .comparison-movie { max-width: 820px; }

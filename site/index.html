@@ -7,7 +7,7 @@
 <title>AO Simulation Explorer</title>
 <meta content="Shack–Hartmann adaptive-optics simulation results: wavefront correction, image quality, reconstruction failure, and controller gain and delay." name="description"/>
 <link href="data:," rel="icon"/>
-<link href="code-fb67b5ece9662fa3/styles.css" rel="stylesheet"/>
+<link href="code-37eedb95bd60b288/styles.css" rel="stylesheet"/>
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script onerror="aoCodeUnavailable()" src="code-fb67b5ece9662fa3/app.js" type="module"></script>
+<script onerror="aoCodeUnavailable()" src="code-37eedb95bd60b288/app.js" type="module"></script>
 </head>
 <body>
 <noscript><p class="wrap">The overview images are static. Enable JavaScript to open the recorded experiments and study views.</p></noscript><a class="skip" href="#main">Skip to content</a>
@@ -547,9 +547,19 @@ function aoCodeUnavailable() {
 <p>The paired comparison uses the same seed and realization: all 1500 atmospheric maps match bitwise and the calibration arrays are identical. All 1500 revised frames reconstruct, with zero command clipping and zero boundary occupancy. <strong>No recovery decay or fallback was activated.</strong> The preventive cutoff change accounts for the improvement on this input; recovery capability was checked separately.</p>
 <p>The <a href="https://arxiv.org/html/2407.14677v1">published NGS simulation</a> uses regularized zonal least squares. This model retains a TSVD approximation. The rationale for suppressing weak inverse modes follows <a href="https://aomicroscopy.org/calibration-and-closed-loop-control-of-deformable-mirrors-using-direct-sensing">the SVD calibration discussion</a>; neither source supplies the chosen 0.05 cutoff or recovery settings.</p>
 </section>
-<section aria-labelledby="ngs22-off-axis-title" class="panel prose" id="ngs22-off-axis">
+<section aria-labelledby="ngs22-off-axis-title" class="panel" id="ngs22-off-axis">
 <h2 id="ngs22-off-axis-title">Off-axis Strehl</h2>
-<p>In a 1.8 s exposure at 1.65 µm, the 2.2 m model used the same guide-star correction for four targets. The long-exposure peak Strehl fell from <strong>0.444</strong> on the natural guide star to <strong>0.433</strong> at 5 arcsec, <strong>0.396</strong> at 10 arcsec, and <strong>0.337</strong> at 20 arcsec. <a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/556c3273cc5206e9759ad4b43a2f068912163da2/docs/scao_off_axis_science.md#reading-the-figures">PSFs and Strehl measurements</a></p>
+<p class="prose">In the Linux reference run, the 2.2 m model used the same guide-star correction for four targets. In a 1.8 s exposure at 1.65 µm, the long-exposure peak Strehl fell from <strong>0.444</strong> on the natural guide star to <strong>0.433</strong> at 5 arcsec, <strong>0.396</strong> at 10 arcsec, and <strong>0.337</strong> at 20 arcsec.</p>
+<div class="off-axis-figures">
+<figure class="comparison-figure">
+<a href="evidence/scao-off-axis-22m/psf_comparison.png"><img src="evidence/scao-off-axis-22m/psf_comparison.png" width="1170" height="1080" alt="Four long-exposure PSFs at 0, 5, 10 and 20 arcsec from the guide star on the same logarithmic brightness scale."/></a>
+<figcaption>In the macOS repeat shown here, the interpolated peak Strehl was 0.448, 0.436, 0.398 and 0.338 at the four separations.</figcaption>
+</figure>
+<figure class="comparison-figure">
+<a href="evidence/scao-off-axis-22m/strehl_vs_separation.png"><img src="evidence/scao-off-axis-22m/strehl_vs_separation.png" width="595" height="465" alt="Interpolated and sampled long-exposure Strehl and mean instantaneous Strehl decrease with guide-star separation."/></a>
+<figcaption>Blue and orange show the peak of the averaged image. Green shows the mean of the individual frame peaks from the same run. <a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/556c3273cc5206e9759ad4b43a2f068912163da2/docs/scao_off_axis_science.md#reading-the-figures">Measurement details</a></figcaption>
+</figure>
+</div>
 </section>
 <details class="panel" id="ngs22-assumptions"><summary>Hardware references, model gaps and 131 parameter notes</summary>
 <div class="prose"><p><strong>The original preparation draft is preserved.</strong> It still says “not run / unregistered” because it predates these runs. The configurations used for v1 and v2 are available below. The revision changes only the cutoff and recovery policy; the other assumptions retain their original classifications.</p>
