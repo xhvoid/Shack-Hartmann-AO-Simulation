@@ -25,3 +25,9 @@ I moved the science target across the field while keeping the mirror correction 
 I compared gains on paired atmospheric sequences. In the historical 42 m configuration, gain 0.2 reduced a late excursion that I saw at gain 0.3. Over the full analysis window, gain 0.3 gave the sharper mean image at both tested delays. Looking at the late excursion alone would have led me to choose the other gain.
 
 [Replay the experiments](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/) · [Methods](methods.md)
+
+## Open item: 2 m end-to-end vs TIPTOP
+
+In a separate 2 m test, I used the same on-axis telescope geometry, atmosphere and loop gain in my model and in TIPTOP. At 1.65 µm the peak Strehl was 0.257–0.419 across three time-domain exposures. TIPTOP gave 0.710. In the first exposure, residual tilt accounted for 69% of the wavefront variance. [Comparison plot and settings](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/tree/main/docs/scao-comparison)
+
+Status: tilt-removed comparison and stroke-clipping attribution not yet done.
