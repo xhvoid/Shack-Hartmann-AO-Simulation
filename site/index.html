@@ -7,7 +7,7 @@
 <title>AO Simulation Explorer</title>
 <meta content="Shack–Hartmann adaptive-optics simulation results: wavefront correction, image quality, reconstruction failure, and controller gain and delay." name="description"/>
 <link href="data:," rel="icon"/>
-<link href="code-71efbc9c8909de3d/styles.css" rel="stylesheet"/>
+<link href="code-c55c5f4ccdb82f34/styles.css" rel="stylesheet"/>
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script onerror="aoCodeUnavailable()" src="code-71efbc9c8909de3d/app.js" type="module"></script>
+<script onerror="aoCodeUnavailable()" src="code-c55c5f4ccdb82f34/app.js" type="module"></script>
 </head>
 <body>
 <noscript><p class="wrap">The overview images are static. Enable JavaScript to open the recorded experiments and study views.</p></noscript><a class="skip" href="#main">Skip to content</a>
@@ -37,7 +37,7 @@ function aoCodeUnavailable() {
 <p class="lede">I followed the light from Shack–Hartmann spots on the detector to the corrected image of a star. These recordings show where the correction worked and where the loop lost lock.</p>
 
 <p><a class="primary-link" href="#explore">Explore the 2 m loop →</a></p></div>
-<figure class="opening-result"><div class="opening-pair"><div><div class="opening-atlas opening-atlas--uncorrected"><img alt="Mean 42 m point-source image without correction" height="256" src="recordings/42m-500-31024b173527b7a6/frames/mean.png" width="1792"/></div><span>Without correction</span></div><div><div class="opening-atlas opening-atlas--corrected"><img alt="Mean 42 m point-source image with AO correction" height="256" src="recordings/42m-500-31024b173527b7a6/frames/mean.png" width="1792"/></div><span>With AO correction</span></div></div>
+<figure class="opening-result"><div class="opening-pair"><div><div class="opening-atlas opening-atlas--uncorrected"><img alt="Mean 42 m point-source image without correction" height="256" src="images/42m-mean-uncorrected.png" width="256" style="left:0;width:100%"/></div><span>Without correction</span></div><div><div class="opening-atlas opening-atlas--corrected"><img alt="Mean 42 m point-source image with AO correction" height="256" src="images/42m-mean-corrected.png" width="256" style="left:0;width:100%"/></div><span>With AO correction</span></div></div>
 <figcaption><strong>42 m model · mean point-source images.</strong> 2.2 µm · 0.2–1.0 s. Peak Strehl of the mean PSF: 0.0023 → 0.754. Both views use the same 1.20″ field and log intensity scale, 10⁻⁶–1 of the ideal peak. No recentering. <a href="#replay42">Replay this 42 m recording →</a></figcaption></figure></div>
 <section aria-labelledby="result-summary"><h2 id="result-summary">What the simulations show</h2><ul><li>In the 2.2 m loop, reconstruction stopped at 0.981 s as spots dropped out. I increased the TSVD cutoff from 0.001 to 0.05 and replayed the same atmosphere. All 1,500 frames reconstructed over two seconds and the mirror stayed within its stroke limits.</li><li>At 1.65 µm, moving the science target from the guide star to 20 arcsec away lowered the long-exposure Strehl from 0.448 to 0.338. I used the same mirror commands for both targets.</li><li>With two frames of delay, raising the loop gain from 0.2 to 1.0 increased the ratio of corrected to uncorrected wavefront RMS from 0.723 to 1.746. At the higher gain the correction amplified the disturbance.</li><li>Increasing the photon count from 1,000 to 100,000 per subaperture reduced the RMS error of the accepted spot positions from 0.199 to 0.0194 pixels.</li><li>In the 8 m MCAO model, 63.5% of the on-axis H-band light fell within 50 milliarcseconds. Tomography accounted for about half of the residual variance.</li></ul><p><a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/main/docs/design-decisions.md">Read my design decisions →</a></p></section>
 <section aria-labelledby="reading-title" class="reading-list"><h2 id="reading-title">Three questions from the simulation</h2>
