@@ -2,25 +2,26 @@
 
 This Python model follows atmospheric wavefronts through a Shack–Hartmann
 sensor and a single-conjugate adaptive optics loop. The experiments vary
-detector noise, reconstruction, and feedback to measure the resulting
-wavefront error and image quality.
+detector noise, reconstruction and feedback, and measure what each does to
+the wavefront error and the image quality.
 
 [AO Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/) shows
-recorded simulations and case studies. The models use published information
-and synthetic assumptions; they have not been calibrated against a real
-instrument.
+recorded simulations and case studies. The models are built from published
+information and synthetic assumptions; none of them has been calibrated
+against a real instrument.
 
 ## Branch status
 
-This is an experimental computation-service branch, not the current package
-release. It has not incorporated the component repairs now on `main`.
-Its October checks apply to the recorded source versions only. See
+This branch carries the experimental computation service, not the current
+package release. It has not picked up the component repairs that are now on
+`main`, and the checks recorded here in October 2026 apply only to the source
+versions they were run on. Read the
 [version and validation scope](docs/research/ao_dynamic_v1/STATUS.md) before
 using it for new results. No public computation service is hosted.
 
 ## Install
 
-Requires Python 3.10 or later. From the repository directory:
+You need Python 3.10 or later. From the repository directory:
 
 ```bash
 python3 -m venv .venv
@@ -28,10 +29,10 @@ source .venv/bin/activate
 python -m pip install .
 ```
 
-On Windows, activate with `.venv\Scripts\activate` instead. To edit the
-package locally, use `python -m pip install -e .`.
+On Windows, activate with `.venv\Scripts\activate` instead. If you plan to
+edit the package, use `python -m pip install -e .`.
 
-The native backend uses NumPy and SciPy. Optional installs:
+The native backend only needs NumPy and SciPy. Two optional extras:
 
 ```bash
 python -m pip install '.[hcipy]'       # HCIPy optical backend
@@ -47,12 +48,13 @@ python examples/run_psf_strehl_demo.py
 ```
 
 The detector example runs a synthetic 2 m SCAO configuration and writes
-`detector_level_demo_output/detector_level_demo.json`. The other examples
-write plots and tables under `outputs/examples/detector_level_SCAO/`.
-Set `AO_DEMO_OUTPUT_DIR` to choose another output directory.
+`detector_level_demo_output/detector_level_demo.json`. The other two write
+plots and tables under `outputs/examples/detector_level_SCAO/`; set
+`AO_DEMO_OUTPUT_DIR` if you want them somewhere else.
 
-The PSF example compares a prescribed phase map with a scaled copy of it;
-it illustrates wavefront error and image quality without running a control loop.
+The PSF example compares a prescribed phase map with a scaled copy of itself.
+It shows the link between wavefront error and image quality without running
+a control loop.
 
 ## Use from Python
 
@@ -67,18 +69,19 @@ print("Frames:", history.n_steps)
 print("Residual RMS (nm):", history.post_update_residual_opd_rms_m * 1e9)
 ```
 
-Profiles, detector presets and their source information are included in
-`src/shwfs_ao/resources/`. Profile names and versions are explicit so a
-saved configuration can be loaded again. OPD is in metres internally;
-wavelengths are also in metres. The example above prints the residual after
-each command update. Explorer image metrics may refer to the wavefront
-before that update, as labelled on the site.
+Profiles, detector presets and their source information are packaged under
+`src/shwfs_ao/resources/`. Profile names and versions are explicit, so a saved
+configuration can always be loaded again. Both OPD and wavelength are stored
+in metres. The example above prints the residual after each command update;
+the Explorer's image metrics may refer to the wavefront before that update,
+as labelled on the site.
 
 ## Optional computation service
 
 `scripts/ao_dynamic/service.py` runs new seeded 2 m experiments for the
-Explorer generation panel. See the [setup guide](docs/research/ao_dynamic_v1/DEPLOYMENT.md)
-for a local preview with a separate website checkout. No public service is hosted.
+Explorer's generation panel. The [setup guide](docs/research/ao_dynamic_v1/DEPLOYMENT.md)
+explains how to preview it locally with a separate website checkout. No public
+service is hosted.
 
 ## Files
 
@@ -87,9 +90,9 @@ for a local preview with a separate website checkout. No public service is hoste
 - `build_support/`: packaging helpers for the resource compatibility alias.
 - `pyproject.toml` and `MANIFEST.in`: installation and source-package contents.
 
-Explorer files are maintained on the
+The Explorer itself is maintained on the
 [`website` branch](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/tree/website),
-which includes preview and publication instructions.
+which has its own preview and publication instructions.
 
-Code is released under the [MIT licence](LICENSE). Third-party data retain
-the terms listed in [DATA_LICENSES.md](DATA_LICENSES.md).
+The code is under the [MIT licence](LICENSE). Third-party data keep the terms
+listed in [DATA_LICENSES.md](DATA_LICENSES.md).
