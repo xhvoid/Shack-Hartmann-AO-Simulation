@@ -1,0 +1,52 @@
+name: Publish reviewed AO case studies
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-cases-50a8d2b.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: explorer-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out the reviewed website commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: 50a8d2bad46cbee3d3080548373b3161c8e12338
+          persist-credentials: false
+      - name: Check published data bindings
+        run: python3 tools/check_bindings.py --web-dir site
+      - name: Configure Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: site
+      - name: Verify that the reviewed commit is still the website branch head
+        shell: bash
+        run: |
+          git ls-remote --exit-code https://github.com/xhvoid/Shack-Hartmann-AO-Simulation.git refs/heads/website > "$RUNNER_TEMP/website-head"
+          read -r current_sha current_ref < "$RUNNER_TEMP/website-head"
+          test "$current_ref" = refs/heads/website
+          test "$current_sha" = 50a8d2bad46cbee3d3080548373b3161c8e12338
+          test "$(git rev-parse HEAD)" = "$current_sha"
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
