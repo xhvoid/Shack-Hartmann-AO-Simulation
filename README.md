@@ -16,6 +16,8 @@ I modelled a Shack–Hartmann loop to follow a measurement from the detector to 
 
 - In the 8 m MCAO model, 63.5% of the on-axis H-band light fell within 50 milliarcseconds. Tomography accounted for about half of the residual variance.
 
+[Compare the 2 m loop with TIPTOP](docs/scao-comparison/README.md)
+
 ## Scientific results
 
 ### Closed-loop correction

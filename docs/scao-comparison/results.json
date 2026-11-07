@@ -1,0 +1,37 @@
+{
+  "time_domain": [
+    {
+      "realization": 0,
+      "rms_nm": 391.40093417629697,
+      "strehl": 0.2565926369746117,
+      "tilt_rms_nm": 325.21653176101495
+    },
+    {
+      "realization": 1,
+      "rms_nm": 360.7061588943072,
+      "strehl": 0.3418956831523777
+    },
+    {
+      "realization": 2,
+      "rms_nm": 256.6502689978184,
+      "strehl": 0.4192760461381323
+    }
+  ],
+  "tiptop": [
+    {
+      "field_pixels": 192,
+      "rms_nm": 154.09933097787118,
+      "strehl": 0.71474
+    },
+    {
+      "field_pixels": 384,
+      "rms_nm": 154.47646362342869,
+      "strehl": 0.70955
+    }
+  ],
+  "versions": {
+    "astro-tiptop": "1.5.1",
+    "astro-p3": "1.6.2",
+    "mastsel": "1.5.2"
+  }
+}
