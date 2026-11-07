@@ -1,14 +1,20 @@
 # Shack-Hartmann AO Simulation
 
-A Shack–Hartmann sensor measures how far each lenslet spot moves. In this
-Python simulation, the controller uses those displacements to drive a
-deformable mirror. The residual wavefront determines the shape of a star’s
-image, its point spread function (PSF).
+I modelled a Shack–Hartmann loop to follow a measurement from the detector to the science image. The sensor measures spot displacements, the reconstructor converts them into mirror commands, and the residual wavefront sets the shape of the point-source image.
 
-AO Explorer follows a 2 m loop frame by frame. It also shows where a
-2.2 m loop lost lock and how gain and delay affected a historical 42 m design.
+[Open AO Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/) · [Design decisions](docs/design-decisions.md) · [Run an example](#run-an-example)
 
-[Install](#install) · [Run an example](#run-an-example) · [Open AO Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/)
+## What the simulations show
+
+- In the 2.2 m loop, reconstruction stopped at 0.981 s as spots dropped out. I increased the TSVD cutoff from 0.001 to 0.05 and replayed the same atmosphere. All 1,500 frames reconstructed over two seconds and the mirror stayed within its stroke limits.
+
+- At 1.65 µm, moving the science target from the guide star to 20 arcsec away lowered the long-exposure Strehl from 0.448 to 0.338. I used the same mirror commands for both targets.
+
+- With two frames of delay, raising the loop gain from 0.2 to 1.0 increased the ratio of corrected to uncorrected wavefront RMS from 0.723 to 1.746. At the higher gain the correction amplified the disturbance.
+
+- Increasing the photon count from 1,000 to 100,000 per subaperture reduced the RMS error of the accepted spot positions from 0.199 to 0.0194 pixels.
+
+- In the 8 m MCAO model, 63.5% of the on-axis H-band light fell within 50 milliarcseconds. Tomography accounted for about half of the residual variance.
 
 ## Scientific results
 
@@ -235,12 +241,11 @@ example converts the post-update residual to nanometres for display.
 The Explorer images use the wavefront **before** the next mirror update.
 Each recording lists its own settings and exposure window.
 
-## Scope and evidence
+<a id="scope-and-evidence"></a>
 
-The simulations use idealized pupils, mirror influence functions and
-detector responses. The 42 m study follows the historical E-ELT design.
-The current ELT design has a 39 m primary. Segment phasing and calibration
-against on-sky telemetry are outside the scope of these models.
+## Limitations
+
+The telescope pupils, mirror influence functions and detector responses are models. The 2.2 m repair was tested on one matched two-second trajectory. Its recovery safeguard stayed inactive. The 42 m pupil follows the historical E-ELT design. Segment phasing and calibration against on-sky telemetry are separate instrument problems.
 
 - [Model conventions and sources](docs/methods.md)
 - [Component checks, numerical repairs and remaining limits](docs/verification-summary.md)
