@@ -362,7 +362,7 @@ function renderNotes() {
   const sc = g.scene.scene; const pr = sc.product; const h = pr.header; const q = sc.quality; const t = sc.target;
   const w = g.manifest.display.window; const res = sc.observational_psf.indicative_resolution;
   const fmt = (v, d = 0) => Number(v).toFixed(d);
-  $("galaxy-label").textContent = `I convolved an HST/WFC3 F814W image of NGC 1705 (LEGUS) with the simulated 1.65 µm PSFs, keeping its angular scale. Hubble’s original resolution and noise remain. This illustration applies one on-axis PSF across the ${fmt(w.extent_arcsec, 1)}″ field; it uses relative flux and adds no noise.`;
+  $("galaxy-label").textContent = `I convolved an HST image of NGC 1705 with the uncorrected and corrected 1.65 µm PSFs. The panels show the central ${fmt(w.extent_arcsec, 1)}″. Start with the HST/WFC3 F814W image on the left, then compare how far each PSF spreads the light from the compact sources.`;
   $("galaxy-source-caption").textContent = `HST F814W morphology at angular scale 1.0 (one cell = ${fmt(w.cell_mas, 1)} mas), north up, east left; fixed for every sample and case. White bar: ${g.manifest.display.scale_bar_arcsec}″. Dashed box: enlarged envelope around the saturated core of NGC 1705-1 (the saturated values are unreliable).`;
   const rows = [
     ["Data product", `<a href="${escapeHtml(pr.url)}" rel="noopener">${escapeHtml(pr.name)}</a> (${escapeHtml(pr.version)}, ${escapeHtml(pr.collection)}); SHA-256 <code>${pr.sha256.slice(0, 16)}…</code>; retrieved ${escapeHtml(pr.retrieved_utc)}`],
@@ -383,11 +383,11 @@ function renderNotes() {
 <p class="table-title" id="galaxy-table-title">Observed template: source and preparation</p>
 <div class="table-scroll" role="region" tabindex="0" aria-labelledby="galaxy-table-title"><table aria-labelledby="galaxy-table-title"><tbody>${rows.map((r) => `<tr><th scope="row">${r[0]}</th><td class="shape">${r[1]}</td></tr>`).join("")}</tbody></table></div>
 <ul>
-<li>Each image is the exact linear convolution of the fixed template with one saved PSF (zero-padded FFT, no wraparound), cropped to the native window by coordinates without renormalization; the template extends to twice the PSF window so light from outside the field still reaches it. All ${FRAMES()} instantaneous PSF pairs were convolved and kept at full precision; sampled mode shows ${SAMPLES()} of them (${escapeHtml(g.manifest.time_domain.display_rule)}). Mean mode uses the saved ${COUNT()}-frame mean PSFs of frames ${START()}–${FRAMES() - 1}, which for the fixed template equals the mean of the ${COUNT()} corresponding observations.</li>
-<li>The prepared numerical template is reused unchanged (identity <code>${escapeHtml(g.manifest.template_reuse.scene_id.slice(0, 16))}…</code>, array SHA-256 <code>${escapeHtml(g.manifest.template_reuse.template_array_sha256.slice(0, 16))}…</code>); the HST products were not re-read for this dataset.</li>
-<li>Response: the output keeps Hubble's effective F814W response and noise, adds the cell response of the reprojection once, and adds the simulated PSF. The AO-corrected panel cannot recover detail absent from the Hubble image.</li>
-<li>The template is a science-channel scene only: the guide source, wavefront-sensor inputs and controller are those of the recorded run. Template identity <code>${sc.scene_id.slice(0, 16)}…</code>, distinct from the binary scene.</li>
-${g.manifest.limitations.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}
+<li>I used a template twice the width of the output window so that light from outside the displayed field could enter it. I calculated the linear convolution before cropping. The replay shows ${SAMPLES()} of the ${FRAMES()} frames. For the mean image I used all ${COUNT()} PSFs in frames ${START()}–${FRAMES() - 1}.</li>
+
+<li>Both output images retain Hubble’s F814W resolution and noise. I used the same on-axis PSF across the cutout for each exposure.</li>
+<li>The wavefront sensor used a separate guide source. I applied the PSFs to NGC 1705 after running the loop.</li>
+
 </ul>
 <p>Credit: ${escapeHtml(g.manifest.credit)} Visual reference only (not the numerical input): <a href="${escapeHtml(v.url)}" rel="noopener">${escapeHtml(v.title)}</a>, ${escapeHtml(v.credit)}.</p>
 <p>Data references:</p>

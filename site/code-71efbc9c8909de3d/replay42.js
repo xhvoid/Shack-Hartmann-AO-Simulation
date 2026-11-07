@@ -84,7 +84,7 @@ async function show(next, {speak=false}={}) {
     readout.textContent=`Frame ${k} / 499 · ${time} / 1.000 s · ${inWindow?'analysis window':'startup exclusion'} · recorded snapshot ${index+1} / 126`;
     readout.dataset.frame=String(k);readout.dataset.mode=mode;
     $('photo-readout').textContent=mean?'400-frame intensity mean · 0.200–1.000 s · same image mode as the PSF panels':`Recorded instantaneous images · frame ${k} · ${time} s`;
-    $('mode-note').textContent=(mean?`PSFs and binary images: mean intensity of all 400 frames 100–499 (not only the snapshots). Wavefronts and RMS: frame ${k}. `:`All wavefronts, PSFs and binary images: recorded frame ${k}. `)+`Image field ${data.field_arcsec.toFixed(3)}″ × ${data.field_arcsec.toFixed(3)}″; native sampling ${(data.step_arcsec*1000).toFixed(2)} mas.`;
+    $('mode-note').textContent=(mean?`The PSFs and binary images average all 400 frames from 100 to 499. The wavefronts and RMS show frame ${k}. `:`All wavefronts, PSFs and binary images: recorded frame ${k}. `)+`Image field ${data.field_arcsec.toFixed(3)}″ × ${data.field_arcsec.toFixed(3)}″; native sampling ${(data.step_arcsec*1000).toFixed(2)} mas.`;
     charts();
     $('status').textContent='';
     if(speak&&!playing)announce(k);
@@ -156,7 +156,7 @@ async function load(entry,entryUrl) {
     $('mean-rms-u').textContent=`${data.mean_rms_nm.atmosphere.toFixed(1)} nm`;$('mean-rms-c').textContent=`${data.mean_rms_nm.residual.toFixed(1)} nm`;$('mean-strehl').textContent=`≈ ${data.mean_peak_strehl.corrected.toFixed(2)}`;
     const replayRms=document.getElementById('c1-replay-rms');if(replayRms)replayRms.textContent=`${data.mean_rms_nm.residual.toFixed(1)} nm`;
     $('config-hash').textContent=data.config_hash;
-    $('checks').textContent=`Archive and reduction checks: RMS and timestamps match the same loop history. Two intensity-averaging paths use the same wavefront samples and propagator and agree; this checks frame selection and accumulation. Saved-map, convolution-alignment and flux checks passed. ${data.trajectory_quality.unusable_reconstruction_frames} unusable reconstruction frames; maximum DM saturation fraction ${(data.trajectory_quality.max_dm_saturation_fraction*100).toFixed(3)}%. A separate eight-step check found that recording diagnostics did not change the loop history. The eight-step comparison addresses observer passivity; the full recording retains its original producer.`;
+    $('checks').textContent=`I checked the RMS and timestamps against the loop history and computed the mean intensity by two accumulation paths. The run had ${data.trajectory_quality.unusable_reconstruction_frames} rejected reconstructions. The largest clipped actuator fraction was ${(data.trajectory_quality.max_dm_saturation_fraction*100).toFixed(3)}%.`;
     for(const [label,name] of [['Source provenance','evidence/source.json'],['Linear template','evidence/binary-template.npz'],['Mean convolved images','evidence/binary-mean.npz']])download('source-downloads',label,name);
     for(const [label,name] of [['Public run plan','evidence/plan.json'],['Run summary','evidence/run-summary.json'],['All frame metrics','data.json'],['Export checks','evidence/export-checks.json'],['Source and archive identities','evidence/publication.json']])download('downloads',label,name);
     colourbars();loaded=true;await show(data.indices.indexOf(100));

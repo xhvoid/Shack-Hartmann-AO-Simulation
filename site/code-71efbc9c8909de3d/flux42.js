@@ -109,20 +109,20 @@ export function initFlux42(entry, entryUrl) {
       rows.push(['Peak Strehl of the mean image (2.2 µm)', img.bright.peak_strehl.toFixed(4), img.faint.peak_strehl.toFixed(4), signed(img.faint.peak_strehl - img.bright.peak_strehl, 4)]);
       rows.push(['Fourier-reference EE50 (λ/D)', img.bright.fourier_ee50_lambda_over_d.toFixed(4), img.faint.fourier_ee50_lambda_over_d.toFixed(4), signed(img.faint.fourier_ee50_lambda_over_d - img.bright.fourier_ee50_lambda_over_d, 4)]);
     } else {
-      rows.push(['Mean-image metrics', { text: 'Not recorded for 1.0–2.0 s alone: no image was averaged over this window, and whole-window values are not subtracted to make one.', colspan: 3, className: 'studies42-na' }]);
+      rows.push(['Mean-image metrics', { text: 'Images are available for 0.2–1.0 s and 0.2–2.0 s.', colspan: 3, className: 'studies42-na' }]);
     }
     tableRows(node('table-body'), rows);
   }
 
   function details() {
     const s = data.summaries, c = data.changes, img = data.images;
-    node('lead').textContent = `Over 0.2–1.0 s the faint run's residual averages ${s.early.faint_minus_bright_mean_nm.toFixed(1)} nm more than the bright run's; over 1.0–2.0 s the gap is ${s.late.faint_minus_bright_mean_nm.toFixed(1)} nm. From the first to the second window, the bright mean changes by ${signed(c.bright_late_minus_early_nm, 2)} nm and the faint mean by ${signed(c.faint_late_minus_early_nm, 1)} nm.`;
-    node('changes').textContent = `Change of the window mean from 0.2–1.0 s to 1.0–2.0 s: bright ${signed(c.bright_late_minus_early_nm, 6)} nm, faint ${signed(c.faint_late_minus_early_nm, 6)} nm; difference in changes ${signed(c.difference_in_changes_nm, 6)} nm. Last-50-frame means (frames 450–499 → 950–999): bright ${data.last50.bright_nm[0].toFixed(2)} → ${data.last50.bright_nm[1].toFixed(2)} nm, faint ${data.last50.faint_nm[0].toFixed(2)} → ${data.last50.faint_nm[1].toFixed(2)} nm.`;
+    node('lead').textContent = `From 0.2 to 1.0 s, the faint run had ${s.early.faint_minus_bright_mean_nm.toFixed(1)} nm more mean residual RMS than the bright run. From 1.0 to 2.0 s the difference grew to ${s.late.faint_minus_bright_mean_nm.toFixed(1)} nm. The bright mean stayed near ${s.early.bright_mean_nm.toFixed(0)} nm while the faint mean rose from ${s.early.faint_mean_nm.toFixed(0)} to ${s.late.faint_mean_nm.toFixed(0)} nm.`;
+    node('changes').textContent = `I also compared the last 50 frames of each second. The bright mean rose from ${data.last50.bright_nm[0].toFixed(1)} to ${data.last50.bright_nm[1].toFixed(1)} nm. The faint mean rose from ${data.last50.faint_nm[0].toFixed(1)} to ${data.last50.faint_nm[1].toFixed(1)} nm.`;
     tableRows(node('exact-body'), Object.keys(WINDOWS).map((key) => [WINDOW_TEXT[key], s[key].bright_mean_nm.toFixed(6), s[key].faint_mean_nm.toFixed(6), signed(s[key].faint_minus_bright_mean_nm, 6)]));
     tableRows(node('image-body'), ['early', 'full'].flatMap((key) => ['bright', 'faint'].map((run) => [
       `${run === 'bright' ? 'Bright' : 'Faint'} · frames ${img[key].frames[0]}–${img[key].frames[1] - 1}`,
       img[key][run].peak_strehl.toFixed(6), img[key][run].fourier_ee50_lambda_over_d.toFixed(6), img[key][run].production_ee50_lambda_over_d.toFixed(6)])));
-    node('identity').textContent = `Display bundle ${bundle.id} (identity of the generated files, not of the scientific source). Source identities, input SHA-256 values and the exporter version are in provenance.json.`;
+    node('identity').textContent = `Data bundle ${bundle.id}.`;
     addDownloads(node('downloads'), bundle, [['Per-frame values (CSV)', 'frames.csv'], ['Data (JSON)', 'data.json'], ['Provenance (JSON)', 'provenance.json'], ['About this bundle', 'README.md'], ['Exporter (Python)', 'exporter.py']]);
   }
 

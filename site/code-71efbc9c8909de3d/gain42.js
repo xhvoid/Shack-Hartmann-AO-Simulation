@@ -151,7 +151,7 @@ export function initGain42(entry,entryUrl) {
     tableRows(node('late-body'),[.3,.2].map(g=>{const s=record(g).history_summary;return [`Gain ${g}`,...['early_mean_nm','late_mean_nm','final_block_mean_nm','final50_mean_nm','late_minus_early_nm'].map(k=>s[k].toFixed(4)),`${s.frames_valid_below_0_995}`,`${s.valid_min.toFixed(6)} · frame ${s.valid_min_frame}`];}));
     node('late-caption').textContent=`r${realization} · configured controller queue delay ${delay} · residual values in nm; validity count over [100,500)`;
     const w=record(imageGain).windowed_images;
-    node('window-status').textContent=w.status==='unavailable'?w.reason:'Available for the six new gain-0.2 runs. Values come from the saved analysis and diagnostic summaries; the large image arrays remain in the source archive.';
+    node('window-status').textContent=w.status==='unavailable'?'Only the full-exposure image is available at gain 0.3.':'Each row gives the Strehl of the image averaged over that frame window.';
     tableRows(node('window-body'),['100_300','300_400','400_500'].map(k=>[k.replace('_','–')+' (half-open)',w.status==='available'?w.values[k].peak_strehl.toFixed(6):'Unavailable',w.status==='available'?`${w.values[k].samples}`:'Not recorded']));
     setFrame(frame);
   }
@@ -176,9 +176,9 @@ export function initGain42(entry,entryUrl) {
       node('content').hidden=false;
       tableRows(node('whole-body'),data.records.map(r=>[`${r.gain}`,`${r.delay}`,`r${r.realization}`,`${r.source}${r.attempt===2?' · attempt 2':''}`,...Object.keys(METRICS).map(k=>r.metrics[k].toFixed(METRICS[k].digits))]));
       plots();late();enable();
-      node('identity').textContent=`Bundle ${bundle.id}. Scientific producer ${data.source.producer_commit}. Analysis ${ANALYSIS}. Evidence closing addendum ${data.source.closing_addendum}.`;
+      node('identity').textContent=`Data bundle ${bundle.id}.`;
       addDownloads(node('downloads'),bundle,[['Methods and limitations','README.md'],['GL-R01 / GL-R02 corrections','CORRECTIONS.md'],['All display values','data.json'],['Recorded traces (CSV)','frames.csv'],['Source identities and hashes','provenance.json'],['Offline exporter','exporter.py']]);
-      node('status').textContent='Twelve records verified: six new, six reused. Residual summaries and paired statistics agree with the saved values.';
+      node('status').textContent='Three paired atmospheres, four controller settings.';
     })().catch(error=>{
       node('content').hidden=true;node('error').hidden=false;node('error').textContent=`Gain–delay study unavailable: ${error.message}. No values from this study are shown. Reload to retry.`;node('status').textContent='The gain–delay records could not be verified.';
       for(const e of root.querySelectorAll('input,select,button'))e.disabled=true;

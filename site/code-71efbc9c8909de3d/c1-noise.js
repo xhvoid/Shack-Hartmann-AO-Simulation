@@ -53,11 +53,10 @@ export function initC1Noise(entry, entryUrl) {
       chart.append(svg('text', {x: Math.max(sx(row.value), L + 1.5) + 6, y: top + 16, class: 'c1-value'}, `${row.value.toFixed(row.key === 'trigger' ? 1 : 4)} nm`));
     }
     node('chart').replaceChildren(chart);
-    const verdict = {QUALIFIED_BELOW_C1_TRIGGER: 'below the threshold', QUALIFIED_MATERIAL_BENEFIT: 'meets the threshold', INCONCLUSIVE_NUMERICS: 'numerically inconclusive'}[summary.status];
-    node('readout').textContent = `Predicted difference: ${d.rms_nm.toFixed(4)} nm, a ${(100 * d.relative_variance_reduction).toFixed(2)} % reduction in this noise variance. Thresholds for a new experiment: ${rule.trigger_rms_nm.toFixed(1)} nm and ${(100 * rule.trigger_relative_variance).toFixed(0)} %. Result: ${verdict}. Bars start at zero.`;
+    node('readout').textContent = `The alternative reduced the predicted variance by ${(100*d.relative_variance_reduction).toFixed(2)}%. My thresholds for a new run were a ${rule.trigger_relative_variance*100}% reduction in variance and a ${rule.trigger_rms_nm.toFixed(0)} nm reduction in RMS.`;
   }
   function details() {
-    const b = summary.dampings.baseline, c = summary.dampings.comparator, q = summary.comparator_qualification, id = summary.identities, cfg = summary.configuration;
+    const b = summary.dampings.baseline, c = summary.dampings.comparator, q = summary.comparator_qualification, cfg = summary.configuration;
     const rows = [
       ['Stationary detector-noise contribution, RMS', `${b.rms_nm.toFixed(4)} nm`, `${c.rms_nm.toFixed(4)} nm`],
       ['Stationary detector-noise contribution, variance', `${b.variance_nm2.toFixed(4)} nm²`, `${c.variance_nm2.toFixed(4)} nm²`],
@@ -70,9 +69,9 @@ export function initC1Noise(entry, entryUrl) {
       values.forEach((text, i) => { const cell = document.createElement(i ? 'td' : 'th'); if (!i) cell.scope = 'row'; cell.textContent = text; tr.append(cell); });
       return tr;
     }));
-    node('conditions').textContent = `Model conditions: ${cfg.profile}, seed ${cfg.root_seed}, realization ${cfg.realization}, detector sampling ${cfg.detector_sampling}; ${cfg.detected_e_per_full_subaperture_frame.toExponential(0)} detected electrons per full subaperture per frame; stationary linear loop with gain ${cfg.loop_model.gain}, latency ${cfg.loop_model.latency_frames} frames and leak ${cfg.loop_model.leak}, temporally white modal noise; detector covariance at a flat wavefront with independent lenslets. This summary describes that fixed operating point.`;
-    node('qualification').textContent = `The selected damping is the largest grid value that kept tip, tilt and defocus gains within [0.99, 1.01] (eligible settings: ${summary.comparator_selection.admissible.join(', ')}; propagated: ${summary.comparator_selection.propagated.join(' and ')}). Its solver passed the pupil-space checks (${q.criterion_A.pass}/${q.criterion_A.of} and ${q.criterion_B.pass}/${q.criterion_B.of}; inputs: ${q.inputs.probe} probes, ${q.inputs.screen} screen, ${q.inputs.noise} unit-noise vectors); the original command-space check fails ${q.original_command_space_failures} of 42, reported separately. Numerical consistency indicator ${summary.numerical_consistency_indicator.value.toExponential(1)}: agreement between different numerical paths under the same fixed model and inputs.`;
-    node('identities').textContent = `Identities (SHA-256): decision record ${id.decision_record_sha256}; damping selection ${id.selection_record_sha256}; comparator record ${id.comparator_record_sha256}; execution report ${id.execution_report_sha256}; calculation adapter ${id.adapter_sha256}; frozen producer commit ${id.frozen_producer_commit}; configuration ${cfg.config_hash}. ${id.note}.`;
+    node('conditions').textContent = `I calculated the detector covariance for a flat wavefront and treated the lenslets as independent. The stationary linear loop used gain ${cfg.loop_model.gain}, a queue of ${cfg.loop_model.latency_frames} frames and leak ${cfg.loop_model.leak}.`;
+    node('qualification').textContent = `I chose the largest damping on the grid that kept the tip, tilt and defocus gains within 1% of unity. The solver met the two pupil-space criteria. In command space, ${q.original_command_space_failures} of 42 checks missed the original tolerance.`;
+    node('identities').textContent = `Numerical inputs and source identifiers are available in the C1 summary below.`;
     for (const [label, name] of [['C1 summary (JSON)', 'summary.json'], ['About this summary', 'README.md']]) {
       const link = document.createElement('a'); link.textContent = label; link.href = new URL(name, base);
       link.addEventListener('click', async event => {

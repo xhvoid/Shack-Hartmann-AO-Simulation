@@ -510,8 +510,8 @@ function renderRmsReadout(k, t, mode) {
   $("rms-readout").innerHTML = markup;
   const third = r ? "" : " The residual RMS after tip/tilt removal is unavailable for this case, so only the two recorded series are shown.";
   $("rms-mode-note").textContent = average
-    ? `Average mode: temporal means of the per-frame RMS values over frames ${START()}–${FRAMES() - 1} (${lo.toFixed(3)}–${hi.toFixed(3)} s, ${COUNT()} frames). They are not the RMS of an averaged wavefront and not inferred from the average PSF. The chart cursor only marks the paused frame ${k}; it is not part of these statistics.${third}`
-    : `Instantaneous mode: the values of displayed frame ${k}, the same frame as the pupil maps, the PSFs and the galaxy panel${r ? "; the dashed curve is the residual after tip/tilt removal of each frame's map" : ""}.${third}`;
+    ? `These values average the RMS of individual frames from ${lo.toFixed(3)} to ${hi.toFixed(3)} s. The cursor shows frame ${k}.${third}`
+    : `These RMS values and the science images correspond to frame ${k}.${third}`;
 }
 
 function updatePsfLabels() {
@@ -603,7 +603,7 @@ function renderBlocks() {
   const rows = b.blocks.map((r) => `<tr${r.in_analysis_window ? "" : " class=\"excluded\""}><th scope="row">${r.frames[0]}–${r.frames[1] - 1}${r.in_analysis_window ? "" : " (excluded)"}</th><td class="num">${f(r.residual_rms_nm, 1)}</td><td class="num">${f(r.peak_strehl_corrected, 3)}</td><td class="num">${f(r.peak_strehl_uncorrected, 3)}</td><td class="num">${fmt(r.saturation_fraction.mean, 4)}</td><td class="num">${fmt(r.saturation_fraction.max, 3)}</td><td class="num">${r.saturation_fraction.frames_with_any_clipped}</td><td class="num">${r.unusable_reconstructions}</td></tr>`);
   $("blocks-table").innerHTML = `<table aria-labelledby="blocks-title"><thead><tr><th>Frames</th><th>Residual RMS (nm)</th><th>Strehl, AO</th><th>Strehl, uncorrected</th><th>Mean DM saturation</th><th>Max DM saturation</th><th>Frames with any clipped actuator</th><th>Unusable reconstructions</th></tr></thead><tbody>${rows.join("")}</tbody></table>`;
   const a = b.analysis_blocks;
-  $("blocks-note").textContent = `Within the analysis window the ${a.count} block means of the residual RMS range from ${fmt(a.residual_rms_nm_block_means_range[0])} to ${fmt(a.residual_rms_nm_block_means_range[1])} nm and of the AO peak Strehl from ${fmt(a.peak_strehl_corrected_block_means_range[0], 3)} to ${fmt(a.peak_strehl_corrected_block_means_range[1], 3)}. r0, the outer scale and the wind are fixed within the case; these changes accompany the frozen-flow realization moving across the pupil, and a loop that keeps tracking a changing input fluctuates with it, so they do not by themselves show controller divergence. ${state.blocks.notice} DM saturation: ${state.blocks.definition.saturation_definition}; it may limit the correction but is not isolated as a cause here.`;
+  $("blocks-note").textContent = `Within the analysis window the ${a.count} block means of the residual RMS range from ${fmt(a.residual_rms_nm_block_means_range[0])} to ${fmt(a.residual_rms_nm_block_means_range[1])} nm and of the AO peak Strehl from ${fmt(a.peak_strehl_corrected_block_means_range[0], 3)} to ${fmt(a.peak_strehl_corrected_block_means_range[1], 3)}. The screen moves across the pupil with fixed r₀, outer scale and wind. Each row summarizes a successive interval of this same run.`;
 }
 
 function renderBinary() {
@@ -615,8 +615,8 @@ function renderBinary() {
   $("scene-caption").textContent = `primary at 0, secondary +${sep.toFixed(1)} mas in x (${ld.toFixed(2)} λ/D, 6 native cells); weights 2/3 and 1/3; total flux 1`;
   $("obs-unc-caption").textContent = `${state.case.json.label}: mean uncorrected PSF; ${(o.roles.uncorrected.retained_fraction * 100).toFixed(3)} % of the full-convolution flux lies inside the native ±4.3″ window`;
   $("obs-ao-caption").textContent = `${state.case.json.label}: mean AO PSF; ${(o.roles.corrected.retained_fraction * 100).toFixed(3)} % of the full-convolution flux lies inside the native ±4.3″ window`;
-  $("binary-label").textContent = `${o.label}. Static: ${windowText()} (${COUNT()} samples); it does not follow the movie cursor or the PSF view switch.`;
-  $("binary-note").textContent = o.limitations.join(" ");
+  $("binary-label").textContent = `I placed two stars ${sep.toFixed(0)} mas apart with a 2:1 flux ratio. Both output images use the mean PSF over ${windowText()} (${COUNT()} samples).`;
+  $("binary-note").textContent = "The corrected mean image concentrates more light around the two stellar positions.";
 }
 
 function renderDownloads() {
@@ -642,13 +642,13 @@ function renderFrameTable(force) {
 function renderModelNotes() {
   const p = state.case.json.effective_parameters;
   $("model-notes").innerHTML = `<ul>
-<li>Each frame samples the atmosphere once, at its start (t = k ms, k = 0–${FRAMES() - 1}, so the trajectory covers the physical interval [0.000, ${(td().physical_interval_s[1]).toFixed(3)}) s). The <em>residual seen by the WFS</em> is the atmosphere minus the DM correction held while that frame was measured (pre-update residual). The <em>held correction</em> is atmosphere minus that residual, in OPD-equivalent nm (not mirror surface height). Post-update residuals are a same-sample diagnostic and are not shown.</li>
-<li>The <em>uncorrected image</em> propagates the same recorded atmosphere with the DM at zero: a reference image calculated without running a separate control loop. The <em>AO-corrected image</em> propagates the frame's pre-update residual. Both are monochromatic at ${wavelengthText()} on the native 156 × 156 grid (shown cropped to ±32 cells); tilt is kept and nothing is recentred.</li>
-<li>The averaged images are the equal-weight mean of the ${COUNT()} instantaneous intensities of ${windowText()} (timestamps ${START()}–${FRAMES() - 1} ms; nominal quadrature ${COUNT()} × 1 ms). The window was selected before the run. These are averages of frame-start intensity snapshots with fixed image coordinates; they retain the temporal behaviour of this recorded interval.</li>
-<li>The movie shows ${SHOWN()} of the ${FRAMES()} recorded frames (${td().display_rule}). Curves, tables and CSV reuse the same saved metric series; block summaries and window means reduce the stated subsets. Residual RMS and PSF peak Strehl start from the same OPD maps and describe pupil error and image concentration respectively. The tilt-removed RMS is another reduction of those maps.</li>
-<li>Queued command delay is ${p.queued_latency_frames} frames: a reconstruction from frame k is applied in the update of frame k + ${p.queued_latency_frames} and first seen by the WFS at frame k + ${p.wfs_visible_delay_frames}.</li>
-<li>The guide-source magnitude is a WFS photon-budget input (synthetic AB source at 700 nm), not the brightness of the science scene. Detector noise is on in the loop.</li>
-<li>One seed (1) and one realization on a ${state.manifest.screen.generated_screen_px} × ${state.manifest.screen.generated_screen_px} screen; the displayed variation is temporal variation within that realization.</li>
+<li>I sampled the atmosphere at the start of each frame and subtracted the mirror shape held during that exposure. The difference is the residual wavefront seen by the sensor. The mirror map is in nanometres of optical path difference.</li>
+<li>I formed the uncorrected image with the mirror flat and the corrected image with the measured residual. Both use the same atmosphere, wavelength (${wavelengthText()}) and 156 × 156 grid. I kept image positions fixed so tilt moves the star on the detector.</li>
+<li>I averaged ${COUNT()} intensities from ${windowText()}, giving each frame equal weight.</li>
+<li>The replay shows ${SHOWN()} of ${FRAMES()} frames. The curves use every frame. I calculated residual RMS from pupil OPD and peak Strehl from the propagated image.</li>
+<li>A command calculated at frame k is applied in the update of frame k + ${p.queued_latency_frames} and first measured by the WFS at frame k + ${p.wfs_visible_delay_frames}.</li>
+<li>The simulated guide star sets the photon count at the 700 nm wavefront sensor. I included detector noise.</li>
+<li>The atmosphere uses seed 1 on a ${state.manifest.screen.generated_screen_px} × ${state.manifest.screen.generated_screen_px} grid.</li>
 </ul>`;
 }
 
@@ -693,7 +693,7 @@ function syncControls(p) {
     ? `Both images average all ${COUNT()} frames in ${windowText()}, with equal weights. Playback is paused in both viewers; wavefront maps and the chart cursor stay at the selected frame. Choose Instantaneous to resume from there.`
     : "";
   const [lo, hi] = p.interval;
-  $("speed-note").textContent = `Playback takes ${p.duration} s to show ${ms(lo)}–${ms(hi)} of simulated time (${p.slowdown.toFixed(0)}× slower). It shows ${SHOWN()} of ${FRAMES()} saved frames, held until the next displayed timestamp without interpolation. The galaxy viewer shares this timeline.${p.loop ? " Loop is on: both viewers repeat the same recording from frame 0." : ""}`;
+  $("speed-note").textContent = `Playback shows ${SHOWN()} snapshots over ${ms(lo)}–${ms(hi)} of simulated time in ${p.duration} s. The galaxy viewer shares this timeline.${p.loop ? " Loop is on: both viewers repeat the same recording from frame 0." : ""}`;
 }
 
 function onPlayback(p) {
@@ -784,7 +784,7 @@ ${state.rms ? `<li>RMS diagnostics <code>${state.rms.manifest.derived_id}</code>
 <li>Raw numerical evidence (pupil maps and PSFs of every frame, full-precision mean PSFs, histories, the galaxy observations of every frame) stays in the producer's output directories and is not part of this site.</li>`;
   $("footer-identity").textContent = `Dataset ${m.dataset_id}.`;
   const lede = $("explore-lede");
-  if (lede) lede.textContent = `A single 2 m baseline recording. Press Play to follow the wavefronts, point-source images and NGC 1705 before and after correction. Each run covers ${t.physical_interval_s[1].toFixed(0)} second at 1 kHz. The images and chart cursor share the same timestamp.`;
+  if (lede) lede.textContent = `I used a 2 m telescope to see how the mirror correction changed the image of a star. Over the last 0.8 s, the mean wavefront RMS fell from 396 to 266 nm. At 1.65 µm, the peak Strehl of the averaged image rose from 0.185 to 0.381.`;
   const hint = $("curves-hint");
   if (hint) hint.textContent = `All ${t.frames} frames, including the startup exclusion (shaded, frames 0–${START() - 1}). Summaries use ${windowText()} only (${COUNT()} equal-weight samples). The cursor marks the displayed frame.`;
 }

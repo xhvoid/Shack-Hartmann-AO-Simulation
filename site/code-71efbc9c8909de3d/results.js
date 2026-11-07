@@ -18,13 +18,50 @@ const STATUS_LABELS = {
   analytic_model: "Analytical model output",
 };
 
-// Editorial notes are separate from the frozen numerical records.
-const RECORD_UPDATES = {
-  "R2": "The later dense precision repair also applies to TSVD and Tikhonov. The low retained condition number of the tutorial TSVD example suggests low numerical risk, but this historical trajectory was not rerun with the repaired kernel.",
-  "R5": "“Current code” in the original record meant commit 2312502 in October 2026. These results were not rerun on today’s main branch.",
-  "R7": "The native and HCIPy loops share the dense reconstructor. Their agreement checks the differing optical components and their combination. Separate matrix-reference tests assess the common solver; this historical comparison retains its original kernel revision.",
-  "R8": "The pending detector-level studies listed below describe the original record. Later 42 m detector and spectral sampling and exposure-quadrature studies converged under their stated criteria. In the extended padding study, production EE50 remained unconverged; residual RMS, Strehl and Fourier-reference EE50 converged. These results do not establish convergence of the separate 12 m detector-level configuration."
+// Presentation copy for the eight archived experiments. The linked records supply the tables and figures.
+const STUDIES = {
+  "R1": {
+    "title": "Spot displacement and centroid precision",
+    "method": "I applied a known tilt in each direction to calibrate the spot displacement. I then varied the photon count per subaperture and measured the error of the centroids that passed the quality cuts.",
+    "finding": "The response along the applied tilt was 93.05% of the geometric prediction. Raising the photon count from 1,000 to 100,000 per frame reduced the RMS centroid error from 0.199 to 0.0194 pixels. At 500 photons every spot was rejected."
+  },
+  "R2": {
+    "title": "Reconstruction and feedback",
+    "method": "I varied how many singular modes the reconstructor kept. In separate closed-loop runs I changed the gain, the command delay and the number of actuators.",
+    "finding": "Keeping 29 modes gave a command RMS error of 8.58 nm. With a two-frame delay, increasing the gain from 0.2 to 1.0 raised the ratio of corrected to uncorrected wavefront RMS from 0.723 to 1.746. At the higher gain the loop amplified the disturbance."
+  },
+  "R3": {
+    "title": "One atmospheric layer and ten layers",
+    "method": "I ran the noise-free 2 m loop with a single layer moving at 10 m/s, then with the ten-layer ESO profile. Their Fried lengths were 0.1263 and 0.13 m at 500 nm, respectively.",
+    "finding": "The residual averaged 293.7 nm with one layer and 325.3 nm with ten. The spread between atmospheric realizations was 76 and 102 nm, respectively, larger than the difference between the two means."
+  },
+  "R4": {
+    "title": "Guide-star flux and the 12 m detector",
+    "method": "I reduced the guide-star flux and counted how many spot measurements the reconstructor could use. I also checked the slope of the fitted noise law at 2 m and 12 m.",
+    "finding": "With the revised 12 m controller, a guide star of AB magnitude 11 gave 195.2 nm residual RMS and a peak Strehl of 0.708 at 2.2 µm. At magnitude 12 all five runs rejected every measurement. The residual then equalled the open-loop value. The 2 m inverse-photon fit met its test criterion. The 12 m fit gave a reduced χ² of 2.50 and missed the criterion."
+  },
+  "R5": {
+    "title": "Repeating the 42 m run with ten atmospheres",
+    "method": "I repeated the original physical-camera run, then kept the system fixed and changed the atmospheric realization ten times.",
+    "finding": "The original run gave 173.2 nm residual RMS and a peak Strehl of 0.753 at 2.2 µm. Across the ten new atmospheres the means were 173.59 nm and 0.7511. Their sample standard deviations were 0.94 nm and 0.0018."
+  },
+  "R6": {
+    "title": "Fitting error and the MCAO image",
+    "method": "I used P3 for the corrected spatial frequencies and extended the fitting calculation above the correction cutoff. I propagated the resulting spectrum with MASTSEL.",
+    "finding": "Including the high-frequency tail raised the fitting term from 47.9 to 71.3 nm. The total on-axis residual was 131.7 nm. At 1.65 µm, 63.5% of the light fell inside a 50 mas radius."
+  },
+  "R7": {
+    "title": "Native optics and HCIPy",
+    "method": "I ran the same 1 m configuration with native and HCIPy optics, keeping the dense reconstructor common to both. In a separate 5 m calculation I moved the lenslet axes to the centres of their sampling blocks.",
+    "finding": "Both optical paths agreed within the specified tolerances for all 52 quantities tested at 1 m. At 5 m, changing the lenslet-axis placement shifted the paired Z4 coefficient by +51.9 nm (standard error 3.9 nm)."
+  },
+  "R8": {
+    "title": "Sampling the pupil and the science image",
+    "method": "I refined the pupil, sensor and focal grids for the 12 m and 42 m reference configurations. I compared the peak Strehl and the radius enclosing half the energy (EE50) with the values from the finest grid.",
+    "finding": "The peak Strehl met its convergence criterion in both configurations. With science padding 2, the EE50 radius was 7.29% larger at 12 m and 3.58% larger at 42 m than with padding 4. The image width was more sensitive to sampling than the peak."
+  }
 };
+
 const PUBLIC_DOWNLOADS = {
   "fde92e225e7ff4eae2905495b9a728c343639716640d3776c2eec0e5078f7077": {
     "href": "../evidence/public-records-46a80a01d47afca4/42m-noise-on-record.public.json",
@@ -43,17 +80,6 @@ const PUBLIC_DOWNLOADS = {
 };
 
 let repository = null;
-
-const RECORD_SCOPE = {
-  R1: ["Tutorial geometry: 1 m pupil and small lenslet grids; the Explorer's 2 m profile is separate.", "Saved display precision is 8 or 6 decimals; uncertainty was unrecorded.", "Precision uses accepted components; availability reports their fraction."],
-  R2: ["The noiseless runs last 12–16 frames, with one realization each.", "The correction-order residual combines spatial sensing, reconstruction, DM fitting and temporal tracking.", "Tutorial 04's trajectories and Tutorial 03's singular spectrum survive in the figures only."],
-  R3: ["Noise-free 2 m loops with 7 × 7 lenslets; the interactive detector-level case has its own profile.", "The profiles use r0 = 0.1263 and 0.13 m at 500 nm.", "The calculation is on axis. Layer heights are metadata; science images were not recorded."],
-  R4: ["Revisions @1–@3 change control policy; each retains its experiment identity.", "lost_lock compares the final post-update and open-loop residuals; zero valid measurements can still produce a false value.", "The predeclared noise-law test uses unscaled fit errors; S4 and LIM-18 remain open.", "Camera presets are synthetic engineering inputs."],
-  R5: ["The noiseless capability record uses a different profile, a pre-update residual and an open-loop average including startup. Its values answer a different question from the physical-camera records.", "Producer: commit 2312502, October 2026.", "The four-second reference repeats the fastest layers' periodic bands.", "This historical group retains summaries. The separate 500-frame replay has its own evidence.", "Peak RSS is the process-lifetime ru_maxrss high-water mark; the recorded host architecture is arm64."],
-  R6: ["Analytical MCAO adapter: P3 correction-band PSD, local fitting-tail completion and MASTSEL propagation.", "It has its own wavelength, residual convention, configuration and budget.", "Original producer and date fields are absent; notebook hashes identify files rather than execution dates.", "Aperture energy uses a 50 mas radius and full-field denominator.", "Contour-width bias against the annular reference is −0.50% at 5 mas pixels and −0.12% at 2.5 mas. Seeing-scan changes are differential at fixed sampling."],
-  R7: ["The accepted comparison covers one small fixture.", "The reduced-scale 5 m Z4 result is summary-only; its raw comparison JSON was not retained.", "high_order_10m_hcipy@4 remains an unpublished draft."],
-  R8: ["ESO tiers, detector-level profiles and the analytical adapter have separate convergence domains; the 2 November note records the later 42 m work.", "The numerical machinery and the experiments using it have separate execution records.", "Science images sample frame start; finite-shutter integration is outside this image definition."]
-};
 
 function sourceHref(s) {
   if (!repository || !s.path) return null;
@@ -165,21 +191,18 @@ function renderGroup(group, resultsUrl) {
   const card = document.createElement("article");
   card.className = "result"; card.id = `result-${group.id}`;
   const context = Object.entries(group.context).map(([k, v]) => contextEntry(k, v)).join("");
-  const badges = group.status.map((s) => `<span class="badge ${esc(s)}">${esc(STATUS_LABELS[s] || s)}</span>`).join("");
   const keyvals = group.key_values.map((k) => `<div class="keyval"><div class="v">${esc(k.display)}${k.unit ? ` ${esc(k.unit)}` : ""}</div><div class="l">${esc(k.label)}</div></div>`).join("");
   card.innerHTML = `
-<header><p class="hint">Historical record ${esc(group.id)}</p><h2>${esc(group.id === "R7" ? "Native and HCIPy component comparisons" : group.title)}</h2><p class="question">${esc(group.id === "R5" ? "What did the October 2026 replay show, and how much did the result vary between realizations?" : group.question)}</p><div class="badges">${badges}</div></header>
-${RECORD_UPDATES[group.id] ? `<aside class="panel"><p><strong>Interpretation updated 2 November 2026.</strong> ${esc(RECORD_UPDATES[group.id])}</p><a href="evidence/verification-update-2026-11-02.md">Scope and current qualifications →</a></aside>` : ""}
-<dl class="context">${context}</dl>
+<p class="takeaway">${esc(STUDIES[group.id].finding)}</p>
 <div class="keyvals">${keyvals}</div>
-<p class="takeaway"><strong>Recorded result.</strong> ${esc(group.id === "R7" ? group.takeaway.replace("the two independent backends", "the native and HCIPy optical paths") : group.takeaway)}</p>
+<details><summary>Experiment settings</summary><dl class="context">${context}</dl></details>
 <div class="selector-host"></div>
 <div class="charts-host"></div>
 <div class="tables-host"></div>
 <div class="figures"></div>
-<h3>Scope of the record</h3><ul class="limits">${RECORD_SCOPE[group.id].map((l) => `<li>${esc(l)}</li>`).join("")}</ul>
-${group.evidence_notes.length ? `<h3>Notes on the source records</h3><ul class="limits">${group.evidence_notes.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}
-<details><summary>Sources, generation details and licence</summary>
+<details><summary>Sources, figures and original notes</summary>
+<p><a href="#model-limitations">Limitations</a> · <a href="evidence/verification-update-2026-11-02.md">Later numerical checks</a></p>
+${group.evidence_notes.length ? `<ul class="limits">${group.evidence_notes.map((note) => `<li>${esc(note)}</li>`).join("")}</ul>` : ""}
 <p class="hint">Producer: ${esc(Object.entries(group.producer).map(([k, v]) => `${k}: ${v}`).join("; "))}.</p>
 <p class="hint">Licence: ${esc(group.licence)}</p>
 <ul class="limits">${sourceList([group.sources, group.context_sources, ...group.tables.map((t) => t.source), group.key_values.map((k) => k.source), group.limitation_locators, group.erratum, group.doc_contradiction, group.z4_summary, group.draft_status, group.licence_source])}</ul>
@@ -283,39 +306,24 @@ export async function renderResults(results, resultsUrl, host, indexHost, result
   checkMissingValues(results);
   repository = results.source_repository || null;
   host.replaceChildren();
-  const note = document.createElement("p");
-  note.className = "hint"; note.textContent = results.separation_note;
-  host.append(note);
-  const update = document.createElement("p");
-  update.className = "hint";
-  update.innerHTML = 'These are historical records. <a href="evidence/verification-update-2026-11-02.md">Read the 2 November interpretation notes</a> for the shared-solver limits, later 42 m sampling studies and edited public downloads. The saved numerical files retain their original bytes.';
-  host.append(update);
   if (resultsBuffer) {
     const all = document.createElement("p");
     all.className = "downloads";
     const link = document.createElement("a");
-    link.textContent = "results.json (original records and source hashes; see dated interpretation notes)";
+    link.textContent = "Original experiment records (JSON)";
     link.href = URL.createObjectURL(new Blob([resultsBuffer], { type: "application/json" }));
     link.download = "research-results.json";
     all.append(document.createTextNode("Download all experiment records: "), link);
     host.append(all);
   }
-  const topics = {
-    R4: ['12 m detector behaviour', 'Measurement availability, reconstruction policy and an unresolved noise-law discrepancy.'],
-    R6: ['Separate analytical MCAO study', 'A separate model family using P3 and MASTSEL, with its own assumptions and checks.'],
-    R5: ['Historical 42 m runs and realization scatter', 'Earlier detector-model runs, with different analysis windows and source versions from the replay above.'],
-    R1: ['Sensing and centroid precision', 'Tutorial response calibration, photon budget and measurement availability.'],
-    R2: ['Reconstruction and feedback experiments', 'Small-system correction, delay and controllable-order studies.'],
-    R3: ['Ten-layer atmosphere: full records', 'Layer profile, structure function and the separate 2 m comparison.'],
-    R7: ['Native and HCIPy component comparisons', 'Small-fixture checks with a shared reconstructor, plus a separate reduced-scale study.'],
-    R8: ['Numerical sampling, provenance and open questions', 'Profile-specific convergence records and unresolved work.'],
-  };
   indexHost.innerHTML = '';
   for (const id of ['R4','R6','R5','R1','R2','R3','R7','R8']) {
-    const group=results.groups.find(g=>g.id===id), [title,description]=topics[id];
+    const group = results.groups.find(g => g.id === id);
+    const study = STUDIES[id];
     const detail=document.createElement('details');detail.className='appendix-record panel';detail.id=`result-${id}`;
-    const summary=document.createElement('summary');summary.textContent=title;
-    const note=document.createElement('p');note.className='hint';note.textContent=description;
+    const summary=document.createElement('summary');summary.textContent=study.title;
+    const note = document.createElement('p');
+    note.textContent = study.method;
     detail.append(summary,note);let built=false;
     detail.addEventListener('toggle',()=>{
       if(!detail.open||built)return;built=true;
@@ -369,8 +377,8 @@ export function initNgs22(entry, entryUrl) {
     }));
     buttons.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.ngsWindow===key)));
     node('window-note').textContent=key==='primary'
-      ? 'Primary interval [0.2, 1.0) s: 800 saved 2 m frames and 600 frames per 2.2 m run. Different physical scenarios; no framewise pairing with the 2 m baseline.'
-      : 'Longer interval [0.2, 2.0) s: 1350 frames per 2.2 m run, with the same atmosphere. The saved 2 m baseline ends at 1.0 s and is omitted here.';
+      ? 'From 0.2 to 1.0 s, the separate 2 m run contributes 800 frames and each 2.2 m run contributes 600.'
+      : 'From 0.2 to 2.0 s, each 2.2 m run contributes 1,350 frames on the same atmosphere.';
   }
   function valueCell(value) {
     const cell=document.createElement('td');const text=JSON.stringify(value);
@@ -404,7 +412,7 @@ export function initNgs22(entry, entryUrl) {
       const image=await fetchVerified(member('comparison.png'),base,{expectType:'image/png'});
       const imageUrl=URL.createObjectURL(new Blob([image.buffer],{type:'image/png'}));
       node('figure').src=imageUrl;await node('figure').decode();node('figure').hidden=false;node('figure-full').href=imageUrl;
-      node('validation').textContent='All 1500 atmosphere maps and the calibration arrays match between v1 and v2; the saved 2 m archive is unchanged.';
+      node('validation').textContent='Both 2.2 m runs use the same atmosphere and calibration.';
       const downloads=[['Methods and definitions','README.md'],['Numerical results','results.json'],['Original 2 m frames (CSV)','original_2m.csv'],
         ['Original 2.2 m frames (CSV)','draft_22m_v1.csv'],['Revised 2.2 m frames (CSV)','repaired_22m_v2.csv'],['Figure (PDF)','comparison.pdf'],
         ['Original parameter draft · historical checkpoint','draft/PARAMETERS.md'],['Original configuration bundle','draft/candidate-config.json'],

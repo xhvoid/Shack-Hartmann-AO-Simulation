@@ -69,8 +69,8 @@ export function initNgsReplay(entry, entryUrl) {
     require(rimg.bitmap.width===2*science.detail&&rimg.bitmap.height===science.detail,'Invalid F162M science reference');scienceReference=rimg.bitmap;reference();
     require(JSON.stringify(science.atlas)==='[240,80]','Unexpected F162M science layout');
     const field=science.detail_field_arcsec;
-    $('science-field').textContent=`Every panel: ${field.toFixed(3)}″ × ${field.toFixed(3)}″; ${(science.pixel_arcsec*1000).toFixed(2)} mas per model pixel. Same accepted field, angular scale and surface-brightness transfer at every time. Source orientation retained.`;
-    $('science-quality').textContent=`All ${science.checks.sampled_strehl_values} replay Strehl values and ${science.checks.saved_psf_checks} archived PSFs agree with the original records. The nine accepted static images agree within ${science.checks.approved_static_max_abs_difference_mjy_sr.toPrecision(3)} MJy/sr. No source region was reselected and no AO trajectory was rerun.`;
+    $('science-field').textContent=`Field size ${field.toFixed(3)}″ × ${field.toFixed(3)}″ at ${(science.pixel_arcsec*1000).toFixed(2)} mas per pixel.`;
+    $('science-quality').textContent=`I compared the replay with nine reference images at three times. The largest pixel difference was ${science.checks.approved_static_max_abs_difference_mjy_sr.toPrecision(3)} MJy/sr.`;
     require(science.source.bunit==='MJy/sr'&&science.source.pivot_wavelength_um===1.627&&science.display.fixed_for_all_frames_and_panels===true,'Scientific image units or display mismatch');
     require(science.display.min_mjy_sr===0&&science.display.max_mjy_sr===80&&science.display.softening_mjy_sr===2,'Accepted image transfer mismatch');
     for(const [name,id]of [['source-context.png','science-context'],['intensity-scale.png','science-scale']]){
@@ -78,7 +78,7 @@ export function initNgsReplay(entry, entryUrl) {
     }
     const q=science.source.quality,c=science.checks,diagnostic=c.saturation_diagnostic;
     require(q.display_direct_invalid_resampled_pixels===0&&q.display_sat_guard_resampled_pixels===0,'Source quality no longer matches accepted field');
-    $('science-missing').textContent=`Four contributor exposures have no mapped SATURATED flag inside this field after a ${q.guard_arcsec.toFixed(3)}″ guard; no source pixel here is directly filled. The wider convolution context still includes saturated stars. Across all ${science.indices.length} image times, zeroing or doubling their supplied guarded values changes a pixel by up to ${c.saturation_context_max_change_mjy_sr.toPrecision(3)} MJy/sr. The analogous missing-context change is ${c.missing_context_max_change_mjy_sr.toPrecision(3)} MJy/sr. These tests do not bound unknown true saturated flux. The downloadable full-replay diagnostic marks ${(100*diagnostic.fraction_above_threshold).toFixed(2)}% of positions above ${diagnostic.threshold_mjy_sr.toFixed(1)} MJy/sr; it is not applied to the default view. The static quality figure uses only its three epochs.`;
+    $('science-missing').textContent=`I excluded mapped saturated pixels and a ${q.guard_arcsec.toFixed(3)}″ margin around them when choosing the field. I then zeroed or doubled their supplied values outside the field. The largest change within the image was ${c.saturation_context_max_change_mjy_sr.toPrecision(3)} MJy/sr. Applying the same test to filled pixels outside the field changed the image by up to ${c.missing_context_max_change_mjy_sr.toPrecision(3)} MJy/sr. The full-replay map marks the ${(100*diagnostic.fraction_above_threshold).toFixed(2)}% of positions where the change exceeded ${diagnostic.threshold_mjy_sr.toFixed(1)} MJy/sr.`;
     for(const [label,name]of [['Download 40 s lossless WebP','science-comparison.webp'],['Animation timing','movie-timing.json'],['Image methods','README.md'],['Source and checks','provenance.json'],['Accepted three-epoch figure','static-comparison.png'],['Three-epoch quality figure','static-quality.png'],['Calibrated cutout (FITS.gz)','source-detail.fits.gz'],['Linear output samples','linear-samples.npz'],['All-frame sensitivity results','sensitivity.json'],['All-frame sensitivity mask','saturation-sensitivity-mask.png'],['Numerical sensitivity maps','saturation-sensitivity-map.npz'],['Resampled science context','scene-context.npz'],['Exposure DQ provenance','quality-extraction.json'],['Offline image exporter','exporter.py']]){
       const a=document.createElement('a');a.href=new URL(name,scienceBase);a.textContent=label;
       a.addEventListener('click',async e=>{e.preventDefault();try{const {buffer}=await fetchVerified(scienceFile(name),scienceBase);const u=URL.createObjectURL(new Blob([buffer],{type:scienceFile(name).media_type}));const link=document.createElement('a');link.href=u;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(u),30000);}catch(error){a.textContent=`${label} unavailable: ${error.message}`;}});$('science-downloads').append(a);
@@ -121,9 +121,9 @@ export function initNgsReplay(entry, entryUrl) {
     $('science-time').textContent=`${t.toFixed(6)} s · frame ${k} · ${k>=736?'v1 reconstruction rejected':'before first v1 rejection'}`;
     $('science-time').dataset.frame=String(k);
     $('event').textContent=k<data.loss_frame
-      ? `Before v1's first rejected reconstruction (${((data.loss_time_s-t)*1000).toFixed(3)} ms before frame 736).`
-      : k===data.loss_frame?'Loss marker: frame 736 is v1’s first rejected reconstruction; v2 remains usable.'
-      : `After v1’s first rejected reconstruction (${((t-data.loss_time_s)*1000).toFixed(3)} ms later). V1 continues to be displayed, including its failed frames.`;
+      ? `${((data.loss_time_s-t)*1000).toFixed(3)} ms before the first rejected reconstruction in v1.`
+      : k===data.loss_frame?'Frame 736. The original reconstructor rejected the measurements. The revised one produced a command.'
+      : `${((t-data.loss_time_s)*1000).toFixed(3)} ms after the original run first rejected a reconstruction.`;
     $('event').dataset.phase=k<data.loss_frame?'before':k===data.loss_frame?'loss':'after';
     $('atmosphere-caption').textContent=`Shared atmosphere · RMS ${m.atmosphere_rms_nm[k].toFixed(1)} nm`;
     $('psf-u-caption').textContent=`Uncorrected · Strehl ${m.uncorrected_strehl[k].toFixed(4)}`;
@@ -134,7 +134,7 @@ export function initNgsReplay(entry, entryUrl) {
       $(`valid-${id}`).textContent=`${id==='v1'?'Original v1':'Revised v2'}: ${v.usable[k]?'usable reconstruction':'reconstruction rejected'} · ${(v.valid_fraction[k]*100).toFixed(2)}% valid rows`;
     }
     const until=index+1<data.indices.length?m.time_s[data.indices[index+1]]:2;
-    $('timing').textContent=`One pass: ${duration} s (${duration/2}× slower). This snapshot is held to ${until.toFixed(6)} s of recorded time. No interpolation; loading or background tabs may extend playback.`;
+    $('timing').textContent=`One pass takes ${duration} s at ${duration/2}× slowdown. This image is held until ${until.toFixed(6)} s on the simulation clock.`;
     $('status').textContent='';
     $('science-u-caption').textContent=`No correction · point-source Strehl ${m.uncorrected_strehl[k].toFixed(4)}`;
     for(const id of ['v1','v2'])$(`science-${id}-caption`).textContent=`${id==='v1'?'Original v1':'Revised v2'} · point-source Strehl ${m[id].strehl[k].toFixed(4)}`;
@@ -221,7 +221,7 @@ export function initNgsReplay(entry, entryUrl) {
       index=data.indices.indexOf(1499);require(index>=0,'Missing final frame');
       $('seek').max=data.indices.length-1;$('duration').value=String(duration);bars();
       root.querySelectorAll('button,input,select').forEach(e=>e.disabled=false);
-      $('sampling').textContent=`${data.indices.length} existing wavefront snapshots: every 12th frame, all archived PSF snapshot times, and every frame 720–752 around loss of lock. The curves show all 1500 saved measurements. Both runs always show the same timestamp.`;
+      $('sampling').textContent=`The replay shows ${data.indices.length} snapshots. These include every 12th frame, the saved PSF times and every frame from 720 to 752. The curves show all 1,500 measurements.`;
       for(const [label,name] of [['All replay metrics','data.json'],['Replay provenance and checks','provenance.json'],['Replay methods','README.md'],['Offline exporter','exporter.py']])download(label,name);
       await show(index);redrawWhenResized($('strehl'),chart);
     })();return loading;

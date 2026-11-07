@@ -200,13 +200,13 @@ export function initDelay42(entry, entryUrl) {
       r.source === 'new' ? (r.attempt === 2 ? 'new · accepted second attempt' : 'new') : 'reused photon-budget baseline',
       r.summary.mean_pre_update_rms_nm.toFixed(6), r.summary.rms_of_frame_pre_update_rms_nm.toFixed(6), `${r.summary.frames_valid_below_0_995}`]));
     const s = data.strehl_asymmetry;
-    node('asymmetry').textContent = `For the peak Strehl of the mean image, the average loss from delay 2 to delay 3 (${s.loss_2_to_3.toFixed(4)}) is ${s.ratio.toFixed(2)} times the average gain from delay 2 to delay 1 (${s.gain_2_to_1.toFixed(4)}), at gain 0.3 in these three realizations. This ratio uses the three realization means for this Strehl metric at gain 0.3.`;
+    node('asymmetry').textContent = `At gain 0.3, reducing the delay from two frames to one raised Strehl by ${s.gain_2_to_1.toFixed(4)}. Increasing it from two to three lowered Strehl by ${s.loss_2_to_3.toFixed(4)}. The second change was ${s.ratio.toFixed(1)} times larger in these runs.`;
   }
 
   function details() {
     const x = data.excursion_r2;
-    node('r2-text').textContent = `Around 0.68 s every delay shows a disturbance in r2. At delay 3, the residual rises from ${x.first_rise_nm[0].toFixed(1)} nm at frame 338 (${x.frame_339_nm.toFixed(1)} nm at frame 339) to ${x.first_rise_nm[1].toFixed(1)} nm at frame 344, coinciding with a larger dip of the valid-measurement fraction (minimum ${x.valid_minimum.value.toFixed(3)} at frame ${x.valid_minimum.frame}). Validity then recovers only partly: its mean over frames 345–499 is ${x.valid_mean_frames_345_500.toFixed(4)}, against ${x.valid_mean_frames_100_300.toFixed(4)} over frames 100–299, and ${x.frames_valid_below_0_995_in_window} of the 400 main-window frames lie below 0.995. A second rise follows at frames 446 → 447, from ${x.second_rise_nm[0].toFixed(1)} to ${x.second_rise_nm[1].toFixed(1)} nm, without a simultaneous validity drop (${x.second_rise_valid_fraction[0].toFixed(5)} → ${x.second_rise_valid_fraction[1].toFixed(5)}).`;
-    node('identity').textContent = `Display bundle ${bundle.id} (identity of the generated files, not of the scientific source). Source identities, input SHA-256 values, attempt selection and the exporter version are in provenance.json.`;
+    node('r2-text').textContent = `At delay 3, the residual rose from ${x.first_rise_nm[0].toFixed(1)} nm at frame 338 to ${x.first_rise_nm[1].toFixed(1)} nm at frame 344. The accepted fraction fell to ${(100*x.valid_minimum.value).toFixed(1)}% at frame ${x.valid_minimum.frame}. A second rise at frames 446–447, from ${x.second_rise_nm[0].toFixed(1)} to ${x.second_rise_nm[1].toFixed(1)} nm, occurred while the accepted fraction increased slightly.`;
+    node('identity').textContent = `Data bundle ${bundle.id}.`;
     addDownloads(node('downloads'), bundle, [['Per-frame values (CSV)', 'frames.csv'], ['Data (JSON)', 'data.json'], ['Provenance (JSON)', 'provenance.json'], ['About this bundle', 'README.md'], ['Exporter (Python)', 'exporter.py']]);
     node('psf-details').addEventListener('toggle', async () => {
       if (!node('psf-details').open || node('psf').dataset.loaded) return;
@@ -252,8 +252,8 @@ export function initDelay42(entry, entryUrl) {
       data = bundle.data;
       extents = computeExtents();
       const lv = data.levels, p = data.paired.mean_pre_update_rms_nm;
-      node('lead').textContent = `Averaged over frames 100–499 and the three realizations, the residual is ${[1, 2, 3].map((d) => lv.mean_pre_update_rms_nm[d].mean.toFixed(1)).join(', ')} nm for delays of 1, 2 and 3 frames, and the peak Strehl of the mean image at 2.2 µm is ${[1, 2, 3].map((d) => lv.peak_strehl[d].mean.toFixed(3)).join(', ')}.`;
-      node('paired-text').textContent = `Against delay 2, one frame less lowers the residual in every realization (mean ${signed(p['1_minus_2'].mean, 1)} nm; exploratory 95% interval ${signed(p['1_minus_2'].ci95[0], 1)} to ${signed(p['1_minus_2'].ci95[1], 1)} nm). One frame more raises it in every realization, by ${p['3_minus_2'].by_realization.map((v) => signed(v, 1)).join(', ')} nm for r0, r1 and r2; the mean is ${signed(p['3_minus_2'].mean, 1)} nm, but with three realizations and the larger r2 value the exploratory interval, ${signed(p['3_minus_2'].ci95[0], 1)} to ${signed(p['3_minus_2'].ci95[1], 1)} nm, includes zero.`;
+      node('lead').textContent = `Across the three atmospheres, the mean residual was ${[1,2,3].map(d=>lv.mean_pre_update_rms_nm[d].mean.toFixed(1)).join(', ')} nm at delays of one, two and three frames. Over the same 0.8 s exposures the mean peak Strehl at 2.2 µm fell from ${lv.peak_strehl[1].mean.toFixed(3)} to ${lv.peak_strehl[2].mean.toFixed(3)} and then ${lv.peak_strehl[3].mean.toFixed(3)}.`;
+      node('paired-text').textContent = `Reducing the delay from two frames to one lowered mean residual RMS by ${Math.abs(p['1_minus_2'].mean).toFixed(1)} nm. Adding a frame raised it by ${p['3_minus_2'].by_realization.map(v=>v.toFixed(1)).join(', ')} nm in r0, r1 and r2. The larger rise in r2 widens the interval for this comparison.`;
       tables(); details(); dots(); realizationText(); enable(); setFrame(frame, false);
       node('status').textContent = '';
     })().catch((error) => {

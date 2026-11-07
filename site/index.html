@@ -7,7 +7,7 @@
 <title>AO Simulation Explorer</title>
 <meta content="Shack–Hartmann adaptive-optics simulation results: wavefront correction, image quality, reconstruction failure, and controller gain and delay." name="description"/>
 <link href="data:," rel="icon"/>
-<link href="code-2ec0f68582ac21b9/styles.css" rel="stylesheet"/>
+<link href="code-71efbc9c8909de3d/styles.css" rel="stylesheet"/>
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script onerror="aoCodeUnavailable()" src="code-2ec0f68582ac21b9/app.js" type="module"></script>
+<script onerror="aoCodeUnavailable()" src="code-71efbc9c8909de3d/app.js" type="module"></script>
 </head>
 <body>
 <noscript><p class="wrap">The overview images are static. Enable JavaScript to open the recorded experiments and study views.</p></noscript><a class="skip" href="#main">Skip to content</a>
@@ -44,32 +44,41 @@ function aoCodeUnavailable() {
 <a href="#explore"><span>01 · 2 m demonstration</span><strong>How does correction change the wavefront and image?</strong><p>Follow the atmosphere, held DM shape and residual on one recorded clock.</p></a>
 <a href="#ngs22"><span>02 · 2.2 m investigation</span><strong>Why did the loop stop correcting?</strong><p>Trace lost measurements and large commands, then compare stronger regularization on the same atmosphere.</p></a>
 <a href="#gain42"><span>03 · 42 m comparison</span><strong>Does lower gain help when correction is delayed?</strong><p>Compare whole-window image quality with a smaller late-run excursion.</p></a></section>
-<p class="scope-note"><a href="#methods-home">Model, limitations and experiment settings →</a></p></section><section aria-labelledby="studies-title" class="wrap section page-view" data-nav="studies" data-view="" hidden="" id="studies"><p class="eyebrow">Selected studies</p><span id="studies42-title"></span><h1 id="studies-title">Selected simulation results</h1><p class="lede">A demonstration, a failure diagnosis and a controller comparison. Each has its own configuration and recorded time interval.</p><div class="reading-list">
-<a href="#explore"><span>2 m · 1 s · synthetic detector model</span><strong>How does correction change an image?</strong><p>One baseline connects wavefront error, mirror commands and point-source images.</p></a>
-<a href="#ngs22"><span>2.2 m · 2 s · same-atmosphere comparison</span><strong>Why did the loop stop correcting?</strong><p>The original reconstruction becomes unusable at 0.981 s. Stronger regularization keeps the revised run usable for the recorded two seconds.</p></a>
-<a href="#gain42"><span>42 m · 1 s · three paired atmospheres</span><strong>Does lower gain help when correction is delayed?</strong><p>Gain 0.3 gives better whole-window image quality among the tested settings. Gain 0.2 reduces the observed late excursion, at an image-quality cost.</p></a></div><p class="scope-note"><a href="#methods-home">Model and experiment settings →</a></p></section><section aria-labelledby="methods-home-title" class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="methods-home"><p class="eyebrow">Methods &amp; evidence</p><h1 id="methods-home-title">What is in the model?</h1><p class="lede">The recordings follow one on-axis wavefront through a Shack–Hartmann sensor, a reconstructed DM command and a feedback loop. Science images come from propagated residual wavefronts.</p>
-<div class="method-grid"><section><h2>Atmosphere and optics</h2><p>Frozen-flow phase screens translate across the pupil. The 2 m demo uses one screen; the 42 m model combines ten von Kármán layers. The sensor propagates lenslet spots to a detector model. DM shapes and reconstructors differ between configurations.</p><a href="#project">Atmosphere and implementation details →</a></section><section><h2>Timing and image metrics</h2><p>The displayed residual is measured before that frame’s controller update. Delayed commands affect later exposures. PSFs keep tilt and are not recentered. An averaged PSF is a mean of intensities; its peak Strehl is different from the mean instantaneous Strehl.</p><a href="#methods">Definitions and recording conventions →</a></section></div>
-<section class="panel" id="model-limitations"><h2>Limitations</h2><p>The pupils, detectors and mirrors are modelled. The 2.2 m repair follows one two-second atmosphere. The 42 m runs use the historical E-ELT design. Comparisons across telescope sizes also change the atmosphere and controller. Hardware calibration, segment phasing and long-term loop stability require separate measurements.</p><p>The 2 m sensor crossed its preset small-signal linearity tolerance. In the historical 42 m run, the iterative solver missed its command-space tolerance, and focal sampling affected EE50. The gain comparison uses the Fourier-reference EE50.</p></section>
-<section class="panel" id="verification-summary"><h2>What the checks establish</h2><p>Numerical comparisons test specific equations and implementations. Plots, tables and downloads present their named saved results.</p>
-<ul><li><strong>2 m sensing and control:</strong> a reconstruction of the recorded chain reproduces its trajectory. Independent spot and DM calculations support the observed weak tilt correction. The measured spot response varied slightly with tilt amplitude.</li><li><strong>2 m fitting:</strong> on a static tilt, the WFS least-squares command leaves more wavefront error than a pupil-optimal fit with the same 13-actuator basis. The two fits use different spatial objectives on the same static wavefront.</li><li><strong>42 m reconstruction:</strong> pupil-space checks and archive comparisons address their stated numerical quantities. The gain study uses the Fourier-reference EE50 for its image-size comparison.</li><li><strong>Later component checks:</strong> the 2 November notes describe boundary and dense-solver repairs and their fixture-level results. Recorded image metrics retain their original producers and model assumptions.</li></ul>
-<p><a href="evidence/verification-update-2026-11-02.md">Current interpretation and limits →</a> · <a href="evidence/numerical-checks.md">Numerical-check summary and evidence →</a> · <a href="#studies42-history">42 m qualifications →</a></p></section>
+<p class="scope-note"><a href="#methods-home">Model, limitations and experiment settings →</a></p></section><section aria-labelledby="studies-title" class="wrap section page-view" data-nav="studies" data-view="" hidden="" id="studies"><p class="eyebrow">Selected studies</p><span id="studies42-title"></span><h1 id="studies-title">Selected simulation results</h1><p class="lede">Follow the 2 m loop, then compare the two changes I tested: rejecting weak reconstruction modes at 2.2 m and lowering the controller gain at 42 m.</p><div class="reading-list">
+<a href="#explore"><span>2 m · 1 s · synthetic detector model</span><strong>How does correction change an image?</strong><p>Follow the spot measurements through the mirror update and compare the resulting stellar images.</p></a>
+<a href="#ngs22"><span>2.2 m · 2 s · same-atmosphere comparison</span><strong>Why did the loop stop correcting?</strong><p>Raising the TSVD cutoff from 0.001 to 0.05 kept the loop reconstructing for all 1,500 frames.</p></a>
+<a href="#gain42"><span>42 m · 1 s · three paired atmospheres</span><strong>Does lower gain help when correction is delayed?</strong><p>Gain 0.3 gave the sharper mean image. Gain 0.2 reduced a late rise in the residual in one of the three atmospheres.</p></a></div><p class="scope-note"><a href="#methods-home">Model and experiment settings →</a></p></section><section aria-labelledby="methods-home-title" class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="methods-home"><p class="eyebrow">Methods &amp; evidence</p><h1 id="methods-home-title">What is in the model?</h1><p class="lede">I calculate where the lenslet spots land, use their displacements to estimate a mirror correction, and propagate the remaining wavefront to the science image.</p>
+<div class="method-grid"><section><h2>Atmosphere and optics</h2><p>Frozen-flow phase screens translate across the pupil. The 2 m demo uses one screen; the 42 m model combines ten von Kármán layers. The sensor propagates lenslet spots to a detector model. DM shapes and reconstructors differ between configurations.</p><a href="#project">Atmosphere and implementation details →</a></section><section><h2>Timing and image metrics</h2><p>Each frame measures the residual with the mirror command already in place. For a long exposure I average intensities at fixed detector coordinates, then measure the peak. Image motion therefore affects long-exposure Strehl.</p><a href="#methods">Definitions and recording conventions →</a></section></div>
+<section class="panel" id="model-limitations"><h2>Limitations</h2>
+<h3>Closed-loop tests</h3>
+<p>The 2.2 m runs share one two-second atmosphere, including a slow dome layer. The traces show how weakly sensed modes amplified the commands as spots dropped out. The noise fluctuation that started the sequence remains unidentified. Only the stronger cutoff acted in the revised run; the recovery rule stayed inactive.</p>
+<p>For the 42 m gain and delay comparisons I used three paired atmospheric realizations. Frames within each run are correlated. The late rise at three frames of delay occurred in r2. Its cause is unresolved, and the saved early and late mean PSFs are available at gain 0.2 only. The damping calculation isolates static detector noise. In the faint-star run, changing flux also changed the measurement noise and the calibration.</p>
+<h3>Telescopes and images</h3>
+<p>These are simulated telescopes. The 2.2 m pupil, mirror and camera are approximations and the model has no separate tip–tilt mirror. The 42 m geometry is the historical E-ELT design. Wind, mirror stroke, control settings and wavelength also change between the 2 m and 42 m runs. Their effect on the difference in Strehl remains coupled to aperture. The ±100 µm OPD stroke belongs to the 42 m model. Applying a published mechanical stroke to a mirror requires its travel convention and angle of incidence. Hardware calibration and segment phasing require separate measurements.</p>
+<p>For the Hubble and Webb image examples I convolved an observed template with the simulated PSF. The template carries its own resolution and noise. The Westerlund 2 example applies one on-axis PSF across its 4.109″ field. Light from bright stars outside the crop contributes near its edges.</p>
+<h3>Numerical checks</h3>
+<p>The 2 m sensor exceeded the small-signal linearity tolerance. In the historical 42 m run the iterative solver missed its command-space criterion. The gain study uses the Fourier-reference half-light radius because the production EE50 depends on focal sampling. <a href="evidence/verification-update-2026-11-02.md">Numerical checks and subsequent tests</a></p>
+</section>
+<section class="panel" id="verification-summary"><h2>What I checked</h2>
+<ul><li><strong>2 m sensing.</strong> I applied a known tilt and compared the spot positions with the expected displacement. The response changed slightly with tilt amplitude.</li><li><strong>2 m fitting.</strong> On a static tilt, the fit to sensor measurements left 68% of the original RMS. Fitting the same 13 actuators directly to the pupil wavefront left 37%.</li><li><strong>42 m image width.</strong> I compared the production EE50 with a Fourier-interpolated measurement of the same image. The difference led me to use the Fourier value for the gain comparison.</li></ul>
+<p><a href="evidence/verification-update-2026-11-02.md">Current interpretation and limits →</a> · <a href="evidence/numerical-checks.md">Numerical-check summary and evidence →</a> · <a href="#studies42-history">Earlier 42 m experiments →</a></p></section>
 <section class="reading-list"><h2>Supporting material</h2>
 <a href="#galaxy-panel">NGC 1705 image replay →</a>
-<a href="#replay42"><strong>Replay the 42 m model</strong><p>A separate recording that illustrates the larger implementation. Its clock is independent of the gain study.</p></a>
-<a href="#flux42"><strong>What changes with a fainter guide star?</strong><p>One two-second matched atmosphere shows a larger late residual at lower flux. Noise and calibration effects are not isolated.</p></a>
-<a href="#delay42"><strong>Compare delays at fixed gain</strong><p>The earlier three-delay comparison supplies six baselines reused in the gain study.</p></a>
-<a href="#c1-noise"><strong>Detector noise and damping</strong><p>A static calculation of one noise component; no closed-loop improvement is inferred.</p></a>
-<a href="#aperture-comparison"><strong>Aperture averaging and stroke</strong><p>Secondary diagnostics of two different configurations, with no controlled aperture-only comparison.</p></a>
-<a href="#appendix"><strong>Earlier experiments and source records</strong><p>Sensor, reconstruction and analytical studies, with their original references and qualifications.</p></a></section>
-<p class="scope-note">Raw wavefront and PSF archives remain local. The public site carries compact records, configuration identities, source hashes and the evidence needed for the selected claims. <a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/main/docs/reproducing.md">What can be reproduced from the public files →</a></p></section>
+<a href="#replay42"><strong>Replay the 42 m model</strong><p>Follow a stellar image through the 42 m loop.</p></a>
+<a href="#flux42"><strong>What changes with a fainter guide star?</strong><p>The fainter guide star gave a larger residual after the first second.</p></a>
+<a href="#delay42"><strong>Compare delays at fixed gain</strong><p>I held gain fixed and delayed the mirror command by one, two or three frames.</p></a>
+<a href="#c1-noise"><strong>Detector noise and damping</strong><p>I calculated how changing the damping changes noise in the reconstructed command.</p></a>
+<a href="#aperture-comparison"><strong>Aperture averaging and stroke</strong><p>Compare fluctuations across the pupil and inspect which mirror commands reached their stroke limit.</p></a>
+<a href="#appendix"><strong>Earlier experiments and source records</strong><p>Inspect the sensor response, reconstruction tests, atmosphere models and MCAO images.</p></a></section>
+<p class="scope-note"><a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/main/docs/reproducing.md">Repeat an experiment or inspect a recording →</a></p></section>
 <section aria-labelledby="explore-title" class="wrap section page-view" data-nav="explore" data-view="" hidden="" id="explore">
 <h1 id="explore-title">Explore the loop</h1>
-<p class="lede" id="explore-lede">A single 2 m baseline recording. Press Play to follow the wavefront, point-source images and NGC 1705 before and after correction.</p>
+<p class="lede" id="explore-lede">I used a 2 m telescope to see how the mirror correction changed the image of a star. Over the last 0.8 s, the mean wavefront RMS fell from 396 to 266 nm. At 1.65 µm, the peak Strehl of the averaged image rose from 0.185 to 0.381.</p>
 <div aria-live="polite" class="status" id="status" role="status">Loading the dataset manifest…</div>
 <div class="error" hidden="" id="error" role="alert"></div>
 <section aria-labelledby="scenario-title" class="panel" hidden="">
 <h2 id="scenario-title">Choose a saved run</h2>
-<p class="hint">Each button opens a saved run with one setting changed from the same baseline. The options cannot be combined.</p>
+<p class="hint">Each run changes one setting from the baseline.</p>
 <div class="groups" id="groups"></div>
 <div aria-live="polite" class="case-summary" id="case-summary"></div>
 </section>
@@ -129,7 +138,7 @@ function aoCodeUnavailable() {
 <div class="rms-panel">
 <div aria-label="RMS values of the displayed frame or of the analysis window" class="rms-readout" id="rms-readout" role="group"></div>
 <p class="hint" id="rms-mode-note"></p>
-<p class="hint" id="rms-explanation">The dashed curve shows the residual after fitting and removing a plane over the illuminated pupil. This summarizes the same residual maps after removing tilt; the PSFs and galaxy images retain their original wavefronts. Fitted wavefront tilt and measured image-centroid motion are different quantities. The atmosphere curve retains tilt, so comparing it with the dashed curve does not give a like-for-like correction ratio. Sampling convergence is assessed by changing the numerical grid.</p>
+<p class="hint" id="rms-explanation">I fitted a plane to each residual wavefront and removed it to measure how much error remained after tip and tilt were removed. The dashed curve shows that RMS. The solid curves and the science images retain tilt.</p>
 </div></section><section aria-labelledby="galaxy-title" class="panel" id="galaxy-panel"><span id="image-examples"></span>
 <div class="viewer-head">
 <h2 id="galaxy-title">NGC 1705 through the simulated PSFs</h2>
@@ -139,7 +148,7 @@ function aoCodeUnavailable() {
 <label><input name="galaxy-mode" type="radio" value="mean"/> Analysis-window mean</label>
 </fieldset>
 </div>
-<p class="hint" id="galaxy-label">The observed HST/F814W central region of NGC 1705 convolved with the selected case's recorded PSFs. The scene illustrates those PSFs in an extended source.</p>
+<p class="hint" id="galaxy-label">I used an HST/WFC3 F814W image of NGC 1705 as the input. The middle and right panels show the same field after convolution with the uncorrected and corrected 1.65 µm PSFs.</p>
 <div aria-live="polite" class="status" id="galaxy-status" role="status">The galaxy observation loads when this panel is in view.</div>
 <div class="error" hidden="" id="galaxy-error" role="alert"></div>
 <div class="galaxy-maps">
@@ -163,7 +172,7 @@ function aoCodeUnavailable() {
 <label class="loop"><input id="galaxy-loop" type="checkbox"/> Loop the same recording (both panels)</label>
 </div>
 <p aria-live="polite" class="frame-readout" id="galaxy-readout"></p>
-<p class="hint" id="galaxy-playback-note">The galaxy and wavefront controls share one timeline. Playback follows the saved timestamps without adding or interpolating frames.</p>
+<p class="hint" id="galaxy-playback-note">Use either set of playback controls to step through the same exposures.</p>
 <details>
 <summary>Image source, processing and limitations</summary>
 <div class="prose" id="galaxy-notes"></div>
@@ -171,7 +180,7 @@ function aoCodeUnavailable() {
 </details>
 </section><section class="panel"><details>
 <summary id="binary-title">Simple point-source comparison</summary>
-<p class="hint" id="binary-label">Synthetic binary observation — analysis-window average; relative flux per numerical cell; no additional science-camera noise.</p>
+<p class="hint" id="binary-label">I placed two point sources 334 mas apart, with the brighter one twice as bright as its companion. The two output panels show the pair through the uncorrected and corrected mean PSFs.</p>
 <div class="binary">
 <figure class="map obs"><div class="zoomwrap"><img alt="Input binary scene reference" height="312" id="scene-img" width="312"/></div><figcaption><strong>Input scene (shared)</strong><span id="scene-caption"></span></figcaption></figure>
 <figure class="map obs"><div class="zoomwrap"><img alt="Binary through the uncorrected average PSF" height="312" id="obs-unc" width="312"/></div><figcaption><strong>Through the uncorrected average</strong><span id="obs-unc-caption"></span></figcaption></figure>
@@ -182,10 +191,10 @@ function aoCodeUnavailable() {
 </details></section>
 <section aria-labelledby="curves-title" class="panel">
 <h2 id="curves-title">How the loop changes over time</h2>
-<p class="hint" id="curves-hint">All recorded frames, including the startup exclusion (shaded). Summaries use the analysis window only. The cursor marks the displayed frame.</p>
+<p class="hint" id="curves-hint">The shaded region is the first 0.2 s. I used the subsequent 0.8 s for the averages.</p>
 <div class="charts">
-<figure class="chart"><canvas aria-label="RMS against frame-start time" height="240" id="chart-rms" role="img" width="640"></canvas><figcaption>Pupil RMS on one common nm OPD scale: atmosphere and total pre-update residual (piston removed, tilt retained; solid), and the same residual after tip/tilt removal (piston and fitted tilt removed; dashed). The cursor marks the displayed frame.</figcaption></figure>
-<figure class="chart"><canvas aria-label="Strehl against frame" height="220" id="chart-strehl" role="img" width="640"></canvas><figcaption>Instantaneous PSF peak Strehl at 1.65 µm; the table and CSV use the same series.</figcaption></figure>
+<figure class="chart"><canvas aria-label="RMS against frame-start time" height="240" id="chart-rms" role="img" width="640"></canvas><figcaption>The solid curves give the atmospheric and residual wavefront RMS. The dashed curve gives the residual RMS after removing tip and tilt.</figcaption></figure>
+<figure class="chart"><canvas aria-label="Strehl against frame" height="220" id="chart-strehl" role="img" width="640"></canvas><figcaption>Peak Strehl before and after correction in each 1.65 µm image.</figcaption></figure>
 <details><summary>Measurement validity and command clipping</summary><figure class="chart"><canvas aria-label="Measurement validity against frame" height="160" id="chart-valid" role="img" width="640"></canvas><figcaption>Valid measurements in frame k, and the fraction of DM commands clipped after that frame. Those commands apply from frame k + 1. Ticks mark unusable reconstructions.</figcaption></figure></details>
 </div>
 <p aria-live="polite" class="current-frame" id="current-frame"></p>
@@ -222,39 +231,39 @@ function aoCodeUnavailable() {
 <div><dt>Controller / command limit</dt><dd id="e2-control">—</dd></div>
 <div><dt>Run length and analysis window</dt><dd id="e2-record">—</dd></div>
 </dl>
-<p><strong>What to look for:</strong> how the selected setting changes the loop response in this run.</p>
+
 
 <details><summary>Full selected-case parameters</summary><ul class="params" id="case-parameters"></ul></details>
-<p class="hint">The pupil, DM and detector are synthetic. OPD (optical path difference) limits refer to DM command bounds. <a href="#details-title">Definitions and source files →</a></p>
-</details><p class="case-ending">The loop reduces wavefront error in this recording, but its low-order model leaves substantial residual tilt. <a href="#verification-summary">Read the numerical interpretation →</a></p></section>
+<p class="hint">Mirror commands are given as optical path difference (OPD). <a href="#details-title">Frame definitions and settings →</a></p>
+</details><p class="case-ending">After I subtracted the fitted tilt from the residual, the mean per-frame RMS fell from 266 to 190 nm. <a href="#verification-summary">See the tilt response of the sensor and mirror →</a></p></section>
 <section aria-labelledby="project-title" class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="project"><p class="breadcrumb"><a href="#methods-home">← Methods &amp; evidence</a></p>
 <h1 id="project-title">Building the simulation</h1>
-<p class="lede">Atmosphere model, computational methods and numerical checks used to interpret the recorded results.</p>
+<p class="lede">I tested the phase screens first, then compared how the loop corrected one moving layer and a ten-layer atmosphere.</p>
 <div aria-label="Project topics" class="topic-nav" role="group">
 <button aria-controls="topic-atmosphere" aria-pressed="true" class="node" data-topic="atmosphere" type="button">Ten-layer atmosphere</button>
 <button aria-controls="topic-architecture" aria-pressed="false" class="node" data-topic="architecture" type="button">42 m architecture</button>
 <button aria-controls="topic-checks" aria-pressed="false" class="node" data-topic="checks" type="button">Checks &amp; limits</button>
 </div>
 <section aria-labelledby="atmosphere-title" class="panel topic-panel" id="topic-atmosphere">
-<div class="topic-split"><div><h2 id="atmosphere-title">Combining ten moving layers</h2><p>The layered model combines independent translating von Kármán screens using the published ESO DRM turbulence weights and wind speeds.</p><p>Each layer contributes to the pupil OPD before the sensor measures it. The 42 m recording below uses this ten-layer model.</p><p class="hint">This model propagates one on-axis wavefront. Layer heights are recorded, but off-axis propagation and tomography are not included. The 2 m experiment above uses a single screen.</p><a href="#result-R3">Detailed atmosphere records →</a></div>
+<div class="topic-split"><div><h2 id="atmosphere-title">Combining ten moving layers</h2><p>I generated one von Kármán phase screen per layer, moved it at the specified wind speed and added its optical path difference to the on-axis pupil. The ten layer weights and winds come from the ESO design reference.</p><p>In a separate noise-free 2 m comparison, the mean residual was 293.7 nm with one layer and 325.3 nm with ten. The two atmospheric profiles used slightly different Fried lengths.</p><a href="#result-R3">Detailed atmosphere records →</a></div>
 <div class="layer-diagram"><h3>Ten-layer profile used in the 42 m recording</h3><div aria-label="Layer altitudes, turbulence fractions and wind speeds" id="layer-profile"></div><p class="hint">r₀ = 0.13 m at 500 nm · L₀ = 25 m<br/>Bar length shows normalized turbulence weight; height is labelled, not drawn to scale.</p></div></div>
-<details><summary>Structure-function check and its scope</summary><p class="hint">Saved 256-screen comparison with the von Kármán reference. The separate single-layer / ten-layer loop comparison also changes r₀, so it does not isolate the effect of layering.</p><figure class="chart"><canvas aria-label="Recorded structure-function ratio against separation" height="260" id="atmosphere-structure" role="img" width="760"></canvas><figcaption id="structure-caption">The structure-function comparison loads with this section.</figcaption></figure></details>
+<details><summary>Structure-function check</summary><p class="hint">I compared the phase structure function from 256 screens with the von Kármán reference at each separation.</p><figure class="chart"><canvas aria-label="Recorded structure-function ratio against separation" height="260" id="atmosphere-structure" role="img" width="760"></canvas><figcaption id="structure-caption">The structure-function comparison loads with this section.</figcaption></figure></details>
 </section>
 <section aria-labelledby="architecture-title" class="panel topic-panel" hidden="" id="topic-architecture">
-<div class="topic-split"><div><h2 id="architecture-title">Keeping larger runs manageable</h2><p>The large-aperture path combines local lenslet propagation, sparse DM operators and iterative reconstruction. Science images are accumulated from instantaneous intensities.</p><p>The replay follows one run from the atmospheric wavefront to the corrected images.</p><p class="hint">The pupil follows the historical 42 m E-ELT design reference. The current ESO ELT is 39 m; this simulation uses a simplified instrument model.</p><a href="#replay42">Open the recorded 42 m experiment →</a></div><ol class="architecture-steps"><li><strong>Local lenslet calculations</strong><span>Propagate detector spots in bounded batches.</span></li><li><strong>Sparse response and DM operators</strong><span>Retain the local couplings used by calibration and reconstruction.</span></li><li><strong>Iterative reconstruction</strong><span>Solve for commands without dense global inversion.</span></li><li><strong>Streaming image accumulation</strong><span>Average intensities while retaining selected full-grid PSFs for replay.</span></li></ol></div>
+<div class="topic-split"><div><h2 id="architecture-title">Keeping larger runs manageable</h2><p>For the 42 m pupil I propagated the lenslet spots in batches and used a sparse response matrix to reconstruct mirror commands. I accumulated the science image one intensity frame at a time.</p><a href="#replay42">Open the recorded 42 m experiment →</a></div><ol class="architecture-steps"><li><strong>Local lenslet calculations</strong><span>Propagate detector spots in bounded batches.</span></li><li><strong>Sparse response and DM operators</strong><span>Retain the local couplings used by calibration and reconstruction.</span></li><li><strong>Iterative reconstruction</strong><span>Solve for commands without dense global inversion.</span></li><li><strong>Streaming image accumulation</strong><span>Average intensities while retaining selected full-grid PSFs for replay.</span></li></ol></div>
 </section>
 <section aria-labelledby="checks-title" class="panel topic-panel" hidden="" id="topic-checks">
 <h2 id="checks-title">Numerical checks and limitations</h2>
-<div class="evidence-grid"><div><h3>Sensor response</h3><p>Calibrated tilt response and centroid precision in tutorial configurations.</p><a href="#result-R1">Sensor checks →</a></div><div><h3>Native and HCIPy components</h3><p>Comparison on one small test configuration. The loops share the dense reconstructor, so agreement does not independently verify that solver.</p><a href="#result-R7">Backend comparison →</a></div><div><h3>Numerical sampling</h3><p>Sampling studies for selected configurations and observables. Other configurations still need their own checks.</p><a href="#result-R8">Sampling records →</a></div></div>
+<div class="evidence-grid"><div><h3>Sensor response</h3><p>Calibrated tilt response and centroid precision in tutorial configurations.</p><a href="#result-R1">Sensor checks →</a></div><div><h3>Native and HCIPy components</h3><p>I compared the two optical paths on the same 1 m pupil and reconstructor.</p><a href="#result-R7">Backend comparison →</a></div><div><h3>Numerical sampling</h3><p>I refined the pupil, lenslet and focal grids and compared the changes in peak Strehl and half-light radius.</p><a href="#result-R8">Sampling records →</a></div></div>
 
 </section>
 </section>
 <section aria-labelledby="replay42-title" class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="replay42"><p class="breadcrumb"><a href="#methods-home">← Methods &amp; evidence</a></p>
 <h1 id="replay42-title">Replay a larger AO loop</h1>
-<p class="lede">This run uses a ten-layer atmosphere and a simplified 42 m telescope model. Step through the saved frames to follow the wavefront, the deformable-mirror correction and the resulting images. The simulation was run offline; playback adds no frames or noise.</p>
-<p class="hint">500 frames at 500 Hz · 1 s simulated time · 126 snapshots (every fourth frame and the final frame). Averages use frames 100–499; metrics are measured before each control update.</p>
-<p class="hint">Simplified annular pupil based on the <a href="https://www.eso.org/sci/facilities/eelt/science/drm/tech_data/telescope/">historical 42 m E-ELT reference geometry</a>. The <a href="https://elt.eso.org/about/">current ELT is 39 m</a>; this run does not predict an ELT instrument’s performance.</p>
-<p class="hint r42-jumps"><a href="#evidence-42m">Setup and limitations ↓</a> · <a href="#c1-noise">A separate detector-noise calculation ↓</a> · <a href="#flux42">Fainter guide star, 2 s ↓</a> · <a href="#delay42">Controller delay ↓</a> · <a href="#gain42">Integrator gain and delay ↓</a> · <a href="#replay42-methods">Full configuration and checks →</a></p>
+<p class="lede">I propagated ten moving turbulent layers across the historical 42 m pupil and ran the loop at 500 Hz. Over the last 0.8 s, the mean wavefront RMS fell from 1,566 nm before correction to 187 nm after correction. At 2.2 µm the peak Strehl of the averaged image rose from 0.0023 to 0.754.</p>
+<p class="hint">The replay shows 126 snapshots from the 500-frame run. The numerical curves include every frame. I calculated the means over frames 100–499.</p>
+<p class="hint">I used an annular pupil based on the <a href="https://www.eso.org/sci/facilities/eelt/science/drm/tech_data/telescope/">historical 42 m E-ELT reference design</a>. <a href="https://elt.eso.org/about/">Current 39 m ELT design →</a></p>
+<p class="hint r42-jumps"><a href="#evidence-42m">42 m setup ↓</a> · <a href="#c1-noise">A separate detector-noise calculation ↓</a> · <a href="#flux42">Fainter guide star, 2 s ↓</a> · <a href="#delay42">Controller delay ↓</a> · <a href="#gain42">Integrator gain and delay ↓</a> · <a href="#replay42-methods">Full configuration and checks →</a></p>
 <div class="status" id="r42-status" role="status">The 42 m recording loads when this section is in view.</div><div class="error" hidden="" id="r42-error" role="alert"></div>
 <section aria-labelledby="r42-viewer-title" class="panel r42-keys" id="r42-viewer">
 <div class="viewer-head"><h2 id="r42-viewer-title">Wavefronts and images</h2><fieldset class="segmented"><legend>Image panels show</legend><label><input checked="" disabled="" name="r42-mode" type="radio" value="frame"/> This frame (instantaneous)</label><label><input disabled="" name="r42-mode" type="radio" value="mean"/> Mean intensity, frames 100–499</label></fieldset></div>
@@ -280,28 +289,28 @@ function aoCodeUnavailable() {
 </div>
 <p class="mode-note" id="r42-mode-note"></p>
 <div aria-label="42 m playback" class="transport r42-transport" role="group"><button aria-label="First recorded frame" disabled="" id="r42-restart">⏮ First</button><button disabled="" id="r42-prev">◀ Step</button><button aria-pressed="false" disabled="" id="r42-play">Play</button><button disabled="" id="r42-next">Step ▶</button><button aria-label="Final recorded frame" disabled="" id="r42-end">Final ⏭</button><label class="seek">Seek <input aria-valuetext="frame 100, 0.200 s" disabled="" id="r42-seek" max="125" min="0" step="1" type="range" value="25"/></label><output class="r42-time" for="r42-seek" id="r42-time">—</output><label class="r42-speed">Presentation <select disabled="" id="r42-speed"><option value="10">10× slower</option><option selected="" value="20">20× slower</option><option value="40">40× slower</option></select></label></div>
-<p class="hint">Speed changes only how fast saved frames are shown; it is not a simulation parameter. Keyboard, with a 42 m control focused: ← and → step, Home and End jump to the first and final frame, K plays or pauses.<span id="r42-motion-note"></span></p>
-<p class="frame-readout" id="r42-readout"></p><p class="hint">Wavefront maps and numerical RMS always show the selected frame. Mean-intensity images use every frame in 0.2–1.0 s, not just the replay snapshots. The 42 m timeline is independent of the 2 m controls.</p>
+<p class="hint">With a replay control selected, use the arrow keys to step, Home and End to jump, and K to play or pause.<span id="r42-motion-note"></span></p>
+<p class="frame-readout" id="r42-readout"></p><p class="hint">The wavefront maps and RMS follow the selected frame. The mean-image option displays the exposure over frames 100–499.</p>
 <p aria-live="polite" class="visually-hidden" id="r42-live"></p>
 </section>
-<section aria-labelledby="r42-metrics-title" class="panel"><h2 id="r42-metrics-title">How the loop changes over time</h2><p class="hint">All 500 frames are shown. The shaded first 0.2 s is excluded from the averages, as planned before the run; it is not a measured settling time.</p><div class="charts"><figure class="chart"><canvas aria-label="42 m atmosphere and residual RMS over time" height="220" id="r42-chart-rms" role="img" width="900"></canvas><figcaption>Atmosphere and total pre-update residual, nm OPD; piston removed and tilt retained.</figcaption></figure><figure class="chart"><canvas aria-label="42 m instantaneous Strehl over time" height="220" id="r42-chart-strehl" role="img" width="900"></canvas><figcaption>Instantaneous peak Strehl at 2.2 µm, pre-update. The cursor marks the selected recorded frame.</figcaption></figure></div><div class="rms-readout"><p class="rms-head">Analysis window · 0.8 s · frames 100–499 · 400 equal weights</p><dl class="rms-values"><div><dt>Mean instantaneous atmosphere RMS</dt><dd id="r42-mean-rms-u">—</dd></div><div><dt>Mean instantaneous pre-update residual RMS</dt><dd id="r42-mean-rms-c">—</dd></div><div><dt>Peak Strehl of mean AO intensity PSF</dt><dd id="r42-mean-strehl">—</dd></div></dl></div><p class="takeaway">I averaged the 2.2 µm images from 0.2 to 1.0 s. Each full subaperture received 10⁵ detected electrons per 2 ms exposure.</p></section>
+<section aria-labelledby="r42-metrics-title" class="panel"><h2 id="r42-metrics-title">How the loop changes over time</h2><p class="hint">I plotted all 500 frames and averaged the 400 frames after the shaded startup interval.</p><div class="charts"><figure class="chart"><canvas aria-label="42 m atmosphere and residual RMS over time" height="220" id="r42-chart-rms" role="img" width="900"></canvas><figcaption>Atmosphere and total pre-update residual, nm OPD; piston removed and tilt retained.</figcaption></figure><figure class="chart"><canvas aria-label="42 m instantaneous Strehl over time" height="220" id="r42-chart-strehl" role="img" width="900"></canvas><figcaption>Instantaneous peak Strehl at 2.2 µm, pre-update. The cursor marks the selected recorded frame.</figcaption></figure></div><div class="rms-readout"><p class="rms-head">Analysis window · 0.8 s · frames 100–499 · 400 equal weights</p><dl class="rms-values"><div><dt>Mean instantaneous atmosphere RMS</dt><dd id="r42-mean-rms-u">—</dd></div><div><dt>Mean instantaneous pre-update residual RMS</dt><dd id="r42-mean-rms-c">—</dd></div><div><dt>Peak Strehl of mean AO intensity PSF</dt><dd id="r42-mean-strehl">—</dd></div></dl></div><p class="takeaway">I averaged the 2.2 µm images from 0.2 to 1.0 s. Each full subaperture received 10⁵ detected electrons per 2 ms exposure.</p></section>
 <details aria-labelledby="r42-assumptions-title" class="setup-notes" id="evidence-42m">
-<summary id="r42-assumptions-title">Setup and limitations · 42 m</summary>
+<summary id="r42-assumptions-title">42 m optical and control settings</summary>
 <p class="evidence-kind">Historical pupil geometry, published atmosphere inputs and assumed hardware parameters</p>
 <ul class="params"><li>42 m annular pupil · 28% obstruction</li><li>10 layers · r₀ 0.13 m at 500 nm</li><li>Science PSF at 2.2 µm</li><li>WFS: 10⁵ detected e⁻ per full subaperture per 2 ms</li><li>Synthetic CCD · detector noise on</li><li>One seed · 500 steps · 1 s simulated time</li></ul>
 <p class="takeaway">The guide-source flux is an input to the simulation. The photograph provides the science target.</p>
 <dl class="evidence-grid">
 <div><dt>Sampling / WFS wavelength</dt><dd>1008² pupil samples; 84 × 84 lenslet grid; 85 × 85 DM grid; 700 nm WFS reference.</dd></div>
 <div><dt>Controller / command limit</dt><dd>500 Hz; gain 0.3; leak 0; two queued frames (4 ms); ±100 µm OPD, an assumed high-headroom bound.</dd></div>
-<div><dt>Analysis window</dt><dd>Seed 1; 0–1 s recorded; [0.2, 1.0) s analysis. One realization, no confidence interval over realizations.</dd></div>
+<div><dt>Analysis window</dt><dd>Seed 1. I recorded 0–1 s and averaged frames from 0.2 s up to 1.0 s.</dd></div>
 <div><dt>Parameter sources</dt><dd>42 m historical DRM geometry and ten-layer profile; synthetic CCD, DM and photon-budget assumptions. L₀ = 25 m; all layer winds along +x.</dd></div>
 </dl>
-<p><strong>What this run shows:</strong> on-axis correction and DM command demand in this model. The sections below examine the wavefront over a smaller patch and check command clipping.</p>
 
-<p class="hint">The pupil omits segment gaps and spiders. Detector and DM parameters are assumed, including a ±100 µm OPD command bound; the model does not include a complete instrument error budget. The 2 m and 42 m runs also use different science wavelengths. <a href="#dm-stroke">DM stroke, saturation and ELT M4 context →</a> · <a href="#replay42-methods">Full configuration and checks →</a></p>
+
+<p class="hint">The model uses an annular pupil and a mirror command limit of ±100 µm OPD. <a href="#dm-stroke">Compare the requested mirror commands →</a> · <a href="#replay42-methods">Run settings and records →</a></p>
 </details>
 <section aria-labelledby="r42-binary-title" class="panel r42-keys">
-<h2 id="r42-binary-title">Observed binary with additional simulated blur</h2><p class="takeaway">I convolved the same HST F775W image with the uncorrected and corrected PSFs. The difference between the two panels shows how much blur each PSF adds.</p><p class="hint">2MASS J0746425+200032 AB · HST/ACS HRC F775W · 2002-10-21. All three panels share one angular scale and one fixed brightness mapping.</p>
+<h2 id="r42-binary-title">Observed binary with additional simulated blur</h2><p class="takeaway">I convolved an HST F775W image of the binary with each 2.2 µm PSF. In the uncorrected mean image the stars blend into one patch. In the corrected image I can distinguish the two peaks.</p><p class="hint">2MASS J0746425+200032 AB · HST/ACS HRC F775W · 2002-10-21. All three panels share one angular scale and one fixed brightness mapping.</p>
 <div class="r42-binary-grid">
 <figure class="map"><div class="r42-picture"><canvas aria-label="Observed HST binary template" height="256" id="r42-source" role="img" width="256"></canvas><span class="r42-scale"><i></i>0.2″</span></div><figcaption><strong>Observed HST template</strong><span>original HST resolution and noise retained</span></figcaption></figure>
 <figure class="map"><div class="r42-picture"><canvas aria-label="HST template with additional blur from the uncorrected simulation PSF" height="256" id="r42-binary-u" role="img" width="256"></canvas><span class="r42-scale"><i></i>0.2″</span></div><figcaption><strong>Template + uncorrected PSF</strong><span>observed template ∗ zero-DM PSF</span></figcaption></figure>
@@ -309,20 +318,20 @@ function aoCodeUnavailable() {
 </div>
 <p class="frame-readout" id="r42-photo-readout"></p>
 <div aria-label="42 m binary playback" class="transport r42-transport" role="group"><button aria-label="First recorded frame" disabled="" id="r42-photo-restart">⏮ First</button><button disabled="" id="r42-photo-prev">◀ Step</button><button aria-pressed="false" disabled="" id="r42-photo-play">Play</button><button disabled="" id="r42-photo-next">Step ▶</button><button aria-label="Final recorded frame" disabled="" id="r42-photo-end">Final ⏭</button><label class="seek">Seek <input aria-valuetext="frame 100, 0.200 s" disabled="" id="r42-photo-seek" max="125" min="0" step="1" type="range" value="25"/></label></div>
-<p class="hint">Both simulated images convolve the same observed template with their respective PSFs. Credit: NASA/ESA Hubble Space Telescope, ACS/HRC program 9451; MAST/STScI. <a href="#replay42-source">Scientific source and image preparation →</a></p>
+<p class="hint">HST/ACS HRC programme 9451, NASA and ESA, via MAST. <a href="#replay42-source">Source image and preparation →</a></p>
 </section></section>
 <section aria-labelledby="aperture-comparison-title" class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="aperture-comparison"><p class="breadcrumb"><a href="#methods-home">← Methods &amp; evidence</a></p>
 <h1 id="aperture-comparison-title">Why does the 42 m atmosphere look steadier?</h1>
-<p class="lede">The full-pupil RMS changes little while the wavefront keeps moving. A fixed 2 m patch from the 42 m recording reveals local changes comparable to the separate 2 m simulation.</p>
+<p class="lede">The 42 m wavefront kept moving even when its RMS barely changed. I selected a fixed 2 m patch inside the large pupil and measured how its RMS varied over the same times as the 2 m baseline.</p>
 <section aria-labelledby="comparison-observation-title" class="panel comparison-intro">
 <h2 id="comparison-observation-title">Comparing the whole-pupil RMS</h2>
-<p class="takeaway">The 2 m recording has much larger swings in <strong>whole-pupil input RMS</strong>. Across the full one-second records, the largest larger/smaller RMS ratios over 40 ms are <strong>1.51× for 2 m</strong> and <strong>1.009× for 42 m</strong>; over 100 ms they are <strong>2.15×</strong> and <strong>1.021×</strong>. These are the maxima over all available pairs at each physical time separation.</p>
-<div class="comparison-columns"><div><h3>Both recordings last one second.</h3><p>The 2 m run has 1000 frames at 1 kHz; the 42 m run has 500 at 500 Hz. Both viewers show 126 saved snapshots. The physical duration is the same.</p><p>In frozen flow, a pattern moves <strong>v Δt / D</strong> aperture diameters. At the same 10 m/s, one second is five 2 m diameters but only 0.24 of a 42 m diameter. This measures whole-aperture crossing time; local coherence also depends on the turbulence and wind.</p></div><div><h3>The original displays use different scales.</h3><p>The 2 m maps use ±1.95 µm OPD; the 42 m maps use ±6.7 µm and 4 × 4 spatial averaging for display. Their apparent color changes are not directly comparable.</p><p>The 42 m wavefront is evolving: between 0.200 and 0.700 s, the full-pupil difference RMS is about 1851 nm even though each frame’s overall RMS is similar.</p></div></div>
+<p class="takeaway">I compared each whole-pupil RMS with its value 40 ms later, dividing the larger by the smaller. The largest ratio was <strong>1.51 for the 2 m pupil</strong> and <strong>1.009 for the 42 m pupil</strong>. At 100 ms the corresponding ratios were 2.15 and 1.021.</p>
+<div class="comparison-columns"><div><h3>Both recordings last one second.</h3><p>I used all 1,000 frames of the 2 m recording and all 500 frames of the 42 m recording to compare equal time intervals.</p><p>A layer moving at 10 m/s travels five 2 m pupil diameters in one second, or 0.24 of a 42 m diameter. A whole-pupil RMS therefore averages over different spatial scales.</p></div><div><h3>The original displays use different scales.</h3><p>The 2 m replay uses a ±1.95 µm OPD scale. The 42 m replay uses ±6.7 µm and averages each 4 × 4 group of pixels for display.</p><p>Subtracting the 42 m wavefront at 0.200 s from the one at 0.700 s gave a difference RMS of 1,851 nm, even though the individual frames had similar RMS values.</p></div></div>
 </section>
 <section aria-labelledby="comparison-experiment-title" class="panel">
 <h2 id="comparison-experiment-title">Comparing the same 2 m footprint</h2>
-<p>Take one fixed circular patch centered at <strong>(10, 0) m</strong> inside the unobstructed 42 m pupil. Compare it with the 2 m baseline at matching physical times, on the same 52 × 52 grid and one <strong>±2500 nm OPD</strong> color scale. Remove each local pupil mean, retain tilt, and leave amplitudes unchanged.</p>
-<p class="hint">The analysis reads existing full-precision recordings at matching times. The 42 m patch uses bilinear spatial sampling onto the 2 m grid.</p>
+<p>I placed a 2 m circle at <strong>(10, 0) m</strong> inside the clear part of the 42 m pupil. At each matched time I sampled this patch on the same 52 × 52 grid as the 2 m baseline, removed piston and kept tilt. Both maps use the same <strong>±2,500 nm OPD</strong> colour scale.</p>
+<p class="hint">I used bilinear interpolation to sample the 42 m wavefront on the 2 m grid.</p>
 <div class="status" id="comparison-status" role="status">The comparison figures load when this section is in view.</div><div class="error" hidden="" id="comparison-error" role="alert"></div>
 <div aria-label="Wavefront comparison time separation" class="comparison-controls" role="group">
 <span>Time separation</span><button aria-pressed="false" data-comparison-lag="8" disabled="" type="button">8 ms</button><button aria-pressed="true" data-comparison-lag="100" disabled="" type="button">100 ms</button><button aria-pressed="false" data-comparison-lag="500" disabled="" type="button">500 ms</button>
@@ -333,15 +342,15 @@ function aoCodeUnavailable() {
 </section>
 <section aria-labelledby="comparison-results-title" class="panel">
 <h2 id="comparison-results-title">The local fluctuations are comparable</h2>
-<p>Across 400 matching times from 0.200 to 0.998 s, the patch’s relative RMS fluctuation rises to <strong>29.3%</strong>, close to the separate 2 m baseline’s <strong>25.6%</strong>. The full 42 m pupil fluctuates by only <strong>1.4%</strong>. The crop does not show uniformly slower local evolution.</p>
+<p>I divided the temporal standard deviation of the pupil RMS by its mean over 400 matched frames. It was <strong>1.4%</strong> over the full 42 m pupil, <strong>29.3%</strong> inside its 2 m patch, and <strong>25.6%</strong> in the separate 2 m run. Averaging over the full aperture hid local changes that were clear in the patch.</p>
 <div class="comparison-table-scroll"><table class="comparison-table"><caption>Existing recordings · matching 2 ms samples · piston removed, tilt retained</caption><thead><tr><th scope="col">Quantity</th><th scope="col">2 m baseline</th><th scope="col">42 m: 2 m patch</th></tr></thead><tbody id="comparison-table-body"><tr><td colspan="3">Loading the recorded comparison statistics…</td></tr></tbody></table></div>
 <p class="hint">Difference RMS is √⟨[W(t + Δt) − W(t)]²⟩ over the common pupil and every available time pair. There are 396, 350 and 150 pairs at 8, 100 and 500 ms. The figures above show one pair starting at 0.200 s, so their RMS values can differ from these whole-window statistics.</p>
-<figure class="comparison-figure"><a id="comparison-temporal-full" rel="noopener" target="_blank"><img alt="Time traces of pupil RMS, RMS of wavefront differences versus time separation, and spatial correlation versus time separation." height="799" hidden="" id="comparison-temporal" width="2380"/></a><figcaption>Local RMS fluctuates while the full-pupil statistic remains steadier. Curves summarize this short record; overlapping time pairs are correlated and do not provide confidence intervals.</figcaption></figure>
+<figure class="comparison-figure"><a id="comparison-temporal-full" rel="noopener" target="_blank"><img alt="Time traces of pupil RMS, RMS of wavefront differences versus time separation, and spatial correlation versus time separation." height="799" hidden="" id="comparison-temporal" width="2380"/></a><figcaption>The lower curves compare the wavefronts at successively longer time separations. The difference RMS grows as the patterns move across the patch.</figcaption></figure>
 </section>
 <section aria-labelledby="comparison-explanation-title" class="panel">
 <h2 id="comparison-explanation-title">What this suggests about DM tracking and Strehl</h2>
-<p class="takeaway"><strong>The explanation needs both atmosphere and control conditions.</strong> The 2 m loop clips commands at its ±1 µm OPD limit, while the 42 m loop stays within its ±100 µm limit. Stroke affects the comparison, but the existing data do not establish it as the main cause of steadier Strehl. The crop experiment helps interpret the input's apparent steadiness; it does not isolate the cause of the corrected image's stability. <a href="#dm-stroke">Read the saturation check below →</a></p>
-<p><strong>One possible explanation to test:</strong> if two loops have comparable response and maintain a similar, approximately constant residual-to-input RMS ratio, smaller fluctuations in input RMS should produce smaller fluctuations in residual RMS. Inferring steadier Strehl additionally requires comparable residual phase variance and consistent science-image definitions. These recordings do not hold those conditions fixed.</p>
+<p class="takeaway">I next compared the mirror commands with their limits. The 2 m loop reached ±1 µm OPD. The 42 m loop stayed well inside ±100 µm. <a href="#dm-stroke">Inspect the stroke measurements →</a></p>
+
 <details><summary>Are the 2 m and 42 m control parameters similar?</summary><div class="prose">
 <div class="comparison-table-scroll"><table class="comparison-table"><caption>Values from the saved baseline configurations</caption><thead><tr><th scope="col">Parameter</th><th scope="col">2 m</th><th scope="col">42 m</th></tr></thead><tbody>
 <tr><th scope="row">r₀ at 500 nm / outer scale</th><td>0.1263 m / 25 m</td><td>0.1300 m / 25 m</td></tr>
@@ -356,27 +365,27 @@ function aoCodeUnavailable() {
 <tr><th scope="row">Detector / guide-source convention</th><td>Synthetic EMCCD / AB magnitude 7</td><td>Synthetic CCD / 10⁵ e⁻ per full subaperture per frame</td></tr>
 <tr><th scope="row">Science wavelength shown</th><td>1.65 µm</td><td>2.2 µm</td></tr>
 </tbody></table></div>
-<p>Both use noisy detector-level sensing and a 700 nm WFS reference, but the detector, spectral sampling and source conventions differ. The 42 m layers also have different wind speeds from the single 10 m/s 2 m layer. Equal latency in frames does not mean equal latency in seconds; gain alone does not determine closed-loop bandwidth.</p>
-<p>As a descriptive check over the same 400 times, the mean per-frame residual/input OPD RMS ratio is <strong>0.687 for 2 m</strong> and <strong>0.119 for 42 m</strong> (temporal standard deviations 0.118 and 0.0028). These ratios combine fitting, temporal, sensing, reconstruction and stroke effects; they are not an isolated controller-efficiency measurement. They do show that an equal suppression ratio is an assumption, not a measured property of these two runs. Exact values, configuration hashes and definitions are in the downloadable control comparison.</p>
+<p>Both loops sense at 700 nm with detector noise. The two-frame queue corresponds to 2 ms in the 2 m loop and 4 ms in the 42 m loop.</p>
+<p>Over the same 400 times, I divided each residual RMS by the corresponding input RMS. The mean ratios were <strong>0.687 for 2 m</strong> and <strong>0.119 for 42 m</strong>. These values describe the complete loops, including their different mirrors, sensors and controllers.</p>
 </div></details>
-<p>A larger aperture covers more spatial structure at once. Its aggregate wavefront RMS can remain steady even as individual regions change. The same-footprint experiment supports this interpretation of the two recordings; it does not show that local turbulence slows down as the telescope gets larger.</p>
-<p>The DM must keep tracking changes at the subaperture and actuator scales. Its performance depends on those scales, wind, loop rate, delay, reconstruction and stroke. A longer whole-aperture crossing time alone does not make that tracking easier.</p>
-<p class="takeaway">A stable Strehl can accompany a continuously changing wavefront if the closed loop maintains a stable residual phase variance. Near high Strehl, the Maréchal approximation S ≈ exp(−σ²<sub>φ,res</sub>) describes this connection for consistent wavelength, pupil and tilt/peak conventions. The site’s reported Strehl values come from propagated PSFs, not this approximation.</p>
-<p>The crop analysis describes the <strong>input atmosphere</strong> over one patch and one realization per model. The recordings also differ in layer winds, DM/control settings and science wavelength.</p>
-<details><summary>Sampling sensitivity, definitions and downloads</summary><div class="prose"><p>The shared support contains 2032 uniformly weighted points over a 2 m circle. The 2 m spacing is 2/51 m; the original 42 m spacing is 42/1007 m. Local piston is removed independently at each time; tilt remains. No wavefront registration or amplitude normalization is applied.</p><p>Bilinear sampling mildly filters the 42 m patch. Nearest-neighbor sampling changes its mean RMS from 381.5 to 384.1 nm and its 8 ms difference RMS from 136.6 to 142.7 nm (about 4.2%). Both sampling choices give the same ordering; the change quantifies interpolation sensitivity.</p><p>The full 2 m archive hash, all 400 used 42 m frame hashes and the archived time arrays were checked. The downloads include source hashes, methods, numerical arrays and a script for repeating the postprocessing. Plots and statistics use those saved wavefronts. Explicit four-corner interpolation checks the crop algorithm on the same inputs.</p><p>For the frozen-flow model context, see <a href="https://ehpor.github.io/assets/pdf/Por-2018-HCIPy.pdf">Por et al. (2018), §4.1</a>. The experiment and figures here were calculated directly from the stored wavefronts.</p><div class="downloads" id="comparison-downloads"></div></div></details>
+
+
+<p class="takeaway">I calculated Strehl from the propagated images. A steady whole-pupil atmospheric RMS can coexist with changing local errors, so I examined the residual after the mirror correction as well.</p>
+
+<details><summary>Sampling sensitivity, definitions and downloads</summary><div class="prose"><p>The two maps have 2,032 common pupil samples. I removed piston from each frame and kept its amplitude and tilt.</p><p>With nearest-neighbour sampling, mean patch RMS changed from 381.5 to 384.1 nm, and the 8 ms difference RMS from 136.6 to 142.7 nm.</p><p>For the frozen-flow model, see <a href="https://ehpor.github.io/assets/pdf/Por-2018-HCIPy.pdf">Por et al. (2018), §4.1</a>.</p><div class="downloads" id="comparison-downloads"></div></div></details>
 </section>
 <section aria-labelledby="dm-stroke-title" class="panel" id="dm-stroke">
 <h2 id="dm-stroke-title">How much does the DM stroke limit matter?</h2>
-<p class="takeaway">The 2 m mirror reached its stroke limit. Even between 0.200 and 0.518 s, while the held commands were within the limit, Strehl varied from 0.380 to 0.722.</p>
-<div class="comparison-columns"><div><h3>Why are the limits 100× apart?</h3><p>The 2 m profile inherits <strong>±1 µm OPD</strong> from a synthetic engineering preset. The 42 m profile deliberately uses <strong>±100 µm OPD</strong> as a finite stand-in for unlimited stroke. That approximation requires the requested commands to stay within the bound. These limits serve different modelling purposes; they are not a hardware scaling rule.</p></div><div><h3>Clipping checks</h3><p>The saved requested and applied actuator commands were compared directly, alongside the existing residual RMS and propagated-PSF Strehl records. Saturation means a requested command exceeds the configured positive or negative limit. No atmosphere, calibration, control loop or PSF was rerun.</p></div></div>
+<p class="takeaway">I compared the requested mirror commands with the configured limits at each update. Over one second the 2 m loop clipped commands in <strong>306 of 1,000 updates</strong>. All 500 updates of the 42 m loop stayed inside the limit.</p>
+<div class="comparison-columns"><div><h3>Why are the limits 100× apart?</h3><p>I kept the <strong>±1 µm OPD</strong> limit of the 2 m profile. For the 42 m run I used a much wider bound, <strong>±100 µm OPD</strong>, to let the loop move freely.</p></div><div><h3>Clipping checks</h3><p>An update counts as clipped when at least one requested actuator command exceeds its limit. I compared the commands the mirror received with the wavefront and Strehl in the next exposure.</p></div></div>
 <div class="status" id="stroke-status" role="status">The saved stroke statistics and figure load when this panel is in view.</div><div class="error" hidden="" id="stroke-error" role="alert"></div>
 <div class="comparison-table-scroll"><table class="comparison-table"><caption>Existing recordings · native sampling · analysis window [0.200, 1.000) s, with startup excluded</caption><thead><tr><th scope="col">Quantity</th><th scope="col">2 m</th><th scope="col">42 m</th></tr></thead><tbody id="stroke-table-body"><tr><td colspan="3">Loading the saved saturation statistics…</td></tr></tbody></table></div>
-<p class="hint">“Frames with clipping” counts updates with any clipped actuator. “Mean clipped actuator fraction” averages across all recorded actuator channels and updates; the two percentages have different denominators. Across the entire 1 s, including startup, 2 m clips in 306/1000 updates; 42 m clips in 0/500. The maximum requested magnitudes over that whole second are 1.128 and 6.918 µm OPD respectively.</p>
+<p class="hint">The largest requested command over the full second was 1.128 µm in the 2 m run and 6.918 µm in the 42 m run. The table uses the interval from 0.2 to 1.0 s.</p>
 <figure class="comparison-figure"><a id="stroke-figure-full" rel="noopener" target="_blank"><img alt="Recorded command magnitudes, held actuator saturation, residual RMS and Strehl over one second; red shading identifies held clipped 2 m commands, and 42 m has no clipping." height="1768" hidden="" id="stroke-figure" width="2006"/></a><figcaption>Gray: the first 0.2 s, excluded from the comparison window. Red: the exposure holds a 2 m command that was clipped. A command issued after frame k affects the next recorded exposure, so saturation is shifted by one update to align with pre-update optical metrics. Strehl wavelengths differ: 1.65 µm for 2 m and 2.20 µm for 42 m.</figcaption></figure>
-<p>The 42 m requests stay below 7 µm OPD, far inside the ±100 µm bound. Unused headroom does not itself strengthen correction in this model. The 2 m loop also fluctuates during sustained unsaturated intervals, and the two configurations differ in sensing, reconstruction, DM influence functions, gain, leak, delays and wavelength. Clipping is present in the 2 m run, but these records cannot tell us how much it contributes to the difference in Strehl variability.</p>
-<details><summary>Timing, descriptive associations and the limits of an offline comparison</summary><div class="prose"><p>There are 174 clipped issued updates in the 2 m analysis window, but 173 observed frames holding a clipped command: the final update has no following saved exposure. Grouped by held command, mean Strehl is 0.601 during clipped intervals and 0.569 during unclipped intervals. These are different atmospheric states, not matched comparisons; they do not imply clipping improves Strehl.</p><p>The controller carries the actually applied command into its next update. Its saved requests therefore already reflect earlier clipping. Removing clipping from those saved commands cannot recover a larger-stroke closed-loop trajectory. On the original 42 m trajectory, 46.73% of actuator-time requests exceed 1 µm and none exceed 10 µm during the analysis window; these are demand counts, not simulated outcomes for alternative limits.</p><p>One second and one realization per configuration do not identify the dominant physical cause or establish long-term stability. The 0.2 s startup exclusion is not a convergence result.</p></div></details>
+<p>Between 0.200 and 0.518 s the 2 m mirror held commands within its limits, yet Strehl ranged from 0.380 to 0.722. The image continued to vary during that interval even without clipping.</p>
+<details><summary>Aligning commands with exposures</summary><div class="prose"><p>In the 2 m analysis window, 174 updates clipped and 173 exposures held a clipped command. The last update has no following exposure in the recording.</p><p>For the 42 m run I also counted the demands above two reference levels. Across all actuators and update times, 46.73% exceeded 1 µm and none exceeded 10 µm. Both counts use the original command history.</p></div></details>
 <h3 id="elt-m4-stroke">What does real ELT M4 hardware tell us?</h3>
-<p>ESO's <a href="https://www.eso.org/~gchiozzi/MyDocs/SPIE2022/12189-48-The_ELT_high_level_coordination_and_control.pdf">2022 ELT coordination and control paper, pp. 1–2</a> provides the following context. Its M4 is part of the 39 m ELT; this recording uses historical 42 m geometry and a synthetic DM model.</p>
+<p>ESO describes M4 in its <a href="https://www.eso.org/~gchiozzi/MyDocs/SPIE2022/12189-48-The_ELT_high_level_coordination_and_control.pdf">2022 paper on ELT coordination and control (pp. 1–2)</a>. The table compares the published quantities with the assumptions in the historical 42 m model.</p>
 <div class="comparison-table-scroll"><table class="comparison-table"><caption>Published ELT design context versus this recorded model</caption><thead><tr><th scope="col">Parameter</th><th scope="col">ELT / M4 in the ESO paper</th><th scope="col">42 m recording</th></tr></thead><tbody>
 <tr><th scope="row">Telescope primary aperture</th><td>39 m</td><td>42 m historical geometry</td></tr>
 <tr><th scope="row">M4 degrees of freedom / model command channels</th><td>5352 degrees of freedom</td><td>5873 recorded channels on an 85 × 85 layout; 5328 are nonzero in this record</td></tr>
@@ -384,44 +393,44 @@ function aoCodeUnavailable() {
 <tr><th scope="row">Stroke</th><td>100 µm actuator stroke, as stated in the paper</td><td>Explicit symmetric command bound: ±100 µm OPD</td></tr>
 <tr><th scope="row">Stroke management</th><td>Slowly accumulating modes are offloaded to other telescope mirrors and axes</td><td>A single modeled DM with command clipping</td></tr>
 </tbody></table></div>
-<p><strong>The two “100 µm” values could correspond, but their definitions must first match.</strong> If the hardware value is a <em>total mechanical travel</em> of 100 µm, with a centered operating point and normal-incidence reflection, the conversion is:</p>
+<p>The paper quotes 100 µm of actuator stroke. To compare that number with an OPD command limit, consider a mirror with 100 µm total mechanical travel, centred on its operating point and illuminated at normal incidence.</p>
 <p class="takeaway">100 µm mechanical total travel → ±50 µm mirror displacement → <strong>±100 µm OPD</strong>.</p>
-<p>That conditional conversion matches the model numerically. The cited passage does not specify all those conventions, and it does not establish the usable symmetric range of every model command coefficient. Optical versus mechanical stroke, total versus one-sided travel, bias and static correction, spatial coupling and incidence angle all matter. For normal displacement h at incidence angle θ, the geometric optical-path change is 2h cos θ; at normal incidence it is 2h. The model commands are already OPD-equivalent.</p>
-<p>The model uses the assumed ±100 µm OPD bound. Translating the published M4 stroke into usable command range also requires its bias, static allocation and spatial calibration.</p>
-<details><summary>Methods, source records and downloads</summary><div class="prose"><p>The raw histories match their archived SHA-256 records. Saturation and clipping were checked against the archived commands. The figure, table and CSV present the same history analysis.</p><p>For the distinction between limited stroke and controller state, see <a href="https://faculty.nps.edu/agrawal/docs/DEPS_BC_12-BC-011%20paper.pdf">Nagashima, Kim and Agrawal, actuator limitations and anti-windup</a>. For controlled finite-stroke comparisons in a different ELT AO architecture, see <a href="https://academic.oup.com/mnras/article/435/2/992/1033081">Basden et al. (2013), §§2.3 and 3.3</a>. Those studies supply physical and controller context for the stroke discussion.</p><div class="downloads" id="stroke-downloads"></div></div></details>
+<p>For a surface displacement <em>h</em> and angle of incidence θ, reflection changes the optical path by 2<em>h</em> cos θ. The conversion above illustrates those conventions. The published stroke alone does not specify M4’s usable symmetric OPD range.</p>
+
+<details><summary>Methods, source records and downloads</summary><div class="prose"><p>For the distinction between limited stroke and controller state, see <a href="https://faculty.nps.edu/agrawal/docs/DEPS_BC_12-BC-011%20paper.pdf">Nagashima, Kim and Agrawal, actuator limitations and anti-windup</a>. For controlled finite-stroke comparisons in a different ELT AO architecture, see <a href="https://academic.oup.com/mnras/article/435/2/992/1033081">Basden et al. (2013), §§2.3 and 3.3</a>. Those studies supply physical and controller context for the stroke discussion.</p><div class="downloads" id="stroke-downloads"></div></div></details>
 </section>
 </section>
 <section aria-labelledby="ngs22-title" class="wrap section page-view" data-nav="studies" data-view="" hidden="" id="ngs22"><p class="breadcrumb"><a href="#studies">← Selected studies</a></p>
-<h1 id="ngs22-title">Why did the loop stop correcting?</h1><nav aria-label="In this study" class="local-nav"><a href="#ngs22-replay">Compare the images</a><a href="#ngs22-cause-title">Trace the failure</a><a href="#ngs22-control">Inspect telemetry</a><a href="#ngs22-repair-title">Interpret the change</a><a href="#ngs22-off-axis">Off-axis Strehl</a></nav>
-<p class="lede">This configuration uses published Robo-AO-2 information and stated modelling assumptions. The original version loses usable reconstruction at 0.9813 s. After increasing regularization, the loop stays usable through the same two-second atmosphere sequence. Both runs are shown below.</p>
-<p class="takeaway"><strong>What changed:</strong> stronger rejection of weakly sensed reconstruction modes. The DM stroke, atmosphere, photons, loop gain and timing are unchanged between the two 2.2 m runs. The added recovery safeguard was not needed in the revised run.</p>
-<p class="hint">The setup combines published hardware information, atmosphere parameters from the literature and explicit modelling assumptions. It has not been calibrated against Robo-AO-2 telemetry or measured PSFs.</p>
+<h1 id="ngs22-title">Why the 2.2 m loop lost lock</h1><nav aria-label="In this study" class="local-nav"><a href="#ngs22-replay">Compare the images</a><a href="#ngs22-cause-title">Trace the failure</a><a href="#ngs22-control">Inspect telemetry</a><a href="#ngs22-repair-title">Compare the two runs</a><a href="#ngs22-off-axis">Off-axis Strehl</a></nav>
+<p class="lede">In my 2.2 m natural-guide-star simulation, the first run stopped reconstructing the wavefront at 0.981 s. I raised the relative cutoff in the truncated singular-value decomposition (TSVD) from 0.001 to 0.05 and ran the same two seconds of atmosphere again.</p>
+<p class="takeaway">The revised loop reconstructed all 1,500 frames. Every mirror command stayed within its stroke limit. From 0.2 to 2.0 s, the mean instantaneous H-band Strehl rose from 0.381 to 0.750.</p>
+
 <p class="status" id="ngs22-status" role="status">The results load when this section comes into view.</p>
 <div class="error" hidden="" id="ngs22-error" role="alert"></div>
 <details aria-labelledby="evidence-ngs22-title" class="setup-notes" id="evidence-ngs22">
-<summary id="evidence-ngs22-title">Setup and limitations · 2.2 m NGS</summary>
-<p class="evidence-kind">Published hardware information, literature atmosphere parameters and modelling assumptions</p>
+<summary id="evidence-ngs22-title">2.2 m telescope, sensor and controller settings</summary>
+<p class="evidence-kind">I used the published Robo-AO-2 geometry to set the telescope and lenslet array in the model.</p>
 <dl class="evidence-grid">
-<div><dt>Hardware targets / model sampling</dt><dd>UH 2.2 m scale; 16 × 16 lenslets; 17 actuators across the illuminated pupil. Numerical model: 256² samples and 197 command channels, not a measured 492-channel map.</dd></div>
-<div><dt>Atmosphere / guide source</dt><dd>11 layers including slow dome seeing; r₀ = 0.113 m at 500 nm; L₀ = 25 m. AB 7 flat-fν guide photometry is a local assumption.</dd></div>
-<div><dt>Wavelengths / sensing</dt><dd>750 nm WFS reference; displayed science PSFs at 1.65 µm. Noisy detector-level sensing; camera electronics, pupil and field-stop treatment remain approximate.</dd></div>
-<div><dt>Controller / command limit</dt><dd>750 Hz; gain 0.4; leak 0; two queued frames (2.667 ms); ±3.5 µm OPD. Symmetric stroke assumes midpoint bias, normal incidence and no reserved static stroke.</dd></div>
-<div><dt>Change between the paired runs</dt><dd>TSVD cutoff 0.001 → 0.05; rejection decay added but never activated in v2. Both settings are local engineering choices.</dd></div>
-<div><dt>Run length and analysis window</dt><dd>One paired realization; 1500 frames per run over 2 s. All input atmosphere maps and calibration arrays match. Analysis starts at 0.2 s.</dd></div>
+<div><dt>Hardware targets / model sampling</dt><dd>2.2 m aperture, 16 × 16 lenslets and 17 actuators across the pupil. The model samples the pupil on a 256 × 256 grid and retains 197 actuator channels.</dd></div>
+<div><dt>Atmosphere / guide source</dt><dd>11 atmospheric layers including slow dome seeing, r₀ = 0.113 m at 500 nm and L₀ = 25 m. The guide source has AB magnitude 7 and flat fν.</dd></div>
+<div><dt>Wavelengths / sensing</dt><dd>The wavefront sensor measures noisy spots at 750 nm. I calculate the science PSFs at 1.65 µm.</dd></div>
+<div><dt>Controller / command limit</dt><dd>750 Hz, gain 0.4, zero leak and two frames of delay (2.667 ms). I set the mirror command limits to ±3.5 µm optical path difference.</dd></div>
+<div><dt>Change between the paired runs</dt><dd>I increased the TSVD cutoff and added command decay after consecutive rejected frames.</dd></div>
+<div><dt>Run length and analysis window</dt><dd>Both runs use the same atmosphere and calibration. Each has 1,500 frames over 2 s. I excluded the first 0.2 s when calculating the Strehl statistics.</dd></div>
 </dl>
-<p><strong>Result:</strong> stronger regularization prevents the observed reconstruction failure on the same input sequence.</p>
-<p><strong>Still to test:</strong> robustness over longer runs and different conditions, and agreement with real instrument data. The recovery safeguard did not activate in v2. The model also omits a separate tip-tilt mirror.</p>
+
+<p><a href="#model-limitations">Model limitations</a></p>
 <p class="hint"><a href="#ngs22-assumptions">All 131 parameter notes →</a> · <a href="#ngs22-control">Inspect the control diagnosis →</a> · <a href="#ngs22-science">Westerlund 2 F162M image experiment →</a></p>
 </details>
 <section aria-labelledby="ngsr-title" class="panel ngsr-panel" id="ngs22-replay">
 <h2 id="ngsr-title">Replay the original and revised runs</h2>
-<p>Shared input on the left; original v1 in the middle; revised v2 on the right. Wavefronts, PSFs, the <a href="#ngs22-science">Westerlund 2 F162M image experiment</a>, readouts and the black chart cursor advance together. The red dashed line marks <strong>frame 736 · 0.981333 s</strong>, the first rejected v1 reconstruction.</p>
+<p>The left panel shows the atmospheric wavefront. The middle and right panels show the residuals with the original and revised reconstructors. Switch to the point-source or <a href="#ngs22-science">star-field view</a> to see the effect of each residual on the image.</p>
 <p class="status" id="ngsr-status" role="status">Saved replay loads when this panel is visible.</p>
 <p class="error" hidden="" id="ngsr-error" role="alert"></p><div aria-label="2.2 m image view" class="view-switch" role="group"><button aria-pressed="true" data-pane="ngs-wave" type="button">Wavefront</button><button aria-pressed="false" data-pane="ngs-psf" type="button">Point-source image</button><button aria-pressed="false" data-pane="ngs-scene" type="button">Star field</button></div><div data-pane-content="ngs-wave"><div class="ngsr-grid">
 <figure><h3>Shared input</h3><canvas aria-label="Shared atmospheric OPD" height="256" id="ngsr-atmosphere" role="img" width="256"></canvas><figcaption id="ngsr-atmosphere-caption">Shared atmosphere</figcaption></figure>
 <figure><h3 class="ngsr-v1">Original · v1</h3><canvas aria-label="Original v1 pre-update residual OPD" height="256" id="ngsr-residual-v1" role="img" width="256"></canvas><figcaption id="ngsr-residual-v1-caption">Original residual</figcaption></figure>
 <figure><h3 class="ngsr-v2">Revised · v2</h3><canvas aria-label="Revised v2 pre-update residual OPD" height="256" id="ngsr-residual-v2" role="img" width="256"></canvas><figcaption id="ngsr-residual-v2-caption">Revised residual</figcaption></figure>
-</div><div class="ngsr-scale"><canvas aria-label="Common diverging OPD color scale" height="12" id="ngsr-wave-scale" width="256"></canvas><span id="ngsr-wave-scale-text"></span></div><p class="hint">One fixed OPD scale for all three panels and every frame; no displayed value is clipped. Piston removed for map display only; tilt retained. Dark pixels lie outside the pupil.</p></div><div data-pane-content="ngs-psf" hidden=""><div class="ngsr-grid">
+</div><div class="ngsr-scale"><canvas aria-label="Common diverging OPD color scale" height="12" id="ngsr-wave-scale" width="256"></canvas><span id="ngsr-wave-scale-text"></span></div><p class="hint">All three maps use the same OPD scale. I removed piston for display and retained tilt. Dark pixels are outside the pupil.</p></div><div data-pane-content="ngs-psf" hidden=""><div class="ngsr-grid">
 <figure><canvas aria-label="Uncorrected H-band PSF" height="256" id="ngsr-psf-u" role="img" width="256"></canvas><figcaption id="ngsr-psf-u-caption">Uncorrected PSF</figcaption></figure>
 <figure><canvas aria-label="Original v1 H-band PSF" height="256" id="ngsr-psf-v1" role="img" width="256"></canvas><figcaption id="ngsr-psf-v1-caption">Original PSF</figcaption></figure>
 <figure><canvas aria-label="Revised v2 H-band PSF" height="256" id="ngsr-psf-v2" role="img" width="256"></canvas><figcaption id="ngsr-psf-v2-caption">Revised PSF</figcaption></figure>
@@ -429,7 +438,7 @@ function aoCodeUnavailable() {
 <div class="science-section" data-pane-content="ngs-scene" hidden="" id="ngs22-science">
 <span aria-hidden="true" id="ngs22-orion"></span><span aria-hidden="true" id="ngs22-ngc602"></span>
 <h3>Westerlund 2 through the recorded PSFs</h3>
-<p>The selected <strong>4.109″ field</strong>, at the same angular scale and brightness transfer in every panel. The single-band JWST observation near <strong>1.627 µm</strong> is convolved with the existing <strong>1.65 µm</strong> PSFs. Images, the wavefront replay and Strehl cursor share one recorded clock. Play begins the full record; the opening view shows the final comparison.</p>
+<p>I selected a <strong>4.109″ field</strong> in a JWST/NIRCam F162M image of Westerlund 2 and convolved it with each of the three 1.65 µm PSFs. The stars and brightness scale are the same in every panel. The opening view shows the last frame, when the original and revised point-source Strehl values were 0.104 and 0.715.</p>
 <div aria-label="Westerlund 2 F162M synchronized playback" class="transport" role="group">
 <button aria-pressed="false" disabled="" id="ngsr-science-play">Play</button><button disabled="" id="ngsr-science-before">Before loss · 0.980 s</button><button disabled="" id="ngsr-science-loss">Loss marker · 0.981 s</button><button disabled="" id="ngsr-science-late">Late comparison · 1.999 s</button>
 <span class="readout" id="ngsr-science-time"></span>
@@ -447,20 +456,20 @@ function aoCodeUnavailable() {
 <figure><h4 class="ngsr-v2">Revised · v2</h4><canvas aria-label="Westerlund 2 field through repaired v2 PSF" height="320" id="ngsr-science-v2" role="img" width="320"></canvas><figcaption id="ngsr-science-v2-caption"></figcaption></figure>
 </div>
 <div class="science-intensity"><canvas aria-label="Fixed asinh surface brightness scale from zero to eighty MJy per steradian" height="16" id="ngsr-science-scale" role="img" width="256"></canvas><span>0 → 80 MJy/sr · asinh, softening 2 · single-band false colour · same scale at all times</span></div>
-<p class="hint"><strong>First rejection is a time marker, not an instantaneous image collapse.</strong> The 0.980000 s and 0.981333 s images are only 1.333 ms apart. Strehl is the saved point-source metric; failed v1 frames remain visible.</p>
-<p class="hint"><strong>Saturation and band approximation:</strong> the crop avoids mapped saturated stellar cores, but bright stars outside it can still affect image edges. F162M is approximated by the existing 1.65 µm monochromatic PSFs. JWST’s own PSF, diffraction structure and noise remain. No new simulation, band integration or exposure integration is performed.</p>
+<p class="hint">Compare the two frames around the first rejection. They are just 1.33 ms apart. The larger difference in stellar concentration develops later as the original mirror holds its last shape.</p>
+
 <p class="science-credit">Source: NASA/ESA/CSA JWST NIRCam, <a href="https://www.stsci.edu/jwst/science-execution/program-information?id=3523">program 3523 · EWOCS</a>, calibrated public MAST product. <a href="https://archive.stsci.edu/publishing/data-use">Data policy</a>. Modified by resampling, PSF convolution and a shared display stretch.</p>
 <details class="science-context"><summary>Locate the selected field and inspect the source</summary>
-<p>The 30″ context shows the selected 4.109″ field in white and mapped saturation flags in cyan. The native cutout is shown alongside it. This is an outer field in the Westerlund 2 observation, not a panorama of the dense cluster core.</p>
+<p>The white box marks the field in the outer part of the Westerlund 2 observation. Cyan marks saturated pixels in the surrounding 30″. The adjacent panel shows the native cutout.</p>
 <canvas aria-label="Westerlund 2 F162M context, saturation flags and selected source field" height="990" id="ngsr-science-context" role="img" width="2160"></canvas>
 </details>
-<details><summary>Download animation · source · saturation checks and assumptions</summary>
+<details><summary>Download the animation and inspect the JWST cutout</summary>
 <p><strong>Source:</strong> <a href="https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:JWST/product/jw03523-o005_t001_nircam_f150w2-f162m_i2d.fits">jw03523-o005_t001_nircam_f150w2-f162m_i2d.fits</a> · SCI in MJy/sr · pipeline 3.0.0 · CRDS jwst_1584.pmap. F150W2 is the blocking filter; the transmitted band is F162M. Its 1.627 µm pivot differs from the model by about 1.4%; its 0.168 µm bandwidth is approximated by one existing monochromatic PSF.</p>
-<p>The same source context is reused. Linear pixel-area averaging and full 768 × 768 unit-flux PSF convolution retain tilt and physical angular scale. The kernel uses real surrounding data. A fixed asinh stretch (0–80 MJy/sr, softening 2 MJy/sr) is applied afterward. Display tails clip; linear numerical samples remain available.</p>
+<p>I averaged pixels by area, then convolved the surrounding field with each 768 × 768 unit-flux PSF. This preserves the angular scale and tilt. I used the same asinh stretch for every image. The linear samples are available below.</p>
 <p id="ngsr-science-missing"></p>
-<p>Invalid samples in the wider context use nearest-valid fills. Source noise, calibration residuals and diffraction structure remain. A single on-axis PSF is assumed over the field; no deconvolution, anisoplanatism or additional science-camera noise is added. The ideal reference adds the model’s zero-aberration pupil PSF to the already observed image. The JWST image supplies the scene morphology; the simulated PSFs supply the added blur.</p>
+<p>The ideal reference convolves the observed JWST field with the unaberrated 2.2 m pupil PSF. I filled missing pixels outside the selected field with the nearest valid sample. <a href="#model-limitations">Image assumptions and limitations</a></p>
 <p id="ngsr-science-quality"></p>
-<p>The original draft, all parameter assumptions and diagnostic records remain below.</p>
+
 <p><a href="https://jwst-docs.stsci.edu/jwst-near-infrared-camera/nircam-instrumentation/nircam-filters">Filter definitions</a> · <a href="https://jwst-docs.stsci.edu/jwst-near-infrared-camera/nircam-performance/nircam-point-spread-functions">JWST PSFs and resampling</a> · <a href="https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html">JWST data-quality flags</a>.</p>
 <div class="downloads" id="ngsr-science-downloads"></div>
 </details>
@@ -476,39 +485,39 @@ function aoCodeUnavailable() {
 <p aria-live="off" class="readout" id="ngsr-readout"></p><p class="ngsr-event" id="ngsr-event"></p>
 <div class="ngsr-validity"><p class="ngsr-v1" id="ngsr-valid-v1"></p><p class="ngsr-v2" id="ngsr-valid-v2"></p></div>
 <p class="hint" id="ngsr-timing"></p>
-<figure class="chart"><canvas aria-label="Synchronized H-band Strehl curves" height="260" id="ngsr-strehl" role="img" width="900"></canvas><figcaption>All 1500 instantaneous pre-update peak Strehl values, including rejected frames. Black: displayed timestamp. Red dashed: v1’s first rejected reconstruction; optical degradation starts earlier.</figcaption></figure><details><summary>Replay sampling, PSF derivation and downloads</summary>
+<figure class="chart"><canvas aria-label="Synchronized H-band Strehl curves" height="260" id="ngsr-strehl" role="img" width="900"></canvas><figcaption>Instantaneous peak Strehl at 1.65 µm for all 1,500 exposures. The black line follows the replay. The red dashed line marks the first rejected reconstruction.</figcaption></figure><details><summary>Replay sampling, PSF derivation and downloads</summary>
 <p id="ngsr-sampling"></p>
-<p>PSFs were rendered offline from the saved raw OPD maps using the original centered FFT convention, binary pupil, threefold padding and unit total flux. All 15 archived original/revised PSF snapshots match exactly; sampled Strehl values agree to within 4.5 × 10⁻¹⁶. This checks export and metric reduction against the same archive. The browser replays those images.</p>
-<p>Maps retain all 256 × 256 pupil samples. Cropped PSFs are enlarged with nearest-neighbour sampling for display; the full PSF determines Strehl. No temporal interpolation or per-frame contrast rescaling is applied. Changing speed only changes presentation time. Playback pauses when the tab is hidden and does not skip frames while loading. The original draft and all assumptions remain below.</p>
+<p>I propagated each saved OPD map through the binary pupil using a centred Fourier transform and threefold padding, then normalised each PSF to unit flux.</p>
+<p>The wavefront maps show all 256 × 256 pupil samples. The display enlarges the centre of each PSF. I measured Strehl on the full PSF.</p>
 <div class="downloads" id="ngsr-downloads"></div>
 </details>
 </section>
 <details aria-labelledby="ngs22-compare-title" class="panel">
-<summary id="ngs22-compare-title">Numeric comparison and the separate 2 m baseline</summary>
+<summary id="ngs22-compare-title">Strehl, mirror commands and reconstruction by time window</summary>
 <div aria-label="NGS comparison interval" class="comparison-controls" role="group">
 <button aria-controls="ngs22-table" aria-pressed="true" data-ngs-window="primary" disabled="" type="button">0.2–1.0 s · with saved 2 m baseline</button>
 <button aria-controls="ngs22-table" aria-pressed="false" data-ngs-window="secondary" disabled="" type="button">0.2–2.0 s · 2.2 m before / after</button>
 </div>
 <p class="hint" id="ngs22-window-note">The baseline covers one second. The longer window compares only the two 2.2 m runs.</p>
 <div class="table-scroll"><table class="comparison-table" id="ngs22-table"><caption>H-band (1.65 µm), instantaneous pre-update peak Strehl. All frames in the selected window are included.</caption><thead><tr><th scope="col">Recorded configuration</th><th scope="col">Frames</th><th scope="col">Mean Strehl</th><th scope="col">Temporal SD</th><th scope="col">CV</th><th scope="col">Frames with new clipping</th><th scope="col">Frames with DM at boundary</th><th scope="col">Unusable reconstruction</th></tr></thead><tbody id="ngs22-table-body"></tbody></table></div>
-<p class="hint">SD is the population standard deviation over time; CV = SD / mean. These are fluctuations of this recording, not error bars on a population mean. The first 0.2 s is excluded as predeclared; rejected frames after that remain in the statistics.</p>
-<p class="hint"><strong>Saturation has two meanings:</strong> new clipping counts a command request beyond the limit; boundary occupancy also counts a command held at the limit. Each table percentage counts frames with at least one affected actuator. The plot below instead shows the fraction of actuators in each frame.</p>
-<figure class="comparison-figure"><a id="ngs22-figure-full"><img alt="Saved 2 m baseline and original and revised 2.2 m trajectories: H Strehl, usable measurement rows, newly clipped actuators and persistent boundary occupancy. The revised trajectory remains usable after the original fails at 0.9813 seconds." height="1520" hidden="" id="ngs22-figure" width="1760"/></a><figcaption>Orange: original 2.2 m run; green: revised run; blue: 2 m baseline. The figure, table and CSV show the same saved runs. <span id="ngs22-validation"></span></figcaption></figure>
+<p class="hint">SD measures the variation of instantaneous Strehl across frames. CV is SD divided by the mean. I included rejected frames in both statistics.</p>
+<p class="hint">A command clips when it requests more than the available stroke. An actuator can then stay at the limit for many frames. The table counts frames with at least one affected actuator. The plot gives the fraction of actuators in each frame.</p>
+<figure class="comparison-figure"><a id="ngs22-figure-full"><img alt="Saved 2 m baseline and original and revised 2.2 m trajectories: H Strehl, usable measurement rows, newly clipped actuators and persistent boundary occupancy. The revised trajectory remains usable after the original fails at 0.9813 seconds." height="1520" hidden="" id="ngs22-figure" width="1760"/></a><figcaption>Orange and green show the original and revised 2.2 m runs. Blue shows the separate one-second 2 m run. <span id="ngs22-validation"></span></figcaption></figure>
 </details>
 <section aria-labelledby="ngs22-cause-title" class="panel prose">
 <h2 id="ngs22-cause-title">Tracing the loss of lock</h2>
 <ol class="ngs-chain">
-<li><strong>Some lenslet measurements fail the quality checks</strong> Peak-SNR rejection appears before window-clipping and centroid-uncertainty failures spread. Selected deterministic checks reproduce the saved effective row counts; detector pixel saturation is absent in those states.</li>
-<li><strong>The remaining measurements leave some modes poorly constrained</strong> The full calibration is reasonably conditioned, but removing rows creates weak response modes. The draft's TSVD cutoff of 0.001 still retains modes that amplify small measurement errors into large DM increments.</li>
-<li><strong>Large command increments worsen measurement loss</strong> At frame 732 (0.976 s), the reconstructed actuator-vector increment norm reaches 45.82 µm OPD. Filtering that saved vector at 0.05 removes 98.43% of its squared norm. This vector norm is not the excursion of one actuator.</li>
-<li><strong>Reconstruction stops and the mirror holds the last correction</strong> At frame 736 (0.981333 s), only 278 of 374 calibrated rows remain: 74.33%, below the unchanged 75% gate. Queued commands continue through frame 737; zero leak then holds the applied shape, with eight actuators at their limit.</li>
+<li><strong>Spot measurements drop out.</strong> Some spots first fell below the peak signal-to-noise threshold. As the residual grew, more centroids became uncertain or their spots extended beyond the measurement window.</li>
+<li><strong>The remaining rows constrain the mirror less well.</strong> After dropping the rejected rows, the reconstructor still kept modes with small singular values. Inverting those values turned small spot errors into large changes in the requested mirror shape.</li>
+<li><strong>I checked the large increment at frame 732.</strong> Its norm over all actuator channels was 45.82 µm OPD. Applying the 0.05 cutoff to that frame reduced the norm to 5.74 µm. The weak modes accounted for 98.4% of its squared norm.</li>
+<li><strong>The loop stops updating the mirror.</strong> At frame 736, only 278 of 374 measurement rows remained. This fell below the 75% required for reconstruction. The last queued commands passed through the controller at frame 737. From exposure 738, eight actuators stayed at their stroke limits.</li>
 </ol>
-<p>At three saved times after rejection, a fixed-state check with the <em>same atmosphere and a flat DM</em> restores all calibrated measurement rows. This suggests that the held correction sustains the failure at those times. The initial noise event is still unresolved, and this diagnosis applies to this case.</p>
-<p class="takeaway">Few new clipping events after the failure do not mean the loop became stable: the DM stopped updating. Persistent boundary occupancy and reconstruction validity reveal the difference.</p>
+<p>I tested whether the held mirror shape was keeping spots out of their windows. At three times after rejection, I kept the atmospheric wavefront fixed and set the mirror flat. All 374 measurement rows became usable again at each of those times.</p>
+
 </section>
 <section aria-labelledby="ngsc-title" class="panel ngsc-panel" id="ngs22-control">
-<h2 id="ngsc-title">Follow the measurement and control signals</h2><p class="hint">Telemetry contains every frame; images contain a saved subset. Replay changes move this cursor to the exact same frame. Inspecting an unsaved telemetry frame pauses the replay and leaves its image timestamp clearly labelled.</p>
-<p>Inspect four recorded signals on the same time axis. Orange: original v1; green: revised v2. The red dashed marker is <strong>frame 736 · 0.981333 s</strong>, v1’s first rejected reconstruction. Optical degradation begins earlier.</p>
+<h2 id="ngsc-title">Follow the measurement and control signals</h2><p class="hint">The plots include every control frame. If the selected control frame has no stored image, the replay pauses and the displayed image keeps its own timestamp.</p>
+<p>Follow the drop in valid rows, then compare the requested command increments with the actuators actually held at the limit. Orange shows the original run and green the revision.</p>
 <p class="status" id="ngsc-status" role="status">Saved control telemetry loads when this panel is visible.</p>
 <p class="error" hidden="" id="ngsc-error" role="alert"></p>
 <div aria-label="Control timeline interval" class="transport" role="group">
@@ -527,63 +536,63 @@ function aoCodeUnavailable() {
 <p aria-live="off" class="readout" id="ngsc-readout"></p>
 <div class="ngsc-plots">
 <figure class="chart"><canvas aria-label="Valid measurement rows, original and revised" height="190" id="ngsc-valid" role="img" width="900"></canvas><figcaption>1 · Valid rows / 374 calibrated rows. Dashed horizontal line: unchanged 75% reconstruction gate.</figcaption></figure>
-<figure class="chart"><canvas aria-label="Reconstructed command increment norm, original and revised" height="190" id="ngsc-increment" role="img" width="900"></canvas><figcaption>2 · Reconstructed actuator-vector L2 norm, before controller gain and queue. Gaps mean no usable estimate; they are not zero error. This is not individual actuator stroke.</figcaption></figure>
-<figure class="chart"><canvas aria-label="Held DM boundary occupancy, original and revised" height="190" id="ngsc-boundary" role="img" width="900"></canvas><figcaption>3 · Actuators held at the boundary during this exposure, aligned with its PSF. This differs from newly clipped requests.</figcaption></figure>
+<figure class="chart"><canvas aria-label="Reconstructed command increment norm, original and revised" height="190" id="ngsc-increment" role="img" width="900"></canvas><figcaption>2 · Norm of the reconstructed increment over all actuators, before applying gain. A gap marks a rejected reconstruction.</figcaption></figure>
+<figure class="chart"><canvas aria-label="Held DM boundary occupancy, original and revised" height="190" id="ngsc-boundary" role="img" width="900"></canvas><figcaption>3 · Fraction of actuators held at their stroke limit during each exposure.</figcaption></figure>
 <figure class="chart"><canvas aria-label="H band Strehl on the control timeline" height="190" id="ngsc-strehl" role="img" width="900"></canvas><figcaption>4 · Instantaneous pre-update H-band peak Strehl. Rejected frames remain in the record.</figcaption></figure>
 </div>
 <div class="table-scroll"><table class="comparison-table"><caption>Selected native telemetry frame; no temporal resampling</caption><thead><tr><th scope="col">Signal</th><th scope="col">Original v1</th><th scope="col">Revised v2</th></tr></thead><tbody id="ngsc-values"></tbody></table></div>
-<p class="takeaway">At frame 732 (0.976 s), v1’s increment-vector norm is 45.82 µm OPD. Frame 736 has only 278/374 valid rows (74.33%). Queued updates continue through frame 737; from exposure 738, eight actuators remain at their boundary. V2 stays usable with no boundary occupancy in this recording.</p>
+
 <details><summary>Frame timing, definitions and downloadable telemetry</summary>
-<p>Wavefront, measurement validity and Strehl refer to exposure k. The archived applied DM command is recorded after update k and is held for exposure k+1, so the occupancy curve uses applied[k−1]; frame 0 starts flat. The existing comparison table above counts post-update applied states. The CSV keeps both the aligned held occupancy and the unshifted new-clipping fraction.</p>
-<p>A rejected reconstruction is stored with a zero increment sentinel. Here it is a null value and a plotted gap. All 1500 native samples per run are retained. The curves describe this realization; the previously recorded modal and fixed-state checks support the diagnosis, while the initiating noise event remains unresolved.</p>
+<p>The PSF at exposure k uses the mirror command from update k−1. Frame 0 starts with a flat mirror. The table above also reports boundary occupancy after each update.</p>
+<p>In the CSV a rejected increment has a missing value and appears as a gap on the plot. The new-clipping column refers to the command requested at that frame.</p>
 <div class="downloads" id="ngsc-downloads"></div>
 </details>
 </section>
 <section aria-labelledby="ngs22-repair-title" class="panel">
-<h2 id="ngs22-repair-title">Regularization change and observed outcome</h2>
+<h2 id="ngs22-repair-title">What changed when I raised the cutoff?</h2>
 <div class="table-scroll"><table class="comparison-table"><thead><tr><th scope="col">Setting</th><th scope="col">Original draft · v1</th><th scope="col">Revision · v2</th><th scope="col">Basis for the setting</th></tr></thead><tbody>
-<tr><th scope="row">TSVD relative cutoff</th><td>0.001</td><td>0.05</td><td>Chosen for this simulation, not taken from an instrument specification. Limits retained relative inverse sensitivity to 20 instead of 1000. All 197 full-support calibration modes remain.</td></tr>
-<tr><th scope="row">Consecutive-rejection recovery</th><td>None</td><td>After 3 rejected frames, decay requested commands by 5% on each further rejected frame</td><td>A recovery rule for this model. The two-frame queue drains first. Fallback reconstruction and gain scheduling remain disabled.</td></tr>
-<tr><th scope="row">Physical model and normal controller</th><td colspan="2">2.2 m; ±3.5 µm OPD; gain 0.4; zero leak; two queued frames; 750 Hz; same atmosphere, optics and camera settings</td><td>Unchanged between v1 and v2. Original classifications and qualifications remain in the field ledger.</td></tr>
+<tr><th scope="row">TSVD relative cutoff</th><td>0.001</td><td>0.05</td><td>With all measurement rows present, both cutoffs retain all 197 modes. With rows missing, the revised cutoff rejects weak modes that the original inverse kept.</td></tr>
+<tr><th scope="row">Consecutive-rejection recovery</th><td>None</td><td>After 3 rejected frames, decay requested commands by 5% on each further rejected frame</td><td>The queue drains before the command starts to decay.</td></tr>
+<tr><th scope="row">Physical model and normal controller</th><td colspan="2">2.2 m; ±3.5 µm OPD; gain 0.4; zero leak; two queued frames; 750 Hz; same atmosphere, optics and camera settings</td><td>Both runs used these settings.</td></tr>
 </tbody></table></div>
-<p>The paired comparison uses the same seed and realization: all 1500 atmospheric maps match bitwise and the calibration arrays are identical. All 1500 revised frames reconstruct, with zero command clipping and zero boundary occupancy. <strong>No recovery decay or fallback was activated.</strong> The preventive cutoff change accounts for the improvement on this input; recovery capability was checked separately.</p>
-<p>The <a href="https://arxiv.org/html/2407.14677v1">published NGS simulation</a> uses regularized zonal least squares. This model retains a TSVD approximation. The rationale for suppressing weak inverse modes follows <a href="https://aomicroscopy.org/calibration-and-closed-loop-control-of-deformable-mirrors-using-direct-sensing">the SVD calibration discussion</a>; the 0.05 cutoff and recovery settings are local modelling choices.</p>
+<p>In the original run, the reconstructor rejected the last 764 frames. In the revised run, all 1,500 frames reconstructed and the recovery rule never activated. The higher cutoff kept reconstruction usable throughout this trajectory.</p>
+<p>The <a href="https://arxiv.org/html/2407.14677v1">published NGS model</a> uses regularised zonal least squares. I used a truncated SVD so I could vary the smallest retained singular value of the response matrix. <a href="https://aomicroscopy.org/calibration-and-closed-loop-control-of-deformable-mirrors-using-direct-sensing">SVD calibration method</a>.</p>
 </section>
 <section aria-labelledby="ngs22-off-axis-title" class="panel" id="ngs22-off-axis">
-<h2 id="ngs22-off-axis-title">Off-axis Strehl</h2>
-<p class="prose">In the Linux reference run, the 2.2 m model used the same guide-star correction for four targets. In a 1.8 s exposure at 1.65 µm, the long-exposure peak Strehl fell from <strong>0.444</strong> on the natural guide star to <strong>0.433</strong> at 5 arcsec, <strong>0.396</strong> at 10 arcsec, and <strong>0.337</strong> at 20 arcsec.</p>
+<h2 id="ngs22-off-axis-title">How far does the guide-star correction extend?</h2>
+<p class="prose">I kept the guide star and its mirror correction fixed and moved the science target to 5, 10 and 20 arcsec from the guide star. The light from the off-axis targets crossed the high atmospheric layers at different positions. On the same 1.8 s exposure at 1.65 µm, the Linux run gave peak Strehl values of 0.444 on axis, 0.433 at 5 arcsec, 0.396 at 10 arcsec and 0.337 at 20 arcsec.</p>
 <div class="off-axis-figures">
 <figure class="comparison-figure">
 <a href="evidence/scao-off-axis-22m/psf_comparison.png"><img src="evidence/scao-off-axis-22m/psf_comparison.png" width="1170" height="1080" alt="Four long-exposure PSFs at 0, 5, 10 and 20 arcsec from the guide star on the same logarithmic brightness scale."/></a>
-<figcaption>In the macOS repeat shown here, the interpolated peak Strehl was 0.448, 0.436, 0.398 and 0.338 at the four separations.</figcaption>
+<figcaption>These PSFs show the macOS repeat. Its long-exposure Strehl fell from 0.448 on axis to 0.338 at 20 arcsec.</figcaption>
 </figure>
 <figure class="comparison-figure">
 <a href="evidence/scao-off-axis-22m/strehl_vs_separation.png"><img src="evidence/scao-off-axis-22m/strehl_vs_separation.png" width="595" height="465" alt="Interpolated and sampled long-exposure Strehl and mean instantaneous Strehl decrease with guide-star separation."/></a>
-<figcaption>Both figures use the same exposure. Blue and orange read its mean PSF with interpolated and sampled peaks; green averages the individual frame peaks. <a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/556c3273cc5206e9759ad4b43a2f068912163da2/docs/scao_off_axis_science.md#reading-the-figures">Measurement details</a></figcaption>
+<figcaption>Blue and orange measure the peak after the images have been averaged, using interpolation or the brightest pixel. Green averages the peak Strehl of the individual frames. <a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/556c3273cc5206e9759ad4b43a2f068912163da2/docs/scao_off_axis_science.md#reading-the-figures">Measurement details</a></figcaption>
 </figure>
 </div>
 </section>
-<details class="panel" id="ngs22-assumptions"><summary>Hardware references, model gaps and 131 parameter notes</summary>
-<div class="prose"><p><strong>The original preparation draft is preserved.</strong> It still says “not run / unregistered” because it predates these runs. The configurations used for v1 and v2 are available below. The revision changes only the cutoff and recovery policy; the other assumptions retain their original classifications.</p>
-<p>Hardware targets include the UH 2.2 m aperture, a 16 × 16 NGS lenslet layout and a BMC DM492-3.5 mirror with 17 actuators across the illuminated pupil. The model uses 197 retained actuator centres, a synthetic basis drawn from the published geometry. Its symmetric ±3.5 µm OPD bound assumes normal incidence, midpoint bias and no reserved static-correction stroke.</p>
-<p>Several parts of the model still need work: a separate tip-tilt mirror is omitted; the pupil and influence functions are approximate; NGS binning, field-stop propagation, actual controller timing and detector electronics are not fully calibrated. AB 7 flat-fν photometry, the sky convention, numerical sampling and some camera values are local assumptions. The slowly evolving dome layer makes two seconds insufficient to establish long-term stability.</p>
-<p>Each parameter is labelled by its basis: published hardware or operating modes, simulation assumptions from the literature, derived values, local assumptions or numerical choices. The table keeps the original notes and sources; the revised settings have a separate download.</p>
+<details class="panel" id="ngs22-assumptions"><summary>Telescope, sensor and controller parameters</summary>
+<div class="prose"><p>The table lists the parameter sources used to build the 2.2 m model. The configuration files below give the values used in each run.</p>
+<p>I used the UH telescope diameter and the 16 × 16 natural-guide-star lenslet layout. I represented the BMC DM492-3.5 with 197 actuator centres across the pupil. The symmetric ±3.5 µm OPD limit assumes normal incidence and operation about the midpoint of travel.</p>
+
+
 </div>
 <label class="ngs-filter" for="ngs22-filter">Find a field or assumption <input disabled="" id="ngs22-filter" placeholder="e.g. stroke, latency, assumed" type="search"/></label>
 <p class="hint" id="ngs22-ledger-count" role="status"></p>
 <div class="table-scroll ngs-ledger"><table><caption>Parameter notes from the original v1 setup. They also apply to v2 except for the cutoff and recovery settings listed above.</caption><thead><tr><th scope="col">Field</th><th scope="col">Original 2 m</th><th scope="col">2.2 m draft</th><th scope="col">Classification / sources</th><th scope="col">Notes and limitations</th></tr></thead><tbody id="ngs22-ledger-body"></tbody></table></div>
 </details>
 <details class="panel"><summary>Data, run history and downloads</summary><div class="prose">
-<p>This comparison uses the saved 2 m baseline and the two completed 2.2 m runs. The comparison with 2 m is descriptive: aperture, atmosphere, spatial sampling, camera and controller all differ. Stroke is one of several changing settings.</p>
-<p>The original run also encountered a separate telemetry-export issue: a negative background-subtracted SNR diagnostic was clipped to zero for export, while signed quality calculations and validity gates remained unchanged. A replay reproduced all 745 prior frames exactly before completing the same realization. A later one-ULP stroke-limit postcheck was corrected using saved data. These corrections concern recording and postprocessing; the loss-of-lock diagnosis uses the measurement and command histories above.</p>
-<p>The downloads preserve source hashes, all field assumptions, executed configurations, diagnostic checks and per-frame scalar values. Full-resolution raw wavefront stacks remain in the local archive. The figures describe one two-second realization. Longer runs, sampling studies and comparison with hardware data remain to be done.</p>
+<p>The 2 m run provides a separate reference. It uses a different atmosphere, aperture, detector sampling and controller.</p>
+<p>During export, negative background-subtracted signal-to-noise values were recorded as zero. The sensor used signed values to reject measurements. Replaying the first 745 frames reproduced the original trajectory. The final stroke check was corrected in postprocessing.</p>
+<p>The downloads include the two configurations, per-frame measurements, diagnostic calculations and the comparison figure.</p>
 <div class="downloads" id="ngs22-downloads"></div>
 </div></details>
 </section>
 <section aria-labelledby="appendix-title" class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="appendix"><p class="breadcrumb"><a href="#methods-home">← Methods &amp; evidence</a></p><h1 id="appendix-title">Earlier experiments</h1>
-<p class="lede">These earlier experiments cover sensor behaviour, reconstruction, larger models and a separate analytical AO study. Open a topic for the results, sources and unresolved questions.</p>
-<details class="panel" id="replay42-methods"><summary>42 m run · configuration, checks and reproducibility</summary><div class="prose"><p>Profile <code>det_ccd_42m_r3band_derived@1</code>; 1008² pupil samples; 84 × 84 lenslet grid; 85 × 85 DM grid; seed 1; 500 Hz simulated loop rate; gain 0.3; leak 0; two queued latency frames; ±100 µm OPD command limit. Declared WFS flux: 10⁵ detected electrons per full subaperture per 2 ms frame. The synthetic CCD preset supplies the detector assumptions. Zero saturation refers to the configured ±100 µm OPD command bound. All ten frozen-flow layers move along +x at their specified speeds; layer heights are not used for tomography.</p><p>500 full-precision atmosphere/residual map pairs, 126 full-grid PSF pairs, all frame metrics and 400-frame intensity means are retained locally. Mean intensities are accumulated without recentering; the wavefront is never averaged before propagation.</p><p id="r42-checks"></p><p>The environment's pinned package versions match the project lock, with additional packages disclosed. Frozen producer sources and content hashes are retained. The public plan omits host details; the original plan and its hash remain in the local archive.</p><p>This recording covers one realization. The historical 42 m studies retain their own runs, windows and sampling comparisons.</p><p><a href="https://www.eso.org/sci/facilities/eelt/science/drm/tech_data/telescope/">Historical 42 m DRM geometry</a> · <a href="https://elt.eso.org/about/">Current 39 m ELT</a></p><div class="downloads" id="r42-downloads"></div><p>Configuration: <code id="r42-config-hash"></code></p></div></details>
-<details class="panel" id="replay42-source"><summary>42 m illustration · scientific source and image preparation</summary><div class="prose"><p>NASA/ESA Hubble Space Telescope, ACS/HRC program 9451; MAST/STScI calibrated product <code>j6kt02020_drz.fits</code>, F775W, 440 s total exposure, 0.025″ pixels. All four input exposures have no saturation flags in the inspected 31 × 31 pixel region around the binary.</p><p>A fixed 161 × 161 pixel crop is background-subtracted using an outer annulus and resampled by exact pixel-area overlap. Signed pixel values are retained, and the template is normalized once. There is no deconvolution, component replacement, separation adjustment or per-frame brightness rescaling.</p><p>The complete recorded PSF is applied by linear convolution with zero extension. The original HST PSF and noise remain. One on-axis PSF is assumed across this compact source; component-dependent anisoplanatism and additional science-camera noise are not included. Image axes retain the source orientation, without a north-up claim. Negative values are clipped only for display.</p><p><a href="https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:HST/product/j6kt02020_drz.fits">Original scientific FITS</a> · <a href="https://archive.stsci.edu/publishing/data-use">MAST data use</a></p><div class="downloads" id="r42-source-downloads"></div></div></details>
+<p class="lede">I tested the sensor and reconstructor separately, then measured how their errors appeared in the corrected image. Each study below includes its figures and measurements.</p>
+<details class="panel" id="replay42-methods"><summary>42 m run · configuration, checks and reproducibility</summary><div class="prose"><p>Profile <code>det_ccd_42m_r3band_derived@1</code>; 1008² pupil samples; 84 × 84 lenslet grid; 85 × 85 DM grid; seed 1; 500 Hz simulated loop rate; gain 0.3; leak 0; two queued latency frames; ±100 µm OPD command limit. Declared WFS flux: 10⁵ detected electrons per full subaperture per 2 ms frame. The synthetic CCD preset supplies the detector assumptions. Zero saturation refers to the configured ±100 µm OPD command bound. All ten frozen-flow layers move along +x at their specified speeds; layer heights are not used for tomography.</p><p>500 full-precision atmosphere/residual map pairs, 126 full-grid PSF pairs, all frame metrics and 400-frame intensity means are retained locally. Mean intensities are accumulated without recentering; the wavefront is never averaged before propagation.</p><p id="r42-checks"></p><p><a href="https://www.eso.org/sci/facilities/eelt/science/drm/tech_data/telescope/">Historical 42 m DRM geometry</a> · <a href="https://elt.eso.org/about/">Current 39 m ELT</a></p><div class="downloads" id="r42-downloads"></div><p>Configuration: <code id="r42-config-hash"></code></p></div></details>
+<details class="panel" id="replay42-source"><summary>42 m illustration · scientific source and image preparation</summary><div class="prose"><p>NASA/ESA Hubble Space Telescope, ACS/HRC program 9451; MAST/STScI calibrated product <code>j6kt02020_drz.fits</code>, F775W, 440 s total exposure, 0.025″ pixels. All four input exposures have no saturation flags in the inspected 31 × 31 pixel region around the binary.</p><p>I subtracted a background estimated in an outer annulus, took a 161 × 161 pixel cutout, and resampled by pixel-area overlap. I kept signed pixel values and normalized the HST template once.</p><p>I used linear convolution and kept the original HST resolution, noise and image orientation. Negative flux values are clipped only in the display.</p><p><a href="https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:HST/product/j6kt02020_drz.fits">Original scientific FITS</a> · <a href="https://archive.stsci.edu/publishing/data-use">MAST data use</a></p><div class="downloads" id="r42-source-downloads"></div></div></details>
 <div id="results"><div aria-live="polite" class="status" id="results-status" role="status">Earlier experiment records load when this section is opened.</div><nav aria-label="Archived experiment groups"><ul class="results-index" id="results-index"></ul></nav><div id="results-body"></div></div>
 <details class="panel" id="methods">
 <summary id="methods-title">Full methods, observable definitions and open questions</summary>
@@ -607,8 +616,7 @@ function aoCodeUnavailable() {
 </ul>
 <h2>How to read the result labels</h2>
 <ul id="methods-status"></ul>
-<h2>Numerical limits and open questions</h2>
-<ul id="methods-open"></ul>
+<details><summary>Questions recorded with the sampling studies</summary><ul id="methods-open"></ul></details>
 <h2>Reproducibility and identity</h2>
 <ul id="methods-identity"></ul>
 <h2>Local preview</h2>
@@ -616,15 +624,9 @@ function aoCodeUnavailable() {
 <p>The page's code lives in a directory named after its content (<code>code-&lt;build&gt;/</code>) and the dataset entry records that build, so a browser cannot combine a cached older script with newer data: a page whose code does not match the entry says so and asks for a reload.</p>
 </div>
 </details>
-<details class="panel" id="studies42-history"><summary>How these experiments relate to the earlier 42 m results</summary><div class="prose">
-<ul>
-<li>The replay above is one recorded 1 s run. Its images and frames are not frames of the later experiments, which have their own durations and windows.</li>
-<li>C1 keeps its restricted conclusion: at 10⁵ e⁻, a static prediction found the detector-noise benefit of the tested alternative damping below the threshold for a new experiment, so the production damping stays α 0.001. Later flux, delay and gain experiments keep that damping fixed; its adequacy across other conditions remains open.</li>
-<li>Earlier static solver checks keep their recorded outcomes. A full-command accuracy check of the production solver against a reference solution (T1c) and the one-shot cost of a much larger damping (T4) failed, so that static stage remained inconclusive (outcome I). A later dense-fill check (N13) remained unqualified; its prospectively amended version (N14) passed its pupil-space criteria while the original command-space criterion still fails.</li>
-<li>The production EE50 remains a secondary, sampling-sensitive diagnostic; the Fourier-reference EE50 is the primary image width.</li>
-<li>The 42 m profile uses synthetic components and the historical 42 m design ledger.</li>
-<li>The earlier failed or incomplete faint 1,000-frame attempts remain part of the record; the completed third attempt and the bright control are later, separate evidence.</li>
-</ul>
+<details class="panel" id="studies42-history"><summary>How the 42 m experiments fit together</summary><div class="prose">
+<p>The one-second replay shows the stellar and binary images. I used different runs to test flux, delay and gain. The static damping test gave a 0.0042 nm predicted reduction in detector noise, so I kept α = 0.001 for the later runs.</p>
+<p>Earlier trials and solver checks are documented in the <a href="evidence/verification-update-2026-11-02.md">numerical notes</a>. The <a href="#model-limitations">Limitations</a> section explains the image-width and solver criteria used here.</p>
 </div></details><section aria-labelledby="references-title" class="reference-repos" id="references">
 <h2 id="references-title">Source code and reference repositories</h2>
 <p><a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation"><strong>Shack-Hartmann AO Simulation</strong></a> — this project's Python package, bundled configurations and usage examples. The 2 m, 2.2 m and 42 m time-domain recordings use the project's native implementation.</p>
@@ -637,30 +639,30 @@ function aoCodeUnavailable() {
 <p class="hint">The analytical adapter combines P3 with a local fitting-tail completion and MASTSEL propagation. Each study lists its software versions, source revisions, scientific references and applicable scope.</p>
 </section></section>
 <section aria-labelledby="c1-title" class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="c1-noise"><p class="breadcrumb"><a href="#methods-home">← Methods &amp; evidence</a></p>
-<h1 id="c1-title">Would stronger damping reduce detector noise?</h1>
+<h1 id="c1-title">How much detector noise does stronger damping remove?</h1>
 <div class="prose">
-<p>This separate calculation (C1) compares the replay damping with one alternative at the same assumed flux (10⁵ detected e⁻ per full subaperture per frame). It predicts the detector-noise contribution to reconstructed pupil wavefront RMS.</p>
-<p>The alternative changed that prediction from <strong id="c1-rms-b">—</strong> to <strong id="c1-rms-c">—</strong>. The difference is below the predeclared threshold for a new closed-loop experiment; α = 0.001 was retained. This calculation produced no images; the pictures above all come from the original replay.</p>
+<p>I increased the reconstructor damping from α = 0.001 to 0.0025. At each setting I propagated the detector-noise covariance through the same linear model to estimate its contribution to pupil wavefront RMS. The guide-star flux was 100,000 detected electrons per full subaperture per frame.</p>
+<p>The predicted noise RMS fell from <strong id="c1-rms-b">—</strong> to <strong id="c1-rms-c">—</strong>. The reduction was 0.0042 nm, well below the 1 nm threshold I had set for a closed-loop test. I kept α = 0.001.</p>
 </div>
 <div class="status" id="c1-status" role="status">The C1 summary loads when this panel is in view.</div><div class="error" hidden="" id="c1-error" role="alert"></div>
 <figure class="c1-figure">
 <div class="c1-chart" id="c1-chart"></div>
 <figcaption class="c1-readout" id="c1-readout"></figcaption>
 </figure>
-<p class="hint">The 0.0042 nm value subtracts two predicted detector-noise RMS components. The calculation holds the static covariance and linear-loop assumptions fixed.</p>
-<details id="c1-provenance"><summary>C1 model, numerical checks and source records</summary><div class="prose">
+
+<details id="c1-provenance"><summary>Noise calculation and downloads</summary><div class="prose">
 <table class="c1-table"><caption>Selected C1 values (static stationary-loop predictions)</caption><thead><tr><th scope="col">Quantity</th><th scope="col">Replay setting α 0.001</th><th scope="col">Alternative α 0.0025</th></tr></thead><tbody id="c1-table-body"></tbody></table>
-<p>The full noise calculation compares α 0.001 with α 0.0025 at this operating point.</p><p>Two numerical paths agree to about 10⁻¹³ for the same fixed model. Bars and table show the saved predictions; RMS = √variance.</p>
+<p><a href="#model-limitations">Model limitations</a></p>
 <p id="c1-conditions"></p>
 <p id="c1-qualification"></p>
 <p class="c1-ids" id="c1-identities"></p>
 <div class="downloads" id="c1-downloads"></div>
 </div></details>
 </section><section aria-labelledby="flux42-title" class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="flux42"><p class="breadcrumb"><a href="#methods-home">← Methods &amp; evidence</a></p>
-<p class="evidence-kind">New closed-loop runs · 2 s each · one atmospheric realization (r2)</p>
-<h1 id="flux42-title">Does a fainter guide star change the loop over two seconds?</h1>
+<p class="evidence-kind">Historical 42 m model · guide-star flux</p>
+<h1 id="flux42-title">How does a fainter guide star change the residual?</h1>
 <div class="prose">
-<p>Two 42 m recordings cover 1,000 frames at 500 Hz (2 s), using the same simulated atmosphere. Only the guide-star flux differs: <strong>100,000</strong> or <strong>1,000</strong> detected electrons (e⁻) per fully illuminated subaperture per frame. Gain, delay, damping and detector model are the replay’s; the atmosphere is realization r2, followed for twice as long. The curves show the residual wavefront error measured before each control update.</p>
+<p>I reduced the flux from 100,000 to 1,000 detected electrons per fully illuminated subaperture per frame and repeated the same two-second atmosphere (r2). I kept gain, delay and damping fixed and recalibrated the sensor and reconstructor at each flux.</p>
 <p id="flux42-lead"></p>
 </div>
 <div class="status" id="flux42-status" role="status">The flux comparison loads when this panel is in view.</div><div class="error" hidden="" id="flux42-error" role="alert"></div>
@@ -669,7 +671,7 @@ function aoCodeUnavailable() {
 <fieldset class="segmented"><legend>Summary window (shaded)</legend><label><input checked="" disabled="" name="flux42-window" type="radio" value="early"/> 0.2–1.0 s · 400 frames</label><label><input disabled="" name="flux42-window" type="radio" value="late"/> 1.0–2.0 s · 500 frames</label><label><input disabled="" name="flux42-window" type="radio" value="full"/> 0.2–2.0 s · 900 frames</label></fieldset>
 </div>
 <div class="charts">
-<figure class="chart studies42-chart"><canvas aria-label="Pre-update residual RMS of the bright and faint runs over time" height="240" id="flux42-chart-rms" role="img" width="900"></canvas><figcaption>Pre-update residual RMS per frame, nm OPD (piston removed). Blue: 100,000 e⁻; orange: 1,000 e⁻. The dashed line at frame 500 (1.0 s) separates the two analysis windows; the loop was not restarted there.</figcaption></figure>
+<figure class="chart studies42-chart"><canvas aria-label="Pre-update residual RMS of the bright and faint runs over time" height="240" id="flux42-chart-rms" role="img" width="900"></canvas><figcaption>Each point gives the piston-removed wavefront RMS before the next correction. Blue is the bright run and orange is the faint run. The dashed line at one second separates the two averaging windows.</figcaption></figure>
 <figure class="chart studies42-chart"><canvas aria-label="Faint minus bright residual RMS of the same frame over time" height="190" id="flux42-chart-diff" role="img" width="900"></canvas><figcaption>Faint minus bright, same frame, nm. Above the dotted zero line, the faint run has the larger residual.</figcaption></figure>
 </div>
 <div class="studies42-inspect"><label for="flux42-frame">Inspect a frame</label><input disabled="" id="flux42-frame" max="999" min="100" step="1" type="range" value="500"/><output class="studies42-readout" for="flux42-frame" id="flux42-readout"></output></div>
@@ -678,26 +680,26 @@ function aoCodeUnavailable() {
 <div aria-labelledby="flux42-window-caption" class="table-scroll" role="region" tabindex="0">
 <table class="studies42-table"><caption id="flux42-window-caption">Summary window</caption><thead><tr><th scope="col">Quantity</th><th scope="col">Bright · 100,000 e⁻</th><th scope="col">Faint · 1,000 e⁻</th><th scope="col">Faint − bright</th></tr></thead><tbody id="flux42-table-body"></tbody></table>
 </div>
-<p class="takeaway"><strong>Observed result:</strong> in this matched atmosphere, the faint run’s residual grows more after the first second. The bright window means are nearly unchanged; its last-50-frame mean rises about 5 nm relative to frames 450–499. Flux changes the simulated noise, calibration and reconstructor together. The result describes their combined response in this realization.</p>
-<details id="flux42-methods"><summary>Flux comparison · definitions, history and source records</summary><div class="prose">
-<p><strong>Settings.</strong> Profile <code>det_ccd_42m_r3band_derived@1</code>, a synthetic configuration derived from the historical 42 m design ledger. 500 Hz; gain 0.3; leak 0; two queued frames; production damping α 0.001; root seed 1; atmospheric realization r2; detector noise on with the simulation’s native noise policy; science PSF at 2.2 µm. The two effective configurations differ only in the detected flux.</p>
-<p><strong>Definitions.</strong> Time is t = k / 500 Hz for frame k. The residual is the piston-removed pupil OPD RMS before the frame’s control update. Window values are arithmetic means of the per-frame RMS values over half-open frame windows: [100,500) has 400 frames, [500,1000) 500 and [100,1000) 900. They are not the root mean square of the frame values. Frames 0–99 are startup and excluded from all summaries.</p>
+<p class="takeaway">Both loops reconstructed every frame and stayed within the mirror limits. Over 0.2–2.0 s, the peak Strehl of the mean image was 0.753 for the bright guide star and 0.730 for the faint one.</p>
+<details id="flux42-methods"><summary>Run settings and downloads</summary><div class="prose">
+<p>I used <code>det_ccd_42m_r3band_derived@1</code> at 500 Hz with gain 0.3, zero leak, a two-frame queue, damping α = 0.001 and detector noise on. I measured image quality at 2.2 µm.</p>
+<p>I averaged the per-frame residual RMS over frames 100–499 and 500–999. The loop ran continuously across frame 500. The combined window covers all 900 frames after startup.</p>
 <p id="flux42-changes"></p>
-<p><strong>Shared atmosphere and flux-dependent sensing.</strong> The atmosphere is identical in all 1,000 frames (the open-loop RMS histories are bit-identical). The detected flux also enters the sensor-noise derivation, the WFS response, the interaction matrix and the reconstructor, whose identities differ between the runs. The detector noise streams follow each flux-dependent sensor identity.</p>
-<p><strong>One trajectory per flux, with a shared first second.</strong> Frames 0–499 of each run repeat its original 500-frame run exactly, and frames 500–999 continue the same loop. Frame 500 is an analysis boundary, not a restart. The shared first half is counted once, and the extension is not an additional realization. The earlier nine-run photon-budget study (three fluxes × three realizations, 500 frames) is unchanged, and this extension does not replace its r2 member. The bright run’s first 500 frames are the same saved record as the delay-2, r2 record in the controller-delay comparison below.</p>
-<p><strong>Attempt history.</strong> The faint 1,000-frame trajectory came from the third attempt. The first attempt stopped before its closed loop because of a tooling defect. The second was interrupted by a computing restart; no prefix check was saved and the number of completed frames is unknown. Both remain recorded as failed or incomplete. The completed third attempt and the later bright control run are the trajectories shown.</p>
+<p>Changing flux affects detector noise, the measured sensor response, and the reconstruction matrix calibrated from that response. The bright and faint runs have the same open-loop RMS frame by frame.</p>
+<p>The first 500 frames of each trajectory reproduce the earlier one-second run. The bright case also supplies the two-frame baseline in the <a href="#delay42">delay study</a>.</p>
+<p>The faint run completed on its third attempt. The first stopped during setup and the second was interrupted by a computer restart. The table uses the completed trajectory.</p>
 <div aria-label="Exact window means" class="table-scroll" role="region" tabindex="0"><table class="studies42-table"><caption>Exact window means of the pre-update residual RMS, nm</caption><thead><tr><th scope="col">Window</th><th scope="col">Bright</th><th scope="col">Faint</th><th scope="col">Faint − bright</th></tr></thead><tbody id="flux42-exact-body"></tbody></table></div>
 <div aria-label="Recorded image metrics" class="table-scroll" role="region" tabindex="0"><table class="studies42-table"><caption>Recorded mean-image metrics at 2.2 µm (EE50 in λ/D)</caption><thead><tr><th scope="col">Run and frames</th><th scope="col">Peak Strehl</th><th scope="col">Fourier-reference EE50</th><th scope="col">Production EE50 (secondary)</th></tr></thead><tbody id="flux42-image-body"></tbody></table></div>
-<p>Image metrics come from the saved analysis of each run’s mean intensity image; they exist for frames 100–499 and 100–999. No image was averaged over frames 500–999 alone, and none is derived by subtracting whole-window values. EE50 uses the same mean PSF: Fourier disc integration is the primary estimate; radius-ordered sampled flux is the sampling-sensitive production estimate. The full-grid mean images are not part of this website bundle and were not recomputed for it.</p>
-<p>Both runs used every reconstruction (none rejected) and no command reached its limit. The saved histories and source identities of the 1,000-frame records were checked separately on 2026-10-29; the review compared saved arrays, identities and summary arithmetic.</p>
+<p>For images I used two exposures, 0.2–1.0 s and 0.2–2.0 s. I measured the peak Strehl and integrated the light in the mean PSF to find the half-light radius.</p>
+<p><a href="#model-limitations">Model limitations</a></p>
 <p class="c1-ids" id="flux42-identity"></p>
 <div class="downloads" id="flux42-downloads"></div>
 </div></details>
 </section><section aria-labelledby="delay42-title" class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="delay42"><p class="breadcrumb"><a href="#methods-home">← Methods &amp; evidence</a></p>
-<p class="evidence-kind">New and reused closed-loop records · 1 s each · three atmospheric realizations (r0, r1, r2)</p>
-<h1 id="delay42-title">How much does one frame of controller delay matter?</h1>
+<p class="evidence-kind">Historical 42 m model · controller delay</p>
+<h1 id="delay42-title">What changes when the mirror correction arrives one frame later?</h1>
 <div class="prose">
-<p>Here only the controller delay changes. A correction computed from frame k is applied at frame k + L and first appears in the measured residual at frame k + L + 1. The replay uses L = 2; the comparison includes L = 1 and L = 3. Each delay went through the same three simulated atmospheres for 500 frames at 500 Hz, at 100,000 e⁻ per fully illuminated subaperture per frame. The delay-2 records are the earlier photon-budget runs, reused rather than rerun.</p>
+<p>I held the integrator gain at 0.3 and changed the command queue from one frame to two and then three. I ran each setting through the same three atmospheres for one second at 500 Hz. The loop applies a command from frame k at k + L, and the sensor first sees its effect at k + L + 1.</p>
 <p id="delay42-lead"></p>
 </div>
 <div class="status" id="delay42-status" role="status">The controller-delay comparison loads when this panel is in view.</div><div class="error" hidden="" id="delay42-error" role="alert"></div>
@@ -713,10 +715,10 @@ function aoCodeUnavailable() {
 <p class="hint">Hover over a chart, or focus the slider and use the arrow keys. Times are frame index ÷ 500 Hz. <span id="delay42-realization-summary"></span></p>
 <p aria-live="polite" class="visually-hidden" id="delay42-live"></p>
 <aside aria-labelledby="delay42-r2-title" class="studies42-note" id="delay42-r2-note">
-<p id="delay42-r2-title"><strong>Post-hoc note on realization r2</strong> (described after the results were seen; not part of the planned analysis). <button disabled="" id="delay42-show-r2" type="button">Show r2 in the charts</button></p>
+<p id="delay42-r2-title"><strong>A late rise in r2</strong> <button disabled="" id="delay42-show-r2" type="button">Show r2 in the charts</button></p>
 <p id="delay42-r2-text"></p>
-<p>The three delays share the same atmospheric input, but these records do not isolate the mechanism, which may involve the loop’s state, the sensor’s validity selection and the simulated noise. At delays 1 and 2 the residual shows only a brief peak around the same time. Nothing is known about this trajectory after frame 499.</p>
-<p>At delay 3, r2 has the largest average residual of the three realizations, yet its whole-window mean-image Strehl is similar to theirs. These are different atmospheres averaged over the same 0.8 s, not a before-and-after comparison within r2; the saved outputs do not isolate how much the late rise affects the image.</p>
+<p>I examined these frames after noticing the rise in the three-frame run. At one and two frames of delay the peak near 0.68 s was brief.</p>
+<p>Across the 0.8 s exposure at delay 3, r2 had the largest mean residual (218.3 nm). Its peak Strehl was 0.722, close to the values for r0 (0.722) and r1 (0.715).</p>
 </aside>
 <h3 id="delay42-paired-title">Paired change against delay 2</h3>
 <p id="delay42-paired-text"></p>
@@ -725,34 +727,34 @@ function aoCodeUnavailable() {
 <h3>Image quality</h3>
 <div aria-label="Image quality by delay" class="table-scroll" role="region" tabindex="0"><table class="studies42-table"><caption>Mean over r0–r2, frames 100–499, 2.2 µm (individual realizations r0 / r1 / r2)</caption><thead><tr><th scope="col">Delay</th><th scope="col">Mean residual RMS</th><th scope="col">r0 / r1 / r2 (nm)</th><th scope="col">Peak Strehl of the mean image</th><th scope="col">r0 / r1 / r2</th><th scope="col">Fourier EE50 (λ/D)</th><th scope="col">r0 / r1 / r2</th></tr></thead><tbody id="delay42-image-body"></tbody></table></div>
 <p id="delay42-asymmetry"></p>
-<p class="takeaway"><strong>Observed result:</strong> in each realization, mean residual, mean-image Strehl and Fourier EE50 worsen from delay 1 to 2 to 3. The exploratory intervals use three atmospheric realization values under one seed and noise policy; the 400 correlated frames supply each run’s summary.</p>
+<p class="takeaway">The half-light radius increased with delay in all three atmospheres. Averaged across them, it grew from 0.803 to 0.834 and then 0.971 λ/D.</p>
 <details id="delay42-psf-details"><summary>Mean PSFs of all nine records (static figure from the analysis)</summary>
-<p class="hint">Saved analysis figure: mean PSFs at 2.2 µm over frames 100–499; rows are r0, r1, r2 and columns delay 1, 2 and 3 (labelled by run name; the middle column is the reused delay-2 baseline). One shared logarithmic scale normalized to the ideal peak; display crop ±20 λ/D. The differences are small at this scale; the table above gives the measured values.</p>
+<p class="hint">Each row is one atmosphere and each column one delay. The nine 2.2 µm images use the same logarithmic scale relative to the ideal peak and show ±20 λ/D.</p>
 <p class="status" id="delay42-psf-status">The figure is checked when this section is opened.</p>
 <img alt="Three by three grid of mean point-spread functions on a shared logarithmic scale; all nine look similar, with a bright core and rings." class="studies42-psf" height="1380" hidden="" id="delay42-psf" width="1440"/>
 </details>
-<details id="delay42-methods"><summary>Controller-delay comparison · timing, definitions, corrections and source records</summary><div class="prose">
-<p><strong>Timing.</strong> L is the length of the controller’s release queue in the simulation. An increment reconstructed at frame k is released at k + L and first sensed in the pre-update residual at k + L + 1. This queue parameter represents the combined delay; detector readout, pixel processing and mirror settling are not resolved individually.</p>
-<p><strong>Settings.</strong> Profile <code>det_ccd_42m_r3band_derived@1</code> (synthetic, from the historical 42 m design ledger); 100,000 e⁻ per fully illuminated subaperture per frame; gain 0.3; leak 0; damping α 0.001; 500 Hz; 500 frames; root seed 1; detector noise on. Each new record differs from the delay-2 record of its realization only in the configured delay, and the three delays of a realization share an identical atmosphere.</p>
-<p><strong>Records.</strong> Six new successful trajectories (delays 1 and 3) and three reused delay-2 baselines make nine analyzed records, with three realization pairs per comparison. Seven new runs were started: the first delay-3, r2 attempt was lost to a computing restart, has no completed history and is excluded. The completed second attempt has the identical configuration on a different host. The delay-2, r2 record is the same saved trajectory as the first 500 frames of the bright run in the flux comparison above; it is not an additional run.</p>
-<p><strong>Statistics.</strong> Record values are arithmetic means of the per-frame RMS over frames [100,500), 400 frames. Paired differences are taken within each realization; the interval is an exploratory 95% t interval with two degrees of freedom over three realizations, conditional on one seed and the native noise policy. All three realizations, including r2, enter the reported intervals.</p>
+<details id="delay42-methods"><summary>Run settings, definitions and downloads</summary><div class="prose">
+<p>Each frame lasts 2 ms. The queue length L is the number of frames between reconstruction and command release.</p>
+<p>I used <code>det_ccd_42m_r3band_derived@1</code> with 100,000 detected electrons per full subaperture per frame, detector noise on, gain 0.3, leak zero and damping α = 0.001. Root seed 1 generated the three atmosphere realizations.</p>
+<p>I used the three delay-2 records from the photon-budget study and made six runs at delays 1 and 3. A computer restart interrupted the first delay-3 run in r2. The table uses its completed repeat. The r2 delay-2 record also supplies the first second of the bright <a href="#flux42">guide-star flux run</a>.</p>
+<p>For each record I averaged the residual RMS over frames 100–499, then subtracted the delay-2 result for the same atmosphere. I used the three paired differences to calculate the 95% Student t interval (two degrees of freedom).</p>
 <div aria-label="Exact per-delay values" class="table-scroll" role="region" tabindex="0"><table class="studies42-table"><caption>Exact means over r0–r2 (frames 100–499)</caption><thead><tr><th scope="col">Delay</th><th scope="col">Residual RMS (nm)</th><th scope="col">Peak Strehl</th><th scope="col">Fourier EE50 (λ/D)</th><th scope="col">Production EE50 (secondary)</th></tr></thead><tbody id="delay42-exact-body"></tbody></table></div>
 <div aria-label="All nine records" class="table-scroll" role="region" tabindex="0"><table class="studies42-table"><caption>All nine records (frames 100–499)</caption><thead><tr><th scope="col">Run</th><th scope="col">Delay</th><th scope="col">Atmosphere</th><th scope="col">Origin</th><th scope="col">Mean RMS (nm)</th><th scope="col">Root mean square of the frame RMS (nm, reference only)</th><th scope="col">Frames with valid fraction &lt; 0.995</th></tr></thead><tbody id="delay42-records-body"></tbody></table></div>
-<p>Image metrics come from each record’s mean intensity image over frames 100–499 (peak Strehl = peak of the mean image ÷ ideal peak). EE50 uses the same mean PSF: Fourier disc integration is the primary estimate; radius-ordered sampled flux is the sampling-sensitive production estimate. The full mean-PSF arrays are not in this bundle; their values were checked against the saved science records in review, not recomputed from the images.</p>
-<p><strong>Wording corrections.</strong> The study’s frozen reports are kept unchanged. This page applies four corrections from the review of 2026-10-29. LAT-R01: the r2 excursion is described as an observation; no atmospheric event is shown to cause the validity dip or the residual rises. LAT-R02: the similar whole-window Strehl of r2 does not measure the excursion’s effect on the image. LAT-R03: 202.761403 nm belongs to frame 338 (frame 339: 208.842077 nm; frame 344: 255.093974 nm); the second rise, 248.795052 → 273.001961 nm at frames 446 → 447, has no simultaneous validity drop (0.993153365 → 0.993740219); validity recovers only partly (0.991961987 over frames 345–499 against 0.999310446 over 100–299), with 137 main-window frames below 0.995. LAT-R04: the ratio of about 2.3 is the sample-mean Strehl loss from delay 2 to 3 divided by the gain from 2 to 1 at gain 0.3 in these three realizations, not a general multiplier.</p>
-<p>The saved histories, pairing and statistics were checked separately on 2026-10-29; the review compared saved arrays, identities and summary arithmetic. Different CPUs can change floating-point results at about the 0.02 nm level, far below the differences reported here.</p>
+<p>I averaged the intensity images over the same 400 frames. Peak Strehl is the peak of this mean image divided by the ideal peak. Fourier disc integration gives the half-light radius. The table also lists the radius obtained by summing sampled pixels.</p>
+
+<p><a href="#model-limitations">Model limitations</a></p>
 <p class="c1-ids" id="delay42-identity"></p>
 <div class="downloads" id="delay42-downloads"></div>
 </div></details>
 </section><section aria-labelledby="gain42-title" class="wrap section page-view" data-nav="studies" data-view="" hidden="" id="gain42"><p class="breadcrumb"><a href="#studies">← Selected studies</a></p><span aria-hidden="true" id="studies42"></span>
-<p class="evidence-kind">Recorded simulation study · six new and six reused trajectories · three paired realizations</p>
-<h1 id="gain42-title">Does lower gain help when correction is delayed?</h1><nav aria-label="In this study" class="local-nav"><a href="#gain42-whole">Whole-window result</a><a href="#gain42-late">Late-run detail</a><a href="#gain42-methods">Methods &amp; downloads</a></nav>
-<p class="takeaway">Among the two tested gains, gain 0.3 produced better whole-window image quality at both configured delays. Lowering gain reduced the observed delay penalty and the r2 late excursion, but incurred a larger overall image-quality cost.</p>
-<p>Two gains (0.2 and 0.3), configured controller queue delays of 2 and 3 frames, and realizations r0–r2. Each record has 500 frames at 500 Hz; the primary window is <strong>[100,500), 400 frames over 0.8 s</strong>. The photon budget is 100,000 e⁻ per full subaperture per frame, with noise on.</p>
+<p class="evidence-kind">Historical 42 m model · closed-loop gain and delay</p>
+<h1 id="gain42-title">How does loop gain affect a delayed correction?</h1><nav aria-label="In this study" class="local-nav"><a href="#gain42-whole">Whole-window result</a><a href="#gain42-late">Late-run detail</a><a href="#gain42-methods">Methods &amp; downloads</a></nav>
+<p class="takeaway">I lowered the integrator gain from 0.3 to 0.2 and repeated the same three atmospheres at queue delays of two and three frames. At two frames, the mean peak Strehl at 2.2 µm fell from 0.751 to 0.692. At three frames it fell from 0.720 to 0.672. Gain 0.3 gave the sharper long exposure at both delays.</p>
+<p>Each run lasted one second at 500 Hz. I excluded the first 0.2 s while the loop settled, then averaged the next 400 images before measuring their peak relative to the ideal PSF. The plots below show the result for each atmosphere and the mean of the three.</p>
 <p aria-live="polite" class="status" id="gain42-status" role="status">Gain–delay records load when this panel is opened.</p>
 <div class="error" hidden="" id="gain42-error" role="alert"></div>
 <div hidden="" id="gain42-content">
-<h3 id="gain42-whole">Whole-window performance</h3>
+<h3 id="gain42-whole">Image quality over the 0.8 s exposure</h3>
 <label for="gain42-metric">Recorded metric</label>
 <select disabled="" id="gain42-metric">
 <option value="peak_strehl">Peak Strehl of the mean PSF</option>
@@ -763,24 +765,24 @@ function aoCodeUnavailable() {
 <div class="gain42-plot" id="gain42-whole-plot"></div>
 <p><a href="#gain42-table">All twelve numeric records ↓</a> · <a href="#gain42-late">Inspect the late-run contrast ↓</a></p>
 <h3>Paired contrasts</h3>
-<p><strong>G</strong> = gain 0.2 − gain 0.3 at fixed delay. <strong>D</strong> = delay 3 − delay 2 at fixed gain. <strong>I</strong> = D(0.2) − D(0.3). Bands are exploratory 95% Student t intervals from the three paired realization values, df 2. The dashed line marks zero; frames are correlated samples, not replicates.</p>
+<p><strong>G</strong> gives the change when I lower the gain from 0.3 to 0.2 at fixed delay. <strong>D</strong> gives the change when I add one frame of delay at fixed gain. <strong>I</strong> compares these delay effects, D(0.2) − D(0.3). Each point comes from one atmosphere. The bands show 95% Student t intervals across the three paired differences.</p>
 <div class="gain42-plot" id="gain42-contrasts-plot"></div>
 <details><summary>Paired contrast values</summary><div aria-label="Gain and delay paired contrasts" class="table-scroll" role="region" tabindex="0"><table class="studies42-table"><caption id="gain42-contrasts-caption"></caption><thead><tr><th scope="col">Contrast</th><th scope="col">r0</th><th scope="col">r1</th><th scope="col">r2</th><th scope="col">Mean</th><th scope="col">95% interval</th><th scope="col">Zero</th></tr></thead><tbody id="gain42-contrasts-body"></tbody></table></div></details>
-<p>Only the <strong>Strehl interaction interval excludes zero</strong>. The residual and Fourier EE50 interaction intervals include zero. The Strehl interaction is resolved under this interval calculation; residual and EE50 interactions remain inconclusive.</p>
+<p>Adding one frame of delay cost 0.0313 in Strehl at gain 0.3 and 0.0196 at gain 0.2. The difference was 0.0117 (95% paired interval 0.0097–0.0136). The intervals for the corresponding changes in residual RMS and half-light radius span zero.</p>
 <details id="gain42-table"><summary>All twelve records · whole-window numeric values</summary>
 <div aria-label="All twelve gain study records" class="table-scroll" role="region" tabindex="0"><table class="studies42-table"><caption>Window [100,500) · 2.2 µm · residual means from histories; image metrics from saved analysis</caption><thead><tr><th scope="col">Gain</th><th scope="col">Queue delay (frames)</th><th scope="col">Realization</th><th scope="col">Origin</th><th scope="col">Mean residual (nm)</th><th scope="col">Peak Strehl</th><th scope="col">Fourier EE50 (λ/D)</th></tr></thead><tbody id="gain42-whole-body"></tbody></table></div>
 </details>
-<h3 id="gain42-late">Late-run detail</h3>
-<p>At delay 3/r2, late-minus-early residual is <strong>40.7 nm at gain 0.3</strong> and <strong>3.7 nm at gain 0.2</strong>; validity falls below 0.995 in <strong>137 versus 8</strong> primary-window frames. This describes the late-window response of r2. Gain 0.3 still gives better whole-window image quality.</p>
+<h3 id="gain42-late">What happened late in the third atmosphere?</h3>
+<p>In atmosphere r2 at three frames of delay, I compared the mean residual over 0.2–0.6 s with the mean over 0.6–1.0 s. It rose by 40.7 nm at gain 0.3 and by 3.7 nm at gain 0.2. The fraction of accepted measurements fell below 99.5% in 137 frames at the higher gain and eight at the lower gain. Over the full r2 exposure, gain 0.3 gave a peak Strehl of 0.722, compared with 0.674 at gain 0.2.</p>
 <div class="gain42-controls">
 <label for="gain42-delay">Recorded queue delay <select disabled="" id="gain42-delay"><option value="2">2 frames</option><option selected="" value="3">3 frames</option></select></label>
 <label for="gain42-realization">Atmospheric realization <select disabled="" id="gain42-realization"><option value="0">r0</option><option value="1">r1</option><option selected="" value="2">r2</option></select></label>
 <label for="gain42-range">Trace window <select disabled="" id="gain42-range"><option value="post">After startup [100,500)</option><option value="full">All recorded frames [0,500)</option></select></label>
 <button disabled="" id="gain42-show-r2" type="button">Show delay 3 / r2</button>
 </div>
-<p class="hint">Teal: gain 0.3 (reused) · orange: gain 0.2 (new). Startup [0,100) is excluded from summaries. Early [100,300), late [300,500); boundary at 0.6 s. Shared axes across all configurations; lines connect the recorded samples.</p>
+<p class="hint">Teal shows gain 0.3 and orange shows gain 0.2. The vertical line at 0.6 s separates the two averaging windows.</p>
 <figure class="studies42-chart"><canvas aria-label="Residual RMS for the two gains at the selected delay and realization" height="250" id="gain42-rms" role="img"></canvas><figcaption>Pre-update residual RMS, nm.</figcaption></figure>
-<figure class="studies42-chart"><canvas aria-label="Recorded valid-measurement fractions for the two gains" height="180" id="gain42-valid" role="img"></canvas><figcaption>Valid fraction; reference line at 0.995. A partly invalid measurement set is not necessarily a rejected reconstruction.</figcaption></figure>
+<figure class="studies42-chart"><canvas aria-label="Recorded valid-measurement fractions for the two gains" height="180" id="gain42-valid" role="img"></canvas><figcaption>Fraction of slope measurements accepted at each frame. The dotted line marks 99.5% acceptance.</figcaption></figure>
 <label for="gain42-frame">Inspect a gain-study frame</label><input disabled="" id="gain42-frame" max="499" min="100" step="1" type="range" value="344"/>
 <p class="studies42-readout" id="gain42-readout"></p><div aria-live="polite" class="sr-only" id="gain42-live"></div>
 <details><summary>Early and late numeric values</summary><div aria-label="Early and late gain comparison" class="table-scroll" role="region" tabindex="0"><table class="studies42-table"><caption id="gain42-late-caption"></caption><thead><tr><th scope="col">Gain</th><th scope="col">Early [100,300)</th><th scope="col">Late [300,500)</th><th scope="col">Final block [400,500)</th><th scope="col">Final 50 [450,500)</th><th scope="col">Late − early</th><th scope="col">Valid &lt; 0.995</th><th scope="col">Minimum validity</th></tr></thead><tbody id="gain42-late-body"></tbody></table></div></details>
@@ -788,14 +790,14 @@ function aoCodeUnavailable() {
 <label for="gain42-image-gain">Recorded gain for image summaries <select disabled="" id="gain42-image-gain"><option value="0.3">0.3 · reused baseline</option><option value="0.2">0.2 · new run</option></select></label>
 <p id="gain42-window-status" role="status"></p>
 <div aria-label="Windowed image summary availability" class="table-scroll" role="region" tabindex="0"><table class="studies42-table"><caption>Selected delay and realization · peak Strehl of each window's mean PSF</caption><thead><tr><th scope="col">Frame window</th><th scope="col">Peak Strehl</th><th scope="col">Samples</th></tr></thead><tbody id="gain42-window-body"></tbody></table></div>
-<p>No matching baseline windowed PSFs were recorded. A new-run windowed image is never compared with a baseline whole-window image. No image or residual snapshot is reconstructed here.</p>
+<p>The gain-0.2 table gives the peak of each window’s separately averaged PSF. At gain 0.3 the available image integrates the full 0.8 s.</p>
 </details>
-<details id="gain42-methods"><summary>Methods, evidence and limits</summary><div class="prose">
-<p>Root seed 1, native scoped noise policy, leak 0, damping 0.001, wavelength 2.2 µm and PSF padding 2. Within each realization, all four cells share the atmospheric input. The sample consists of three atmospheric realizations under the native noise policy. Interaction uncertainty is computed from the three interaction values.</p>
-<p>Residual means, early/late diagnostics, validity counts and paired statistics reduce saved histories. Whole-window and new-run windowed image metrics come from the saved analysis; full PSFs and residual arrays remain in the local archive. The plots, tables and CSV show these same records. Reused gain-0.3 records also appear in the delay study.</p>
-<p>The gain-0.3 delay-3/r2 record is completed attempt 2. Its interrupted first attempt remains in the prior failure history. No baseline was rerun. The result compares these two gains at the stated delays and conditions. The 2.2 m astronomical replay is separate and contains no frames from this study.</p>
-<p><a href="#studies42-history">Earlier scientific qualifications remain in force</a>, including T1c/T4 failures, outcome I, N13/N14, C1's static scope with C3 untriggered, the detector-component meaning of about 0.0042 nm, production-EE50 sampling sensitivity, and photon-budget/latency failure records and corrections.</p>
-<p><a href="evidence/gain-study-notes.md">Current methods reading copy</a> · <a href="evidence/gain-study-corrections.md">Timing and preservation corrections</a>. The original methods download retains the GL-R01 and GL-R02 identifiers for tracing the historical record. The original execution reports and their hashes are unchanged. Commits and hashes identify the separately retained evidence archive.</p>
+<details id="gain42-methods"><summary>Run settings and downloads</summary><div class="prose">
+<p>I used a guide-star flux of 100,000 detected electrons per full subaperture per frame, detector noise on, leak zero and damping α = 0.001. Within each atmosphere, all four gain and delay settings saw the same incoming wavefront. Root seed 1 generated atmospheres r0–r2.</p>
+<p>I took the arithmetic mean of the per-frame residual RMS before each correction. For image quality I measured the peak Strehl and the half-light radius of the mean PSF at 2.2 µm. The radius comes from Fourier integration over a disc.</p>
+<p>I used the six gain-0.3 recordings from the <a href="#delay42">delay study</a> and made six runs at gain 0.2. The first attempt at delay 3 in r2 was interrupted. The comparison uses the completed repeat with the same configuration.</p>
+<p><a href="#model-limitations">Model limitations</a> · <a href="#studies42-history">Earlier numerical checks</a></p>
+<p><a href="evidence/gain-study-notes.md">Gain-study methods</a> · <a href="evidence/gain-study-corrections.md">Corrections to the original reports</a></p>
 <p class="c1-ids" id="gain42-identity"></p><div class="downloads" id="gain42-downloads"></div>
 </div></details>
 </div>
