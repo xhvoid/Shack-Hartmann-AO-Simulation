@@ -68,8 +68,19 @@ PROFILE_SCHEMA_NAME = "shwfs_ao.system_profile"
 # hash moves; a v1-v6 record cannot carry the block.  A v7 record also
 # requires an exposure no longer than the frame period and a centroid window
 # symmetric about the optical-axis pixel.
-PROFILE_SCHEMA_VERSION = 7
-SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7)
+# Schema v8 adds the optional ``reconstructor.waffle_filter_cutoff`` field: a
+# relative response cutoff below which the sparse LSMR reconstructor removes
+# the calibrated response's weakly sensed checkerboard family (checkerboards
+# separated by local-waffle content from the smooth modes of similar response)
+# from every increment.  On the 42 m Fried geometry that family is weakly
+# sensed and the relative damping barely regularizes it; in the recorded
+# replay the commands carried it and the corrected image showed four spots at
+# the DM Nyquist corners (measurement noise and aliased turbulence are
+# plausible drivers that the replay did not separate).  The field is absent
+# from a record when null, exactly as ``controller.recovery`` is, so every
+# record without it keeps its identity; a v1-v7 record cannot carry it.
+PROFILE_SCHEMA_VERSION = 8
+SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8)
 # The WFS photon allocation the schema-v1 profiles were reviewed and published
 # under.  A v1 record omits the field entirely, so this is the only allocation a
 # configuration claiming record schema 1 can legitimately hold.  It must stay
@@ -110,6 +121,8 @@ _WFS_FIELDS_V1 = _WFS_FIELDS_V2 - {"photon_allocation"}
 _DM_FIELDS = {"influence_model", "coupling_width_pitch", "stroke_limit_opd_m", "include_edge_actuators", "actuator_margin_fraction", "dead_actuator_indices", "stuck_actuator_indices", "stuck_command_opd_m"}
 _CALIBRATION_FIELDS = {"source", "method", "probe_kind", "amplitude_m", "include_noise", "repeats", "resource_name"}
 _RECONSTRUCTOR_FIELDS = {"kind", "rcond", "alpha", "min_valid_fraction", "min_rank", "max_cached_masks"}
+# Schema v8 may carry the optional waffle-family filter; it is absent when null.
+_RECONSTRUCTOR_OPTIONAL_FIELDS_V8 = {"waffle_filter_cutoff"}
 _PROJECTOR_FIELDS = {"kind", "mapping_resource"}
 _CONTROLLER_FIELDS = {"n_steps", "gain", "leak", "latency_frames", "frame_rate_hz", "include_noise"}
 _RECOVERY_FIELDS = {"rejected_frames_before_decay", "decay_per_rejected_frame", "fallback_min_valid_fraction", "fallback_min_actuator_coverage", "gain_full_valid_fraction"}
@@ -278,6 +291,24 @@ class _ControllerConfigWithoutRecovery:
     latency_frames: int
     frame_rate_hz: float
     include_noise: bool
+
+
+@dataclass(frozen=True, slots=True)
+class _ReconstructorConfigWithoutWaffleFilter:
+    """Hash shape of a ``reconstructor`` block without a waffle-family filter.
+
+    The same declared fields, order and schema id as before the optional
+    schema-v8 filter existed, so records without one keep their identity.
+    """
+
+    __hash_schema_id__ = "shwfs_ao.io.configs.ReconstructorConfig"
+
+    kind: Literal["least_squares", "tsvd", "tikhonov", "sparse_lsmr_tikhonov"]
+    rcond: float | None
+    alpha: float | None
+    min_valid_fraction: float
+    min_rank: int
+    max_cached_masks: int
 
 
 @dataclass(frozen=True, slots=True)

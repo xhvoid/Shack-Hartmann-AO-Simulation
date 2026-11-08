@@ -14,6 +14,7 @@ from .config import (
     DmConfig,
     actuator_id,
     actuator_ids_from_grid_indices,
+    grid_indices_from_actuator_ids,
 )
 from .model import (
     COMMAND_UNIT,
@@ -40,6 +41,7 @@ __all__ = (
     "DmConfig",
     "actuator_id",
     "actuator_ids_from_grid_indices",
+    "grid_indices_from_actuator_ids",
     "COMMAND_UNIT",
     "DmBackend",
     "ScalableDmBackend",

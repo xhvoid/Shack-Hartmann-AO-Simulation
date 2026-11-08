@@ -23,6 +23,10 @@
       "sha256": "bab611dfbb16b00e6e4735a3b8473ca6ed3dcf8cf434b02b9ba8fd9504573e48"
     },
     {
+      "logical_name": "benchmarks/detector_level.assumptions.v3.json",
+      "sha256": "5b519f864358038c677dc8d0ad73ed93b235967bbd91b362befadef8f8a03ae7"
+    },
+    {
       "logical_name": "benchmarks/detector_source_ledger.v1.json",
       "sha256": "2b8cc13ebca067f9c48af1861680a84de619834019567a33a7d671ec606882fc"
     },
@@ -189,6 +193,10 @@
     {
       "logical_name": "synthetic_presets/det_ccd_42m_r3band_derived.v1.json",
       "sha256": "56d8a6bac412b56c995a359f56458eb4ad5383d6f5fe47b9fa60b58a3a6714ff"
+    },
+    {
+      "logical_name": "synthetic_presets/det_ccd_42m_r3band_derived.v2.json",
+      "sha256": "243802c641b0e53920cb90eadd3de4439793c5a170dba520d2e22f7c1969f5e0"
     },
     {
       "logical_name": "synthetic_presets/det_cmos_2m_synthetic.v1.json",

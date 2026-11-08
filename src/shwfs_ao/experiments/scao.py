@@ -52,7 +52,7 @@ from ..core.protocols import (
 from ..core.random import NamedRandomStreams, with_detector_physics_domains
 from ..detector import CentroidConfig, CentroidValidityConfig, DetectorConfig
 from ..detector.physical_config import PhysicalDetectorConfig
-from ..dm import DMConfig
+from ..dm import DMConfig, grid_indices_from_actuator_ids
 from ..io.configs import AtmosphereLayerConfig, SystemConfig
 from ..io.resources import read_text_resource
 from ..science.propagation import PsfSampling
@@ -1456,6 +1456,7 @@ def _build_reconstructor(
             raise ScaoConstructionError(
                 "sparse_lsmr_tikhonov needs a scalable profile and a sparse matrix."
             )
+        waffle_cutoff = reconstructor.waffle_filter_cutoff
         try:
             return SparseLsmrReconstructor(
                 matrix,
@@ -1467,6 +1468,12 @@ def _build_reconstructor(
                 max_iterations=scalable.solver_max_iterations,
                 min_valid_fraction=reconstructor.min_valid_fraction,
                 nonconverged_policy=scalable.nonconverged_policy,
+                waffle_filter_cutoff=waffle_cutoff,
+                actuator_grid_indices=(
+                    None
+                    if waffle_cutoff is None
+                    else grid_indices_from_actuator_ids(matrix.coordinate_ids)
+                ),
             )
         except (TypeError, ValueError) as exc:
             raise ScaoConstructionError(f"cannot build reconstructor {kind!r}: {exc}") from exc

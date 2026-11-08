@@ -7,9 +7,11 @@ before command validation or backend synthesis.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 import math
 from numbers import Integral, Real
+import re
 from typing import cast
 
 import numpy as np
@@ -32,6 +34,7 @@ __all__ = (
     "DmConfig",
     "actuator_id",
     "actuator_ids_from_grid_indices",
+    "grid_indices_from_actuator_ids",
 )
 
 
@@ -176,12 +179,29 @@ class DMConfig:
 DmConfig = DMConfig
 
 
+_ACTUATOR_ID_PATTERN = re.compile(r"actuator-r(\d{4,})-c(\d{4,})")
+
+
 def actuator_id(row: int, column: int) -> str:
     """Return a stable actuator ID from nominal physical grid indices."""
 
     row_index = _nonnegative_integer(row, label="row")
     column_index = _nonnegative_integer(column, label="column")
     return f"actuator-r{row_index:04d}-c{column_index:04d}"
+
+
+def grid_indices_from_actuator_ids(actuator_ids: Sequence[str]) -> np.ndarray:
+    """Return the ``(n, 2)`` row/column indices encoded by :func:`actuator_id` IDs."""
+
+    if isinstance(actuator_ids, (str, bytes)) or len(actuator_ids) == 0:
+        raise DMConfigError("actuator_ids must be a non-empty sequence of IDs.")
+    indices = np.empty((len(actuator_ids), 2), dtype=np.int64)
+    for position, identifier in enumerate(actuator_ids):
+        match = _ACTUATOR_ID_PATTERN.fullmatch(identifier) if isinstance(identifier, str) else None
+        if match is None:
+            raise DMConfigError(f"actuator_ids[{position}] is not an actuator ID: {identifier!r}.")
+        indices[position] = (int(match.group(1)), int(match.group(2)))
+    return indices
 
 
 def actuator_ids_from_grid_indices(grid_indices_rc: np.ndarray) -> tuple[str, ...]:

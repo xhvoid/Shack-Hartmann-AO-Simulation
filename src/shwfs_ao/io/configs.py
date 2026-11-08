@@ -35,6 +35,7 @@ from ._profile_schema import (
     _WfsConfigSchemaV3,
     _ControllerConfigWithoutRecovery,
     _DetectorPhysicsConfigWithoutCalibrationSource,
+    _ReconstructorConfigWithoutWaffleFilter,
     _SYSTEM_FIELDS,
     _ATMOSPHERE_FIELDS,
     _ATMOSPHERE_FIELDS_V3,
@@ -47,6 +48,7 @@ from ._profile_schema import (
     _DM_FIELDS,
     _CALIBRATION_FIELDS,
     _RECONSTRUCTOR_FIELDS,
+    _RECONSTRUCTOR_OPTIONAL_FIELDS_V8,
     _PROJECTOR_FIELDS,
     _CONTROLLER_FIELDS,
     _RECOVERY_FIELDS,
@@ -113,6 +115,9 @@ _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
     # Version 3 after the m_AB = 11 excursion study: Tikhonov damping 0.1 and
     # the reset-to-flat recovery policy.
     ("det_emccd_12m_medium_derived", 3): "synthetic_presets/det_emccd_12m_medium_derived.v3.json",
+    # Schema-v8 version 2 of the 42 m profile after its recorded replay: the
+    # reconstructor waffle-family filter.
+    ("det_ccd_42m_r3band_derived", 2): "synthetic_presets/det_ccd_42m_r3band_derived.v2.json",
 }
 
 BackendName = Literal["native", "hcipy"]
@@ -700,6 +705,16 @@ class ReconstructorConfig:
     ``tikhonov``.  For ``sparse_lsmr_tikhonov`` it is *dimensionless*: the
     damping relative to the RMS column norm of the calibration-valid response,
     solved by LSMR with the tolerances of the profile's ``scalable`` block.
+
+    ``waffle_filter_cutoff`` (optional, schema v8, ``sparse_lsmr_tikhonov``
+    only) is a relative response cutoff in ``(0, 1]``: every reconstructed
+    increment loses its projection on the calibrated response's weakly sensed
+    checkerboard family, the commands whose energy is mostly local waffle and
+    whose response is below this fraction of the RMS column norm, separated
+    from the smooth modes of similar response that the response eigenvectors
+    mix them with (``shwfs_ao.calibration.sparse.response_waffle_modes``).
+    ``None`` (the default, and every record before schema v8) filters
+    nothing.
     """
 
     kind: Literal["least_squares", "tsvd", "tikhonov", "sparse_lsmr_tikhonov"]
@@ -708,6 +723,9 @@ class ReconstructorConfig:
     min_valid_fraction: float
     min_rank: int
     max_cached_masks: int
+    # Optional schema-v8 waffle-family filter.  Absent from a record when null,
+    # so every record without one keeps its identity.
+    waffle_filter_cutoff: float | None = None
 
     def __post_init__(self) -> None:
         if self.kind not in {"least_squares", "tsvd", "tikhonov", "sparse_lsmr_tikhonov"}:
@@ -723,14 +741,34 @@ class ReconstructorConfig:
             raise SystemConfigError(f"{self.kind} requires alpha.")
         if not uses_alpha and alpha is not None:
             raise SystemConfigError("alpha is valid only for Tikhonov reconstructors.")
+        waffle_filter_cutoff = _optional_positive(self.waffle_filter_cutoff, "waffle_filter_cutoff")
+        if waffle_filter_cutoff is not None and waffle_filter_cutoff > 1.0:
+            raise SystemConfigError("waffle_filter_cutoff must be at most 1.")
+        if waffle_filter_cutoff is not None and self.kind != "sparse_lsmr_tikhonov":
+            raise SystemConfigError(
+                "waffle_filter_cutoff is valid only for the sparse_lsmr_tikhonov reconstructor."
+            )
         object.__setattr__(self, "rcond", rcond)
         object.__setattr__(self, "alpha", alpha)
+        object.__setattr__(self, "waffle_filter_cutoff", waffle_filter_cutoff)
         object.__setattr__(self, "min_valid_fraction", _fraction(self.min_valid_fraction, "min_valid_fraction"))
         object.__setattr__(self, "min_rank", _integer(self.min_rank, "min_rank", minimum=1))
         object.__setattr__(self, "max_cached_masks", _integer(self.max_cached_masks, "max_cached_masks", minimum=0))
 
     @property
     def config_hash(self) -> str:
+        if self.waffle_filter_cutoff is None:
+            return component_config_hash(
+                "scao.reconstructor_config",
+                _ReconstructorConfigWithoutWaffleFilter(
+                    kind=self.kind,
+                    rcond=self.rcond,
+                    alpha=self.alpha,
+                    min_valid_fraction=self.min_valid_fraction,
+                    min_rank=self.min_rank,
+                    max_cached_masks=self.max_cached_masks,
+                ),
+            )
         return component_config_hash("scao.reconstructor_config", self)
 
 
@@ -1292,6 +1330,14 @@ class SystemConfig:
                     )
         if record_version >= 7:
             _validate_schema7_rules(self)
+        # Only a schema-v8 record has a field for the waffle-family filter; an
+        # older record carrying one would lose it.
+        if record_version < 8 and self.reconstructor.waffle_filter_cutoff is not None:
+            raise SystemConfigError(
+                f"record_schema_version={record_version} cannot express "
+                "reconstructor.waffle_filter_cutoff; record this configuration "
+                "under schema 8."
+            )
         object.__setattr__(self, "record_schema_version", record_version)
 
     @property
@@ -1580,7 +1626,7 @@ def system_config_from_mapping(record: Mapping[str, object]) -> SystemConfig:
         ),
         dm=_construct(DmSystemConfig, values["dm"], _DM_FIELDS, "dm", tuple_fields={"dead_actuator_indices", "stuck_actuator_indices"}),
         calibration=_construct(CalibrationConfig, values["calibration"], _CALIBRATION_FIELDS, "calibration"),
-        reconstructor=_construct(ReconstructorConfig, values["reconstructor"], _RECONSTRUCTOR_FIELDS, "reconstructor"),
+        reconstructor=_reconstructor_config(values["reconstructor"], schema_version),
         command_projector=_construct(CommandProjectorConfig, values["command_projector"], _PROJECTOR_FIELDS, "command_projector"),
         controller=_controller_config(values["controller"], schema_version),
         science=_construct(ScienceConfig, values["science"], _SCIENCE_FIELDS, "science"),
@@ -1657,7 +1703,7 @@ def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
             "wfs": wfs_fields,
             "dm": _dataclass_mapping(config.dm),
             "calibration": _dataclass_mapping(config.calibration),
-            "reconstructor": _dataclass_mapping(config.reconstructor),
+            "reconstructor": _reconstructor_mapping(config.reconstructor),
             "command_projector": _dataclass_mapping(config.command_projector),
             "controller": _controller_mapping(config.controller),
             "science": _dataclass_mapping(config.science),
@@ -1733,6 +1779,29 @@ def _controller_config(value: object, schema_version: int) -> ControllerConfig:
             RecoveryPolicyConfig, mapping["recovery"], _RECOVERY_FIELDS, "controller.recovery"
         )
     return cast(ControllerConfig, _construct(ControllerConfig, mapping, _CONTROLLER_FIELDS | {"recovery"}, "controller", optional_fields={"recovery"}))
+
+
+def _reconstructor_config(value: object, schema_version: int) -> ReconstructorConfig:
+    # Only a schema-v8 record may carry the optional waffle-family filter.
+    if schema_version < 8:
+        return cast(ReconstructorConfig, _construct(ReconstructorConfig, value, _RECONSTRUCTOR_FIELDS, "reconstructor"))
+    return cast(
+        ReconstructorConfig,
+        _construct(
+            ReconstructorConfig,
+            value,
+            _RECONSTRUCTOR_FIELDS | _RECONSTRUCTOR_OPTIONAL_FIELDS_V8,
+            "reconstructor",
+            optional_fields=_RECONSTRUCTOR_OPTIONAL_FIELDS_V8,
+        ),
+    )
+
+
+def _reconstructor_mapping(config: ReconstructorConfig) -> dict[str, object]:
+    mapping = _dataclass_mapping(config)
+    if mapping["waffle_filter_cutoff"] is None:
+        del mapping["waffle_filter_cutoff"]
+    return mapping
 
 
 def _controller_mapping(config: ControllerConfig) -> dict[str, object]:

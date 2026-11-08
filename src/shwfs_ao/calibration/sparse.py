@@ -33,8 +33,65 @@ Sparse response and solver
 forward/adjoint pair.  :class:`SparseLsmrReconstructor` solves the Tikhonov
 objective ``min ||A_u x - b_u||^2 + damp^2 ||x||^2`` on the usable rows with
 LSMR from ``x0 = 0``; ``damp`` is ``damping_relative`` times the RMS column
-norm of the calibration-valid response.  It never forms a dense matrix, an SVD,
-or a per-mask factorization cache.
+norm of the calibration-valid response.  It never forms a dense response
+matrix, a response SVD or a per-mask factorization cache; the optional
+waffle-family filter adds one sparse eigen-decomposition of the response Gram
+matrix at construction.
+
+Waffle-family filter
+--------------------
+On an ideal Fried-geometry Shack-Hartmann (actuators on the lenslet corners,
+each lenslet measuring the mean gradient of a bilinear surface) a complete
+lenslet with corner heights ``(a, b, c, e)`` in row order measures slopes
+proportional to ``-a + b - c + e`` and ``-a - b + c + e``.  The local waffle
+``(+1, -1, -1, +1)`` gives zero in both, so such a lenslet cannot see it.  The
+calibrated optical, pixelated sensor is not this ideal stencil.  On the 42 m
+geometry of ``det_ccd_42m_r3band_derived`` every fully illuminated lenslet
+responds weakly to the uniform checkerboard ``(-1)**(row + column)``, and
+together they carry 62% of its squared response; the lenslets cut by the
+pupil edge carry the rest.  The experiment did not separate the causes of this
+departure from the ideal stencil.  Relative to the RMS column norm, the unit
+uniform checkerboard responds at 0.106 and its least sensed form, tapered
+toward the pupil edge, at 0.022; the two tilt-like response eigenvectors sit
+at 0.027 and unit tip and tilt ramps respond at 0.032.  A relative Tikhonov
+damping of 1e-3 changes a mode at 0.022 by about 0.2%, so it leaves the
+weakly sensed checkerboards essentially unregularized.  In the recorded
+500-frame replay of ``det_ccd_42m_r3band_derived@1`` the applied commands
+carried such checkerboards and the corrected image showed four spots at the DM
+Nyquist corners ``(+-lambda/2d, +-lambda/2d)``.  Measurement noise and aliased
+turbulence are plausible drivers of those commands; the replay did not
+separate them.  With ``waffle_filter_cutoff`` every solve is followed by the
+orthogonal projection ``x <- x - Q (Q^T x)`` onto the complement of the
+family (:func:`response_waffle_modes`).
+
+The family cannot be read off the response eigenvectors.  For the ideal
+stencil, multiplying a command by the checkerboard exchanges a complete
+lenslet's two slopes up to sign, so a smooth command and its checkerboard twin
+have equal slope energy there.  The calibrated response does not keep that
+equality (on the 42 m geometry the twins of unit tip and tilt respond 4.1
+times as strongly as the ramps and the twin of defocus 1.9 times as strongly),
+but weakly sensed smooth and checkerboard directions still share the low end
+of the spectrum, and the eigenvectors of ``A_v^T A_v`` there mix the two.
+:func:`response_waffle_modes` therefore splits that band into a smooth and a
+checkerboard subspace by local-waffle content first, and diagonalizes the
+response inside the checkerboard subspace second.  The family is exactly
+orthogonal to the smooth subspace of the band, not to every smooth physical
+command.  On the 42 m geometry the projections of unit tip, tilt and defocus
+on it have norms of 1.4e-4, 1.4e-4 and 4.8e-4, while one band eigenvector with
+a local-waffle fraction below 0.05 loses 4.9% of its energy; a real wavefront
+component inside the family is removed along with the checkerboards.  Four
+other designs were tried on the 42 m geometry and discarded.  A penalty row on
+the uniform checkerboard cut that projection but not the corner light (the
+written record attributes this to compensating commands on weakly sensed edge
+actuators).  A penalty row on the least sensed waffle mode cancelled that
+mode, but in the two checked frames where the runtime validity mask had
+dropped 6 and 8 slope rows the solve moved 7.5 and 5.9 times the cancelled
+amount into other command directions (0.007 times with no row dropped).  The
+exact projection of that single mode leaves
+the rest of the family in place, which kept most of the Nyquist-corner light.
+Projecting out the response eigenvectors with a majority of local waffle
+removes useful correction together with the checkerboards, because those
+eigenvectors mix the two, and the corner spots got brighter.
 """
 
 from __future__ import annotations
@@ -49,12 +106,13 @@ from typing import Any, Final, Literal, cast
 
 import numpy as np
 import scipy.sparse as sp
-from scipy.sparse.linalg import lsmr
+from scipy.sparse.linalg import ArpackError, ArpackNoConvergence, eigsh, lsmr
 
 from ..core.hashing import component_config_hash
 from ..core.protocols import RandomStreams, WavefrontSensor
 from ..core.provenance import Provenance
 from ..core.types import MeasurementVector, ReconstructionEstimate
+from ..dm.config import grid_indices_from_actuator_ids
 from ..dm.model import DeformableMirror
 from .interaction import (
     INTERACTION_SIGN_CONVENTION,
@@ -78,12 +136,16 @@ __all__ = (
     "DEFAULT_DENSE_RESPONSE_LIMIT_BYTES",
     "ExclusionReason",
     "SparseCalibrationError",
+    "WAFFLE_LOCAL_FRACTION_THRESHOLD",
     "LocalDmProbeBasis",
     "SparseInteractionMatrix",
     "SparseLsmrReconstructor",
     "SolverTelemetry",
     "calibrate_sparse_interaction_matrix",
+    "global_waffle_signs",
+    "local_waffle_operator",
     "probe_groups",
+    "response_waffle_modes",
 )
 
 SPARSE_INTERACTION_MATRIX_SCHEMA_ID: Final = "shwfs_ao.calibration.SparseInteractionMatrix.v1"
@@ -107,10 +169,74 @@ _ISTOP_MEANING: Final = {
     6: "cond(A) exceeded machine precision limit",
     7: "iteration limit reached",
 }
+# A command of the weakly sensed band is a checkerboard twin when more than
+# this fraction of its energy is local waffle (``||W x||^2 / 16``, see
+# :func:`local_waffle_operator`): about 0.96 for the uniform checkerboard on a
+# large pupil and zero for any sum of a function of the row and a function of
+# the column (piston, tip, tilt, defocus).  Other smooth shapes have a small
+# but nonzero fraction: ``x(i, j) = i * j`` has local waffle 1 in every cell.
+WAFFLE_LOCAL_FRACTION_THRESHOLD: Final = 0.5
+# The weakly sensed band that is split into smooth modes and checkerboard twins
+# extends to this multiple of the cutoff.  The margin comes from the ideal
+# stencil, where a twin and its smooth partner respond equally, so the partner
+# of a twin just below the cutoff would fall inside the band.  The calibrated
+# response does not keep that equality (on the 42 m geometry the twins of the
+# unit tip and tilt ramps respond 4.1 times as strongly as the ramps), so the
+# factor is a chosen margin, not a promise that every twin's partner is in
+# the band.
+_WAFFLE_BAND_FACTOR: Final = 1.5
+# Responses up to this many coordinates use a dense symmetric eigensolver.
+_WAFFLE_DENSE_EIGEN_LIMIT: Final = 1500
+# Shift-invert point of the sparse eigensolver, in units of the squared RMS
+# column norm; below the spectrum, so ``A^T A - shift`` stays positive definite.
+_WAFFLE_EIGEN_SHIFT: Final = -1.0e-4
+_WAFFLE_EIGEN_SEED: Final = 20261107
+_WAFFLE_INITIAL_EIGENPAIRS: Final = 64
+# Basis columns of a guarded subset solve below this singular value are dropped.
+_WAFFLE_RESTRICTED_RANK_TOLERANCE: Final = 1.0e-8
 
 
 class SparseCalibrationError(InteractionMatrixError):
     """Raised when scalable calibration or its sparse response is invalid."""
+
+
+def _validated_grid_indices(grid_indices: object, *, columns: int | None, label: str) -> np.ndarray:
+    try:
+        array = np.asarray(grid_indices)
+    except (TypeError, ValueError) as error:
+        raise SparseCalibrationError(f"{label} must be an integer array.") from error
+    if array.ndim != 2 or array.shape[1:] != (2,) or array.shape[0] == 0:
+        raise SparseCalibrationError(f"{label} must be a non-empty (count, 2) array of (row, column) pairs.")
+    if columns is not None and array.shape[0] != columns:
+        raise SparseCalibrationError(
+            f"{label} must have one (row, column) pair per coordinate ({columns})."
+        )
+    if array.dtype == bool or not np.issubdtype(array.dtype, np.integer):
+        raise SparseCalibrationError(f"{label} must contain integers.")
+    if np.any(array < 0):
+        raise SparseCalibrationError(f"{label} must be non-negative.")
+    if np.unique(array, axis=0).shape[0] != array.shape[0]:
+        raise SparseCalibrationError(f"{label} must be unique.")
+    return _readonly(array, np.int64)
+
+
+def _validated_waffle_filter(
+    cutoff: object, grid_indices: object, *, columns: int
+) -> tuple[float | None, np.ndarray | None]:
+    if cutoff is None and grid_indices is None:
+        return None, None
+    if cutoff is None or grid_indices is None:
+        raise SparseCalibrationError(
+            "waffle_filter_cutoff and actuator_grid_indices are given together or not at all."
+        )
+    if isinstance(cutoff, bool) or not isinstance(cutoff, Real):
+        raise SparseCalibrationError("waffle_filter_cutoff must be a real number.")
+    relative = float(cutoff)
+    if not math.isfinite(relative) or not 0.0 < relative <= 1.0:
+        raise SparseCalibrationError("waffle_filter_cutoff must be in (0, 1].")
+    return relative, _validated_grid_indices(
+        grid_indices, columns=columns, label="actuator_grid_indices"
+    )
 
 
 def _readonly(values: Any, dtype: Any) -> np.ndarray:
@@ -899,7 +1025,27 @@ def calibrate_sparse_interaction_matrix(
 
 @dataclass(frozen=True)
 class SolverTelemetry:
-    """One LSMR solve: stopping code, iterations, and residual norms."""
+    """One LSMR solve: stopping code, iterations, and residual norms.
+
+    ``istop``, ``iterations``, ``converged`` and ``lsmr_normal_residual_norm``
+    (LSMR's own estimate of ``||A_s^T (b_s - A_s x) - damp^2 x||``) describe
+    LSMR's solve before any waffle-family projection.  ``residual_norm``,
+    ``normal_residual_norm`` and ``solution_norm`` describe the candidate
+    command ``x`` after any projection, over the usable rows and solved
+    columns ``s``, with the damping; for an accepted solve that is the
+    delivered command.  Without the filter ``normal_residual_norm`` is LSMR's
+    estimate.  With it the norm is evaluated directly, and it can be nonzero
+    because the projected command need not be the damped least-squares
+    optimum.  A rejected solve delivers nothing: its three command norms
+    describe the rejected candidate when that is finite and are NaN when it
+    is not, and ``lsmr_normal_residual_norm`` keeps LSMR's estimate.
+
+    ``lsmr_normal_residual_norm`` is the last field and may be omitted, so
+    records of the earlier ten-field form still construct, by position or
+    from a mapping.  In that form ``normal_residual_norm`` was always LSMR's
+    estimate, so an omitted value is set to ``normal_residual_norm``.  The
+    reconstructor always sets both explicitly.
+    """
 
     solve_index: int
     usable_rows: int
@@ -911,6 +1057,223 @@ class SolverTelemetry:
     residual_norm: float
     normal_residual_norm: float
     solution_norm: float
+    lsmr_normal_residual_norm: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.lsmr_normal_residual_norm is None:
+            object.__setattr__(self, "lsmr_normal_residual_norm", self.normal_residual_norm)
+
+
+def local_waffle_operator(grid_indices: np.ndarray | Sequence[Sequence[int]]) -> sp.csr_matrix:
+    """One row per complete actuator cell: its local waffle ``x00 - x10 - x01 + x11``.
+
+    ``grid_indices`` holds the integer ``(row, column)`` grid position of every
+    coordinate.  A cell has a row exactly when all four of its corners are
+    coordinates; illumination plays no part, so a lenslet cut by the pupil edge
+    has a row whenever its four corner actuators exist (on the 42 m geometry
+    every retained lenslet's cell does, including all 224 partly illuminated
+    ones), and a cell with a missing corner actuator has none.  Rows are
+    ordered by the coordinate index of the cell's ``(row, column)`` corner.
+    For the ideal Fried stencil (bilinear surface, mean-gradient lenslet) a
+    lenslet's two slopes do not sense piston or this checkerboard of its four
+    corner actuators, and the checkerboard is the non-piston one of the two;
+    a calibrated sensor can respond to it weakly.  Corners are looked up among
+    the given coordinates only, so the cost does not depend on how large the
+    grid indices are.
+    """
+
+    validated = _validated_grid_indices(grid_indices, columns=None, label="grid_indices")
+    rows, cols = validated[:, 0], validated[:, 1]
+    lookup = {(int(row), int(col)): index for index, (row, col) in enumerate(zip(rows, cols))}
+    corners = np.array(
+        [
+            [index, lookup.get((row + 1, col), -1), lookup.get((row, col + 1), -1), lookup.get((row + 1, col + 1), -1)]
+            for (row, col), index in lookup.items()
+        ],
+        dtype=np.int64,
+    ).reshape(-1, 4)
+    complete = np.flatnonzero(np.all(corners >= 0, axis=1))
+    data = np.tile(np.array([1.0, -1.0, -1.0, 1.0]), complete.size)
+    row_index = np.repeat(np.arange(complete.size), 4)
+    return sp.csr_matrix(
+        (data, (row_index, corners[complete].ravel())), shape=(complete.size, rows.size)
+    )
+
+
+def _lowest_eigenpairs(gram: sp.csc_matrix, limit: float) -> tuple[np.ndarray, np.ndarray, str]:
+    """Ascending eigenpairs of ``gram`` up to the first eigenvalue at or above ``limit``.
+
+    Above ``_WAFFLE_DENSE_EIGEN_LIMIT`` coordinates the sparse search doubles
+    its eigenpair count, capped at a quarter of the coordinates; the capped
+    count is always tried once before the search gives up.  If even that many
+    eigenpairs lie below ``limit``, the dense fallback is used only while one
+    dense copy of ``gram`` fits in ``DEFAULT_DENSE_RESPONSE_LIMIT_BYTES`` (the
+    eigensolver's workspace comes on top); otherwise the call raises instead
+    of allocating it.
+    """
+
+    size = gram.shape[0]
+    if size > _WAFFLE_DENSE_EIGEN_LIMIT:
+        start = np.random.default_rng(_WAFFLE_EIGEN_SEED).standard_normal(size)
+        ceiling = size // 4
+        wanted = min(_WAFFLE_INITIAL_EIGENPAIRS, ceiling)
+        while True:
+            try:
+                values, vectors = eigsh(gram, k=wanted, sigma=_WAFFLE_EIGEN_SHIFT, which="LM", v0=start)
+            except (ArpackError, ArpackNoConvergence) as error:
+                raise SparseCalibrationError(
+                    f"the waffle-family eigen-decomposition did not converge: {error}"
+                ) from error
+            order = np.argsort(values)
+            values, vectors = values[order], vectors[:, order]
+            if values[-1] >= limit:
+                return values, vectors, "sparse_shift_invert_eigsh"
+            if wanted >= ceiling:
+                break
+            wanted = min(2 * wanted, ceiling)
+        dense_bytes = size * size * np.dtype(float).itemsize
+        if dense_bytes > DEFAULT_DENSE_RESPONSE_LIMIT_BYTES:
+            raise SparseCalibrationError(
+                f"the waffle-family band holds at least {ceiling} eigenpairs, a "
+                f"quarter of the {size} coordinates and the most the sparse "
+                "search requests, and its dense fallback would need "
+                f"{dense_bytes / 1024**2:.1f} MiB for one copy of the response "
+                f"Gram matrix (limit {DEFAULT_DENSE_RESPONSE_LIMIT_BYTES / 1024**2:.0f} MiB); "
+                "use a smaller waffle_filter_cutoff."
+            )
+    values, vectors = np.linalg.eigh(gram.toarray())
+    return values, vectors, "dense_eigh"
+
+
+def response_waffle_modes(
+    interaction_matrix: SparseInteractionMatrix,
+    grid_indices: np.ndarray | Sequence[Sequence[int]],
+    *,
+    cutoff: float,
+    local_fraction_threshold: float = WAFFLE_LOCAL_FRACTION_THRESHOLD,
+) -> tuple[np.ndarray, dict[str, float | int | str]]:
+    """The calibrated response's weakly sensed checkerboard family, as orthonormal columns.
+
+    The band is the eigenpairs of ``A_v^T A_v / r^2`` (``A_v`` the
+    calibration-valid rows, ``r`` the RMS column norm) with singular value
+    below ``1.5 * cutoff``.  Inside the band, the eigenvectors of the
+    local-waffle form ``||W x||^2 / 16`` (``W`` the
+    :func:`local_waffle_operator` of ``grid_indices``, one ``(row, column)``
+    pair per coordinate) with eigenvalue above ``local_fraction_threshold``
+    span the checkerboard twins and the others the smooth modes.  The family
+    is the eigenvectors of the response restricted to the twin subspace whose
+    singular value is below ``cutoff * r``.  Every column therefore lies in the
+    twin subspace (local-waffle fraction above the threshold) with a relative
+    response below the cutoff, and the family is exactly orthogonal to the
+    smooth subspace of the band, however weakly those modes are sensed.  It
+    is not orthogonal to every smooth command: a smooth command that is not
+    in the band's smooth subspace can share a small component with it, and a
+    real wavefront component inside the family is removed along with the
+    checkerboards.  The basis is fixed at construction from the
+    calibration-valid rows.  When a runtime mask drops rows, a direction that
+    becomes weakly sensed is removed only in the part it shares with ``Q``.
+    The band eigenvectors come from a dense symmetric eigensolver up to 1500
+    coordinates and above it from the sparse shift-invert Lanczos solver
+    (``scipy.sparse.linalg.eigsh``) from a fixed starting vector, doubling the
+    number of eigenpairs up to a quarter of the coordinates until one leaves
+    the band (dense when the band holds that many, within the dense-response
+    memory limit).  Columns are in
+    ascending response; each column's sign makes its largest-magnitude entry
+    positive.  Raises when no twin is below the cutoff.  Returns ``(Q,
+    diagnostics)``; ``Q`` has shape ``(coordinates, count)`` and the
+    diagnostics are ``count``, ``eigenpairs`` (the band size), ``eigensolver``,
+    ``band_factor``, ``local_fraction_threshold``, ``twin_subspace`` (its
+    dimension), the smallest and largest selected relative response, the first
+    twin response at or above the cutoff (the band edge when there is none),
+    the smallest twin and largest smooth local-waffle fraction of the band
+    split, and ``checkerboard_overlap``, the norm of the unit global
+    checkerboard's projection on the span of ``Q``.
+    """
+
+    if not isinstance(interaction_matrix, SparseInteractionMatrix):
+        raise SparseCalibrationError("interaction_matrix must be a SparseInteractionMatrix.")
+    columns = len(interaction_matrix.coordinate_ids)
+    indices = _validated_grid_indices(grid_indices, columns=columns, label="grid_indices")
+    if isinstance(cutoff, bool) or not isinstance(cutoff, Real) or not 0.0 < float(cutoff) <= 1.0:
+        raise SparseCalibrationError("cutoff must be a real number in (0, 1].")
+    if (
+        isinstance(local_fraction_threshold, bool)
+        or not isinstance(local_fraction_threshold, Real)
+        or not 0.0 < float(local_fraction_threshold) < 1.0
+    ):
+        raise SparseCalibrationError("local_fraction_threshold must be in (0, 1).")
+    relative_cutoff = float(cutoff)
+    threshold = float(local_fraction_threshold)
+    band_edge = _WAFFLE_BAND_FACTOR * relative_cutoff
+    norms = interaction_matrix.column_norms
+    rms = float(np.sqrt(np.mean(norms * norms)))
+    operator = interaction_matrix._operator()[np.flatnonzero(interaction_matrix.row_valid)]
+    gram = (operator.T @ operator).tocsc() / (rms * rms)
+    values, vectors, solver = _lowest_eigenpairs(gram, band_edge**2)
+    band = values < band_edge**2
+    band_values = np.maximum(values[band], 0.0)
+    band_vectors = vectors[:, band]
+    images = np.asarray(local_waffle_operator(indices) @ band_vectors)
+    fractions, split = np.linalg.eigh(images.T @ images / 16.0)
+    is_twin = fractions > threshold
+    twins = split[:, is_twin]
+    twin_values, rotation = np.linalg.eigh(twins.T @ (band_values[:, None] * twins))
+    response = np.sqrt(np.maximum(twin_values, 0.0))
+    selected = response < relative_cutoff
+    if not np.any(selected):
+        raise SparseCalibrationError(
+            "waffle_filter_cutoff selects no waffle-family mode of this response."
+        )
+    basis = band_vectors @ (twins @ rotation[:, selected])
+    count = basis.shape[1]
+    peaks = np.argmax(np.abs(basis), axis=0)
+    basis *= np.where(basis[peaks, np.arange(count)] < 0.0, -1.0, 1.0)
+    signs = np.where(indices.sum(axis=1) % 2 == 0, 1.0, -1.0) / np.sqrt(columns)
+    smooth = fractions[~is_twin]
+    diagnostics: dict[str, float | int | str] = {
+        "count": int(count),
+        "eigenpairs": int(band_values.size),
+        "eigensolver": solver,
+        "band_factor": float(_WAFFLE_BAND_FACTOR),
+        "local_fraction_threshold": threshold,
+        "twin_subspace": int(twins.shape[1]),
+        "smallest_selected_response": float(response[selected].min()),
+        "largest_selected_response": float(response[selected].max()),
+        "first_response_at_or_above_cutoff": (
+            float(response[~selected].min()) if np.any(~selected) else float(band_edge)
+        ),
+        "smallest_twin_local_fraction": float(fractions[is_twin].min()),
+        "largest_smooth_local_fraction": float(smooth.max()) if smooth.size else 0.0,
+        "checkerboard_overlap": float(np.linalg.norm(basis.T @ signs)),
+    }
+    return _readonly(basis, float), diagnostics
+
+
+def global_waffle_signs(coordinate_ids: Sequence[str]) -> np.ndarray:
+    """``(-1)**(row + column)`` for every DM actuator coordinate, as a float array.
+
+    The coordinates must be actuator IDs of the packaged DM layout
+    (``actuator-r####-c####``); the sign pattern is the global waffle
+    (checkerboard) command on the actuator grid, restricted to the given
+    coordinates and not normalized.
+    """
+
+    indices = grid_indices_from_actuator_ids(coordinate_ids)
+    parity = np.asarray(indices, dtype=np.int64).sum(axis=1) % 2
+    return _readonly(np.where(parity == 0, 1.0, -1.0), float)
+
+
+def _restricted_basis(restricted: np.ndarray) -> np.ndarray:
+    """An orthonormal basis of the span of ``restricted``'s columns.
+
+    Directions with singular value at or below
+    ``_WAFFLE_RESTRICTED_RANK_TOLERANCE`` are dropped.  When few columns are
+    solved, the restricted family can span most or all of the solved command
+    space, and the projection then removes most or all of the increment.
+    """
+
+    left, singular, _ = np.linalg.svd(restricted, full_matrices=False)
+    return left[:, singular > _WAFFLE_RESTRICTED_RANK_TOLERANCE]
 
 
 class SparseLsmrReconstructor:
@@ -924,11 +1287,29 @@ class SparseLsmrReconstructor:
     tests or at ``max_iterations``; a solve that hits the iteration limit or a
     conditioning limit is rejected (returns ``None``, so the controller adds
     nothing that frame) unless ``nonconverged_policy="accept"``.
+
+    With ``waffle_filter_cutoff`` and ``actuator_grid_indices`` (one integer
+    ``(row, column)`` actuator grid position per coordinate) every solution
+    loses its projection on the response's weakly sensed checkerboard family,
+    ``x <- x - Q (Q^T x)`` (:func:`response_waffle_modes`); a guarded subset
+    solve uses an orthonormal basis of ``Q`` restricted to its solved
+    columns, keeping directions with singular value above 1e-8.  The basis
+    is computed once, from the calibration-valid rows, and is not rebuilt for
+    a runtime mask.  The cutoff, the basis and its diagnostics are part of the
+    reconstructor identity.  The residual, normal-residual and solution norms
+    in the telemetry describe the filtered command (NaN when the solve gives
+    no finite command); the stopping code, iteration count and
+    ``lsmr_normal_residual_norm`` describe LSMR's solve before the projection
+    (:class:`SolverTelemetry`).
     """
 
     _matrix: SparseInteractionMatrix
     _relative: float
     _damp: float
+    _waffle_cutoff: float | None
+    _waffle_grid: np.ndarray | None
+    _waffle_modes: np.ndarray | None
+    _waffle_diagnostics: Mapping[str, float | int | str] | None
     _atol: float
     _btol: float
     _max_iterations: int
@@ -951,6 +1332,8 @@ class SparseLsmrReconstructor:
         min_valid_fraction: float,
         nonconverged_policy: Literal["reject", "accept"] = "reject",
         telemetry_capacity: int = 4096,
+        waffle_filter_cutoff: float | None = None,
+        actuator_grid_indices: np.ndarray | Sequence[Sequence[int]] | None = None,
     ) -> None:
         if not isinstance(interaction_matrix, SparseInteractionMatrix):
             raise SparseCalibrationError(
@@ -976,9 +1359,25 @@ class SparseLsmrReconstructor:
             raise SparseCalibrationError("nonconverged_policy must be reject or accept.")
         norms = interaction_matrix.column_norms
         rms = float(np.sqrt(np.mean(norms * norms)))
+        waffle_cutoff, waffle_grid = _validated_waffle_filter(
+            waffle_filter_cutoff,
+            actuator_grid_indices,
+            columns=len(interaction_matrix.coordinate_ids),
+        )
         self._matrix = interaction_matrix
         self._relative = relative
         self._damp = relative * rms
+        self._waffle_cutoff = waffle_cutoff
+        self._waffle_grid = waffle_grid
+        self._waffle_modes = None
+        self._waffle_diagnostics = None
+        if waffle_cutoff is not None:
+            assert waffle_grid is not None
+            modes, diagnostics = response_waffle_modes(
+                interaction_matrix, waffle_grid, cutoff=waffle_cutoff
+            )
+            self._waffle_modes = modes
+            self._waffle_diagnostics = MappingProxyType(dict(diagnostics))
         self._atol = tolerances["atol"]
         self._btol = tolerances["btol"]
         self._max_iterations = int(max_iterations)
@@ -1004,6 +1403,27 @@ class SparseLsmrReconstructor:
                 "min_valid_fraction": fraction,
                 "nonconverged_policy": nonconverged_policy,
                 "null_space_policy": "tikhonov_damping_minimum_norm",
+                **(
+                    {}
+                    if waffle_cutoff is None
+                    else {
+                        "waffle_filter_cutoff": waffle_cutoff,
+                        "waffle_actuator_grid_indices": waffle_grid,
+                        "waffle_modes": self._waffle_modes,
+                        "waffle_modes_diagnostics": dict(self._waffle_diagnostics or {}),
+                        "waffle_modes_rule": (
+                            "band: eigenpairs of the calibration-valid response Gram matrix with singular "
+                            "value below band_factor * cutoff * rms(column norms); twins: the band "
+                            "eigenvectors of the local-waffle form with eigenvalue above the threshold; "
+                            "family: the response eigenvectors of the twin subspace below cutoff * "
+                            "rms(column norms)"
+                        ),
+                        "waffle_filter_rule": (
+                            "x -= Q (Q^T x) after the solve; a guarded subset solve uses an orthonormal "
+                            "basis of Q restricted to its solved columns"
+                        ),
+                    }
+                ),
             },
         )
         self._metadata = MappingProxyType(
@@ -1017,6 +1437,19 @@ class SparseLsmrReconstructor:
                 "min_valid_fraction": fraction,
                 "nonconverged_policy": nonconverged_policy,
                 "initial_guess": "zero",
+                # Present only with a filter, so recorded metadata of every
+                # unpenalized reconstructor is unchanged.
+                **(
+                    {}
+                    if waffle_cutoff is None
+                    else {
+                        "waffle_filter_cutoff": waffle_cutoff,
+                        **{
+                            f"waffle_modes_{key}": value
+                            for key, value in (self._waffle_diagnostics or {}).items()
+                        },
+                    }
+                ),
             }
         )
 
@@ -1043,6 +1476,28 @@ class SparseLsmrReconstructor:
     @property
     def damping_absolute(self) -> float:
         return self._damp
+
+    @property
+    def waffle_filter_cutoff(self) -> float | None:
+        """The relative response cutoff of the waffle-family filter, or None."""
+
+        return self._waffle_cutoff
+
+    @property
+    def actuator_grid_indices(self) -> np.ndarray | None:
+        """The ``(row, column)`` actuator grid position of every coordinate, or None."""
+
+        return self._waffle_grid
+
+    @property
+    def waffle_modes(self) -> np.ndarray | None:
+        """The orthonormal waffle-family basis removed from every solution, or None."""
+
+        return self._waffle_modes
+
+    @property
+    def waffle_modes_diagnostics(self) -> Mapping[str, float | int | str] | None:
+        return self._waffle_diagnostics
 
     @property
     def telemetry(self) -> tuple[SolverTelemetry, ...]:
@@ -1163,6 +1618,14 @@ class SparseLsmrReconstructor:
             maxiter=self._max_iterations,
         )
         solution = np.asarray(output[0], dtype=float)
+        lsmr_normal_residual = float(output[4])
+        finite = bool(np.all(np.isfinite(solution)))
+        filtered = self._waffle_modes is not None and finite
+        if filtered:
+            # Projection after the solve: no penalty row enters LSMR, so the
+            # solve cannot move the removed component onto other actuators.
+            basis = self._waffle_modes if columns is None else _restricted_basis(self._waffle_modes[columns])
+            solution = solution - basis @ (basis.T @ solution)
         istop = int(output[1])
         iterations = int(output[2])
         converged = istop in _CONVERGED_ISTOP and bool(np.all(np.isfinite(solution)))
@@ -1173,6 +1636,15 @@ class SparseLsmrReconstructor:
         self._max_seen_iterations = max(self._max_seen_iterations, iterations)
         predicted = np.asarray(submatrix @ solution, dtype=float)
         residual = target - predicted
+        if not finite:
+            # No command to describe; LSMR's estimate stays in its own field.
+            normal_residual = math.nan
+        elif filtered:
+            normal_residual = float(
+                np.linalg.norm(submatrix.T @ residual - self._damp * self._damp * solution)
+            )
+        else:
+            normal_residual = lsmr_normal_residual
         self._telemetry.append(
             SolverTelemetry(
                 solve_index=self._counts["solves"] - 1,
@@ -1183,8 +1655,9 @@ class SparseLsmrReconstructor:
                 converged=converged,
                 accepted=bool(accepted),
                 residual_norm=float(np.linalg.norm(residual)),
-                normal_residual_norm=float(output[4]),
+                normal_residual_norm=normal_residual,
                 solution_norm=float(np.linalg.norm(solution)),
+                lsmr_normal_residual_norm=lsmr_normal_residual,
             )
         )
         if not accepted:
