@@ -513,3 +513,15 @@ summary { cursor: pointer; font-weight: 550; }
   .gain42-controls { align-items: stretch; }
   .gain42-controls label { max-width: 100%; }
 }
+/* 42 m corner-spot study */
+.waffle-figure { margin: 20px 0; }
+.waffle-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; max-width: 640px; margin: 0 0 8px; }
+.waffle-zoom { max-width: 520px; margin-top: 18px; }
+.waffle-pair figure, .waffle-grid figure { margin: 0; min-width: 0; }
+.waffle-image { position: relative; }
+.waffle-pair img, .waffle-grid img { display: block; width: 100%; height: auto; image-rendering: pixelated; background: #000004; }
+.waffle-image svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.waffle-pair figcaption, .waffle-grid figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.waffle-pair figcaption strong, .waffle-grid figcaption strong { display: block; color: var(--ink); font-size: 13px; font-weight: 600; }
+.waffle-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 14px; max-width: 640px; margin: 18px 0 8px; }
+@media (max-width: 600px) { .waffle-pair, .waffle-grid { gap: 8px; } }

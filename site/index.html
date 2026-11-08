@@ -5,9 +5,9 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>AO Simulation Explorer</title>
-<meta content="Shack–Hartmann adaptive-optics simulation results: wavefront correction, image quality, reconstruction failure, and controller gain and delay." name="description"/>
+<meta content="Shack–Hartmann adaptive-optics simulation results: wavefront correction, image quality, reconstruction failure, mirror waffle, and controller gain and delay." name="description"/>
 <link href="data:," rel="icon"/>
-<link href="code-c55c5f4ccdb82f34/styles.css" rel="stylesheet"/>
+<link href="code-bd472007c9717e9f/styles.css" rel="stylesheet"/>
 <script>
 function aoCodeUnavailable() {
   const show = () => {
@@ -17,7 +17,7 @@ function aoCodeUnavailable() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
 }
 </script>
-<script onerror="aoCodeUnavailable()" src="code-c55c5f4ccdb82f34/app.js" type="module"></script>
+<script onerror="aoCodeUnavailable()" src="code-bd472007c9717e9f/app.js" type="module"></script>
 </head>
 <body>
 <noscript><p class="wrap">The overview images are static. Enable JavaScript to open the recorded experiments and study views.</p></noscript><a class="skip" href="#main">Skip to content</a>
@@ -38,21 +38,24 @@ function aoCodeUnavailable() {
 
 <p><a class="primary-link" href="#explore">Explore the 2 m loop →</a></p></div>
 <figure class="opening-result"><div class="opening-pair"><div><div class="opening-atlas opening-atlas--uncorrected"><img alt="Mean 42 m point-source image without correction" height="256" src="images/42m-mean-uncorrected.png" width="256" style="left:0;width:100%"/></div><span>Without correction</span></div><div><div class="opening-atlas opening-atlas--corrected"><img alt="Mean 42 m point-source image with AO correction" height="256" src="images/42m-mean-corrected.png" width="256" style="left:0;width:100%"/></div><span>With AO correction</span></div></div>
-<figcaption><strong>42 m model · mean point-source images.</strong> 2.2 µm · 0.2–1.0 s. Peak Strehl of the mean PSF: 0.0023 → 0.754. Both views use the same 1.20″ field and log intensity scale, 10⁻⁶–1 of the ideal peak. No recentering. <a href="#replay42">Replay this 42 m recording →</a></figcaption></figure></div>
-<section aria-labelledby="result-summary"><h2 id="result-summary">What the simulations show</h2><ul><li>In the 2.2 m loop, reconstruction stopped at 0.981 s as spots dropped out. I increased the TSVD cutoff from 0.001 to 0.05 and replayed the same atmosphere. All 1,500 frames reconstructed over two seconds and the mirror stayed within its stroke limits.</li><li>At 1.65 µm, moving the science target from the guide star to 20 arcsec away lowered the long-exposure Strehl from 0.448 to 0.338. I used the same mirror commands for both targets.</li><li>With two frames of delay, raising the loop gain from 0.2 to 1.0 increased the ratio of corrected to uncorrected wavefront RMS from 0.723 to 1.746. At the higher gain the correction amplified the disturbance.</li><li>Increasing the photon count from 1,000 to 100,000 per subaperture reduced the RMS error of the accepted spot positions from 0.199 to 0.0194 pixels.</li><li>In the 8 m MCAO model, 63.5% of the on-axis H-band light fell within 50 milliarcseconds. Tomography accounted for about half of the residual variance.</li></ul><p><a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/main/docs/design-decisions.md">Read my design decisions →</a></p></section>
-<section aria-labelledby="reading-title" class="reading-list"><h2 id="reading-title">Three questions from the simulation</h2>
+<figcaption><strong>42 m model · mean point-source images.</strong> 2.2 µm · 0.2–1.0 s. Peak Strehl of the mean PSF: 0.0023 → 0.754. Both views use the same 1.20″ field and log intensity scale, 10⁻⁶–1 of the ideal peak. No recentering. The four faint spots on the diagonals came from checkerboard mirror commands, which I later filtered out. <a href="#replay42">Replay this 42 m recording →</a> · <a href="#waffle42">Where the corner spots came from →</a></figcaption></figure></div>
+<section aria-labelledby="result-summary"><h2 id="result-summary">What the simulations show</h2><ul><li>In the 2.2 m loop, reconstruction stopped at 0.981 s as spots dropped out. I increased the TSVD cutoff from 0.001 to 0.05 and replayed the same atmosphere. All 1,500 frames reconstructed over two seconds and the mirror stayed within its stroke limits.</li><li>In the 42 m replay, four faint spots on the image diagonals came from checkerboard mirror commands that the Shack–Hartmann sensor barely detects. Filtering 96 such commands out of every update brought the corner light down to the halo level and raised the peak Strehl from 0.754 to 0.767. Three held-out atmospheres gave the same result.</li><li>At 1.65 µm, moving the science target from the guide star to 20 arcsec away lowered the long-exposure Strehl from 0.448 to 0.338. I used the same mirror commands for both targets.</li><li>With two frames of delay, raising the loop gain from 0.2 to 1.0 increased the ratio of corrected to uncorrected wavefront RMS from 0.723 to 1.746. At the higher gain the correction amplified the disturbance.</li><li>Increasing the photon count from 1,000 to 100,000 per subaperture reduced the RMS error of the accepted spot positions from 0.199 to 0.0194 pixels.</li><li>In the 8 m MCAO model, 63.5% of the on-axis H-band light fell within 50 milliarcseconds. Tomography accounted for about half of the residual variance.</li></ul><p><a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/main/docs/design-decisions.md">Read my design decisions →</a></p></section>
+<section aria-labelledby="reading-title" class="reading-list"><h2 id="reading-title">Four questions from the simulation</h2>
 <a href="#explore"><span>01 · 2 m demonstration</span><strong>How does correction change the wavefront and image?</strong><p>Follow the atmosphere, held DM shape and residual on one recorded clock.</p></a>
 <a href="#ngs22"><span>02 · 2.2 m investigation</span><strong>Why did the loop stop correcting?</strong><p>Trace lost measurements and large commands, then compare stronger regularization on the same atmosphere.</p></a>
-<a href="#gain42"><span>03 · 42 m comparison</span><strong>Does lower gain help when correction is delayed?</strong><p>Compare whole-window image quality with a smaller late-run excursion.</p></a></section>
-<p class="scope-note"><a href="#methods-home">Model, limitations and experiment settings →</a></p></section><section aria-labelledby="studies-title" class="wrap section page-view" data-nav="studies" data-view="" hidden="" id="studies"><p class="eyebrow">Selected studies</p><span id="studies42-title"></span><h1 id="studies-title">Selected simulation results</h1><p class="lede">Follow the 2 m loop, then compare the two changes I tested: rejecting weak reconstruction modes at 2.2 m and lowering the controller gain at 42 m.</p><div class="reading-list">
+<a href="#gain42"><span>03 · 42 m comparison</span><strong>Does lower gain help when correction is delayed?</strong><p>Compare whole-window image quality with a smaller late-run excursion.</p></a>
+<a href="#waffle42"><span>04 · 42 m investigation</span><strong>Where did the four corner spots come from?</strong><p>Trace the spots to weakly sensed checkerboard commands, then test a filter on four atmospheres.</p></a></section>
+<p class="scope-note"><a href="#methods-home">Model, limitations and experiment settings →</a></p></section><section aria-labelledby="studies-title" class="wrap section page-view" data-nav="studies" data-view="" hidden="" id="studies"><p class="eyebrow">Selected studies</p><span id="studies42-title"></span><h1 id="studies-title">Selected simulation results</h1><p class="lede">Follow the 2 m loop, then compare the three changes I tested: rejecting weak reconstruction modes at 2.2 m, filtering checkerboard mirror commands at 42 m and lowering the controller gain at 42 m.</p><div class="reading-list">
 <a href="#explore"><span>2 m · 1 s · synthetic detector model</span><strong>How does correction change an image?</strong><p>Follow the spot measurements through the mirror update and compare the resulting stellar images.</p></a>
 <a href="#ngs22"><span>2.2 m · 2 s · same-atmosphere comparison</span><strong>Why did the loop stop correcting?</strong><p>Raising the TSVD cutoff from 0.001 to 0.05 kept the loop reconstructing for all 1,500 frames.</p></a>
+<a href="#waffle42"><span>42 m · 1 s · four atmospheres</span><strong>Where did the four corner spots come from?</strong><p>Removing 96 weakly sensed checkerboard commands brought the corner light down to the halo level and raised the peak Strehl from 0.754 to 0.767.</p></a>
 <a href="#gain42"><span>42 m · 1 s · three paired atmospheres</span><strong>Does lower gain help when correction is delayed?</strong><p>Gain 0.3 gave the sharper mean image. Gain 0.2 reduced a late rise in the residual in one of the three atmospheres.</p></a></div><p class="scope-note"><a href="#methods-home">Model and experiment settings →</a></p></section><section aria-labelledby="methods-home-title" class="wrap section page-view" data-nav="methods-home" data-view="" hidden="" id="methods-home"><p class="eyebrow">Methods &amp; evidence</p><h1 id="methods-home-title">What is in the model?</h1><p class="lede">I calculate where the lenslet spots land, use their displacements to estimate a mirror correction, and propagate the remaining wavefront to the science image.</p>
 <div class="method-grid"><section><h2>Atmosphere and optics</h2><p>Frozen-flow phase screens translate across the pupil. The 2 m demo uses one screen; the 42 m model combines ten von Kármán layers. The sensor propagates lenslet spots to a detector model. DM shapes and reconstructors differ between configurations.</p><a href="#project">Atmosphere and implementation details →</a></section><section><h2>Timing and image metrics</h2><p>Each frame measures the residual with the mirror command already in place. For a long exposure I average intensities at fixed detector coordinates, then measure the peak. Image motion therefore affects long-exposure Strehl.</p><a href="#methods">Definitions and recording conventions →</a></section></div>
 <section class="panel" id="model-limitations"><h2>Limitations</h2>
 <h3>Closed-loop tests</h3>
 <p>The 2.2 m runs share one two-second atmosphere, including a slow dome layer. The traces show how weakly sensed modes amplified the commands as spots dropped out. The noise fluctuation that started the sequence remains unidentified. Only the stronger cutoff acted in the revised run; the recovery rule stayed inactive.</p>
 <p>For the 42 m gain and delay comparisons I used three paired atmospheric realizations. Frames within each run are correlated. The late rise at three frames of delay occurred in r2. Its cause is unresolved, and the saved early and late mean PSFs are available at gain 0.2 only. The damping calculation isolates static detector noise. In the faint-star run, changing flux also changed the measurement noise and the calibration.</p>
+<p>I chose the cutoff of the 42 m waffle filter on one atmosphere and checked it on three more. All four share the turbulence profile, guide-star flux, geometry and run length. The overview image and the 42 m replay still show the earlier reconstructor.</p>
 <h3>Telescopes and images</h3>
 <p>These are simulated telescopes. The 2.2 m pupil, mirror and camera are approximations and the model has no separate tip–tilt mirror. The 42 m geometry is the historical E-ELT design. Wind, mirror stroke, control settings and wavelength also change between the 2 m and 42 m runs. Their effect on the difference in Strehl remains coupled to aperture. The ±100 µm OPD stroke belongs to the 42 m model. Applying a published mechanical stroke to a mirror requires its travel convention and angle of incidence. Hardware calibration and segment phasing require separate measurements.</p>
 <p>For the Hubble and Webb image examples I convolved an observed template with the simulated PSF. The template carries its own resolution and noise. The Westerlund 2 example applies one on-axis PSF across its 4.109″ field. Light from bright stars outside the crop contributes near its edges.</p>
@@ -263,7 +266,7 @@ function aoCodeUnavailable() {
 <p class="lede">I propagated ten moving turbulent layers across the historical 42 m pupil and ran the loop at 500 Hz. Over the last 0.8 s, the mean wavefront RMS fell from 1,566 nm before correction to 187 nm after correction. At 2.2 µm the peak Strehl of the averaged image rose from 0.0023 to 0.754.</p>
 <p class="hint">The replay shows 126 snapshots from the 500-frame run. The numerical curves include every frame. I calculated the means over frames 100–499.</p>
 <p class="hint">I used an annular pupil based on the <a href="https://www.eso.org/sci/facilities/eelt/science/drm/tech_data/telescope/">historical 42 m E-ELT reference design</a>. <a href="https://elt.eso.org/about/">Current 39 m ELT design →</a></p>
-<p class="hint r42-jumps"><a href="#evidence-42m">42 m setup ↓</a> · <a href="#c1-noise">A separate detector-noise calculation ↓</a> · <a href="#flux42">Fainter guide star, 2 s ↓</a> · <a href="#delay42">Controller delay ↓</a> · <a href="#gain42">Integrator gain and delay ↓</a> · <a href="#replay42-methods">Full configuration and checks →</a></p>
+<p class="hint r42-jumps"><a href="#evidence-42m">42 m setup ↓</a> · <a href="#c1-noise">A separate detector-noise calculation ↓</a> · <a href="#flux42">Fainter guide star, 2 s ↓</a> · <a href="#delay42">Controller delay ↓</a> · <a href="#gain42">Integrator gain and delay ↓</a> · <a href="#waffle42">Corner spots in the mean image →</a> · <a href="#replay42-methods">Full configuration and checks →</a></p>
 <div class="status" id="r42-status" role="status">The 42 m recording loads when this section is in view.</div><div class="error" hidden="" id="r42-error" role="alert"></div>
 <section aria-labelledby="r42-viewer-title" class="panel r42-keys" id="r42-viewer">
 <div class="viewer-head"><h2 id="r42-viewer-title">Wavefronts and images</h2><fieldset class="segmented"><legend>Image panels show</legend><label><input checked="" disabled="" name="r42-mode" type="radio" value="frame"/> This frame (instantaneous)</label><label><input disabled="" name="r42-mode" type="radio" value="mean"/> Mean intensity, frames 100–499</label></fieldset></div>
@@ -801,6 +804,115 @@ function aoCodeUnavailable() {
 <p class="c1-ids" id="gain42-identity"></p><div class="downloads" id="gain42-downloads"></div>
 </div></details>
 </div>
+</section><section aria-labelledby="waffle42-title" class="wrap section page-view" data-nav="studies" data-view="" hidden="" id="waffle42"><p class="breadcrumb"><a href="#studies">← Selected studies</a></p>
+<p class="evidence-kind">Historical 42 m model · reconstruction artefact</p>
+<h1 id="waffle42-title">Where did the four corner spots come from?</h1><nav aria-label="In this study" class="local-nav"><a href="#waffle42-images">Compare the images</a><a href="#waffle42-cause-title">Trace the cause</a><a href="#waffle42-tried-title">What I tried</a><a href="#waffle42-held-out-title">Held-out atmospheres</a><a href="#waffle42-limits-title">Limits &amp; downloads</a></nav>
+<p class="lede">The AO-corrected mean image of my 42 m replay showed four faint spots on the diagonals, 0.454″ from the core along each axis. I traced them to checkerboard patterns on the deformable mirror that the Shack–Hartmann sensor barely detects. Version 2 of the 42 m profile removes a family of 96 such patterns from every reconstructed mirror update and changes nothing else.</p>
+<p class="takeaway">On the same atmosphere, the light in the corner windows fell from 10.8 to 0.91 times the surrounding halo. The peak Strehl of the mean image rose from 0.754 to 0.767 at 2.2 µm. Three further atmospheres, judged by criteria I fixed before running them, gave the same result.</p>
+<details aria-labelledby="waffle42-setup-title" class="setup-notes" id="waffle42-setup">
+<summary id="waffle42-setup-title">42 m settings and the one change between the runs</summary>
+<dl class="evidence-grid">
+<div><dt>Telescope and sensor</dt><dd>Historical 42 m annular pupil. 84 × 84 Shack–Hartmann lenslets in the Fried geometry, with the actuators at the lenslet corners. 85 × 85 actuator grid at 0.5 m pitch.</dd></div>
+<div><dt>Controller and reconstructor</dt><dd>500 Hz, gain 0.3, leak 0 and two frames of delay. The reconstructor solves damped least squares with LSMR, damping α = 0.001.</dd></div>
+<div><dt>The change</dt><dd><code>det_ccd_42m_r3band_derived@2</code> projects 96 weakly sensed checkerboard modes out of every reconstructed increment, with cutoff 0.35 of the RMS column norm of the response. Every other setting matches <code>@1</code>.</dd></div>
+<div><dt>Runs and analysis window</dt><dd>Seed 1 is the published replay, rerun on the same atmosphere. Seeds 104–106 are held out. Each run has 500 frames, and I averaged the 2.2 µm images over 0.2–1.0 s.</dd></div>
+</dl>
+<p class="hint"><a href="#replay42">Replay the version-1 recording →</a> · <a href="#evidence-42m">All 42 m settings →</a></p>
+</details>
+<div class="waffle-figure" id="waffle42-images">
+<div class="waffle-pair">
+<figure><div class="waffle-image"><img alt="Mean 42 m point-source image with the version-1 reconstructor. Four faint spots sit on the diagonals." height="256" loading="lazy" src="derived/waffle42-a8bf7a432d51a862/mean-corrected-v1.png" width="256"/><svg aria-hidden="true" focusable="false" viewBox="0 0 256 256"><g fill="none" stroke="#ffffff" stroke-dasharray="3 3" stroke-opacity="0.7"><circle cx="31.5" cy="31.5" r="13"/><circle cx="224.5" cy="31.5" r="13"/><circle cx="31.5" cy="224.5" r="13"/><circle cx="224.5" cy="224.5" r="13"/></g></svg></div><figcaption><strong>Version 1 · published</strong>Corner / halo 10.8 · peak Strehl 0.754</figcaption></figure>
+<figure><div class="waffle-image"><img alt="Mean 42 m point-source image of the same atmosphere with the version-2 reconstructor. The diagonals show only the halo." height="256" loading="lazy" src="derived/waffle42-a8bf7a432d51a862/mean-corrected-v2.png" width="256"/><svg aria-hidden="true" focusable="false" viewBox="0 0 256 256"><g fill="none" stroke="#ffffff" stroke-dasharray="3 3" stroke-opacity="0.7"><circle cx="31.5" cy="31.5" r="13"/><circle cx="224.5" cy="31.5" r="13"/><circle cx="31.5" cy="224.5" r="13"/><circle cx="224.5" cy="224.5" r="13"/></g></svg></div><figcaption><strong>Version 2 · waffle filter</strong>Corner / halo 0.91 · peak Strehl 0.767</figcaption></figure>
+</div>
+<p class="hint">Mean AO-corrected images of the same atmosphere, frames 100–499 at 2.2 µm. Both use the overview's 1.20″ field and log scale, 10⁻⁶–1 of the ideal peak. Dashed circles mark (±λ/2d, ±λ/2d), 0.454″ from the core along each axis for the 0.5 m actuator pitch. The left image is the one on the overview.</p>
+<div class="waffle-pair waffle-zoom">
+<figure><img alt="Upper-right corner position in version 1: a bright compact spot." height="246" loading="lazy" src="derived/waffle42-a8bf7a432d51a862/corner-s1-v1.png" width="246"/><figcaption><strong>Version 1 · upper-right corner</strong>Peak 4.8 × 10⁻⁴ of the ideal peak</figcaption></figure>
+<figure><img alt="Upper-right corner position in version 2: only the speckled halo." height="246" loading="lazy" src="derived/waffle42-a8bf7a432d51a862/corner-s1-v2.png" width="246"/><figcaption><strong>Version 2 · upper-right corner</strong>Only the halo remains</figcaption></figure>
+</div>
+<p class="hint">±0.108″ (±20 detector pixels) around the corner position, six screen pixels per detector pixel, log scale 10⁻⁶–10⁻³ of the ideal peak. The 13 × 13 pixel window used for the ratios covers the central third.</p>
+</div>
+<div aria-label="Seed-1 comparison of the two versions" class="table-scroll" role="region" tabindex="0"><table class="comparison-table"><caption>Seed 1 · frames 100–499 · recomputed from the saved mean images and histories</caption><thead><tr><th scope="col">Quantity</th><th scope="col">Version 1</th><th scope="col">Version 2</th></tr></thead><tbody>
+<tr><th scope="row">Corner / halo</th><td>10.84</td><td>0.91</td></tr>
+<tr><th scope="row">Edge midpoint / halo</th><td>1.99</td><td>1.99</td></tr>
+<tr><th scope="row">Peak Strehl of the mean PSF</th><td>0.7535</td><td>0.7670</td></tr>
+<tr><th scope="row">Encircled energy within 2 λ/D</th><td>0.664</td><td>0.675</td></tr>
+<tr><th scope="row">Mean residual RMS</th><td>186.7 nm</td><td>180.7 nm</td></tr>
+<tr><th scope="row">Checkerboard in the mirror commands, RMS per actuator</th><td>49.9 nm</td><td>2.5 nm</td></tr>
+<tr><th scope="row">Slope rows dropped per frame</th><td>4.4</td><td>1.3</td></tr>
+<tr><th scope="row">Unusable frames · saturated actuators</th><td>0 · 0</td><td>0 · 0</td></tr>
+</tbody></table></div>
+<p>Halo windows at the same radius away from the diagonals held the same light in both runs. The windows at the edge midpoints, (±λ/2d, 0) and (0, ±λ/2d), stayed at about twice the halo, so the excess belonged to the diagonals alone.</p>
+<section aria-labelledby="waffle42-cause-title" class="panel prose">
+<h2 id="waffle42-cause-title">Tracing the spots</h2>
+<ol class="ngs-chain">
+<li><strong>The spots sit where a checkerboard sends its light.</strong> A mirror pattern that alternates sign from each actuator to the next along both axes diffracts light to (±λ/2d, ±λ/2d). For d = 0.5 m at 2.2 µm, that is 0.454″ on each axis, exactly where the spots appeared. Makidon et al. describe the same lattice of PSF copies in AEOS images.</li>
+<li><strong>The sensor hardly sees that checkerboard.</strong> In the Fried geometry each lenslet measures the slopes set by the four actuators at its corners. The combination x₀₀ − x₁₀ − x₀₁ + x₁₁ produces no slope at all. A checkerboard across the mirror registers only where the pupil edges cut the lenslets. Its least sensed form, tapered toward the edges, responds at 2.2% of the typical actuator response. Tip and tilt respond at 2.7%.</li>
+<li><strong>The damping was too weak to hold it back.</strong> With α = 0.001, damping changes the reconstructed amplitude of that mode by 0.2%. The solve amplifies it about 45 times more than a mode of median response, and the integrator, with no leak, keeps what it receives. Over 0.2–1.0 s the mirror commands carried 49.9 nm RMS of checkerboard per actuator.</li>
+<li><strong>It is a family, not one mode.</strong> Multiplying any smooth command by the checkerboard gives a twin that a complete lenslet sees with the same slope energy. Every smooth correction the loop applies therefore has a checkerboard twin of nearly equal response. Twins with slowly varying envelopes send their light to points within a few λ/D of the corners.</li>
+</ol>
+<p>I did not isolate what drives the family. Measurement noise and aliased high-order turbulence, fitted with large amplitudes in nearly blind directions, are the likely sources.</p>
+</section>
+<section aria-labelledby="waffle42-tried-title" class="panel">
+<h2 id="waffle42-tried-title">What I tried, in order</h2>
+<p class="prose">Three runs replayed the published atmosphere in full. One design ran as a 120-frame check. The others ran as 150-frame prototypes on the same seed, with the image averaged over frames 50–149. In that shorter window version 1 gives a corner / halo ratio of 9.50 and a peak Strehl of 0.758.</p>
+<div aria-label="Designs tried for the corner spots" class="table-scroll" role="region" tabindex="0"><table class="comparison-table"><caption>Corner / halo and peak Strehl of the mean corrected image. Full replays use frames 100–499.</caption><thead><tr><th scope="col">Design</th><th scope="col">Test</th><th scope="col">Corner / halo</th><th scope="col">Peak Strehl</th><th scope="col">What happened</th></tr></thead><tbody>
+<tr><th scope="row">Penalty row on the uniform checkerboard</th><td>Full replay</td><td>11.7*</td><td>0.7455*</td><td>The global checkerboard in the commands fell 13-fold, but the loop moved the pattern onto weakly sensed edge actuators. Commands reached the stroke limit and the residual climbed to 646 nm.*</td></tr>
+<tr><th scope="row">Penalty row on the least sensed mode</th><td>120-frame check</td><td>–</td><td>–</td><td>Once the validity gate dropped slope rows, the penalized direction stopped being a mode of that frame's solve. The largest command reached 77 µm and the residual 241 nm by frame 100.</td></tr>
+<tr><th scope="row">Exact projection of that mode after each solve</th><td>Full replay</td><td>8.22</td><td>0.7569</td><td>Commands stayed small, but the spots turned into faint rings. Checkerboards under smooth envelopes, left in place, still carried light around the corners.</td></tr>
+<tr><th scope="row">Remove the mostly checkerboard response eigenvectors</th><td>Prototypes, cutoff 0.15 · 0.25</td><td>15.3 · 16.9</td><td>0.716 · 0.696</td><td>Worse than no filter. The eigenvectors mix smooth modes with their twins, so removing them also removed useful correction.</td></tr>
+<tr><th scope="row">Stronger damping, α = 0.1</th><td>Prototype</td><td>4.82</td><td>0.696</td><td>Damping acts on response, not on shape, so tip, tilt and other smooth modes were damped as hard.</td></tr>
+<tr><th scope="row">Local-waffle penalty on every lenslet cell</th><td>Prototype</td><td>1.22</td><td>0.768</td><td>Close to the halo, at the cost of 5,112 extra rows in every solve.</td></tr>
+<tr><th scope="row">Split twins, then select one at a time</th><td>Prototype, cutoff 0.35</td><td>1.04</td><td>0.769</td><td>Stopped just above the halo.</td></tr>
+<tr><th scope="row">Split twins, then select within the twin subspace</th><td>Prototypes, cutoff 0.30 · 0.35 · 0.40</td><td>1.01 · 0.96 · 0.94</td><td>0.768–0.770</td><td>Reached the halo. 0.35 is the smallest tested cutoff below it.</td></tr>
+<tr><th scope="row">Version 2: the last design at cutoff 0.35</th><td>Full replay</td><td>0.91</td><td>0.7670</td><td>The corners sit at the halo level.</td></tr>
+</tbody></table></div>
+<p class="hint">* From the written record. The run files were deleted after they were measured.</p>
+<div class="prose">
+<p>The way through was to separate each checkerboard twin from its smooth partner before choosing what to remove. Inside a band of weakly sensed response modes, the local-waffle form splits each pair into a nearly pure checkerboard and a nearly smooth mode. The filter keeps the smooth modes and removes the least sensed part of the checkerboard subspace, 96 modes at cutoff 0.35. Tip, tilt and defocus each overlap that family by less than 5 × 10⁻⁴.</p>
+<p>I kept the projection rather than the per-cell penalty because it reached the halo level at the tested settings and leaves the least-squares solve unchanged.</p>
+</div>
+</section>
+<section aria-labelledby="waffle42-held-out-title" class="panel">
+<h2 id="waffle42-held-out-title">Does it hold on other atmospheres?</h2>
+<div class="prose">
+<p>I chose the cutoff on seed 1. To test whether it only suited that one atmosphere, I ran both versions on three seeds that no earlier 42 m run had used: 104, 105 and 106. Before the first run I wrote down the settings and five pass criteria for each seed:</p>
+<ol>
+<li>Version 1 shows the spots, with corner / halo above 3.</li>
+<li>Version 2 has corner / halo at most 1.5.</li>
+<li>The version-2 peak Strehl is no more than 0.005 below version 1.</li>
+<li>The version-2 edge-midpoint ratio is within 10% of version 1.</li>
+<li>Neither run has an unusable frame or a saturated actuator.</li>
+</ol>
+<p>Every random stream comes from the seed, including the simulated detector calibration. Each seed therefore also built its own 96-mode family.</p>
+</div>
+<div aria-label="Held-out seed results" class="table-scroll" role="region" tabindex="0"><table class="comparison-table"><caption>Frames 100–499 · version 1 → version 2</caption><thead><tr><th scope="col">Quantity</th><th scope="col">Seed 104</th><th scope="col">Seed 105</th><th scope="col">Seed 106</th><th scope="col">Seed 1 (tuning)</th></tr></thead><tbody>
+<tr><th scope="row">Corner / halo</th><td>10.15 → 0.92</td><td>12.76 → 0.98</td><td>9.42 → 0.88</td><td>10.84 → 0.91</td></tr>
+<tr><th scope="row">Peak Strehl of the mean PSF</th><td>0.7525 → 0.7652</td><td>0.7492 → 0.7657</td><td>0.7525 → 0.7647</td><td>0.7535 → 0.7670</td></tr>
+<tr><th scope="row">Mean residual RMS (nm)</th><td>187.5 → 181.9</td><td>189.4 → 181.3</td><td>187.5 → 181.7</td><td>186.7 → 180.7</td></tr>
+<tr><th scope="row">Edge midpoint / halo</th><td>1.64 → 1.65</td><td>1.87 → 1.87</td><td>2.23 → 2.24</td><td>1.99 → 1.99</td></tr>
+<tr><th scope="row">Criteria met</th><td>5 of 5</td><td>5 of 5</td><td>5 of 5</td><td>5 of 5</td></tr>
+</tbody></table></div>
+<div class="waffle-grid" role="group" aria-label="Upper-right corner of each held-out seed">
+<figure><img alt="Seed 104, version 1: bright spot at the corner position." height="246" loading="lazy" src="derived/waffle42-a8bf7a432d51a862/corner-s104-v1.png" width="246"/><figcaption><strong>Seed 104</strong>Version 1</figcaption></figure>
+<figure><img alt="Seed 105, version 1: bright spot at the corner position." height="246" loading="lazy" src="derived/waffle42-a8bf7a432d51a862/corner-s105-v1.png" width="246"/><figcaption><strong>Seed 105</strong>Version 1</figcaption></figure>
+<figure><img alt="Seed 106, version 1: bright spot at the corner position." height="246" loading="lazy" src="derived/waffle42-a8bf7a432d51a862/corner-s106-v1.png" width="246"/><figcaption><strong>Seed 106</strong>Version 1</figcaption></figure>
+<figure><img alt="Seed 104, version 2: only the halo at the corner position." height="246" loading="lazy" src="derived/waffle42-a8bf7a432d51a862/corner-s104-v2.png" width="246"/><figcaption>Version 2</figcaption></figure>
+<figure><img alt="Seed 105, version 2: only the halo at the corner position." height="246" loading="lazy" src="derived/waffle42-a8bf7a432d51a862/corner-s105-v2.png" width="246"/><figcaption>Version 2</figcaption></figure>
+<figure><img alt="Seed 106, version 2: only the halo at the corner position." height="246" loading="lazy" src="derived/waffle42-a8bf7a432d51a862/corner-s106-v2.png" width="246"/><figcaption>Version 2</figcaption></figure>
+</div>
+<p class="hint">Upper-right corner of each held-out seed, on the zoom scale above.</p>
+<p class="prose">All three seeds met all five criteria. Version 1 showed the spots in every seed, at 9.4 to 12.8 times the halo, and version 2 brought them to 0.88–0.98. The edge-midpoint ratios differ from seed to seed but changed by less than 0.5% within each seed, so the filter put no new light there.</p>
+</section>
+<section aria-labelledby="waffle42-limits-title" class="panel">
+<h2 id="waffle42-limits-title">Limits, sources and downloads</h2>
+<div class="prose">
+<p>Each evaluation covers 0.8 s of a 1 s run. I chose the cutoff on frames 50–149 of seed 1, which overlap that seed's evaluation window. The held-out seeds avoid that overlap but share its turbulence profile, guide-star flux, geometry and run length. Other turbulence, fluxes and longer runs are untested.</p>
+<p>The family is computed once per run from the fully valid calibration. A direction that becomes weakly sensed only when a frame drops slope rows is not in it. The cutoff of 0.35, the band factor of 1.5 and the threshold of 0.5 are my choices for this geometry, not published values. The filter exists only for the sparse LSMR reconstructor. The overview image and the 42 m replay still show version 1.</p>
+<p><a href="https://doi.org/10.1086/431436">Makidon et al. (2005)</a> show that a Fried-geometry Shack–Hartmann sensor does not sense waffle, and that waffle error copies the PSF onto a square lattice at odd multiples of λ/2d. <a href="https://doi.org/10.1117/12.459686">Gavel (2003)</a> shows that Tikhonov regularization leaves the mode space unchanged, that a penalty on the global waffle mode alone leaves local waffle free, and that almost every singular mode carries some local waffle. The twin split is my own way of separating those modes; neither paper gives a cutoff for this system.</p>
+<p><a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/main/src/shwfs_ao/calibration/sparse.py">Filter source code</a> · <a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/main/docs/design-decisions.md">Design decisions</a> · <a href="#model-limitations">Model limitations</a></p>
+<p class="downloads"><a href="derived/waffle42-a8bf7a432d51a862/README.md">Notes (README.md)</a><a href="derived/waffle42-a8bf7a432d51a862/data.json">Values (data.json)</a><a href="derived/waffle42-a8bf7a432d51a862/frames.csv">Per-frame residuals (frames.csv)</a><a href="derived/waffle42-a8bf7a432d51a862/provenance.json">Input hashes (provenance.json)</a><a href="derived/waffle42-a8bf7a432d51a862/exporter.py">Exporter (exporter.py)</a></p>
+</div>
+</section>
 </section></main>
 <footer class="site-footer"><div class="wrap footer-row"><p>Xu Han · Shack–Hartmann adaptive-optics simulations.</p><p><a href="https://github.com/xhvoid/Shack-Hartmann-AO-Simulation">Source code</a> · <a href="#methods-home">Methods &amp; evidence</a> · <a href="#references">References &amp; licences</a></p><p hidden="" id="footer-identity"></p></div></footer>
 </body>
