@@ -16,7 +16,8 @@ with their summary, and every image of the bundle. Carried from the saved run
 analysis, with the hashes of the files they come from: command projections on
 the uniform checkerboard (they need the ordered actuator IDs of each run's
 record.json, which is not an input here) and on each run's 96-mode family (it
-also needs that run's family basis, which was not kept), the superseded
+also needs that run's family basis, which is in neither the run archives nor
+these inputs), the superseded
 single-mode run and the short prototypes. The values of one deleted run are
 constants transcribed from the written record and say so. A dry run (no
 --write) builds the bundle in a temporary folder and leaves the site unchanged.
@@ -477,7 +478,7 @@ def export(root, web_dir, out):
                 'checkerboard_per_actuator_nm': waffle['per_actuator_amplitude_rms_m_window'] * 1e9,
                 'checkerboard_fraction_of_command_energy': waffle['fraction_of_command_energy_window'],
                 'family_modes': family['modes'], 'family_projection_rms_um': family['projection_rms_m_window'] * 1e6,
-                'source': 'carried from heldout.json; the uniform-checkerboard value can be recomputed from the actuator IDs in each run record.json and its history.npz, the family value also needs the run family basis, which was not kept',
+                'source': 'carried from heldout.json; the uniform-checkerboard value can be recomputed from the actuator IDs in each run record.json and its history.npz, the family value also needs the run family basis, which is in neither the standard run archives nor the exporter inputs',
             },
             'residual_nm': trace['residual_nm'], 'dropped_rows': trace['dropped_rows'],
         }

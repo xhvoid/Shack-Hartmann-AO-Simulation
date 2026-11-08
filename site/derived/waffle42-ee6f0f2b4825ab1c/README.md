@@ -49,13 +49,17 @@ the maximum of the mean PSF over the maximum of the ideal PSF.
 ## Held-out criteria
 
 Seeds 104, 105 and 106 were taken by a fixed rule before any of them ran:
-the first three consecutive seeds unused in the saved 42 m records.
+the first three consecutive integers from 100 upward that appeared under no
+seed-like key in the 135,817 JSON records scanned (the research repository
+with its worktrees and outputs, and the other local AO checkouts; very large
+files and some directories were skipped). 101-103 appear in other records.
 Each had to meet five criteria: version 1 shows the spots (corner / halo above
 3); version 2 has corner / halo at most 1.5; the version-2 peak Strehl is no
 more than 0.005 below version 1; the version-2 edge / halo is within 10% of
 version 1; and neither run has an unusable frame or a saturated actuator. All
 three seeds met all five, 15 held-out passes. Seed 1 meets the same five after
-the fact, so `data.json` counts 20. Each seed also has its own detector
+the fact. `data.json` stores the five pass flags of each seed, and the
+validator totals all 20. Each seed also has its own detector
 calibration and therefore its own 96-mode family; the eigensolver that builds
 the family starts from a fixed vector of its own.
 
@@ -68,8 +72,10 @@ image, and the version-1 tile reproduces the published corrected image pixel
 for pixel. Command projections on the uniform checkerboard and on the family
 are carried from the saved analysis. The checkerboard value can be recomputed
 from the ordered actuator IDs in each run's `record.json` and its command
-history (the record is not an input of the exporter); the family value also
-needs each run's family basis, which was not kept.
+history (the record is not an input of the exporter). The family value also
+needs each run's family basis, which neither the run archives nor the
+exporter's inputs contain; a separately saved seed-1 basis reproduces the
+seed-1 values but is not distributed.
 
 The designs that were set aside are carried as recorded: the single-mode
 projection from the saved comparison, the penalty on the least sensed mode
@@ -92,8 +98,11 @@ in `data.json`.
 - `mean-corrected-v1.png`, `mean-corrected-v2.png`: the 1.20″ field on the
   site's log scale, 10⁻⁶ to 1 of the ideal peak.
 - `corner-<run>.png`: the upper-right corner position, ±20 samples (±0.108″),
-  six image pixels per sample, log scale 10⁻⁶ to 10⁻³ of the ideal peak. The
-  ratio printed under a zoom on the site is the four-corner mean.
+  six image pixels per sample, log scale 10⁻⁶ to 10⁻³ of the ideal peak. On the
+  Explorer the seed-1 zooms are labelled with the version-1 upper-right peak
+  and with "only the halo remains" for version 2; the corner / halo ratios,
+  which are four-corner means, sit under the full-field images and in the
+  tables.
 - `exporter.py`: the script that wrote this bundle. In this folder,
   `python exporter.py --validate-bundle .` checks every file and value record
   with NumPy and Pillow. A full export (`--evidence-root`, `--web-dir`) also

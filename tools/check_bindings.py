@@ -19,7 +19,13 @@ file is found before it is published:
   the site with that size and SHA-256, and no two records of one file disagree;
 - the manifest's own directory holds no unlisted file and no symlink (members
   listed in place elsewhere are verified, but their directories are not owned);
-- no two entries own the same directory.
+- no two entries own the same directory;
+- every hash-bound ``href`` inside a bound research catalog (schema
+  ``ao-explorer.research-results.*``: its downloads and figures, relative to
+  the catalog; a ``path`` names a source-repository file and is not followed) is a regular file inside the site with the recorded size and
+  SHA-256.  A link whose target is not served counts only when some bound
+  catalog lists that SHA-256 as the ``original_asset`` of an edited public
+  copy; it is then reported as replaced, not as a problem.
 
 Directories under ``data/``, ``derived/`` and ``recordings/`` that no entry
 owns are listed for information (preserved earlier datasets and superseded
@@ -50,6 +56,8 @@ ENTRY_SCHEMA = "ao-explorer.entry.v1"
 IDENTITY_KEYS = ("dataset_id", "derived_id", "recording_id", "id")
 BUNDLE_ROOTS = ("data", "derived", "recordings")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+CATALOG_SCHEMA_PREFIX = "ao-explorer.research-results."
+_CATALOG_MAX_BYTES = 16 << 20
 
 
 class BindingError(RuntimeError):
@@ -200,6 +208,58 @@ def check_bundle(site: Path, name: str, binding: Dict[str, Any], digests: _Diges
     return result
 
 
+def _catalogs(site: Path, paths: Iterator[Path]) -> Dict[Path, Any]:
+    """The bound research catalogs among the given files, parsed strictly."""
+
+    found: Dict[Path, Any] = {}
+    for path in paths:
+        if path.suffix != ".json" or not path.is_file() or path.stat().st_size > _CATALOG_MAX_BYTES:
+            continue
+        data = path.read_bytes()
+        if CATALOG_SCHEMA_PREFIX.encode() not in data[:512]:
+            continue
+        value = _strict_json(data, path.relative_to(site).as_posix())
+        if isinstance(value, dict) and str(value.get("schema", "")).startswith(CATALOG_SCHEMA_PREFIX):
+            found[path] = value
+    return found
+
+
+def check_catalog_links(site: Path, catalogs: Dict[Path, Any], digests: _Digests) -> Tuple[Dict[str, Any], List[str]]:
+    """Links inside each bound research catalog, and the problems among them."""
+
+    replaced = set()
+    for catalog in catalogs.values():
+        for group in catalog.get("groups", []):
+            for item in group.get("downloads", []):
+                original = item.get("original_asset")
+                if isinstance(original, dict) and original.get("served") is False and _SHA256.match(str(original.get("sha256"))):
+                    replaced.add(original["sha256"])
+    report: Dict[str, Any] = {}
+    problems: List[str] = []
+    for path, catalog in sorted(catalogs.items()):
+        name = path.relative_to(site).as_posix()
+        links, replaced_here = 0, []
+        for where, relative, record in _references(catalog):
+            # Only site links: a "path" names a file of the source repository.
+            if record.get("href") != relative or re.match(r"^[a-z]+:", relative):
+                continue
+            links += 1
+            target = (path.parent / relative).resolve()
+            if not _inside(site, target):
+                problems.append(f"catalog {name}{where}: {relative} lies outside the site")
+            elif target.is_symlink() or not target.is_file():
+                if record.get("sha256") in replaced:
+                    replaced_here.append(f"{where}: {relative}")
+                else:
+                    problems.append(f"catalog {name}{where}: {relative} is missing or not a regular file")
+            else:
+                size, sha = digests(target)
+                if size != record.get("bytes") or sha != record.get("sha256"):
+                    problems.append(f"catalog {name}{where}: {relative} has {size} bytes / SHA-256 {sha[:12]}…; the catalog records {record.get('bytes')} / {str(record.get('sha256'))[:12]}…")
+        report[name] = {"links": links, "replaced_by_public_copy": replaced_here}
+    return report, problems
+
+
 def check(web_dir: Path) -> Dict[str, Any]:
     """Every binding of the site and every problem found (an empty list means all bindings hold)."""
 
@@ -225,6 +285,11 @@ def check(web_dir: Path) -> Dict[str, Any]:
         bundles[name] = {"manifest": result["manifest"], "schema": result.get("schema"), "identity": result.get("identity"),
                          "directory": None if directory is None else directory.relative_to(site).as_posix(),
                          "members": result.get("members", 0), "bytes": result.get("bytes", 0), "problems": result["problems"]}
+    try:
+        catalog_links, catalog_problems = check_catalog_links(site, _catalogs(site, iter(sorted(referenced))), digests)
+    except BindingError as exc:
+        catalog_links, catalog_problems = {}, [str(exc)]
+    problems += catalog_problems
     unbound = []
     for root in BUNDLE_ROOTS:
         for directory in sorted(path for path in (site / root).iterdir() if path.is_dir()) if (site / root).is_dir() else []:
@@ -232,7 +297,7 @@ def check(web_dir: Path) -> Dict[str, Any]:
                 files = [path.resolve() for path in directory.rglob("*") if path.is_file()]
                 unbound.append({"directory": directory.relative_to(site).as_posix(), "files": len(files),
                                 "files_referenced_by_bound_manifests": sum(path in referenced for path in files)})
-    return {"site": str(site), "bundles": bundles, "unbound_directories": unbound, "problems": problems,
+    return {"site": str(site), "bundles": bundles, "catalog_links": catalog_links, "unbound_directories": unbound, "problems": problems,
             "files_hashed": len(digests.cache), "bytes_hashed": sum(size for size, _ in digests.cache.values())}
 
 
@@ -249,6 +314,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if arguments.report:
         arguments.report.write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
     summary = {"bindings_hold": not report["problems"], "bundles": {name: {"identity": b["identity"], "members": b["members"]} for name, b in report["bundles"].items()},
+               "catalog_links": report["catalog_links"],
                "files_hashed": report["files_hashed"], "bytes_hashed": report["bytes_hashed"],
                "unbound_directories": [u["directory"] for u in report["unbound_directories"]], "problems": report["problems"]}
     print(json.dumps(summary, indent=1))

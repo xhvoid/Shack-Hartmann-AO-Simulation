@@ -64,19 +64,30 @@ const STUDIES = {
 
 const PUBLIC_DOWNLOADS = {
   "fde92e225e7ff4eae2905495b9a728c343639716640d3776c2eec0e5078f7077": {
-    "href": "../evidence/public-records-f594068f4fd9a8bd/42m-noise-on-record.public.json",
+    "href": "../evidence/public-records-6770f474dd029d01/42m-noise-on-record.public.json",
     "bytes": 3774,
     "sha256": "4493b28810feb0713ed317f80c4903fd08942ca0cc139dc552df0b62cef8399c",
     "media_type": "application/json",
     "file_name": "42m-noise-on-record.public.json"
   },
   "b62fd20493a6d3611302ab9262a5372afdc098c66fafc98ceb8d58390e3d6942": {
-    "href": "../evidence/public-records-f594068f4fd9a8bd/detector-noise-law.public.json",
-    "bytes": 180177,
-    "sha256": "bece0af3eda2cfecf3e46371cfd5db34ff229706de1f341bc674104165ae6e1d",
+    "href": "../evidence/public-records-6770f474dd029d01/detector-noise-law.public.json",
+    "bytes": 183082,
+    "sha256": "0b0386f75f37b880649703852868c2fc6cc15c4562bf55367b411454e18b7e15",
     "media_type": "application/json",
     "file_name": "detector-noise-law.public.json"
   }
+};
+
+// The research catalog bound by the 2 m dataset still lists the two originals
+// above; its public copy points those downloads at the edited copies and
+// rebases every other link, so the whole catalog stays usable when saved.
+const PUBLIC_CATALOG = {
+  "href": "../evidence/public-records-6770f474dd029d01/research-results.public.json",
+  "bytes": 239002,
+  "sha256": "8326695841f5f6bfa267fd4e22137a4168fe861246a995c0006019078b8fdef3",
+  "media_type": "application/json",
+  "file_name": "research-results.public.json"
 };
 
 let repository = null;
@@ -255,8 +266,8 @@ ${group.evidence_notes.length ? `<ul class="limits">${group.evidence_notes.map((
       const publicCopy = PUBLIC_DOWNLOADS[item.asset.sha256];
       const label = item.label.replace(/^Accepted /, "Recorded ");
       const link = document.createElement("a");
-      link.href = "#"; link.textContent = `${label} (${publicCopy ? "public copy; administrative field omitted" : extract ? "source-bound extract of saved notebook outputs" : "byte-identical copy"})`;
-      link.title = publicCopy ? `Edited public copy. Original SHA-256 ${item.asset.sha256}; source and edit are recorded inside the copy.` : extract ? `extract of ${item.sources.map((s) => s.path).join(", ")}` : `${item.source.path} — SHA-256 ${item.source.sha256}`;
+      link.href = "#"; link.textContent = `${label} (${publicCopy ? "public copy; its edits are listed inside" : extract ? "source-bound extract of saved notebook outputs" : "byte-identical copy"})`;
+      link.title = publicCopy ? `Edited public copy. Original SHA-256 ${item.asset.sha256}; source and edits are recorded inside the copy.` : extract ? `extract of ${item.sources.map((s) => s.path).join(", ")}` : `${item.source.path} — SHA-256 ${item.source.sha256}`;
       link.addEventListener("click", (event) => { event.preventDefault(); saveVerified(link, label, publicCopy || item.asset, publicCopy ? import.meta.url : resultsUrl, publicCopy ? publicCopy.file_name : item.file_name); });
       host.querySelector(".downloads").append(link, document.createTextNode(" "));
     }
@@ -310,9 +321,11 @@ export async function renderResults(results, resultsUrl, host, indexHost, result
     const all = document.createElement("p");
     all.className = "downloads";
     const link = document.createElement("a");
-    link.textContent = "Original experiment records (JSON)";
-    link.href = URL.createObjectURL(new Blob([resultsBuffer], { type: "application/json" }));
-    link.download = "research-results.json";
+    const label = "Experiment records (JSON, public copy)";
+    link.textContent = label;
+    link.href = "#";
+    link.title = "The bound catalog with its two edited records pointed at their public copies; file hash checked on download.";
+    link.addEventListener("click", (event) => { event.preventDefault(); saveVerified(link, label, PUBLIC_CATALOG, import.meta.url, PUBLIC_CATALOG.file_name); });
     all.append(document.createTextNode("Download all experiment records: "), link);
     host.append(all);
   }
