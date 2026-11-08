@@ -59,6 +59,21 @@ def test_version1_tile_is_the_overview_image():
         assert np.array_equal(np.asarray(mine.convert('RGB')), np.asarray(shown.convert('RGB')))
 
 
+def test_the_downloaded_exporter_finds_its_notes(tmp_path):
+    bundle = published()
+    spec = importlib.util.spec_from_file_location('waffle_download', bundle / 'exporter.py')
+    downloaded = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(downloaded)
+    assert downloaded.notes_file() == (bundle / 'README.md').resolve()
+    assert w.notes_file() == (ROOT / 'tools/waffle42_notes/README.md').resolve()
+    assert (bundle / 'README.md').read_bytes() == (ROOT / 'tools/waffle42_notes/README.md').read_bytes()
+    assert (bundle / 'exporter.py').read_bytes() == (ROOT / 'tools/export_waffle42.py').read_bytes()
+    lonely = tmp_path / 'exporter.py'
+    shutil.copyfile(bundle / 'exporter.py', lonely)
+    with pytest.raises(w.ExportError, match='notes not found'):
+        w.notes_file(lonely)
+
+
 def test_windows_on_a_synthetic_image():
     # A flat floor with extra flux in the centre pixel of each corner window.
     step = w.SETTINGS['science_wavelength_m'] / (2 * w.SETTINGS['actuator_pitch_m']) / 84.08341608739086

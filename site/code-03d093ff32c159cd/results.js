@@ -64,16 +64,16 @@ const STUDIES = {
 
 const PUBLIC_DOWNLOADS = {
   "fde92e225e7ff4eae2905495b9a728c343639716640d3776c2eec0e5078f7077": {
-    "href": "../evidence/public-records-46a80a01d47afca4/42m-noise-on-record.public.json",
+    "href": "../evidence/public-records-f594068f4fd9a8bd/42m-noise-on-record.public.json",
     "bytes": 3774,
     "sha256": "4493b28810feb0713ed317f80c4903fd08942ca0cc139dc552df0b62cef8399c",
     "media_type": "application/json",
     "file_name": "42m-noise-on-record.public.json"
   },
   "b62fd20493a6d3611302ab9262a5372afdc098c66fafc98ceb8d58390e3d6942": {
-    "href": "../evidence/public-records-46a80a01d47afca4/detector-noise-law.public.json",
-    "bytes": 180136,
-    "sha256": "a5277405bf24b6d834065a097711e09d8caa1c182b36c4e05a28dc8a48f5928c",
+    "href": "../evidence/public-records-f594068f4fd9a8bd/detector-noise-law.public.json",
+    "bytes": 180177,
+    "sha256": "bece0af3eda2cfecf3e46371cfd5db34ff229706de1f341bc674104165ae6e1d",
     "media_type": "application/json",
     "file_name": "detector-noise-law.public.json"
   }

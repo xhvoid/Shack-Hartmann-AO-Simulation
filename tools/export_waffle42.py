@@ -12,12 +12,19 @@ Recomputed from the saved mean images and histories of eight runs: peak
 Strehl of the mean PSF, the corner, edge-midpoint and halo windows, encircled
 energy within 2 lambda/D, the residual and atmosphere RMS over frames 100-499,
 unusable frames, saturation, dropped slope rows, the five held-out criteria
-with their summary, and every image of the bundle. Carried with the hashes of
-the files they come from: command projections on the checkerboard and on the
-96-mode family (they need the actuator layout and the family basis, which only
-the simulation package can rebuild), the superseded single-mode run and the
-short prototypes. The values of one deleted run are carried from the written
-record and say so.
+with their summary, and every image of the bundle. Carried from the saved run
+analysis, with the hashes of the files they come from: command projections on
+the uniform checkerboard (they need the ordered actuator IDs of each run's
+record.json, which is not an input here) and on each run's 96-mode family (it
+also needs that run's family basis, which was not kept), the superseded
+single-mode run and the short prototypes. The values of one deleted run are
+constants transcribed from the written record and say so. A dry run (no
+--write) builds the bundle in a temporary folder and leaves the site unchanged.
+
+The script works from the website checkout (tools/export_waffle42.py, notes in
+tools/waffle42_notes/README.md) and from a downloaded bundle (exporter.py with
+README.md beside it). Public readers can run --validate-bundle; the saved
+replay records needed for a full export are not published.
 """
 from __future__ import annotations
 
@@ -83,7 +90,7 @@ SOURCE = {
 # folder was trimmed and deleted, so these values come from the written record.
 PENALTY_REPLAY = {'corner_over_halo': 11.7, 'peak_strehl': 0.7455, 'mean_residual_rms_nm_window': 506.0,
                   'final_residual_rms_nm': 646.0, 'checkerboard_projection_rms_um': 0.28,
-                  'source': 'troubleshooting record (troubleshooting_record_commit); the run files were deleted'}
+                  'source': 'constants transcribed from the troubleshooting record (troubleshooting_record_commit); the run files were deleted'}
 PROTOTYPES = {
     'base': ('reference', 'Version 1, no filter'),
     'alpha010': ('control', 'Damping alpha = 0.1, no filter'),
@@ -470,7 +477,7 @@ def export(root, web_dir, out):
                 'checkerboard_per_actuator_nm': waffle['per_actuator_amplitude_rms_m_window'] * 1e9,
                 'checkerboard_fraction_of_command_energy': waffle['fraction_of_command_energy_window'],
                 'family_modes': family['modes'], 'family_projection_rms_um': family['projection_rms_m_window'] * 1e6,
-                'source': 'carried from heldout.json; rebuilding the actuator layout and the family needs the simulation package',
+                'source': 'carried from heldout.json; the uniform-checkerboard value can be recomputed from the actuator IDs in each run record.json and its history.npz, the family value also needs the run family basis, which was not kept',
             },
             'residual_nm': trace['residual_nm'], 'dropped_rows': trace['dropped_rows'],
         }
@@ -573,18 +580,27 @@ def export(root, web_dir, out):
                        'the five held-out criteria and the held-out mean, sample SD, minimum and maximum', 'every image of the bundle'],
         'carried': ['command projections on the unit checkerboard and on each run\'s 96-mode family', 'the superseded single-mode run (comparison.json)',
                     'the 120-frame mode-penalty check', 'the 150-frame prototypes', 'the checkerboard-penalty replay, from the written record'],
-        'limitations': ['Each evaluation covers 0.8 s of one 1 s run. The cutoff was chosen on frames 50-149 of seed 1.',
+        'limitations': ['Each evaluation covers 0.8 s of one 1 s run. The cutoff was chosen on frames 50-149 of seed 1; frames 100-149 are also the first 50 of its 400 evaluation frames.',
+                        'Seed 1 compares runs from two builds of the code (producer_commit); each held-out pair ran on one build.',
                         'The held-out seeds share the turbulence profile, guide-star flux, geometry and run length of seed 1.',
                         'Prototype values average frames 50-149 of 150-frame runs and are not comparable with full replays.'],
     })
     shutil.copyfile(__file__, out / 'exporter.py')
-    notes = Path(__file__).parent / 'waffle42_notes'
-    shutil.copyfile(notes / 'README.md', out / 'README.md')
+    shutil.copyfile(notes_file(), out / 'README.md')
     media = {'.json': 'application/json', '.md': 'text/markdown', '.csv': 'text/csv', '.py': 'text/plain', '.png': 'image/png'}
     members = {f.name: {'bytes': f.stat().st_size, 'sha256': sha(f), 'media_type': media[f.suffix]} for f in sorted(out.iterdir())}
     identity = 'waffle42-' + hashlib.sha256(json.dumps(members, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:16]
     write(out / 'manifest.json', {'schema': MANIFEST_SCHEMA, 'id': identity, 'files': members})
     return identity, validation
+
+
+def notes_file(script=__file__):
+    """The bundle notes: tools/waffle42_notes/README.md in the website checkout, README.md beside a downloaded exporter.py."""
+    here = Path(script).resolve().parent
+    for candidate in (here / 'waffle42_notes' / 'README.md', here / 'README.md'):
+        if candidate.is_file():
+            return candidate
+    raise ExportError('Bundle notes not found next to ' + Path(script).name)
 
 
 def validate_display(d):

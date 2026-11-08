@@ -1,6 +1,6 @@
 {
   "schema": "ao-explorer.public-evidence-copies.v1",
-  "id": "public-records-46a80a01d47afca4",
+  "id": "public-records-f594068f4fd9a8bd",
   "files": {
     "42m-noise-on-record.public.json": {
       "bytes": 3774,
@@ -8,18 +8,18 @@
       "media_type": "application/json"
     },
     "detector-noise-law.public.json": {
-      "bytes": 180136,
-      "sha256": "a5277405bf24b6d834065a097711e09d8caa1c182b36c4e05a28dc8a48f5928c",
+      "bytes": 180177,
+      "sha256": "bece0af3eda2cfecf3e46371cfd5db34ff229706de1f341bc674104165ae6e1d",
       "media_type": "application/json"
     },
     "README.md": {
-      "bytes": 666,
-      "sha256": "498f0962a945a46303334e94271abc53eead7dfda2b405dbb337bdd4eca38de3",
+      "bytes": 1010,
+      "sha256": "476014c401f3c9ea294cc810a02f0e54416fdedd2d20c93b12cd42c7cbe43665",
       "media_type": "text/markdown"
     },
     "sources.json": {
-      "bytes": 1403,
-      "sha256": "987be0fbd80c82074363135134304912fef438041005e8d2b6aecd0d6289e7ad",
+      "bytes": 1441,
+      "sha256": "e2cad47b2dc514f3d804fe4637748250e803a2fc4caea9df064e788667b08944",
       "media_type": "application/json"
     }
   }

@@ -4878,7 +4878,7 @@
   },
   "package_checks": {
     "available": true,
-    "package_file": "/home/user/Shack-Hartmann-AO-Simulation/src/shwfs_ao/__init__.py",
+    "package_file": "src/shwfs_ao/__init__.py (environment prefix omitted in public copy)",
     "12m_v3": {
       "config_hash_matches": 20,
       "config_hash_mismatches": [],
@@ -5047,7 +5047,8 @@
     "original_bytes": 154179,
     "original_url": "https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/da4337d35eccca7f0e1fd2c679daa806ea87d272/site/data/series-2m180-b3e1c66-e0d60cbaccc6b/research/evidence/docs__research__detector_noise_law__results.json",
     "edited_fields": [
-      "/source_identity/branch"
+      "/source_identity/branch",
+      "/package_checks/package_file"
     ],
     "reason": "Omit a workstation-specific directory or temporary branch label from the reading copy. Scientific values and all other original fields are unchanged."
   }

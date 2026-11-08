@@ -4,7 +4,7 @@
  "manifest": "series-2m1000-s624-c7241e4190d5-ef74a541b0e60/manifest.json",
  "manifest_bytes": 42464,
  "manifest_sha256": "a151da4b84b21029c03a9f373c586a8203781807e52cb0f9bedddef4ae1719ee",
- "code_build": "bd472007c9717e9f",
+ "code_build": "03d093ff32c159cd",
  "galaxy": {
   "schema": "ao-explorer.galaxy-entry.v3",
   "derived_id": "ngc1705-f814w-2m1000-s624-c7241e4190d5-gda93ed5af026-m4adb5a4af111",
@@ -105,16 +105,16 @@
  },
  "publicEvidenceCopies": {
   "schema": "ao-explorer.public-evidence-entry.v1",
-  "id": "public-records-46a80a01d47afca4",
-  "manifest": "../evidence/public-records-46a80a01d47afca4/manifest.json",
-  "manifest_bytes": 840,
-  "manifest_sha256": "7dac0d3b011f0b7b0fd99d295e65b71abcbca7f7d7d9f2d855174658f655b1cc"
+  "id": "public-records-f594068f4fd9a8bd",
+  "manifest": "../evidence/public-records-f594068f4fd9a8bd/manifest.json",
+  "manifest_bytes": 841,
+  "manifest_sha256": "3c42ad6e6bf0a7b1d06354921c469fc889194516218eb45d5c54972b99f174af"
  },
  "waffle42": {
   "schema": "ao-explorer.waffle42-entry.v1",
-  "id": "waffle42-a8bf7a432d51a862",
-  "manifest": "../derived/waffle42-a8bf7a432d51a862/manifest.json",
+  "id": "waffle42-3652c2193396e931",
+  "manifest": "../derived/waffle42-3652c2193396e931/manifest.json",
   "manifest_bytes": 2136,
-  "manifest_sha256": "df5acb4ce6faf0641e54d7824534bfbc4e957f7fef92b63e331bffe52c4d2f4d"
+  "manifest_sha256": "dcd490e6cb0cb09a0c4bacffe493a2e4ee035e426e0e1b2814a37254715cf4e1"
  }
 }
