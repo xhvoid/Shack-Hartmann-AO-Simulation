@@ -6,14 +6,62 @@ image. The sensor sees where each lenslet spot lands, the reconstructor turns
 those displacements into mirror commands, and whatever wavefront is left over
 decides what the star looks like in the final image.
 
-[Open AO Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/) · [Design decisions](docs/design-decisions.md) · [Run an example](#run-an-example)
+[Open AO Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/) · [TIPTOP comparison](#comparison-with-tiptopp3) · [Design decisions](docs/design-decisions.md) · [Run an example](#run-an-example)
 
-In the 2 m comparison, my loop left about twice as much residual wavefront
-error as TIPTOP predicted. When I fitted a plane to the residual in the first exposure,
-tilt accounted for 69% of its variance. I then compared larger pupils to see
-how much of the difference I could trace to the mirror and the way the sensor
-measures a spot.
-[The 2 m comparison](docs/scao-comparison/README.md) · [The 5 m, 12 m and 42 m comparisons](docs/eso_scao_benchmark.md)
+## Comparison with TIPTOP/P3
+
+In the 2 m model I averaged 800 H-band images in each of three exposures.
+My loop left 257–391 nm RMS of wavefront error, with peak Strehl between
+0.257 and 0.419. TIPTOP predicted 154 nm and 0.710. I fitted a plane to the
+first exposure's residual wavefronts to see how much tilt the mirror had
+left behind. Tilt alone contributed 325 nm RMS, or 69% of the native
+residual variance in that exposure. [2 m measurements and settings](docs/scao-comparison/README.md)
+
+For the larger pupils I matched the ten-layer atmospheric profile, the
+0.5 m subaperture size and the 500 Hz control loop. The Shack–Hartmann
+sensor barely sees some checkerboard patterns on the mirror. I ran the
+noiseless loop with and without a filter that removes these patterns from
+each command increment, keeping the Tikhonov damping at 0.001.
+
+| Aperture | Native RMS, filter off (nm) | Native RMS, filter on (nm) | P3 RMS (nm) | Filtered RMS above P3 | 2.2 µm Strehl, filtered native / P3 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 5 m | 192.0 ± 1.4 | 173.5 ± 0.9 | 154.1 | 12.6% | 0.784 / 0.813 |
+| 12 m | 183.2 ± 2.0 | 172.1 ± 1.5 | 155.9 | 10.4% | 0.787 / 0.816 |
+| 42 m | 173.6 | 168.06 ± 0.65 | 156.45 | 7.4% | 0.795 / 0.818 |
+
+The 5 m and 12 m rows each use five atmospheres. At 42 m I ran three with
+the filter on and one with it off. On the atmosphere common to both, the
+filter took the residual from 173.65 to 167.17 nm. The uncertainties are
+standard errors across atmospheres. The P3 values use the spatial frequency
+band sampled by the native screens and exclude chromatism.
+
+### Where the 12 m difference comes from
+
+I took a separate set of twelve noiseless 12 m runs at the same damping
+and filter cutoff (0.35). Over 500 settled frames per run, the native
+residual variance averaged 29,692 nm². P3 gave 24,311 nm². I traced the
+5,381 nm² difference in three steps.
+
+| Measurement | Excess variance (nm²) | Share of the gap |
+| --- | ---: | ---: |
+| Fit the wavefront with the native mirror's tent-shaped actuator responses and compare with P3's analytical fitting floor | 2,387 ± 94 | 44% |
+| Compare the image-based sensor and reconstructor with a separately calibrated loop that reads the wavefront gradient directly | 2,032 ± 73 | 38% |
+| Compare that geometric loop with P3 over the modes the mirror can control | 962 ± 251 | 18% |
+
+I could trace part of the sensor term to how the lenslet images were
+sampled. Going from 12 to 24 wavefront samples across each subaperture
+on different atmospheric grids narrowed the image-to-geometric gap by
+510 ± 84 nm² with the coarse gradient stencil retained on fully
+illuminated subapertures. Widening the centroid window from 23 to 47 pixels
+on the same finer-grid wavefronts removed another 614 ± 20 nm².
+In the geometric loop, the excess was concentrated near the pupil edges.
+Spatial aliasing was strongest in the outer 5% of the pupil radius.
+
+The three v3 profiles use the filter. I chose a damping factor of 0.03 for
+both 5 m and 12 m. It gave the lowest measured mean at 12 m. At 5 m the
+lowest mean was at 0.07, about 0.3 nm below the common setting. At 42 m I
+kept 0.001. Raising it to 0.03 took the three-atmosphere mean from 168.06
+to 168.19 nm. [Damping scan, model settings and per-realization measurements](docs/eso_scao_benchmark.md)
 
 ## Results
 
@@ -25,26 +73,6 @@ This 1 m example runs at 500 Hz with gain 0.5 and detector noise switched
 off. Over the last six frames of the sequence, correction brought the mean
 wavefront RMS down from 148.6 to 84.4 nm.
 [Recorded control experiment](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/14611da9a92c6c4de59ee60de8fb2d23f2bbc7c3/notebooks/tutorials/04_closed_loop_control.ipynb)
-
-### Mirror reconstruction at 5 m, 12 m and 42 m
-
-The Shack–Hartmann sensor barely sees some checkerboard patterns on the
-mirror. In the noiseless 12 m loop, filtering those patterns out of each
-command brought the residual RMS down from 183.2 to 172.1 nm over five
-atmospheres. TIPTOP/P3 gave 155.9 nm for the same observing conditions.
-
-I looked at the remaining gap in a second set of twelve 12 m runs. The
-difference between fitting the wavefront with the model mirror and P3's
-analytical fitting floor accounted for 44% of the excess variance. Measuring
-the spots on the detector and reconstructing from those measurements added
-another 38% relative to a separately calibrated geometric sensor.
-
-The three v3 profiles all use this waffle filter. I use a Tikhonov
-damping factor of 0.03 at 5 m and 12 m. It gave the lowest mean residual I
-measured at 12 m. At 5 m the minimum was at 0.07, about 0.3 nm below the
-common setting. At 42 m I kept 0.001. Across the three atmospheres I tried,
-raising it to 0.03 took the mean from 168.06 to 168.19 nm.
-[Settings, damping scan and per-realization measurements](docs/eso_scao_benchmark.md)
 
 ### Science targets away from the guide star
 
