@@ -6,7 +6,7 @@ Each example uses the packaged profiles and data. Run it from the repository roo
 | --- | --- |
 | Detector, centroid and Strehl examples | Run the [three short scripts](../README.md#run-an-example) and inspect their measurements. |
 | 2.2 m guide-star loop | Run either version of the profile. The [off-axis example](scao_off_axis_science.md) uses version 2 for all four science targets. |
-| ESO-derived 5 m, 12 m and 42 m loops | Load version 3 for the published damping and filter settings. The [comparison tables](eso_scao_benchmark.md) include the frame counts and individual measurements from the longer scans. |
+| ESO-derived 5 m, 12 m and 42 m loops | Load version 4 of the 12 m profile and version 3 of the other two for the published damping and filter settings. The [comparison tables](eso_scao_benchmark.md) include the frame counts and individual measurements from the longer scans. |
 | 2 m Explorer | Replay the eight configurations and inspect their per-frame metrics on the website. |
 | 42 m gain study | Recompute scalar summaries and paired contrasts from the twelve compact records on the website. |
 

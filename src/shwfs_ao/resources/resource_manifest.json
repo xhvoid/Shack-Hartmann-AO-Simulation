@@ -47,6 +47,10 @@
       "sha256": "16ec1a23809adbe8b432c58048f3fe5b551be07f502d492574c54ff411af4276"
     },
     {
+      "logical_name": "benchmarks/eso_drm_42m_scao_derived.assumptions.v4.json",
+      "sha256": "ec4b6042f4f3ca31e3c7cd1f02cbdbe757f5ca67a3adfcaca028f82321b5c950"
+    },
+    {
       "logical_name": "benchmarks/eso_scao_source_ledger.v1.json",
       "sha256": "abbfd14af06f38a9296723a7c5e2a2fede7faa3472d3a3fe5e9b2ac88ba2b522"
     },
@@ -253,6 +257,10 @@
     {
       "logical_name": "synthetic_presets/eso_scao_medium_12m_derived.v3.json",
       "sha256": "f9c9ef8575ae67278c76073cf1a92c495c689e1927b72995776b9bf70f53ab75"
+    },
+    {
+      "logical_name": "synthetic_presets/eso_scao_medium_12m_derived.v4.json",
+      "sha256": "5bf5e816fa48b2661d929c45eb91c76746921ec0a7109f8c4d59e240844a0f9e"
     },
     {
       "logical_name": "synthetic_presets/eso_scao_medium_12m_weak_gate.v1.json",

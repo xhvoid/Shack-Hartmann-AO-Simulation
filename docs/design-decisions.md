@@ -28,6 +28,10 @@ I compared gains on paired atmospheric sequences. In the historical 42 m configu
 
 I used a Tikhonov factor of 0.03 for both v3 profiles. The 12 m noiseless scan had its lowest mean there. I checked what that choice would cost at 5 m by replaying the same five atmospheres at 0.07, the lowest mean in that scan. The difference was 103 ± 19 nm² of total residual variance. At 42 m I kept 0.001 after comparing both settings on three atmospheres. [Damping scan](eso_scao_benchmark.md#choosing-the-v3-damping)
 
+### Scan the filter cutoff at 5 m and 12 m
+
+The v3 profiles took their filter cutoff of 0.35 from the 42 m detector-level profile. I had not scanned it at the smaller apertures. With the damping at 0.03, I replayed five atmospheres at each cutoff. At 5 m, 0.35 gave the lowest mean of the six cutoffs I tried. At 12 m the lowest mean of eleven was at 0.6, 419 ± 42 nm² of total residual variance below 0.35. The reduction held when I added 1 e⁻ of read noise. Version 4 of the 12 m profile uses 0.6. The 5 m and 42 m profiles stay at version 3. I have not scanned the cutoff at 42 m. [Cutoff scan](eso_scao_benchmark.md#choosing-the-12-m-filter-cutoff)
+
 [Replay the experiments](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/) · [Methods](methods.md)
 
 ## Open item: 2 m end-to-end vs TIPTOP

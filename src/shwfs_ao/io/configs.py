@@ -128,6 +128,10 @@ _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
     ("eso_scao_smoke_5m_software", 3): "synthetic_presets/eso_scao_smoke_5m_software.v3.json",
     ("eso_scao_medium_12m_derived", 3): "synthetic_presets/eso_scao_medium_12m_derived.v3.json",
     ("eso_drm_42m_scao_derived", 3): "synthetic_presets/eso_drm_42m_scao_derived.v3.json",
+    # Version 4 of the 12 m tier after a scan of the filter cutoff: 0.6, the
+    # lowest sample mean of nine tested cutoffs there.  The 5 m tier keeps 0.35,
+    # the lowest of its tested cutoffs; 42 m was not scanned.
+    ("eso_scao_medium_12m_derived", 4): "synthetic_presets/eso_scao_medium_12m_derived.v4.json",
     # Literature-inspired Robo-AO-2 NGS draft (2.2 m); its assumptions are
     # recorded in docs/research/robo_ao2_ngs_v1. No existing default changes.
     ("robo_ao2_22m_ngs_draft", 1): "synthetic_presets/robo_ao2_22m_ngs_draft.v1.json",

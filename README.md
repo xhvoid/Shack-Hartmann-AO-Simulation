@@ -63,6 +63,11 @@ lowest mean was at 0.07, about 0.3 nm below the common setting. At 42 m I
 kept 0.001. Raising it to 0.03 took the three-atmosphere mean from 168.06
 to 168.19 nm. [Damping scan, model settings and per-realization measurements](docs/eso_scao_benchmark.md)
 
+I then scanned the filter cutoff at that damping. At 5 m, 0.35 stayed
+lowest. At 12 m a cutoff of 0.6 took the five-atmosphere mean from 170.82
+to 169.59 nm, and the reduction held with 1 e⁻ of read noise. Version 4 of
+the 12 m profile uses 0.6. [Cutoff scan](docs/eso_scao_benchmark.md#choosing-the-12-m-filter-cutoff)
+
 ## Results
 
 ### Closed-loop correction

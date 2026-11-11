@@ -48,17 +48,44 @@ I chose 0.03 for both the 5 m and 12 m profiles. At 12 m it gave the lowest mean
 
 I repeated the 12 m scan with four realizations of 400 settled frames, this time adding 1 electron of read noise. Raising the factor from 0.001 to 0.03 reduced total variance by 348 ± 43 nm² at 1,000 photons per fully illuminated subaperture per frame and by 356 ± 78 nm² at 500 photons. At 500 photons the lowest mean was at 0.02, with 0.03 only 16 ± 51 nm² higher.
 
+## Choosing the 12 m filter cutoff
+
+The v3 profiles took the cutoff of 0.35 from the 42 m detector-level profile. I scanned it at 5 m and 12 m with the Tikhonov factor at 0.03, on five noiseless atmospheres per aperture. The table gives the number of mirror patterns the filter removes and the square root of the mean total residual variance, in nm.
+
+| Filter cutoff | 5 m, patterns removed | 5 m RMS | 12 m, patterns removed | 12 m RMS |
+| ---: | ---: | ---: | ---: | ---: |
+| off | 0 | 186.37 | 0 | 179.38 |
+| 0.1 | 1 | 172.68 | 1 | 173.85 |
+| 0.2 | — | — | 5 | 171.46 |
+| 0.3 | — | — | 8 | 170.95 |
+| 0.35 | 3 | 172.66 | 11 | 170.82 |
+| 0.45 | — | — | 16 | 169.99 |
+| 0.5 | 5 | 173.31 | 18 | 169.79 |
+| 0.6 | — | — | 20 | 169.59 |
+| 0.7 | 5 | 173.88 | 32 | 169.69 |
+| 0.8 | — | — | 45 | 170.11 |
+| 0.9 | 10 | 175.53 | 64 | 171.32 |
+| 1.0 | 12 | 176.06 | 80 | 172.63 |
+
+The 5 m runs keep 1,800 settled frames and the 12 m runs 900. The 12 m entry at 0.35 comes from these five runs, so it differs from the twelve-realization value in the damping table. I counted the removed patterns by building the reconstructor at each cutoff.
+
+Raising the damping did not replace the filter. With the filter off, total variance was 4,924 ± 346 nm² higher at 5 m and 2,998 ± 212 nm² higher at 12 m than at 0.35. At 5 m, 0.35 gave the lowest mean. A cutoff of 0.1 came out 9 ± 31 nm² higher, and 0.5 came out 226 ± 45 nm² higher. At 12 m the lowest mean was at 0.6, 419 ± 42 nm² below 0.35. On the same five atmospheres, 0.5 was 68 ± 10 nm² above 0.6 and 0.7 was 36 ± 9 nm² above it.
+
+I ran two checks at 12 m before changing the profile. With the cutoff at 0.5 and again at 0.7, I repeated the runs at Tikhonov factors of 0.001, 0.01, 0.05 and 0.1. In both cases 0.03 kept the lowest mean of the five factors. Then I added 1 electron of read noise on four atmospheres of 400 settled frames. Relative to 0.35, a cutoff of 0.6 reduced total variance by 406 ± 79 nm² at 1,000 photons per fully illuminated subaperture per frame and by 355 ± 60 nm² at 500 photons. With noise I could not separate 0.6 from 0.7. The paired difference between them was 23 ± 40 nm² at 1,000 photons and −74 ± 55 nm² at 500.
+
+Version 4 of the 12 m profile uses a cutoff of 0.6 and keeps the damping at 0.03. The 5 m and 42 m profiles stay at version 3. I did not scan the damping with the cutoff at 0.6, and I did not scan the cutoff at 42 m.
+
 ## Using the profiles and measurements
 
-Pass version 3 to the profile loader. The three names are `eso_scao_smoke_5m_software`, `eso_scao_medium_12m_derived` and `eso_drm_42m_scao_derived`. The 42 m pupil follows the historical E-ELT design. The profile records give the source of each parameter. [ESO design sources](../src/shwfs_ao/resources/benchmarks/eso_scao_source_ledger.v1.json) · [v3 assumptions](../src/shwfs_ao/resources/benchmarks/eso_drm_42m_scao_derived.assumptions.v3.json)
+Pass version 4 to the profile loader for the 12 m profile and version 3 for the other two. The three names are `eso_scao_smoke_5m_software`, `eso_scao_medium_12m_derived` and `eso_drm_42m_scao_derived`. Version 3 of the 12 m profile still loads with its cutoff of 0.35. The 42 m pupil follows the historical E-ELT design. The profile records give the source of each parameter. [ESO design sources](../src/shwfs_ao/resources/benchmarks/eso_scao_source_ledger.v1.json) · [v3 assumptions](../src/shwfs_ao/resources/benchmarks/eso_drm_42m_scao_derived.assumptions.v3.json) · [v4 assumptions](../src/shwfs_ao/resources/benchmarks/eso_drm_42m_scao_derived.assumptions.v4.json)
 
 ```python
 from shwfs_ao.io.configs import load_system_profile
 
-config = load_system_profile("eso_scao_medium_12m_derived", 3)
+config = load_system_profile("eso_scao_medium_12m_derived", 4)
 print(config.reconstructor.alpha, config.reconstructor.waffle_filter_cutoff)
 ```
 
-The native CSV has one row per realization and setting. The `aperture` series supplies the filter comparison and the 5 m and 42 m damping scans. The `sensor` series supplies the 12 m variance budget and noiseless damping scan. The `spot_sampling` series gives the 24-sample image and geometric measurements. The `detector_noise` series pairs each noisy 12 m run with its noiseless control. For a paired damping change, subtract the two variances for the same realization, series, sensor and noise setting, then average the differences. Empty cells mark quantities that the run did not measure or settings that were switched off.
+The native CSV has one row per realization and setting. The `aperture` series supplies the filter comparison, the 5 m and 42 m damping scans, and the noiseless cutoff scans. The `sensor` series supplies the 12 m variance budget and noiseless damping scan. The `spot_sampling` series gives the 24-sample image and geometric measurements. The `detector_noise` series pairs each noisy 12 m run with its noiseless control. For a paired damping or cutoff change, subtract the two variances for the same realization, series, sensor and noise setting, then average the differences. Empty cells mark quantities that the run did not measure or settings that were switched off.
 
 These scans applied the specified settings to version 2 of each profile. The configuration hashes identify those runs, including their frame counts. The source SHA-256 identifies the original numerical record for each row. [Native measurements](scao-comparison/layered/native.csv)
