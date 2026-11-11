@@ -8,31 +8,12 @@ decides what the star looks like in the final image.
 
 [Open AO Explorer](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/) · [Design decisions](docs/design-decisions.md) · [Run an example](#run-an-example)
 
-## What came out of it
-
-Most of what I learned is in the figures below, but a few results stuck with me:
-
-- The 2.2 m loop lost lock just under a second in, when spots started dropping
-  out and the small singular values of the reconstructor blew up the commands.
-  Raising the TSVD cutoff from 0.001 to 0.05 and replaying the same atmosphere
-  got it through the full two seconds without the mirror reaching its stroke
-  limit.
-- Moving the science target away from the guide star costs Strehl steadily.
-  At 20 arcsec the long-exposure peak is about three quarters of the on-axis
-  value, with the same mirror commands for both.
-- With two frames of delay, pushing the gain up to 1.0 made the loop worse than
-  no correction at all. The gain–delay figure shows where that turns over.
-- Spot centroids improve with photon count very close to the square-root
-  scaling you would expect from photon noise. At 500 photons per subaperture,
-  though, the quality cuts throw every spot away before the noise statistics
-  even come into it.
-- In the 8 m MCAO model, tomography is the single largest term in the error
-  budget, about half the residual variance, and roughly two thirds of the
-  on-axis H-band light lands within 50 milliarcseconds.
-
-I also ran the same 2 m geometry through TIPTOP. The two codes disagree by a
-factor of about two in residual RMS, and most of that gap is tilt that this
-small loop leaves behind: [Compare the 2 m loop with TIPTOP](docs/scao-comparison/README.md).
+In the 2 m comparison, my loop left about twice as much residual wavefront
+error as TIPTOP predicted. When I fitted a plane to the residual in the first exposure,
+tilt accounted for 69% of its variance. I then compared larger pupils to see
+how much of the difference I could trace to the mirror and the way the sensor
+measures a spot.
+[The 2 m comparison](docs/scao-comparison/README.md) · [The 5 m, 12 m and 42 m comparisons](docs/eso_scao_benchmark.md)
 
 ## Results
 
@@ -45,12 +26,37 @@ off. Over the last six frames of the sequence, correction brought the mean
 wavefront RMS down from 148.6 to 84.4 nm.
 [Recorded control experiment](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/14611da9a92c6c4de59ee60de8fb2d23f2bbc7c3/notebooks/tutorials/04_closed_loop_control.ipynb)
 
+### Mirror reconstruction at 5 m, 12 m and 42 m
+
+The Shack–Hartmann sensor barely sees some checkerboard patterns on the
+mirror. In the noiseless 12 m loop, filtering those patterns out of each
+command brought the residual RMS down from 183.2 to 172.1 nm over five
+atmospheres. TIPTOP/P3 gave 155.9 nm for the same observing conditions.
+
+I looked at the remaining gap in a second set of twelve 12 m runs. The
+difference between fitting the wavefront with the model mirror and P3's
+analytical fitting floor accounted for 44% of the excess variance. Measuring
+the spots on the detector and reconstructing from those measurements added
+another 38% relative to a separately calibrated geometric sensor.
+
+The three v3 profiles all use this waffle filter. I use a Tikhonov
+damping factor of 0.03 at 5 m and 12 m. It gave the lowest mean residual I
+measured at 12 m. At 5 m the minimum was at 0.07, about 0.3 nm below the
+common setting. At 42 m I kept 0.001. Across the three atmospheres I tried,
+raising it to 0.03 took the mean from 168.06 to 168.19 nm.
+[Settings, damping scan and per-realization measurements](docs/eso_scao_benchmark.md)
+
 ### Science targets away from the guide star
 
-In the 2.2 m model a single natural guide star sets the mirror correction, and
-I then look at four targets at increasing separation from it. Light from a
-target farther out crosses the high-altitude layers at a different place than
-the guide-star light did, so the correction fits it less and less well.
+My first 2.2 m run lost lock at 0.981 s. As spots dropped out, the
+reconstructor amplified small measurement errors until the mirror hit its
+stroke limit. I raised the singular-value cutoff from 0.001 to 0.05 and
+replayed the same atmosphere. The mirror stayed within its limits for all
+two seconds. [The two profile versions](docs/research/robo_ao2_ngs_v1/REPAIR.md)
+
+I used that guide-star correction for four science targets. Light from a
+target farther out crosses the high-altitude layers at a different place,
+so the same mirror shape corrects it less well.
 
 ![Long-exposure PSFs at 0, 5, 10, and 20 arcsec, on a common logarithmic scale](https://raw.githubusercontent.com/xhvoid/Shack-Hartmann-AO-Simulation/7aca875e5e34265c3f9ead97ae99da55663bcce7/docs/research/scao_off_axis_v1/evidence/demo_22m/reproduction/psf_comparison.png)
 
@@ -64,9 +70,12 @@ The second figure separates two ways of quoting Strehl from the same exposure.
 If I take the brightest pixel of every individual frame and average those, the
 on-axis value is 0.750. If I average the frames first and then read the peak,
 it is 0.448. The core wanders between frames, so the accumulated image spreads
-its light over several pixels. Which number you want depends on whether you
-care about a single frame or a real exposure.
-[Linux reference values and measurement details](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/7aca875e5e34265c3f9ead97ae99da55663bcce7/docs/scao_off_axis_science.md#reading-the-figures) · [Off-axis implementation (PR #10)](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/pull/10)
+its light over several pixels.
+
+In the Python model I can also change where the telescope points. Away from zenith
+the light travels farther through the turbulence, and the lines of sight to
+the guide star and the target cross each layer farther apart.
+[Run the off-axis example or set a zenith angle](docs/scao_off_axis_science.md)
 
 ### Sensor calibration and photon noise
 
@@ -74,7 +83,7 @@ care about a single frame or a real exposure.
 
 A 2 µrad tilt moves the spot centroids by 2.701 pixels along the driven axis.
 The purely geometric prediction from the pixel scale is 2.902 pixels, so the
-measured gain comes out about 7% low; the tutorial puts that down to the finite
+measured gain comes out about 7% low. The tutorial puts that down to the finite
 centroid window and spot sampling. The response on the perpendicular axis is
 negligible in this symmetric 8 × 8 lenslet model.
 [Calibration experiment](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/14611da9a92c6c4de59ee60de8fb2d23f2bbc7c3/notebooks/tutorials/01_geometric_shwfs.ipynb)
@@ -143,15 +152,15 @@ views of the error are never computed from different inputs.
 As seeing worsens from 0.5 to 1.2 arcsec, the energy inside 50 milliarcseconds
 drops by 27.1% relative to the good-seeing case, while the sampled full width
 at half maximum hardly moves, from 43.19 to 43.45 milliarcseconds. The core
-stays the same size; it just holds less of the light.
+stays about the same size and holds less of the light.
 
 ### Layered atmospheric turbulence
 
 ![ESO ten-layer profile, phase screen, structure function, and residual wavefront RMS](figures/eso_elt_turbulence/eso_elt_turbulence_demo.png)
 
 I ran the same 2 m loop under two atmospheres. With the ten layers of the ESO
-E-ELT design reference, correction took the wavefront RMS from 444 to 325 nm;
-with a single frozen-flow layer it went from 462 to 294 nm. Both numbers use
+E-ELT design reference, correction took the wavefront RMS from 444 to 325 nm.
+With a single frozen-flow layer it went from 462 to 294 nm. Both numbers use
 frames 50–149 from eight realizations. The layered atmosphere is harder to
 correct even though it starts from a slightly lower uncorrected RMS.
 [Layer parameters and experiment](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/14611da9a92c6c4de59ee60de8fb2d23f2bbc7c3/docs/eso_elt_turbulence_model.md)
@@ -221,7 +230,7 @@ The calibration varies the amplitude of the positive and negative actuator pokes
 
 ## Install
 
-You need Python 3.10 or later. From the repository root:
+Run these commands from the repository root with Python 3.10 or later.
 
 ```bash
 python3 -m venv .venv
@@ -230,21 +239,20 @@ python -m pip install .
 ```
 
 On Windows PowerShell the activation step is `.\.venv\Scripts\Activate.ps1`.
-If you plan to edit the package, install it with `python -m pip install -e .`
-instead. The default backend only needs NumPy and SciPy; for the HCIPy
-backend, install with `python -m pip install '.[hcipy]'`.
+The native optics backend uses NumPy and SciPy. For the HCIPy backend,
+install with `python -m pip install '.[hcipy]'`.
 
 ## Run an example
 
 The detector example runs a synthetic 2 m closed loop and writes the detector
-and wavefront measurements to `detector_level_demo_output/detector_level_demo.json`:
+and wavefront measurements to `detector_level_demo_output/detector_level_demo.json`.
 
 ```bash
 python examples/run_detector_level_demo.py
 ```
 
 Two shorter examples pick out individual parts of the loop. The first plots
-how a prescribed wavefront shifts the lenslet spots; the second scales a phase
+how a prescribed wavefront shifts the lenslet spots. The second scales a phase
 map and reports its propagated peak Strehl next to the Maréchal estimate from
 the RMS.
 
@@ -256,8 +264,16 @@ python examples/run_psf_strehl_demo.py
 Both write their plots under `outputs/examples/detector_level_SCAO/`. Set
 `AO_DEMO_OUTPUT_DIR` if you want them somewhere else.
 
+To make the four 2.2 m off-axis PSFs shown above, run the example with its
+default profile. It writes the images and the Strehl table to the directory
+you choose.
+
+```bash
+python examples/run_off_axis_science_demo.py --output outputs/off_axis_science/22m
+```
+
 To look at the 2 m residual wavefront from Python, load the same profile and
-read the history after each mirror update:
+read the history after each mirror update.
 
 ```python
 from shwfs_ao.io.configs import load_system_profile
@@ -268,22 +284,16 @@ history = run_closed_loop(config)
 print("Residual after each update (nm):", history.post_update_residual_opd_rms_m * 1e9)
 ```
 
-Everything inside the package is in metres, OPD and wavelength alike; the
-example multiplies by 1e9 for display. One thing to keep in mind when comparing
-with the Explorer: its images are made from the wavefront *before* the next
-mirror update, whereas the history above is read *after* it. Each recording
-on the site lists its own settings and exposure window.
+The example converts optical path difference from metres to nanometres.
+It reads the wavefront after the mirror update. The Explorer images use
+the wavefront from the preceding measurement.
 
-## Limitations
+## Model assumptions
 
-The pupils, mirror influence functions and detector responses are idealised
-models, and none of this has been calibrated against a real instrument. The
-2.2 m repair has only been tested on the one two-second trajectory it was
-built for, and the recovery rule I added alongside it never had to act in that
-run, so I cannot say much about how it behaves. The 42 m pupil follows the
-historical E-ELT design rather than the current 39 m ELT. Segment phasing and
-calibration against on-sky telemetry are instrument problems I have not
-touched.
+I use idealised pupils, mirror influence functions and detector responses.
+The 42 m pupil follows the historical E-ELT design. The comparisons here use
+simulated wavefronts. The atmospheric monitoring and photometry used in the
+detector studies come from the archives listed in the data licences.
 
 - [Model conventions and sources](docs/methods.md)
 - [Component checks, numerical repairs and remaining limits](docs/verification-summary.md)

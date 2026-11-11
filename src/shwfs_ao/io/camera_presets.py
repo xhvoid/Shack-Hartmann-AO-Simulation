@@ -1,8 +1,9 @@
 """Strict offline loading of the packaged physical-camera presets.
 
 Presets live in ``benchmarks/detector_camera_presets.v1.json`` and are
-addressed by ``(name, version)``; there is no implicit latest version.  Every
-packaged preset is ``synthetic_assumed``.
+addressed by ``(name, version)``; there is no implicit latest version.  Each
+preset declares its own provenance; literature-inspired proxies still carry
+unmeasured assumptions and are not instrument calibrations.
 """
 
 from __future__ import annotations

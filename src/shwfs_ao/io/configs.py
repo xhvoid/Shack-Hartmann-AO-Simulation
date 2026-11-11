@@ -36,9 +36,11 @@ from ._profile_schema import (
     _ControllerConfigWithoutRecovery,
     _DetectorPhysicsConfigWithoutCalibrationSource,
     _ReconstructorConfigWithoutWaffleFilter,
+    _AtmosphereConfigWithoutZenithAngle,
     _SYSTEM_FIELDS,
     _ATMOSPHERE_FIELDS,
     _ATMOSPHERE_FIELDS_V3,
+    _ATMOSPHERE_OPTIONAL_FIELDS_V9,
     _ATMOSPHERE_LAYER_FIELDS,
     _DETECTOR_FIELDS,
     _WFS_FIELDS,
@@ -118,6 +120,18 @@ _PROFILE_RESOURCES: dict[tuple[str, int], str] = {
     # Schema-v8 version 2 of the 42 m profile after its recorded replay: the
     # reconstructor waffle-family filter.
     ("det_ccd_42m_r3band_derived", 2): "synthetic_presets/det_ccd_42m_r3band_derived.v2.json",
+    # Schema-v8 version 3 of three ESO-derived tiers after a comparison with a
+    # Fourier model and a scan of the Tikhonov factor: the reconstructor
+    # waffle-family filter at every aperture, and damping 0.03 at 5 m and 12 m,
+    # where it lowers the residual.  At 42 m it does not, and the factor stays
+    # 0.001.  The weak-turbulence gate was not scanned and stays at version 2.
+    ("eso_scao_smoke_5m_software", 3): "synthetic_presets/eso_scao_smoke_5m_software.v3.json",
+    ("eso_scao_medium_12m_derived", 3): "synthetic_presets/eso_scao_medium_12m_derived.v3.json",
+    ("eso_drm_42m_scao_derived", 3): "synthetic_presets/eso_drm_42m_scao_derived.v3.json",
+    # Literature-inspired Robo-AO-2 NGS draft (2.2 m); its assumptions are
+    # recorded in docs/research/robo_ao2_ngs_v1. No existing default changes.
+    ("robo_ao2_22m_ngs_draft", 1): "synthetic_presets/robo_ao2_22m_ngs_draft.v1.json",
+    ("robo_ao2_22m_ngs_draft", 2): "synthetic_presets/robo_ao2_22m_ngs_draft.v2.json",
 }
 
 BackendName = Literal["native", "hcipy"]
@@ -212,6 +226,15 @@ class AtmosphereConfig:
     normalized ``cn2_fraction`` and carry their own winds, so the block-level
     ``wind_m_per_s`` must then be zero.  A layered atmosphere is absolutely
     normalized by r0 and the outer scale; it has no RMS rescaling.
+
+    ``zenith_angle_deg`` (optional, schema v9, ``native_layered`` only) is the
+    angle between the line of sight and the zenith, in ``[0, 90)`` degrees.
+    When it is not zero ``r0_m`` is the zenith value and ``layers[].altitude_m``
+    the height above the telescope: with airmass ``X = sec(z)`` the line of
+    sight sees the Fried parameter ``r0_m * X**(-3/5)`` and crosses layer ``l``
+    at the distance ``altitude_m[l] * X``, which is what displaces an off-axis
+    science footprint.  Layer winds and the outer scale are not changed.  Zero
+    (the default, and every record before schema v9) is the zenith.
     """
 
     r0_m: float
@@ -221,6 +244,9 @@ class AtmosphereConfig:
     target_rms_opd_m: float | None
     normalize_rms: bool
     layers: tuple[AtmosphereLayerConfig, ...] = ()
+    # Optional schema-v9 zenith angle.  Absent from a record when zero, so
+    # every record without one keeps its identity.
+    zenith_angle_deg: float = 0.0
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "r0_m", _positive(self.r0_m, "r0_m"))
@@ -274,16 +300,45 @@ class AtmosphereConfig:
                     "target_rms_opd_m null."
                 )
         object.__setattr__(self, "layers", layers)
+        zenith = self.zenith_angle_deg
+        if isinstance(zenith, bool) or not isinstance(zenith, Real) or not math.isfinite(zenith):
+            raise SystemConfigError("zenith_angle_deg must be a finite number.")
+        zenith = float(zenith)
+        if not 0.0 <= zenith < 90.0:
+            raise SystemConfigError("zenith_angle_deg must satisfy 0 <= zenith_angle_deg < 90.")
+        if zenith != 0.0 and not layers:
+            raise SystemConfigError(
+                "zenith_angle_deg needs a layered atmosphere (layer altitudes)."
+            )
+        object.__setattr__(self, "zenith_angle_deg", zenith)
+
+    @property
+    def airmass(self) -> float:
+        """``sec(zenith_angle_deg)``; exactly 1 at the zenith."""
+
+        if self.zenith_angle_deg == 0.0:
+            return 1.0
+        return 1.0 / math.cos(math.radians(self.zenith_angle_deg))
 
     @property
     def config_hash(self) -> str:
         return component_config_hash("scao.atmosphere_config", self._hash_view())
 
     def _hash_view(self) -> object:
-        """Return the value this block is hashed as (see the v3 stand-in)."""
+        """Return the value this block is hashed as (see the stand-ins)."""
 
-        if self.layers:
+        if self.zenith_angle_deg != 0.0:
             return self
+        if self.layers:
+            return _AtmosphereConfigWithoutZenithAngle(
+                r0_m=self.r0_m,
+                r0_reference_wavelength_m=self.r0_reference_wavelength_m,
+                outer_scale_m=self.outer_scale_m,
+                wind_m_per_s=self.wind_m_per_s,
+                target_rms_opd_m=self.target_rms_opd_m,
+                normalize_rms=self.normalize_rms,
+                layers=self.layers,
+            )
         return _AtmosphereConfigSchemaV3(
             r0_m=self.r0_m,
             r0_reference_wavelength_m=self.r0_reference_wavelength_m,
@@ -1338,6 +1393,20 @@ class SystemConfig:
                 "reconstructor.waffle_filter_cutoff; record this configuration "
                 "under schema 8."
             )
+        # Only a schema-v9 record has a field for the zenith angle, and only
+        # the native layered atmosphere implements it.
+        if self.atmosphere.zenith_angle_deg != 0.0:
+            if record_version < 9:
+                raise SystemConfigError(
+                    f"record_schema_version={record_version} cannot express "
+                    "atmosphere.zenith_angle_deg; record this configuration "
+                    "under schema 9."
+                )
+            if self.backend != "native" or self.atmosphere_model != "native_layered":
+                raise SystemConfigError(
+                    "atmosphere.zenith_angle_deg is implemented for backend='native' "
+                    "with atmosphere_model='native_layered' only."
+                )
         object.__setattr__(self, "record_schema_version", record_version)
 
     @property
@@ -1675,6 +1744,8 @@ def system_config_to_mapping(config: SystemConfig) -> dict[str, object]:
     if config.record_schema_version < 2:
         del wfs_fields["photon_allocation"]
     atmosphere_fields = _dataclass_mapping(config.atmosphere)
+    if atmosphere_fields["zenith_angle_deg"] == 0.0:
+        del atmosphere_fields["zenith_angle_deg"]
     if config.record_schema_version < 4:
         del atmosphere_fields["layers"]
     else:
@@ -1846,7 +1917,10 @@ def _atmosphere_config(value: object, schema_version: int) -> AtmosphereConfig:
             tuple_fields={"wind_m_per_s"},
         )
     mapping = dict(_mapping(value, "atmosphere"))
-    _keys(mapping, _ATMOSPHERE_FIELDS, "atmosphere")
+    # Only a schema-v9 record may carry the optional zenith angle.
+    optional = _ATMOSPHERE_OPTIONAL_FIELDS_V9 if schema_version >= 9 else set()
+    fields = _ATMOSPHERE_FIELDS | optional
+    _keys(mapping, fields, "atmosphere", optional=optional)
     mapping["layers"] = tuple(
         _construct(
             AtmosphereLayerConfig,
@@ -1862,9 +1936,10 @@ def _atmosphere_config(value: object, schema_version: int) -> AtmosphereConfig:
     return _construct(
         AtmosphereConfig,
         mapping,
-        _ATMOSPHERE_FIELDS,
+        fields,
         "atmosphere",
         tuple_fields={"wind_m_per_s"},
+        optional_fields=optional,
     )
 
 

@@ -1,7 +1,7 @@
 {
   "schema_name": "shwfs_ao.camera_presets",
   "schema_version": 1,
-  "note": "Versioned physical-camera presets for shwfs_ao.detector.physical_camera.v1. Every preset is synthetic_assumed; units: input_e (photoelectrons before EM gain), output_e (after EM gain), adu. Conversion gain is output e-/ADU; read noise is output-referred.",
+  "note": "Versioned camera presets; each record retains its own source_class and source_note. Synthetic presets are engineering assumptions; literature-inspired proxies include explicitly unmeasured settings. Units: input_e before EM gain, output_e after EM gain, adu. Conversion gain is output e-/ADU; read noise is output-referred.",
   "presets": [
     {
       "model": "ccd",
@@ -110,6 +110,33 @@
       "coupling_diagonal": 0.002,
       "source_class": "synthetic_assumed",
       "source_note": "Synthetic engineering preset (synthetic_assumed): values chosen as representative orders of magnitude for a visible SH-WFS camera of this type; no datasheet (D6) is cited and no commercial camera is implied. As synthetic_emccd@1 plus a declared synthetic electronic coupling kernel (1 % to each nearest and 0.2 % to each diagonal neighbour) placed after saturation and before read noise; a model assumption, not a measured property of any EMCCD (B04)."
+    },
+    {
+      "model": "emccd",
+      "preset_name": "robo_ao2_ngs_emccd_proxy",
+      "preset_version": 1,
+      "quantum_efficiency": 0.67,
+      "full_well_e": 80000.0,
+      "dark_e_per_s": 0.01,
+      "hot_pixel_fraction": 0.001,
+      "hot_pixel_dark_e_per_s": 1.0,
+      "prnu_rms": 0.01,
+      "dead_pixel_fraction": 0.0005,
+      "read_noise_e": 117.0,
+      "conversion_gain_e_per_adu": 15.0,
+      "bias_adu": 500.0,
+      "offset_map_rms_adu": 1.0,
+      "adc_bits": 16,
+      "em_gain": 300.0,
+      "cic_e_per_pixel_read": 0.005,
+      "register_full_well_e": 800000.0,
+      "cmos_gain_map_rms": 0.0,
+      "cmos_read_noise_lognormal_sigma": 0.0,
+      "nonlinearity_coefficients": [],
+      "coupling_nearest": 0.0,
+      "coupling_diagonal": 0.0,
+      "source_class": "synthetic_literature_inspired",
+      "source_note": "S2 Table 5 NGS effective-noise proxy: QE 0.67, dark 0.01 e-/s/pixel, input-referred read noise 0.39 e-. EM gain 300 is assumed, so output read noise is 117 e-. Other electronics and pixel defects are inherited synthetic assumptions; not a calibrated HNu128 camera."
     }
   ]
 }

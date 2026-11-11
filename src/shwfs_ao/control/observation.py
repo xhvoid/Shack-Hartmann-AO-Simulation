@@ -36,6 +36,20 @@ atmosphere.  At that point:
     ``None`` when the sensor produced none.  Availability is the sensor's:
     a geometric sensor never provides it.
 
+``science_residual_opd_m``
+    Off-axis science: one map per science direction the loop
+    was given (``run_closed_loop(science_directions_rad=...)``), in that
+    order, each the atmospheric OPD sampled along that direction at the
+    frame time ``t`` minus the *same* DM correction that was applied while
+    frame ``k`` was measured (the correction of ``pre_update_residual_opd_m``).
+    The directions themselves are always available as
+    ``science_directions_rad`` (``(theta_x, theta_y)`` radians from the
+    guide-star direction).  The maps are sampled from the same atmospheric
+    realization at the same time as the on-axis sample, after the WFS
+    measurement and without any random draw, so the loop's telemetry, hash,
+    noise draws and DM commands are the same with or without them.  ``None``
+    when the run was given no science direction.
+
 Only the fields named in an observer's ``requested_fields`` are copied, and a
 field is copied once per frame however many observers request it.  Each
 snapshot is a read-only array backed by an immutable buffer, so neither the
@@ -84,6 +98,7 @@ OBSERVABLE_FIELDS: Final = (
     *OBSERVABLE_MAP_FIELDS,
     "measurement_row_mask",
     "detector_telemetry",
+    "science_residual_opd_m",
 )
 OBSERVATION_POINT: Final = (
     "after_frame_dm_update_and_telemetry_before_next_atmosphere_sample"
@@ -208,6 +223,37 @@ def _optional_mask(value: object, *, label: str) -> np.ndarray | None:
     return value
 
 
+def _optional_directions(
+    value: object,
+) -> tuple[tuple[float, float], ...] | None:
+    if value is None:
+        return None
+    if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
+        raise FrameObservationError(
+            "science_directions_rad must be a sequence of (theta_x, theta_y) pairs."
+        )
+    result: list[tuple[float, float]] = []
+    for index, item in enumerate(value):
+        if isinstance(item, (str, bytes)) or not isinstance(item, Sequence) or len(item) != 2:
+            raise FrameObservationError(
+                f"science_directions_rad[{index}] must be a (theta_x, theta_y) pair."
+            )
+        pair = []
+        for component in item:
+            if isinstance(component, bool) or not isinstance(component, Real):
+                raise FrameObservationError(
+                    f"science_directions_rad[{index}] must hold real radians."
+                )
+            number = float(component)
+            if not math.isfinite(number):
+                raise FrameObservationError(
+                    f"science_directions_rad[{index}] must be finite."
+                )
+            pair.append(number)
+        result.append((pair[0], pair[1]))
+    return tuple(result)
+
+
 def _optional_telemetry(value: object, *, label: str) -> DetectorTelemetry | None:
     if value is None:
         return None
@@ -243,6 +289,11 @@ class FrameObservation:
     # immutable snapshot); each only when requested, else None.
     measurement_row_mask: np.ndarray | None = None
     detector_telemetry: DetectorTelemetry | None = None
+    # Off-axis science: the science directions of the run
+    # (radians, always set when the loop was given any) and, only when
+    # requested, one read-only residual map per direction in that order.
+    science_directions_rad: tuple[tuple[float, float], ...] | None = None
+    science_residual_opd_m: tuple[np.ndarray, ...] | None = None
 
     def __post_init__(self) -> None:
         if (
@@ -278,6 +329,24 @@ class FrameObservation:
             raise FrameObservationError("observed maps must share one shape.")
         _optional_mask(self.measurement_row_mask, label="measurement_row_mask")
         _optional_telemetry(self.detector_telemetry, label="detector_telemetry")
+        directions = _optional_directions(self.science_directions_rad)
+        science = self.science_residual_opd_m
+        if science is not None:
+            if not isinstance(science, tuple):
+                raise FrameObservationError(
+                    "science_residual_opd_m must be a tuple of maps or None."
+                )
+            if directions is None or len(directions) != len(science):
+                raise FrameObservationError(
+                    "science_residual_opd_m needs one map per science direction."
+                )
+            for index, item in enumerate(science):
+                checked = _optional_map(item, label=f"science_residual_opd_m[{index}]")
+                assert checked is not None
+                shapes.add(checked.shape)
+            if len(shapes) > 1:
+                raise FrameObservationError("observed maps must share one shape.")
+        object.__setattr__(self, "science_directions_rad", directions)
         object.__setattr__(self, "frame_index", int(self.frame_index))
         object.__setattr__(self, "time_s", float(self.time_s))
         object.__setattr__(self, "frame_period_s", float(self.frame_period_s))

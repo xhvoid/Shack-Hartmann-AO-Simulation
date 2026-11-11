@@ -24,6 +24,10 @@ I moved the science target across the field while keeping the mirror correction 
 
 I compared gains on paired atmospheric sequences. In the historical 42 m configuration, gain 0.2 reduced a late excursion that I saw at gain 0.3. Over the full analysis window, gain 0.3 gave the sharper mean image at both tested delays. Looking at the late excursion alone would have led me to choose the other gain.
 
+### Use the same damping at 5 m and 12 m
+
+I used a Tikhonov factor of 0.03 for both v3 profiles. The 12 m noiseless scan had its lowest mean there. I checked what that choice would cost at 5 m by replaying the same five atmospheres at 0.07, the lowest mean in that scan. The difference was 103 ± 19 nm² of total residual variance. At 42 m I kept 0.001 after comparing both settings on three atmospheres. [Damping scan](eso_scao_benchmark.md#choosing-the-v3-damping)
+
 [Replay the experiments](https://xhvoid.github.io/Shack-Hartmann-AO-Simulation/) · [Methods](methods.md)
 
 ## Open item: 2 m end-to-end vs TIPTOP

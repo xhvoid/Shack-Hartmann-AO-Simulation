@@ -1,20 +1,16 @@
 # Reproducing the examples
 
-The three examples in the README run using packaged configurations and small
-cached resources. They require no archive account. They are useful entry
-points, but they do not recreate every published recording.
+Each example uses the packaged profiles and data. Run it from the repository root after installation.
 
-| Material | Available publicly | Reproduction scope |
-| --- | --- | --- |
-| Python package | Source, versioned configurations and example entry points on `main` | Run the documented short examples or inspect their component construction |
-| 2 m Explorer | Eight configurations, metrics, display assets and provenance on `website` | Replay the recorded samples and inspect all per-frame metrics; full-precision OPD/PSF archives remain local |
-| 2.2 m investigation | Paired diagnostic records, replay samples, configuration identities and source extracts | Inspect the failure, regularization change and exact recorded comparisons; no claim of a one-command full rerun from `main` |
-| 42 m gain study | Twelve compact records, paired statistics, methods, corrections and saved-data exporter | Recompute scalar summaries and paired contrasts from the bundled histories; full PSFs and original run archives remain local |
+| Material | What you can reproduce |
+| --- | --- |
+| Detector, centroid and Strehl examples | Run the [three short scripts](../README.md#run-an-example) and inspect their measurements. |
+| 2.2 m guide-star loop | Run either version of the profile. The [off-axis example](scao_off_axis_science.md) uses version 2 for all four science targets. |
+| ESO-derived 5 m, 12 m and 42 m loops | Load version 3 for the published damping and filter settings. The [comparison tables](eso_scao_benchmark.md) include the frame counts and individual measurements from the longer scans. |
+| 2 m Explorer | Replay the eight configurations and inspect their per-frame metrics on the website. |
+| 42 m gain study | Recompute scalar summaries and paired contrasts from the twelve compact records on the website. |
 
-The current package is not a substitute for a recording's pinned producer
-revision. Each bundle identifies its sources and configuration hashes. Source
-revisions can differ from public `main`; use those identities when comparing
-results. A missing raw archive is not silently replaced with a fresh trajectory.
+The Explorer bundles identify the producer revision and configuration hash for each recording.
 
 ## Branches and evidence dates
 

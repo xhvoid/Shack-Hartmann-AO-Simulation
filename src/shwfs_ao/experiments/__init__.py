@@ -32,6 +32,13 @@ from .public_data_conditioned import (
     r0_from_seeing_arcsec,
     theta0_rad_from_arcsec,
 )
+from .off_axis_science import (
+    DOCUMENTED_LAYERED_PROFILES,
+    OffAxisScienceRun,
+    check_off_axis_support,
+    layered_profiles,
+    run_off_axis_science,
+)
 from .scao import (
     ExposureOverride,
     FrozenFlowScreenOptions,
@@ -85,4 +92,9 @@ __all__ = (
     "register_scao_backend_factory",
     "build_scao_system",
     "run_closed_loop",
+    "DOCUMENTED_LAYERED_PROFILES",
+    "OffAxisScienceRun",
+    "check_off_axis_support",
+    "layered_profiles",
+    "run_off_axis_science",
 )

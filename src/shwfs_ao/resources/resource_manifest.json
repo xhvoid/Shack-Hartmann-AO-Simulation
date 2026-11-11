@@ -12,7 +12,7 @@
     },
     {
       "logical_name": "benchmarks/detector_camera_presets.v1.json",
-      "sha256": "6e85ad08244a866a8ea12a92ca5fa4e1b583d7c640476a4f09fc55f460fa658f"
+      "sha256": "44d5849c96e169e7680d21b56065d4757e698b220329898a4c5c28b4cdc5ceb5"
     },
     {
       "logical_name": "benchmarks/detector_level.assumptions.v1.json",
@@ -41,6 +41,10 @@
     {
       "logical_name": "benchmarks/eso_drm_42m_scao_derived.assumptions.v2.json",
       "sha256": "93d889e20529234cbdfecc73db0327612cb5da1a5e643ddc38e5af78dd14e1a5"
+    },
+    {
+      "logical_name": "benchmarks/eso_drm_42m_scao_derived.assumptions.v3.json",
+      "sha256": "16ec1a23809adbe8b432c58048f3fe5b551be07f502d492574c54ff411af4276"
     },
     {
       "logical_name": "benchmarks/eso_scao_source_ledger.v1.json",
@@ -235,12 +239,20 @@
       "sha256": "49b52a18c845f0a7ea2c5ea30419aed87dda7a3d2ab7e304372c2f20db596044"
     },
     {
+      "logical_name": "synthetic_presets/eso_drm_42m_scao_derived.v3.json",
+      "sha256": "ecf67d6eca7c5c06d8246116841b1b929816ca097af01ba0d0ffd717b31f4dba"
+    },
+    {
       "logical_name": "synthetic_presets/eso_scao_medium_12m_derived.v1.json",
       "sha256": "9c3b7870a097188b8e6d35d1200010409468dfbcb89e2457e1d66515e5ea3726"
     },
     {
       "logical_name": "synthetic_presets/eso_scao_medium_12m_derived.v2.json",
       "sha256": "5da2452b216a595ae69132480c8e45e3fb9fd70df21a328e880ef9b4e95f356c"
+    },
+    {
+      "logical_name": "synthetic_presets/eso_scao_medium_12m_derived.v3.json",
+      "sha256": "f9c9ef8575ae67278c76073cf1a92c495c689e1927b72995776b9bf70f53ab75"
     },
     {
       "logical_name": "synthetic_presets/eso_scao_medium_12m_weak_gate.v1.json",
@@ -257,6 +269,10 @@
     {
       "logical_name": "synthetic_presets/eso_scao_smoke_5m_software.v2.json",
       "sha256": "d24a5d073ef31382084156f2c45e64fb00359daa69e320067b89965a46eca04c"
+    },
+    {
+      "logical_name": "synthetic_presets/eso_scao_smoke_5m_software.v3.json",
+      "sha256": "d9bfedde2a81a438c7c991dc3cdefbdbf932d796f3b2fb7b433926a86968c78d"
     },
     {
       "logical_name": "synthetic_presets/eso_turbulence_2m_detector.v1.json",
@@ -329,6 +345,14 @@
     {
       "logical_name": "synthetic_presets/research_2m_detector.v3.json",
       "sha256": "1a93d9649ab9c73f217b0ab5fcf59f5e57d88469447d0691ad109278f39a156a"
+    },
+    {
+      "logical_name": "synthetic_presets/robo_ao2_22m_ngs_draft.v1.json",
+      "sha256": "cd5bb1d77ee4a766809842a73fb065c23e294a9f5d67d1d3993055109243393a"
+    },
+    {
+      "logical_name": "synthetic_presets/robo_ao2_22m_ngs_draft.v2.json",
+      "sha256": "c197c5ac02a62ac544f41fdda92e1e9a9d03e23b70102df761ec2c135338a667"
     }
   ]
 }

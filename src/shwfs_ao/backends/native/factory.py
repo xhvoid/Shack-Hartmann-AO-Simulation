@@ -141,6 +141,7 @@ class NativeScaoComponentFactory:
         band_limit_screen_size: int | None = None,
         screen_period_rule: str | None = None,
         screen_grid_size: int | None = None,
+        zenith_angle_deg: float = 0.0,
     ) -> AtmosphereModel:
         """Build the atmosphere named by ``model``.
 
@@ -166,6 +167,10 @@ class NativeScaoComponentFactory:
             raise NativeScaoFactoryError(
                 "the fixed-physics pairing options "
                 f"{sorted(pairing)} apply to the 'native_layered' atmosphere only."
+            )
+        if zenith_angle_deg != 0.0 and model != "native_layered":
+            raise NativeScaoFactoryError(
+                "zenith_angle_deg applies to the 'native_layered' atmosphere only."
             )
         if screen_grid_size is not None and model != "native_frozen_flow_v2":
             raise NativeScaoFactoryError(
@@ -253,6 +258,7 @@ class NativeScaoComponentFactory:
                 layers=layers,
                 band_coefficient_storage=band_coefficient_storage,
                 pairing=pairing,
+                zenith_angle_deg=zenith_angle_deg,
             ),
         }
         try:
@@ -465,6 +471,7 @@ def _layered_atmosphere(
     layers: Sequence[Any],
     band_coefficient_storage: str = "materialized",
     pairing: Mapping[str, Any] | None = None,
+    zenith_angle_deg: float = 0.0,
 ) -> LayeredFrozenFlowAtmosphere:
     if normalize_rms or target_rms_rad is not None:
         raise NativeScaoFactoryError(
@@ -491,6 +498,8 @@ def _layered_atmosphere(
             # Pairing options are passed only when set, so the default config
             # (and its identity payload) is exactly the historical one.
             **dict(pairing or {}),
+            # r0_m stays the zenith value; the atmosphere applies the airmass.
+            **({"zenith_angle_deg": zenith_angle_deg} if zenith_angle_deg != 0.0 else {}),
         )
     except NativeAtmosphereError as exc:
         raise NativeScaoFactoryError(f"invalid layered atmosphere configuration: {exc}") from exc

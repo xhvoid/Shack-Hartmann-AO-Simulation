@@ -552,7 +552,8 @@ def test_the_profile_cutoff_reaches_the_sparse_reconstructor():
 def test_the_42m_version_2_adds_only_the_waffle_filter() -> None:
     """@2 of the 42 m profile is @1 under schema v8 plus the reconstructor waffle-family filter."""
 
-    assert PROFILE_SCHEMA_VERSION == 8
+    # The filter needs schema 8; later schemas (9: zenith angle) keep it.
+    assert PROFILE_SCHEMA_VERSION >= 8
     version_1 = load_system_profile(PROFILE, 1)
     version_2 = load_system_profile(PROFILE, 2)
     assert (version_1.config_hash, version_2.config_hash) == (V1_CONFIG_HASH, V2_CONFIG_HASH)

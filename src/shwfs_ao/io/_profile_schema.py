@@ -79,8 +79,16 @@ PROFILE_SCHEMA_NAME = "shwfs_ao.system_profile"
 # plausible drivers that the replay did not separate).  The field is absent
 # from a record when null, exactly as ``controller.recovery`` is, so every
 # record without it keeps its identity; a v1-v7 record cannot carry it.
-PROFILE_SCHEMA_VERSION = 8
-SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8)
+# Schema v9 adds the optional ``atmosphere.zenith_angle_deg`` field of a
+# native layered atmosphere: the angle between the line of sight and the
+# zenith.  ``r0_m`` is then the zenith value; the line-of-sight Fried parameter
+# is ``r0_m * sec(z)**(-3/5)`` and off-axis science reads layer ``l`` at
+# ``altitude_m[l] * sec(z) * theta``.  Winds and the outer scale are unchanged.
+# The field is absent from a record when zero, exactly as
+# ``reconstructor.waffle_filter_cutoff`` is when null, so every record without
+# it keeps its identity; a v1-v8 record cannot carry it.
+PROFILE_SCHEMA_VERSION = 9
+SUPPORTED_PROFILE_SCHEMA_VERSIONS: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9)
 # The WFS photon allocation the schema-v1 profiles were reviewed and published
 # under.  A v1 record omits the field entirely, so this is the only allocation a
 # configuration claiming record schema 1 can legitimately hold.  It must stay
@@ -103,6 +111,8 @@ _SYSTEM_FIELDS = {"backend", "wfs_model", "atmosphere_model", "telescope_diamete
 _ATMOSPHERE_FIELDS = {"r0_m", "r0_reference_wavelength_m", "outer_scale_m", "wind_m_per_s", "target_rms_opd_m", "normalize_rms", "layers"}
 # Schemas v1-v3 predate atmosphere.layers and describe single-layer atmospheres.
 _ATMOSPHERE_FIELDS_V3 = _ATMOSPHERE_FIELDS - {"layers"}
+# Schema v9 may carry the optional zenith angle; it is absent when zero.
+_ATMOSPHERE_OPTIONAL_FIELDS_V9 = {"zenith_angle_deg"}
 _ATMOSPHERE_LAYER_FIELDS = {"altitude_m", "cn2_fraction", "wind_m_per_s"}
 _DETECTOR_FIELDS = {"enabled", "photons_per_subap_frame", "read_noise_e", "dark_e_per_s", "background_e_per_pixel_frame", "full_well_e", "qe", "prnu_rms", "exposure_s", "prnu_mode", "bad_pixel_fraction"}
 _WFS_FIELDS = {"min_fill_fraction", "pad_factor", "detector_window_px", "centroid_estimator", "threshold_fraction", "subtract_minimum", "min_flux_e", "min_peak_snr", "max_centroid_sigma_px", "max_window_clipping_fraction", "central_obstruction_ratio", "spider_width_m", "photon_allocation", "clip_negative_pixels", "lenslet_axis"}
@@ -164,6 +174,26 @@ class _AtmosphereConfigSchemaV3:
     wind_m_per_s: tuple[float, float]
     target_rms_opd_m: float | None
     normalize_rms: bool
+
+
+@dataclass(frozen=True, slots=True)
+class _AtmosphereConfigWithoutZenithAngle:
+    """Hash shape of a layered ``atmosphere`` block observed at the zenith.
+
+    The same declared fields, order and schema id as before the optional
+    schema-v9 ``zenith_angle_deg`` existed, so every layered block without a
+    zenith angle keeps its identity.
+    """
+
+    __hash_schema_id__ = "shwfs_ao.io.configs.AtmosphereConfig"
+
+    r0_m: float
+    r0_reference_wavelength_m: float
+    outer_scale_m: float | None
+    wind_m_per_s: tuple[float, float]
+    target_rms_opd_m: float | None
+    normalize_rms: bool
+    layers: tuple[object, ...]
 
 
 @dataclass(frozen=True, slots=True)

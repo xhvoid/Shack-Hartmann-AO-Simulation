@@ -745,6 +745,11 @@ def build_scao_system(
                 "atmosphere_band_storage applies to the native_layered atmosphere only."
             )
         layer_keywords["band_coefficient_storage"] = options.atmosphere_band_storage
+    if config.atmosphere.zenith_angle_deg != 0.0:
+        # Forwarded only away from the zenith, so a factory written before the
+        # keyword existed keeps building every zenith profile.  r0_m stays the
+        # zenith value: the layered atmosphere applies the airmass itself.
+        layer_keywords["zenith_angle_deg"] = config.atmosphere.zenith_angle_deg
     if pairing is not None:
         # Only the set fields travel, so a factory written before they existed
         # keeps building every default system; one that lacks them fails here
@@ -926,6 +931,7 @@ def run_closed_loop(
     execution: ScaoExecutionOptions | None = None,
     atmosphere_options: AtmosphereOptions | None = None,
     exposure: ExposureOverride | None = None,
+    science_directions_rad: Sequence[tuple[float, float]] = (),
 ):
     """Execute either detector-level or geometric profiles through one runner.
 
@@ -939,6 +945,11 @@ def run_closed_loop(
     replaces the profile's WFS exposure count and/or selects the midpoint
     sample rule for this run; without it the loop receives exactly the
     profile's exposure keywords, as before.
+
+    ``science_directions_rad`` (off-axis science) are forwarded unchanged to
+    the canonical loop: ``(theta_x, theta_y)`` radians of each science
+    direction an observer requesting ``science_residual_opd_m`` will see
+    (:mod:`shwfs_ao.science.off_axis`).  They never enter the history.
     """
 
     if not isinstance(config, SystemConfig):
@@ -984,6 +995,7 @@ def run_closed_loop(
         realization_index=realization_index,
         observers=observers,
         recovery=resolved.recovery_policy,
+        science_directions_rad=science_directions_rad,
         **_exposure_keywords(config, exposure),
     )
 

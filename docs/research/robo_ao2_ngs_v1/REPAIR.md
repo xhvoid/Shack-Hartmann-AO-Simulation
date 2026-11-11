@@ -1,0 +1,5 @@
+# How the 2.2 m loop lost lock
+
+At 0.981 s, only 278 of the 374 calibrated slope rows were usable. By then, losing spots had changed the interaction matrix seen by the reconstructor. Four frames earlier it had amplified a weakly measured mode into a command increment with a norm of 45.82 µm across the actuators. Once the loop rejected the measurement and its two queued updates drained, the mirror held its shape.
+
+Version 2 raises the relative singular-value cutoff from 0.001 to 0.05 and applies it to the rows available at each update. It also lets the requested mirror shape decay by 5% per rejected frame starting with the fourth consecutive rejection. I replayed the same atmosphere and calibration for 1,500 frames. The loop accepted every reconstruction, stayed inside the stroke limit and never invoked the decay rule. [Parameter choices](PARAMETERS.md) · [Recorded diagnosis and repair](https://github.com/xhvoid/Shack-Hartmann-AO-Simulation/blob/7aca875e5e34265c3f9ead97ae99da55663bcce7/docs/research/robo_ao2_ngs_v1/REPAIR.md)

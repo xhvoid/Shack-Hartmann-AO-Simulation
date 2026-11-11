@@ -38,6 +38,39 @@ The periodic band repeats after a layer has travelled one screen period
 (``screen_period_m``); the low-frequency modes do not.  Repetition makes
 long-exposure statistics less independent but introduces no discontinuity.
 
+``directional sampling``
+    :meth:`LayeredFrozenFlowAtmosphere.directional_opd_at` samples the same
+    realization at the same time along a sky direction ``(theta_x, theta_y)``
+    radians from the on-axis (guide-star) direction.  In the zenith,
+    small-angle, thin-layer approximation a ray through pupil coordinate
+    ``r`` crosses layer ``l`` at ``r + h_l * theta``, so the layer's frozen
+    pattern is read at ``r + h_l * theta - v_l * t``: the translation applied
+    to the periodic band (a Fourier phase ramp) and to the analytic
+    low-frequency modes is ``s_l = v_l * t - h_l * theta`` for both.  The
+    on-axis sample is the ``theta = 0`` case of the same arithmetic, so
+    ``directional_opd_at(t, (0.0, 0.0))`` equals ``opd_at(t)`` bit for bit.
+    A directional sample never advances the realization clock, draws no
+    random number and leaves ``max_travel_m`` (wind travel) unchanged;
+    ``max_directional_displacement_m`` records the largest ``|h_l * theta|``
+    requested.  Altitudes are the layers' ``altitude_m``; a ground layer
+    (``h = 0``) is seen identically in every direction.  Positive ``theta_x``
+    moves the footprint toward larger pupil ``x`` (array columns), positive
+    ``theta_y`` toward larger pupil ``y`` (array rows).
+
+``zenith angle``
+    ``zenith_angle_deg`` (default 0) is the angle between the line of sight and
+    the zenith; ``X = sec(z)`` is the airmass.  ``r0_m`` is then the zenith
+    Fried parameter and the layers are generated with the line-of-sight value
+    ``r0_m * X**(-3/5)`` (the turbulent path through every layer is ``X``
+    times longer).  A ray leaving the pupil at the sky offset ``theta`` reaches
+    layer ``l`` after the distance ``altitude_m[l] * X``, so directional
+    sampling displaces the layer by ``altitude_m[l] * X * theta``.  ``theta``
+    is the angle on the sky as elsewhere; the foreshortening of a layer seen
+    obliquely, the winds and the outer scale are not modified (the convention
+    of the P3 Fourier model).  At ``zenith_angle_deg = 0`` the configuration's
+    identity payload, the draws, every sample and the metadata are exactly
+    those of the model before this field existed.
+
 ``fixed-physics pairing``
     Three optional configuration fields pair the realizations of two pupil
     samplings.  ``band_draw_reference_screen_size`` draws the band normals on
@@ -75,6 +108,8 @@ from .atmosphere import NativeAtmosphereError, _von_karman_psd
 
 
 __all__ = (
+    "DIRECTIONAL_SAMPLING_MODEL",
+    "DIRECTIONAL_SAMPLING_MODEL_AIRMASS",
     "LAYERED_SPECTRUM_MODEL",
     "PAIRED_BAND_ALGORITHM",
     "SCREEN_PERIOD_RULES",
@@ -88,6 +123,16 @@ __all__ = (
 
 LAYERED_SPECTRUM_MODEL = "periodic_band_analytic_low_frequency_v1"
 """Identifier of the spectral discretization described in the module docstring."""
+
+DIRECTIONAL_SAMPLING_MODEL = "thin_layer_small_angle_zenith_v1"
+"""Identifier of the off-axis sampling geometry: layer ``l`` read at
+``r + altitude_m[l] * theta`` (radians) with frozen flow, no cone effect, no
+zenith-angle stretch and no diffraction between layers."""
+
+DIRECTIONAL_SAMPLING_MODEL_AIRMASS = "thin_layer_small_angle_airmass_v1"
+"""Identifier of the same geometry away from the zenith: layer ``l`` read at
+``r + altitude_m[l] * sec(z) * theta``.  Reported only when
+``zenith_angle_deg`` is not zero."""
 
 _BACKEND_NAME = "native"
 _METADATA_SCHEMA_VERSION = 1
@@ -190,8 +235,17 @@ class LayeredFrozenFlowAtmosphereConfig:
     band_draw_reference_screen_size: int | None = None
     band_limit_screen_size: int | None = None
     screen_period_rule: str = "pupil_array"
+    # Angle between the line of sight and the zenith, degrees, in [0, 90).
+    # Zero is omitted from the identity payload (module docstring).
+    zenith_angle_deg: float = 0.0
 
     def __post_init__(self) -> None:
+        zenith = _finite("zenith_angle_deg", self.zenith_angle_deg)
+        if not 0.0 <= zenith < 90.0:
+            raise NativeAtmosphereError(
+                f"zenith_angle_deg must satisfy 0 <= zenith_angle_deg < 90; got {zenith!r}."
+            )
+        object.__setattr__(self, "zenith_angle_deg", zenith)
         grid_size = _integer("grid_size", self.grid_size, minimum=2)
         factor = _integer("screen_period_factor", self.screen_period_factor, minimum=1)
         inner = _integer("inner_quadrature_cells", self.inner_quadrature_cells, minimum=0)
@@ -308,12 +362,35 @@ class LayeredFrozenFlowAtmosphereConfig:
         return (self.band_limit_screen_size - 1) // 2
 
     @property
-    def layer_r0_m(self) -> tuple[float, ...]:
-        """Per-layer Fried parameters ``r0 * f**(-3/5)`` at the reference wavelength."""
+    def airmass(self) -> float:
+        """``sec(zenith_angle_deg)``; exactly 1 at the zenith."""
 
-        return tuple(
-            self.r0_m * layer.cn2_fraction ** (-3.0 / 5.0) for layer in self.layers
-        )
+        if self.zenith_angle_deg == 0.0:
+            return 1.0
+        return 1.0 / math.cos(math.radians(self.zenith_angle_deg))
+
+    @property
+    def line_of_sight_r0_m(self) -> float:
+        """Integrated Fried parameter along the line of sight, ``r0_m * X**(-3/5)``."""
+
+        if self.zenith_angle_deg == 0.0:
+            return self.r0_m
+        return self.r0_m * self.airmass ** (-3.0 / 5.0)
+
+    @property
+    def layer_path_m(self) -> tuple[float, ...]:
+        """Distance to each layer along the line of sight, ``altitude_m * X``."""
+
+        if self.zenith_angle_deg == 0.0:
+            return tuple(layer.altitude_m for layer in self.layers)
+        return tuple(layer.altitude_m * self.airmass for layer in self.layers)
+
+    @property
+    def layer_r0_m(self) -> tuple[float, ...]:
+        """Per-layer line-of-sight Fried parameters ``r0 * f**(-3/5)`` at the reference wavelength."""
+
+        r0 = self.line_of_sight_r0_m
+        return tuple(r0 * layer.cn2_fraction ** (-3.0 / 5.0) for layer in self.layers)
 
 
 @dataclass(frozen=True)
@@ -406,6 +483,7 @@ class LayeredFrozenFlowAtmosphere:
         self._layer_stream_ids: tuple[str, ...] = ()
         self._last_time_s = 0.0
         self._max_travel_m = 0.0
+        self._max_directional_displacement_m = 0.0
         self._metadata: Mapping[str, Any] = MappingProxyType({})
         self.reset(realization_index=0)
 
@@ -442,6 +520,24 @@ class LayeredFrozenFlowAtmosphere:
         """Largest distance any layer has moved since the last ``reset``."""
 
         return self._max_travel_m
+
+    @property
+    def max_directional_displacement_m(self) -> float:
+        """Largest ``|altitude_m * theta|`` any directional sample has requested."""
+
+        return self._max_directional_displacement_m
+
+    @property
+    def layer_altitudes_m(self) -> tuple[float, ...]:
+        """Each layer's altitude in metres, in layer order."""
+
+        return tuple(layer.altitude_m for layer in self._config.layers)
+
+    @property
+    def layer_path_m(self) -> tuple[float, ...]:
+        """Distance to each layer along the line of sight (``altitude * sec(z)``)."""
+
+        return self._config.layer_path_m
 
     @property
     def band_coefficient_storage(self) -> str:
@@ -495,6 +591,7 @@ class LayeredFrozenFlowAtmosphere:
         )
         self._last_time_s = 0.0
         self._max_travel_m = 0.0
+        self._max_directional_displacement_m = 0.0
         self._refresh_metadata()
 
     def _band_draw(self, rng: np.random.Generator, amplitude: float) -> np.ndarray:
@@ -549,7 +646,31 @@ class LayeredFrozenFlowAtmosphere:
         """Return piston-removed OPD metres at an absolute simulation time."""
 
         time_value = _absolute_time(time_s, previous=self._last_time_s)
-        phase = self._phase_rad(time_value)
+        opd_m = self._opd_m(time_value, (0.0, 0.0))
+        self._last_time_s = time_value
+        return opd_m
+
+    def directional_opd_at(
+        self, time_s: float, direction_rad: tuple[float, float]
+    ) -> np.ndarray:
+        """Piston-removed OPD metres seen along ``direction_rad`` at ``time_s``.
+
+        ``direction_rad = (theta_x, theta_y)`` is the sky offset from the
+        on-axis direction in radians (module docstring, ``directional
+        sampling``).  The sample is a pure function of the realization, the
+        time and the direction: it does not advance the clock that
+        :meth:`opd_at` keeps nondecreasing, so a science direction may be
+        sampled at the frame time after the WFS has sampled later exposure
+        sub-samples.  ``(0.0, 0.0)`` reproduces :meth:`opd_at` bit for bit.
+        """
+
+        time_value = _finite("time_s", time_s)
+        if time_value < 0.0:
+            raise NativeAtmosphereError(f"time_s must be non-negative; got {time_s!r}.")
+        return self._opd_m(time_value, _direction(direction_rad))
+
+    def _opd_m(self, time_s: float, direction_rad: tuple[float, float]) -> np.ndarray:
+        phase = self._phase_rad(time_s, direction_rad)
         try:
             opd_m = phase_to_opd(
                 remove_piston(phase, self._pupil_mask),
@@ -557,11 +678,18 @@ class LayeredFrozenFlowAtmosphere:
             )
         except ValueError as exc:
             raise NativeAtmosphereError(str(exc)) from exc
-        self._last_time_s = time_value
         return _readonly(opd_m)
 
-    def _phase_rad(self, time_s: float) -> np.ndarray:
-        """Summed layer phase on the pupil array, before piston removal."""
+    def _phase_rad(
+        self, time_s: float, direction_rad: tuple[float, float] = (0.0, 0.0)
+    ) -> np.ndarray:
+        """Summed layer phase on the pupil array, before piston removal.
+
+        Layer ``l`` is read at ``r - s_l`` with ``s_l = v_l * t - h_l * theta``:
+        the wind translation of the frozen pattern and the footprint
+        displacement of an off-axis ray combined in one real-valued shift that
+        the periodic band and the analytic modes both apply.
+        """
 
         config = self._config
         n = config.grid_size
@@ -569,12 +697,27 @@ class LayeredFrozenFlowAtmosphere:
         size = config.screen_size
         spectrum = np.zeros((size, size), dtype=complex)
         work = np.empty_like(spectrum)
+        theta_x, theta_y = direction_rad
         shifts = []
-        for layer, coefficients in zip(config.layers, self._layer_band_coefficients()):
-            shift_x = layer.wind_m_per_s[0] * time_s
-            shift_y = layer.wind_m_per_s[1] * time_s
+        for layer, path_m, coefficients in zip(
+            config.layers, config.layer_path_m, self._layer_band_coefficients()
+        ):
+            travel_x = layer.wind_m_per_s[0] * time_s
+            travel_y = layer.wind_m_per_s[1] * time_s
+            self._max_travel_m = max(self._max_travel_m, math.hypot(travel_x, travel_y))
+            # theta = 0 gives h * 0.0 = 0.0 and x - 0.0 = x exactly, so the
+            # on-axis arithmetic is unchanged by the directional term.  path_m
+            # is the layer's altitude at the zenith and altitude * sec(z) away
+            # from it.
+            displacement_x = path_m * theta_x
+            displacement_y = path_m * theta_y
+            self._max_directional_displacement_m = max(
+                self._max_directional_displacement_m,
+                math.hypot(displacement_x, displacement_y),
+            )
+            shift_x = travel_x - displacement_x
+            shift_y = travel_y - displacement_y
             shifts.append((shift_x, shift_y))
-            self._max_travel_m = max(self._max_travel_m, math.hypot(shift_x, shift_y))
             if shift_x == 0.0 and shift_y == 0.0:
                 spectrum += coefficients
                 continue
@@ -629,6 +772,17 @@ class LayeredFrozenFlowAtmosphere:
                     "Nyquist row and column"
                 ),
             }
+        zenith: dict[str, Any] = {}
+        if config.zenith_angle_deg != 0.0:
+            # Recorded only away from the zenith, so the default metadata keeps
+            # exactly its historical keys.  ``r0_m`` stays the zenith value;
+            # each layer's ``r0_m`` is the line-of-sight value it was drawn with.
+            zenith = {
+                "zenith_angle_deg": config.zenith_angle_deg,
+                "airmass": config.airmass,
+                "line_of_sight_r0_m": config.line_of_sight_r0_m,
+                "layer_path_m": config.layer_path_m,
+            }
         self._metadata = MappingProxyType(
             {
                 "schema_name": "shwfs_ao.native_atmosphere",
@@ -674,8 +828,14 @@ class LayeredFrozenFlowAtmosphere:
                 "realization_rms_rescaled": False,
                 "frozen_flow_discretization": "exact_fourier_subpixel_unbounded_travel",
                 "wind_convention": "pattern_advects_with_positive_wind",
+                "directional_sampling": (
+                    DIRECTIONAL_SAMPLING_MODEL
+                    if config.zenith_angle_deg == 0.0
+                    else DIRECTIONAL_SAMPLING_MODEL_AIRMASS
+                ),
                 "band_coefficient_storage": self._band_storage,
                 **pairing,
+                **zenith,
             }
         )
 
@@ -694,6 +854,9 @@ def canonical_identity_payload(config: LayeredFrozenFlowAtmosphereConfig) -> dic
     for name, default in _PAIRING_DEFAULTS.items():
         if payload[name] == default:
             del payload[name]
+    # The zenith is every identity published before the field existed.
+    if payload["zenith_angle_deg"] == 0.0:
+        del payload["zenith_angle_deg"]
     if (
         config.band_draw_reference_screen_size is not None
         or config.band_limit_screen_size is not None
@@ -826,6 +989,20 @@ def _absolute_time(time_s: float, *, previous: float) -> float:
             f"previous={previous!r}, got {time_value!r}."
         )
     return time_value
+
+
+def _direction(value: object) -> tuple[float, float]:
+    """A validated ``(theta_x, theta_y)`` sky direction in radians."""
+
+    if (
+        isinstance(value, (str, bytes))
+        or not isinstance(value, (tuple, list, np.ndarray))
+        or len(value) != 2
+    ):
+        raise NativeAtmosphereError(
+            "direction_rad must be a two-value (theta_x, theta_y) pair in radians."
+        )
+    return (_finite("direction_rad[0]", value[0]), _finite("direction_rad[1]", value[1]))
 
 
 def _integer(field_name: str, value: object, *, minimum: int) -> int:
