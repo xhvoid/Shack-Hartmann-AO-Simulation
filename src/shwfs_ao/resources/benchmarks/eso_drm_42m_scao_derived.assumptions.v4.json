@@ -776,7 +776,7 @@
       "authority_sources": [],
       "locator": "",
       "rationale": "every reconstructed increment loses its projection on the calibrated response's weakly sensed checkerboard family (commands that are mostly local waffle and are sensed below 0.35 of the RMS response column norm); the relative damping of row A07b does not regularize that family, and the closed loop accumulates aliased turbulence in it (revision 2 -> 3); version 4 of the 12 m tier uses 0.6, the lowest sample mean of eleven tested cutoffs at that aperture, where the family has 20 modes and at 0.35 it has 11 (revision 3 -> 4)",
-      "transformation": "family from shwfs_ao.calibration.sparse.response_waffle_modes at cutoff 0.35; projection removed after the LSMR solve",
+      "transformation": "family from shwfs_ao.calibration.sparse.response_waffle_modes at the effective cutoff of each profile: 0.35 for the version-3 profiles and 0.6 for eso_scao_medium_12m_derived@4; projection removed after the LSMR solve",
       "limitation": "0.35 at 5 m and 42 m is the value of det_ccd_42m_r3band_derived@2; the cutoff was scanned at 5 m and 12 m and not at 42 m; tested with noise at 12 m only",
       "consuming_tests": [
         "tests/test_waffle_filter.py::test_the_waffle_family_is_the_weakly_sensed_checkerboard_twin_subspace",

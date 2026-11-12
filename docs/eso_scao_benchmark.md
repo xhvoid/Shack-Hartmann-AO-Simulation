@@ -67,13 +67,13 @@ The v3 profiles took the cutoff of 0.35 from the 42 m detector-level profile. I 
 | 0.9 | 10 | 175.53 | 64 | 171.32 |
 | 1.0 | 12 | 176.06 | 80 | 172.63 |
 
-The 5 m runs keep 1,800 settled frames and the 12 m runs 900. The 12 m entry at 0.35 comes from these five runs, so it differs from the twelve-realization value in the damping table. I counted the removed patterns by building the reconstructor at each cutoff.
+The 5 m runs keep 1,800 settled frames and the 12 m runs 900. The 12 m entry at 0.35 comes from these five runs, so it differs from the twelve-realization value in the damping table. For the pattern counts I built each system once, at a cutoff of 0.35, and applied a dense form of the filter's selection rule to that calibrated response at every cutoff in the table. Its count matched the reconstructor's own at 0.35 for both apertures. Building version 4 of the 12 m profile gives 20 at 0.6.
 
 Raising the damping did not replace the filter. With the filter off, total variance was 4,924 ± 346 nm² higher at 5 m and 2,998 ± 212 nm² higher at 12 m than at 0.35. At 5 m, 0.35 gave the lowest mean. A cutoff of 0.1 came out 9 ± 31 nm² higher, and 0.5 came out 226 ± 45 nm² higher. At 12 m the lowest mean was at 0.6, 419 ± 42 nm² below 0.35. On the same five atmospheres, 0.5 was 68 ± 10 nm² above 0.6 and 0.7 was 36 ± 9 nm² above it.
 
-I ran two checks at 12 m before changing the profile. With the cutoff at 0.5 and again at 0.7, I repeated the runs at Tikhonov factors of 0.001, 0.01, 0.05 and 0.1. In both cases 0.03 kept the lowest mean of the five factors. Then I added 1 electron of read noise on four atmospheres of 400 settled frames. Relative to 0.35, a cutoff of 0.6 reduced total variance by 406 ± 79 nm² at 1,000 photons per fully illuminated subaperture per frame and by 355 ± 60 nm² at 500 photons. With noise I could not separate 0.6 from 0.7. The paired difference between them was 23 ± 40 nm² at 1,000 photons and −74 ± 55 nm² at 500.
+I ran two checks at 12 m before changing the profile. With the cutoff at 0.5 and again at 0.7, I repeated the runs at Tikhonov factors of 0.001, 0.01, 0.05 and 0.1. In both cases 0.03 kept the lowest mean of the five factors. Then I added 1 electron of read noise on four atmospheres of 400 settled frames. Relative to 0.35, a cutoff of 0.6 reduced total variance by 406 ± 79 nm² at 1,000 photons per fully illuminated subaperture per frame and by 355 ± 60 nm² at 500 photons. With noise I could not separate 0.6 from 0.7. The paired difference, 0.6 minus 0.7, was −23 ± 40 nm² at 1,000 photons and +74 ± 55 nm² at 500.
 
-Version 4 of the 12 m profile uses a cutoff of 0.6 and keeps the damping at 0.03. The 5 m and 42 m profiles stay at version 3. I did not scan the damping with the cutoff at 0.6, and I did not scan the cutoff at 42 m.
+Version 4 of the 12 m profile uses a cutoff of 0.6 and keeps the damping at 0.03. The 5 m and 42 m profiles stay at version 3. I did not scan the damping with the cutoff at 0.6, and I did not scan the cutoff at 42 m. The weak-turbulence 12 m profile, `eso_scao_medium_12m_weak_gate`, was not part of these scans and stays at version 2.
 
 ## Using the profiles and measurements
 

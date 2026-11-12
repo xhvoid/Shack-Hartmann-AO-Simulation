@@ -48,7 +48,7 @@
     },
     {
       "logical_name": "benchmarks/eso_drm_42m_scao_derived.assumptions.v4.json",
-      "sha256": "ec4b6042f4f3ca31e3c7cd1f02cbdbe757f5ca67a3adfcaca028f82321b5c950"
+      "sha256": "ca4cb9e6e7adbbbae3e38a6f0d6d929ff2ef6405e0c980a6e42fa01111c820a6"
     },
     {
       "logical_name": "benchmarks/eso_scao_source_ledger.v1.json",
