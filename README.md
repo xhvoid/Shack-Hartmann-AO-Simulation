@@ -27,11 +27,10 @@ each command increment, keeping the Tikhonov damping at 0.001.
 | --- | ---: | ---: | ---: | ---: | ---: |
 | 5 m | 192.0 ± 1.4 | 173.5 ± 0.9 | 154.1 | 12.6% | 0.784 / 0.813 |
 | 12 m | 183.2 ± 2.0 | 172.1 ± 1.5 | 155.9 | 10.4% | 0.787 / 0.816 |
-| 42 m | 173.6 | 168.06 ± 0.65 | 156.45 | 7.4% | 0.795 / 0.818 |
+| 42 m | 174.18 ± 0.66 | 168.06 ± 0.65 | 156.45 | 7.4% | 0.795 / 0.818 |
 
-The 5 m and 12 m rows each use five atmospheres. At 42 m I ran three with
-the filter on and one with it off. On the atmosphere common to both, the
-filter took the residual from 173.65 to 167.17 nm. The uncertainties are
+The 5 m and 12 m rows each use five atmospheres and the 42 m row three. On
+each 42 m atmosphere the filter lowered the residual. The uncertainties are
 standard errors across atmospheres. The P3 values use the spatial frequency
 band sampled by the native screens and exclude chromatism.
 

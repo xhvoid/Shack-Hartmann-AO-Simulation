@@ -10,9 +10,9 @@ The alternating pattern of neighbouring mirror actuators is called *waffle*. Sev
 | --- | ---: | ---: | ---: | ---: |
 | 5 m | 192.0 ± 1.4 | 173.5 ± 0.9 | 154.1 | 0.784 / 0.813 |
 | 12 m | 183.2 ± 2.0 | 172.1 ± 1.5 | 155.9 | 0.787 / 0.816 |
-| 42 m | 173.6 | 168.06 ± 0.65 | 156.45 | 0.795 / 0.818 |
+| 42 m | 174.18 ± 0.66 | 168.06 ± 0.65 | 156.45 | 0.795 / 0.818 |
 
-The 5 m and 12 m means each cover five realizations. At 42 m I have three filtered realizations and one unfiltered run. On the one atmosphere common to both, the filter took the residual from 173.65 to 167.17 nm. The 5 m averages use 1,800 settled frames per realization, the others 900. RMS is the square root of the mean piston-removed pupil variance. The ± values are standard errors across realizations.
+The 5 m and 12 m means each cover five realizations and the 42 m means three. At 42 m the filter lowered total variance by 2,092 ± 78 nm², and by at least 1,943 nm² on each atmosphere. The 5 m averages use 1,800 settled frames per realization, the others 900. RMS is the square root of the mean piston-removed pupil variance. The ± values are standard errors across realizations.
 
 For P3 I integrated fitting power over the same spatial band as the native screens and excluded chromatism. The P3 Strehl values use the 1,024-pixel image and approximate exponential corrections for those two changes. The native Strehl comes from the accumulated image. [P3 results](scao-comparison/layered/p3.csv) · [5 m input](scao-comparison/layered/5m.ini) · [12 m input](scao-comparison/layered/12m.ini) · [42 m input](scao-comparison/layered/42m.ini)
 
@@ -86,7 +86,40 @@ After preparing version 4, I scanned the damping at its own cutoff of 0.6 on the
 
 A factor of 0.03 gave the lowest mean of the six. Each of the other five came out higher on every atmosphere.
 
-Version 4 of the 12 m profile uses a cutoff of 0.6 and keeps the damping at 0.03. The 5 m and 42 m profiles stay at version 3. I did not scan the damping at 0.6 with read noise, and I did not scan the cutoff at 42 m.
+I then repeated that scan with 1 electron of read noise, on four atmospheres of 400 settled frames. The entries are the total variance minus its value at 0.03, in nm².
+
+| Tikhonov factor | Noise off | 1,000 photons | 500 photons |
+| ---: | ---: | ---: | ---: |
+| 0.001 | +234 ± 20 | +252 ± 18 | +131 ± 56 |
+| 0.01 | +166 ± 15 | +172 ± 16 | +91 ± 56 |
+| 0.02 | +57 ± 6 | +96 ± 22 | +21 ± 70 |
+| 0.05 | +47 ± 12 | +66 ± 42 | +52 ± 42 |
+
+A factor of 0.03 kept the lowest mean in all three columns. At 500 photons I could not separate it from 0.02 or 0.05.
+
+Version 4 of the 12 m profile uses a cutoff of 0.6 and keeps the damping at 0.03. The 5 m and 42 m profiles stay at version 3.
+
+## The filter cutoff at 42 m
+
+The 42 m reconstructor could not build a cutoff of 0.6. The filter first collects every mirror pattern whose response is below 1.5 times the cutoff. The sparse solver handles at most a quarter of the 5,328 commanded actuators in that set, and the dense fallback would need more memory than the code allows. The largest cutoff that passes is 0.513.
+
+I ran 0.4, 0.45 and 0.5 on the three atmospheres already used at 0.35, and ran the same three with the filter off. The Tikhonov factor was 0.001 and detector noise was off.
+
+| Filter cutoff | Patterns removed | RMS (nm) | Total variance minus its value at 0.35 (nm²) |
+| ---: | ---: | ---: | ---: |
+| off | 0 | 174.18 ± 0.66 | +2,092 ± 78 |
+| 0.35 | 96 | 168.06 ± 0.65 | — |
+| 0.4 | 130 | 167.78 ± 0.64 | −96 ± 7 |
+| 0.45 | 165 | 167.54 ± 0.64 | −177 ± 6 |
+| 0.5 | 206 | 167.40 ± 0.65 | −223 ± 6 |
+
+Each step up in cutoff lowered the residual on each of the three atmospheres. The steps shrank, from 96 nm² between 0.35 and 0.4 to 81 nm² and then 46 nm². The residual was still falling at the largest cutoff I could build. Against P3 at 156.45 nm, the native residual went from 7.4% above it at 0.35 to 7.0% at 0.5.
+
+I also tried a Tikhonov factor of 0.03 at 0.45 and at 0.5. Relative to 0.001 it changed total variance by +48 ± 42 nm² and +49 ± 42 nm². At 0.35 the same change was +44 ± 42 nm², so the damping is unresolved at all three cutoffs.
+
+I have not changed the 42 m profile. Three atmospheres is a small sample, and I have not added detector noise. A cutoff of 0.5 also sits 2.6% below the build limit, which leaves little margin if the calibrated response changes.
+
+Part of this section ran on a Linux machine: the cutoff of 0.4, two of the three unfiltered atmospheres, and the 0.03 runs at 0.45. I repeated ten of the macOS runs there, and the total variances agreed to within 2 parts in 10¹⁴.
 
 ## The weak-turbulence 12 m profile
 
@@ -103,7 +136,20 @@ Version 4 of the 12 m profile uses a cutoff of 0.6 and keeps the damping at 0.03
 
 The order matched the nominal profile, with the lowest mean at 0.6 and 0.03. I do not count this as independent evidence. These atmospheres are the nominal screens scaled to the larger Fried length, and each total variance came out as the nominal one divided by 6.59 to 6.62. The two Fried lengths alone give 6.51. A noiseless scan repeats the nominal one at a smaller amplitude.
 
-Detector noise does not shrink with the turbulence. Finding out whether this profile needs its own settings takes a scan with noise, which I have not run. The profile stays at version 2.
+Detector noise does not shrink in step with the turbulence, so I repeated the six settings with 1 electron of read noise, on four atmospheres of 400 settled frames. Each entry gives the RMS in nm and the total variance minus version 2 in nm².
+
+| Filter cutoff | Tikhonov factor | Noise off | 1,000 photons | 500 photons |
+| ---: | ---: | --- | --- | --- |
+| off | 0.001 | 70.11 | 76.89 | 85.57 |
+| off | 0.03 | 68.76, −187 ± 18 | 74.86, −308 ± 20 | 82.88, −454 ± 44 |
+| 0.35 | 0.001 | 66.50, −492 ± 33 | 72.94, −592 ± 50 | 81.08, −748 ± 68 |
+| 0.35 | 0.03 | 66.06, −551 ± 36 | 72.13, −709 ± 47 | 80.00, −922 ± 71 |
+| 0.6 | 0.001 | 65.87, −576 ± 39 | 72.20, −699 ± 51 | 80.34, −869 ± 75 |
+| 0.6 | 0.03 | 65.60, −611 ± 41 | 71.67, −775 ± 53 | 79.39, −1,019 ± 67 |
+
+The lowest mean stayed at 0.6 and 0.03 with noise, and every setting beat version 2 on every atmosphere. At a factor of 0.03, a cutoff of 0.6 came out below 0.35 by 61 ± 5 nm² without noise, 66 ± 12 nm² at 1,000 photons and 97 ± 5 nm² at 500. The same difference for the nominal profile, divided by 6.51, gives 61, 62 and 54 nm². At 500 photons the weak-turbulence run is no longer a scaled copy of the nominal one. At those settings and 500 photons, the noise added 1,999 nm² to this profile and 6,360 nm² to the nominal one, a ratio of 3.2.
+
+The profile stays at version 2. These are four short runs at the two photon levels I chose for the nominal profile, and the atmospheres are still the nominal screens scaled to the larger Fried length. The runs with noise were made on Linux.
 
 ## Using the profiles and measurements
 
@@ -116,6 +162,6 @@ config = load_system_profile("eso_scao_medium_12m_derived", 4)
 print(config.reconstructor.alpha, config.reconstructor.waffle_filter_cutoff)
 ```
 
-The native CSV has one row per realization and setting. The `aperture` series supplies the filter comparison, the 5 m and 42 m damping scans, and the noiseless cutoff scans with their 12 m damping checks. The `sensor` series supplies the 12 m variance budget and noiseless damping scan. The `spot_sampling` series gives the 24-sample image and geometric measurements. The `detector_noise` series pairs each noisy 12 m run with its noiseless control. The `weak_turbulence` series holds the runs of the weak-turbulence 12 m profile. For a paired damping or cutoff change, subtract the two variances for the same realization, series, sensor and noise setting, then average the differences. Empty cells mark quantities that the run did not measure or settings that were switched off.
+The native CSV has one row per realization and setting. The `aperture` series supplies the filter comparison, the 5 m and 42 m damping scans, and the noiseless cutoff scans at 5 m, 12 m and 42 m with the 12 m damping checks. The `sensor` series supplies the 12 m variance budget and noiseless damping scan. The `spot_sampling` series gives the 24-sample image and geometric measurements. The `detector_noise` series pairs each noisy 12 m run with its noiseless control. The `weak_turbulence` series holds the runs of the weak-turbulence 12 m profile, with and without noise. For a paired damping or cutoff change, subtract the two variances for the same realization, series, sensor, noise setting and frame count, then average the differences. Some rows come from a Linux machine and the rest from macOS. The runs made on both agreed to within 2 parts in 10¹³ in total variance, so the rows can be paired across the two. Empty cells mark quantities that the run did not measure or settings that were switched off.
 
 These scans applied the specified settings to version 2 of each profile. The configuration hashes identify those runs, including their frame counts. The source SHA-256 identifies the original numerical record for each row. [Native measurements](scao-comparison/layered/native.csv)
